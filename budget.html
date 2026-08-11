@@ -324,6 +324,12 @@
       <div class="panel">
         <h2>Before you buy — run it by me.</h2>
         <p class="sub">The companion that makes you earn the purchase. Drop in what's tempting you and I'll show what it really costs — in hours of your life, and in distance from your dreams. Then you decide, on the record.</p>
+        <div class="row" style="margin-bottom:14px">
+          <label class="fld">Your take-home pay per hour
+            <input type="number" id="wage" min="0" step="0.5" placeholder="e.g. 22" style="width:150px">
+          </label>
+          <div id="wageNote" class="sub" style="margin:0;align-self:flex-end;max-width:340px"></div>
+        </div>
         <div class="row">
           <label class="fld" style="flex:1">What are you eyeing?
             <input type="text" id="impName" placeholder="Sneakers, gadget, another coffee…">
@@ -370,6 +376,7 @@
         <h2>Your impulse scoreboard</h2>
         <p class="sub">Proof that questioning the purchase pays. Every skip is money that stayed on your team.</p>
         <div class="scorecards" id="impScore"></div>
+        <div id="impHours"></div>
         <div id="impLog"></div>
       </div>
     </section>
@@ -480,7 +487,7 @@ const LESSONS=[
 function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
-           assets:[], liabilities:[], impulse:[] };
+           assets:[], liabilities:[], impulse:[], hourlyWage:0 };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -818,6 +825,8 @@ function avgMonthlyIncome(){
   const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
 }
 function topGoal(){ return state.goals.find(g=>g.saved<g.target)||null; }
+function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (avgMonthlyIncome()>0 ? avgMonthlyIncome()/160 : 0); }
+function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
 function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip').reduce((s,i)=>s+i.amount,0); }
 function impulseSpent(){ return state.impulse.filter(i=>i.type==='buy').reduce((s,i)=>s+i.amount,0); }
 function skipStreak(){ let n=0; for(let i=state.impulse.length-1;i>=0;i--){ if(state.impulse[i].type==='skip') n++; else break; } return n; }
@@ -861,6 +870,19 @@ document.getElementById('addLiab').addEventListener('click',()=>{
   document.getElementById('liabName').value=''; document.getElementById('liabVal').value=''; save(); renderNetWorth();
 });
 
+/* --- hourly wage --- */
+const wageEl=document.getElementById('wage');
+wageEl.addEventListener('input',()=>{
+  state.hourlyWage=parseFloat(wageEl.value)||0; save();
+  updateWageNote(); renderImpulse(); if(pendingCheck) renderCheckResult();
+});
+function updateWageNote(){
+  const note=document.getElementById('wageNote'); const h=effectiveHourly();
+  if(state.hourlyWage>0) note.textContent='Locked in. Every '+money(state.hourlyWage)+' you spend = 1 hour of your life at work.';
+  else if(h>0) note.textContent='No wage set — estimating '+money(h)+'/hr from your logged income. Enter your real rate for the truth.';
+  else note.textContent='Set this to see every purchase in hours of your life.';
+}
+
 /* --- impulse check --- */
 let pendingCheck=null;
 document.getElementById('impRun').addEventListener('click',()=>{
@@ -880,8 +902,9 @@ function renderCheckResult(){
   left=Math.max(5,Math.min(95,left));
   const needleColor = kind==='want'?'var(--accent-2)':kind==='need'?'var(--accent)':'var(--good)';
 
+  const H=effectiveHourly();
   const metrics=[];
-  if(avg>0){ const hrs=amt/(avg/160); metrics.push(['Hours of your life',(hrs>=10?Math.round(hrs):hrs.toFixed(1))+' hrs']); }
+  if(H>0) metrics.push([state.hourlyWage>0?'Hours to break even':'Hours of your life (est.)', fmtHours(amt/H)]);
   if(g){
     const remaining=Math.max(0.01,g.target-g.saved);
     metrics.push(['Of “'+g.name+'”', Math.round(Math.min(999,amt/remaining*100))+'%']);
@@ -933,7 +956,8 @@ function renderCheckResult(){
     state.activeMonth=monthOf(date); pendingCheck=null;
     document.getElementById('impName').value=''; document.getElementById('impAmt').value='';
     save(); renderImpulse(); renderBudget(); renderTx();
-    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">Logged. No shame — just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged as an expense under “Impulse / Wants.” Streak reset. Next one's a skip.</p></div>`;
+    const H=effectiveHourly(); const hrTxt=H>0?` That's about <b>${fmtHours(amt2/H)}</b> of work to earn back.`:'';
+    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">Logged. No shame — just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged as an expense under “Impulse / Wants.”${hrTxt} Streak reset. Next one's a skip.</p></div>`;
   });
 }
 
@@ -944,6 +968,13 @@ function renderImpulse(){
     <div class="stat"><div class="k">Spent on impulse</div><div class="v ${spent>0?'bad':''}">${money(spent)}</div></div>
     <div class="stat"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
     <div class="stat"><div class="k">Net discipline</div><div class="v ${net<0?'bad':'good'}">${money(net)}</div></div>`;
+  const H=effectiveHourly(), hoursBox=document.getElementById('impHours');
+  if(H>0 && (spent>0||saved>0)){
+    const parts=[];
+    if(spent>0) parts.push(`<span class="chip">Impulse spending = <b>${fmtHours(spent/H)}</b> to earn back</span>`);
+    if(saved>0) parts.push(`<span class="chip">Skipped = <b>${fmtHours(saved/H)}</b> of your life kept</span>`);
+    hoursBox.innerHTML=parts.join('');
+  } else hoursBox.innerHTML='';
   const log=state.impulse.slice().reverse(), box=document.getElementById('impLog');
   if(!log.length){ box.innerHTML=`<div class="empty" style="margin-top:8px">No calls made yet. Next time something tempts you, run it by me first.</div>`; return; }
   box.innerHTML=log.map(e=>`<div class="decision ${e.type}"><span class="badge">${e.type==='skip'?'Skipped':'Bought'}</span><span class="nm">${escapeHtml(e.name)}${e.goalId?' → dream':''}</span><span class="am">${e.type==='skip'?'+':'−'}${money(e.amount)}</span><button class="del" data-delimp="${e.id}" title="Delete">✕</button></div>`).join('');
@@ -961,6 +992,7 @@ function boot(){
   renderIntensity(); newQuote();
   renderBudget(); renderTx(); renderGoals(); renderLesson();
   renderNetWorth(); renderImpulse();
+  document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   document.querySelector('.tab').classList.add('on');
   document.getElementById('view-budget').classList.add('on');
 }
