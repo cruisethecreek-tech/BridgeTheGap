@@ -166,6 +166,53 @@
   .linkbtn:hover{color:var(--text)}
   .hide{display:none!important}
 
+  /* ---------- Impulse / Net worth ---------- */
+  .nw{font-size:32px;font-weight:900;letter-spacing:-.5px;margin:2px 0}
+  .nw.pos{color:var(--good)}.nw.neg{color:var(--bad)}
+  .avl-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;background:#0d0f14;border:1px solid var(--line)}
+  .avl-bar .a{background:linear-gradient(90deg,#1e4a37,#38d39f);min-width:2px;transition:width .4s ease}
+  .avl-bar .l{background:linear-gradient(90deg,#4a221e,#ff5c39);min-width:2px;transition:width .4s ease}
+  .avl-legend{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;font-weight:700}
+  .avl-legend .a{color:var(--good)}.avl-legend .l{color:var(--bad)}
+  .chip{display:inline-block;background:#0d0f14;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--muted);margin:8px 6px 0 0}
+  .chip b{color:var(--text)}
+  .lineitem{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
+  .lineitem .nm{flex:1;font-weight:700;font-size:14px;min-width:0}
+  .lineitem .vl{font-weight:800}
+  .lineitem.asset .vl{color:var(--good)}.lineitem.liab .vl{color:var(--bad)}
+  .lineitem .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
+  .lineitem .del:hover{color:var(--bad)}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:640px){.twocol{grid-template-columns:1fr}}
+
+  .meter{position:relative;height:34px;border-radius:10px;margin:6px 0;
+    background:linear-gradient(90deg,#10231a 0%,#143024 24%,#1d222c 50%,#301a14 76%,#2a1410 100%);border:1px solid var(--line)}
+  .meter .mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.15)}
+  .meter .needle{position:absolute;top:-6px;bottom:-6px;width:4px;border-radius:3px;background:var(--text);box-shadow:0 0 0 3px rgba(0,0,0,.4);transition:left .45s cubic-bezier(.2,.8,.2,1)}
+  .meter-lbl{display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:6px}
+  .meter-lbl .cl{color:var(--good)}.meter-lbl .fr{color:var(--accent-2)}
+  .checkcard{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:16px;animation:fade .3s ease}
+  .checkcard.want{border-color:#4a221e}.checkcard.asset{border-color:#1e4a37}
+  .verdict{font-size:22px;font-weight:900;letter-spacing:-.4px}
+  .verdict.want{color:var(--accent-2)}.verdict.asset{color:var(--good)}.verdict.need{color:var(--accent)}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+  .metric{background:#0d0f14;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .metric .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;line-height:1.3}
+  .metric .v{font-size:20px;font-weight:900;margin-top:5px;letter-spacing:-.3px}
+  .qline{font-style:italic;color:var(--muted);font-size:14px;margin:10px 0 2px}
+  .check-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .scorecards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:720px){.scorecards{grid-template-columns:repeat(2,1fr)}}
+  .decision{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:9px}
+  .decision .badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:4px 9px;border-radius:6px;flex-shrink:0}
+  .decision.skip .badge{background:#10231a;color:var(--good);border:1px solid #1e4a37}
+  .decision.buy .badge{background:#2a1410;color:var(--accent-2);border:1px solid #4a221e}
+  .decision .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .decision .am{font-weight:900}
+  .decision.skip .am{color:var(--good)}
+  .decision .del{background:none;border:none;color:var(--muted);cursor:pointer}
+  .decision .del:hover{color:var(--bad)}
+
   @media (max-width:720px){ .summary{grid-template-columns:repeat(2,1fr)} }
   @media (max-width:560px){
     .quote-controls{align-items:stretch;width:100%}
@@ -200,6 +247,7 @@
     <nav class="tabs">
       <button class="tab" data-view="budget">Budget</button>
       <button class="tab" data-view="tx">Transactions</button>
+      <button class="tab" data-view="impulse">Impulse Check</button>
       <button class="tab" data-view="goals">Dreams &amp; Goals</button>
       <button class="tab" data-view="learn">Money School</button>
     </nav>
@@ -268,6 +316,61 @@
           <button class="btn sm ghost" id="allMonthsBtn">Showing: this month</button>
         </div>
         <div id="txList"></div>
+      </div>
+    </section>
+
+    <!-- ============ IMPULSE ============ -->
+    <section class="view" id="view-impulse">
+      <div class="panel">
+        <h2>Before you buy — run it by me.</h2>
+        <p class="sub">The companion that makes you earn the purchase. Drop in what's tempting you and I'll show what it really costs — in hours of your life, and in distance from your dreams. Then you decide, on the record.</p>
+        <div class="row">
+          <label class="fld" style="flex:1">What are you eyeing?
+            <input type="text" id="impName" placeholder="Sneakers, gadget, another coffee…">
+          </label>
+          <label class="fld">Price $
+            <input type="number" id="impAmt" min="0" step="0.01" placeholder="0.00" style="width:120px">
+          </label>
+          <label class="fld">What is it, really?
+            <select id="impKind">
+              <option value="want">A want / impulse</option>
+              <option value="need">A real need</option>
+              <option value="asset">An asset (holds or grows value)</option>
+            </select>
+          </label>
+          <button class="btn primary" id="impRun">Run the check</button>
+        </div>
+        <div id="impResult"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Assets vs. Liabilities</h2>
+        <p class="sub">Every dollar you control is either working for your dreams (an asset) or against them (a liability). Here's where you actually stand.</p>
+        <div class="nw" id="nwNum">$0</div>
+        <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="l" style="width:50%"></div></div>
+        <div class="avl-legend"><span class="a" id="avlA">Assets $0</span><span class="l" id="avlL">Liabilities $0</span></div>
+        <div id="nwChips"></div>
+        <div class="twocol" style="margin-top:18px">
+          <div>
+            <label class="fld" style="width:100%">Add asset
+              <div class="row" style="gap:8px"><input type="text" id="assetName" placeholder="Savings, car, investments…" style="flex:1;min-width:80px"><input type="number" id="assetVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addAsset">＋</button></div>
+            </label>
+            <div id="assetList"></div>
+          </div>
+          <div>
+            <label class="fld" style="width:100%">Add liability
+              <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addLiab">＋</button></div>
+            </label>
+            <div id="liabList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Your impulse scoreboard</h2>
+        <p class="sub">Proof that questioning the purchase pays. Every skip is money that stayed on your team.</p>
+        <div class="scorecards" id="impScore"></div>
+        <div id="impLog"></div>
       </div>
     </section>
 
@@ -376,7 +479,8 @@ const LESSONS=[
 /* ---------- state ---------- */
 function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
-           categories:[], budgets:{}, transactions:[], goals:[] };
+           categories:[], budgets:{}, transactions:[], goals:[],
+           assets:[], liabilities:[], impulse:[] };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -678,10 +782,185 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
   }
 });
 
+/* ============================================================
+   IMPULSE ACCOUNTABILITY + ASSETS/LIABILITIES
+   ============================================================ */
+const IMP_QUESTIONS=[
+  "Will you even remember this in 30 days?",
+  "Is this the thing — or just a feeling wearing a price tag?",
+  "Would you buy it twice? If not, maybe not once.",
+  "Does this get you closer to the dream, or just through the afternoon?",
+  "If you had to hand over the cash right now, would you still want it?",
+  "Is this a decision, or is this a mood?"
+];
+const IMP_WANT={
+  clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],
+  blunt:["Be honest — you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],
+  savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]
+};
+const IMP_ASSET={
+  clean:["Now this can actually work for you.","An asset — spend it with intention."],
+  blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],
+  savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit."]
+};
+const IMP_NEED={
+  clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],
+  blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it belongs in the budget, not on impulse."],
+  savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?"]
+};
+const SKIP_WINS=["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."];
+
+function sumAssets(){ return state.assets.reduce((s,a)=>s+(a.value||0),0); }
+function sumLiab(){ return state.liabilities.reduce((s,l)=>s+(l.value||0),0); }
+function netWorth(){ return sumAssets()-sumLiab(); }
+function avgMonthlyIncome(){
+  const byM={}; state.transactions.filter(t=>t.type==='income').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
+  const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
+}
+function topGoal(){ return state.goals.find(g=>g.saved<g.target)||null; }
+function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip').reduce((s,i)=>s+i.amount,0); }
+function impulseSpent(){ return state.impulse.filter(i=>i.type==='buy').reduce((s,i)=>s+i.amount,0); }
+function skipStreak(){ let n=0; for(let i=state.impulse.length-1;i>=0;i--){ if(state.impulse[i].type==='skip') n++; else break; } return n; }
+function ensureImpulseCategory(){
+  let c=state.categories.find(x=>x.name.toLowerCase()==='impulse / wants');
+  if(!c){ c={id:uid(),name:'Impulse / Wants'}; state.categories.push(c); }
+  return c;
+}
+
+/* --- net worth panel --- */
+function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}${money(o.value)}</span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
+function renderNetWorth(){
+  const A=sumAssets(),L=sumLiab(),NW=A-L,total=A+L;
+  const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
+  const bar=document.getElementById('avlBar');
+  bar.querySelector('.a').style.width=(total>0?(A/total*100):50)+'%';
+  bar.querySelector('.l').style.width=(total>0?(L/total*100):50)+'%';
+  document.getElementById('avlA').textContent='Assets '+money(A);
+  document.getElementById('avlL').textContent='Liabilities '+money(L);
+  const cash=allTimeBalance(), dreams=state.goals.reduce((s,g)=>s+g.saved,0);
+  document.getElementById('nwChips').innerHTML=
+    `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
+    `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
+    `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
+  document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>lineItem(a,'asset')).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
+  document.getElementById('liabList').innerHTML=state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>';
+  document.querySelectorAll('#view-impulse button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
+    const [cls,id]=b.dataset.delitem.split(':');
+    if(cls==='asset') state.assets=state.assets.filter(x=>x.id!==id); else state.liabilities=state.liabilities.filter(x=>x.id!==id);
+    save(); renderNetWorth();
+  }));
+}
+document.getElementById('addAsset').addEventListener('click',()=>{
+  const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
+  if(!n||!v||v<0) return; state.assets.push({id:uid(),name:n,value:v});
+  document.getElementById('assetName').value=''; document.getElementById('assetVal').value=''; save(); renderNetWorth();
+});
+document.getElementById('addLiab').addEventListener('click',()=>{
+  const n=document.getElementById('liabName').value.trim(), v=parseFloat(document.getElementById('liabVal').value);
+  if(!n||!v||v<0) return; state.liabilities.push({id:uid(),name:n,value:v});
+  document.getElementById('liabName').value=''; document.getElementById('liabVal').value=''; save(); renderNetWorth();
+});
+
+/* --- impulse check --- */
+let pendingCheck=null;
+document.getElementById('impRun').addEventListener('click',()=>{
+  const name=document.getElementById('impName').value.trim()||'This purchase';
+  const amt=parseFloat(document.getElementById('impAmt').value);
+  const kind=document.getElementById('impKind').value;
+  if(!amt||amt<=0){ alert('Enter a price.'); return; }
+  pendingCheck={name,amt,kind}; renderCheckResult();
+});
+document.getElementById('impAmt').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('impRun').click(); });
+
+function renderCheckResult(){
+  const {name,amt,kind}=pendingCheck;
+  const avg=avgMonthlyIncome(), g=topGoal(), NW=netWorth();
+  const size=Math.min(1, avg>0? amt/avg : amt/500);
+  let left = kind==='want'? 70+size*24 : kind==='need'? 50 : 32-size*24;
+  left=Math.max(5,Math.min(95,left));
+  const needleColor = kind==='want'?'var(--accent-2)':kind==='need'?'var(--accent)':'var(--good)';
+
+  const metrics=[];
+  if(avg>0){ const hrs=amt/(avg/160); metrics.push(['Hours of your life',(hrs>=10?Math.round(hrs):hrs.toFixed(1))+' hrs']); }
+  if(g){
+    const remaining=Math.max(0.01,g.target-g.saved);
+    metrics.push(['Of “'+g.name+'”', Math.round(Math.min(999,amt/remaining*100))+'%']);
+    if(g.date){
+      const days=(new Date(g.date+'T00:00:00')-new Date(todayStr()+'T00:00:00'))/86400000;
+      if(days>0){ const perDay=remaining/days; if(perDay>0){ const d=amt/perDay; metrics.push([kind==='asset'?'In dream-days':'Delays that dream',(d>=1?Math.round(d):d.toFixed(1))+' days']); } }
+    }
+  }
+  if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
+  metrics.push(['Skips to fund a $500 goal', Math.max(1,Math.round(500/amt))+'×']);
+
+  const pool=(kind==='want'?IMP_WANT:kind==='asset'?IMP_ASSET:IMP_NEED)[state.intensity]||IMP_WANT.blunt;
+  const line=pool[Math.floor(Math.random()*pool.length)];
+  const q=IMP_QUESTIONS[Math.floor(Math.random()*IMP_QUESTIONS.length)];
+  const vlabel=kind==='want'?'Further from your dreams':kind==='asset'?'Could move you forward':'Necessary — track it';
+  const open=state.goals.filter(x=>x.saved<x.target);
+  const goalSelect=open.length?`<select id="impGoal"><option value="">Bank the savings</option>${open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('')}</select>`:'';
+
+  document.getElementById('impResult').innerHTML=`
+    <div class="checkcard ${kind}">
+      <div class="verdict ${kind}">${escapeHtml(name)} — ${money(amt)}</div>
+      <div class="qline">${escapeHtml(line)}</div>
+      <div class="meter-lbl"><span class="cl">◄ Closer</span><span>${vlabel}</span><span class="fr">Further ►</span></div>
+      <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:${needleColor}"></div></div>
+      <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
+      <div class="qline">${escapeHtml(q)}</div>
+      <div class="check-actions">
+        <button class="btn income" id="impSkip">I skipped it 💪</button>
+        ${goalSelect}
+        <button class="btn ghost" id="impBuy">I bought it anyway</button>
+      </div>
+    </div>`;
+
+  document.getElementById('impSkip').addEventListener('click',()=>{
+    const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';
+    const ev={id:uid(),type:'skip',name:pendingCheck.name,amount:pendingCheck.amt,date:todayStr()};
+    if(goalId){ const gg=state.goals.find(x=>x.id===goalId); if(gg){ gg.saved+=pendingCheck.amt; ev.goalId=goalId; } }
+    state.impulse.push(ev); const amt2=ev.amount;
+    pendingCheck=null; document.getElementById('impName').value=''; document.getElementById('impAmt').value='';
+    save(); renderImpulse(); renderNetWorth(); renderGoals();
+    const win=SKIP_WINS[Math.floor(Math.random()*SKIP_WINS.length)];
+    document.getElementById('impResult').innerHTML=`<div class="checkcard asset"><div class="verdict asset">Skipped. ${escapeHtml(win)}</div><p class="sub" style="margin:8px 0 0">${goalId?'Sent '+money(amt2)+' straight to your dream.':money(amt2)+' saved and banked to your discipline score.'}</p></div>`;
+  });
+  document.getElementById('impBuy').addEventListener('click',()=>{
+    const c=ensureImpulseCategory(), date=todayStr(), amt2=pendingCheck.amt, nm=pendingCheck.name;
+    const tx={id:uid(),type:'expense',amount:amt2,catId:c.id,date,note:nm+' (impulse)'};
+    state.transactions.push(tx);
+    state.impulse.push({id:uid(),type:'buy',name:nm,amount:amt2,date,txId:tx.id});
+    state.activeMonth=monthOf(date); pendingCheck=null;
+    document.getElementById('impName').value=''; document.getElementById('impAmt').value='';
+    save(); renderImpulse(); renderBudget(); renderTx();
+    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">Logged. No shame — just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged as an expense under “Impulse / Wants.” Streak reset. Next one's a skip.</p></div>`;
+  });
+}
+
+function renderImpulse(){
+  const saved=impulseSaved(), spent=impulseSpent(), net=saved-spent;
+  document.getElementById('impScore').innerHTML=`
+    <div class="stat"><div class="k">Saved by skipping</div><div class="v good">${money(saved)}</div></div>
+    <div class="stat"><div class="k">Spent on impulse</div><div class="v ${spent>0?'bad':''}">${money(spent)}</div></div>
+    <div class="stat"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
+    <div class="stat"><div class="k">Net discipline</div><div class="v ${net<0?'bad':'good'}">${money(net)}</div></div>`;
+  const log=state.impulse.slice().reverse(), box=document.getElementById('impLog');
+  if(!log.length){ box.innerHTML=`<div class="empty" style="margin-top:8px">No calls made yet. Next time something tempts you, run it by me first.</div>`; return; }
+  box.innerHTML=log.map(e=>`<div class="decision ${e.type}"><span class="badge">${e.type==='skip'?'Skipped':'Bought'}</span><span class="nm">${escapeHtml(e.name)}${e.goalId?' → dream':''}</span><span class="am">${e.type==='skip'?'+':'−'}${money(e.amount)}</span><button class="del" data-delimp="${e.id}" title="Delete">✕</button></div>`).join('');
+  box.querySelectorAll('button[data-delimp]').forEach(b=>b.addEventListener('click',()=>{
+    const ev=state.impulse.find(x=>x.id===b.dataset.delimp); if(!ev) return;
+    if(ev.type==='buy'&&ev.txId) state.transactions=state.transactions.filter(t=>t.id!==ev.txId);
+    if(ev.type==='skip'&&ev.goalId){ const g=state.goals.find(x=>x.id===ev.goalId); if(g) g.saved=Math.max(0,g.saved-ev.amount); }
+    state.impulse=state.impulse.filter(x=>x.id!==ev.id);
+    save(); renderImpulse(); renderNetWorth(); renderBudget(); renderTx(); renderGoals();
+  }));
+}
+
 /* ---------- boot ---------- */
 function boot(){
   renderIntensity(); newQuote();
   renderBudget(); renderTx(); renderGoals(); renderLesson();
+  renderNetWorth(); renderImpulse();
   document.querySelector('.tab').classList.add('on');
   document.getElementById('view-budget').classList.add('on');
 }
