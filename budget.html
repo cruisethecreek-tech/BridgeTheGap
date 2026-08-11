@@ -14,10 +14,11 @@
     --line:#2a303c;
     --text:#f2f4f8;
     --muted:#8b93a3;
-    --accent:#c6ff3a;      /* electric lime — loud, "no filter" energy */
-    --accent-2:#ff5c39;    /* warning / over-budget */
+    --accent:#c6ff3a;
+    --accent-2:#ff5c39;
     --good:#38d39f;
     --bad:#ff5c66;
+    --income:#38d39f;
     --shadow:0 20px 50px rgba(0,0,0,.45);
   }
 
@@ -28,97 +29,73 @@
   input,select{font-family:inherit}
   ::selection{background:var(--accent);color:#0d0f14}
 
-  /* ---------- Top motivation banner ---------- */
-  .hero{
-    background:linear-gradient(135deg,#12151c 0%,#191d27 100%);
-    border-bottom:1px solid var(--line);
-    padding:26px 20px 30px;
-  }
+  /* ---------- Hero ---------- */
+  .hero{background:linear-gradient(135deg,#12151c 0%,#191d27 100%);border-bottom:1px solid var(--line);padding:26px 20px 30px}
   .hero-inner{max-width:1080px;margin:0 auto}
   .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .brand .logo{
-    font-weight:900;font-size:22px;letter-spacing:-.5px;
-    display:inline-flex;align-items:center;gap:8px;
-  }
+  .brand .logo{font-weight:900;font-size:22px;letter-spacing:-.5px;display:inline-flex;align-items:center;gap:8px}
   .brand .logo b{color:var(--accent)}
-  .brand .tag{
-    font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);
-    border:1px solid var(--line);border-radius:50px;padding:5px 12px;
-  }
+  .brand .tag{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);border:1px solid var(--line);border-radius:50px;padding:5px 12px}
   .quote-wrap{margin-top:22px;display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
-  .quote{
-    flex:1;min-width:260px;font-size:clamp(20px,3.4vw,34px);font-weight:800;line-height:1.15;
-    letter-spacing:-.5px;
-  }
-  .quote .accent{color:var(--accent)}
+  .quote{flex:1;min-width:260px;font-size:clamp(20px,3.4vw,34px);font-weight:800;line-height:1.15;letter-spacing:-.5px}
   .quote-controls{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
-  .hit{
-    background:var(--accent);color:#0d0f14;border:none;border-radius:12px;
-    padding:12px 18px;font-weight:800;font-size:14px;white-space:nowrap;
-    transition:transform .12s ease, box-shadow .12s ease;
-    box-shadow:0 8px 22px rgba(198,255,58,.25);
-  }
+  .hit{background:var(--accent);color:#0d0f14;border:none;border-radius:12px;padding:12px 18px;font-weight:800;font-size:14px;white-space:nowrap;transition:transform .12s ease;box-shadow:0 8px 22px rgba(198,255,58,.25)}
   .hit:hover{transform:translateY(-2px)}
-  .hit:active{transform:translateY(0)}
   .intensity{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
-  .intensity button{
-    background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;
-    padding:7px 12px;border-radius:8px;letter-spacing:.3px;
-  }
+  .intensity button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px}
   .intensity button.on{background:var(--accent);color:#0d0f14}
 
   /* ---------- Layout ---------- */
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-  .tabs{display:flex;gap:6px;margin:22px 0 4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-  .tab{
-    background:none;border:none;color:var(--muted);font-weight:700;font-size:15px;
-    padding:14px 16px;position:relative;
-  }
+  .tabs{display:flex;gap:2px;margin:22px 0 4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{background:none;border:none;color:var(--muted);font-weight:700;font-size:15px;padding:14px 14px;position:relative}
   .tab.on{color:var(--text)}
-  .tab.on::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:3px;background:var(--accent);border-radius:3px}
+  .tab.on::after{content:'';position:absolute;left:10px;right:10px;bottom:-1px;height:3px;background:var(--accent);border-radius:3px}
 
-  .view{display:none;padding:26px 0}
+  .view{display:none;padding:24px 0}
   .view.on{display:block;animation:fade .25s ease}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  /* ---------- Cards / panels ---------- */
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
   .panel + .panel{margin-top:18px}
   .panel h2{font-size:18px;font-weight:800;margin-bottom:4px}
-  .panel .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .panel .sub{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.5}
 
-  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
   label.fld{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-  input[type=text],input[type=number],input[type=date],select{
-    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
-    border-radius:10px;padding:11px 13px;font-size:15px;min-width:0;
-  }
+  input[type=text],input[type=number],input[type=date],select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px 13px;font-size:15px;min-width:0}
   input:focus,select:focus{outline:none;border-color:var(--accent)}
-  .btn{
-    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
-    border-radius:10px;padding:11px 16px;font-weight:700;font-size:14px;
-  }
+  .btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px 16px;font-weight:700;font-size:14px}
   .btn:hover{border-color:var(--accent)}
   .btn.primary{background:var(--accent);color:#0d0f14;border-color:var(--accent)}
+  .btn.income{background:var(--income);color:#08120d;border-color:var(--income)}
   .btn.ghost{background:transparent}
   .btn.sm{padding:7px 11px;font-size:13px}
   .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
 
-  /* ---------- Budget summary ---------- */
-  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
-  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:18px}
+  /* ---------- Month nav ---------- */
+  .monthnav{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px}
+  .monthnav button{background:var(--panel-2);border:1px solid var(--line);color:var(--text);width:40px;height:40px;border-radius:10px;font-size:18px;font-weight:800}
+  .monthnav button:hover{border-color:var(--accent)}
+  .monthnav .m{font-size:20px;font-weight:900;letter-spacing:-.3px;min-width:190px;text-align:center}
+  .monthnav .m small{display:block;font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;font-weight:700}
+
+  /* ---------- Stats ---------- */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px}
   .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
-  .stat .v{font-size:26px;font-weight:900;margin-top:6px;letter-spacing:-.5px}
+  .stat .v{font-size:22px;font-weight:900;margin-top:6px;letter-spacing:-.5px}
+  .v.pos{color:var(--accent)}.v.good{color:var(--good)}.v.bad{color:var(--bad)}
   .ltb{grid-column:1/-1;background:linear-gradient(135deg,#1a2410,#232f14);border-color:#3a4a1e}
   .ltb.zero{background:linear-gradient(135deg,#10231a,#143024);border-color:#1e4a37}
   .ltb.over{background:linear-gradient(135deg,#2a1410,#301a14);border-color:#4a221e}
-  .ltb .v{font-size:34px}
-  .ltb .msg{margin-top:8px;font-weight:700;font-size:14px}
+  .ltb .v{font-size:32px}
+  .ltb .msg{margin-top:6px;font-weight:700;font-size:14px}
   .ltb.zero .v,.ltb.zero .msg{color:var(--good)}
   .ltb.over .v,.ltb.over .msg{color:var(--accent-2)}
   .ltb .v.pos{color:var(--accent)}
 
-  /* ---------- Category list ---------- */
+  /* ---------- Categories ---------- */
   .cat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
   .cat-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px}
@@ -127,12 +104,34 @@
   .bar{height:8px;background:#0d0f14;border-radius:6px;margin-top:12px;overflow:hidden}
   .bar > span{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .3s ease}
   .cat-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--muted)}
-  .cat-meta .rem.good{color:var(--good)}
-  .cat-meta .rem.over{color:var(--bad)}
-  .cat.overspent{border-color:#4a221e}
-  .cat.overspent .bar>span{background:var(--accent-2)}
+  .cat-meta .rem.good{color:var(--good)}.cat-meta .rem.over{color:var(--bad)}
+  .cat.overspent{border-color:#4a221e}.cat.overspent .bar>span{background:var(--accent-2)}
 
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
+
+  /* ---------- Transactions ---------- */
+  .typetoggle{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
+  .typetoggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:14px;padding:9px 18px;border-radius:8px}
+  .typetoggle button.on[data-t=expense]{background:var(--accent);color:#0d0f14}
+  .typetoggle button.on[data-t=income]{background:var(--income);color:#08120d}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  .pill{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:50px;padding:7px 14px;font-weight:700;font-size:13px}
+  .pill.on{background:var(--text);color:#0d0f14;border-color:var(--text)}
+  .filters input[type=text]{flex:1;min-width:140px}
+
+  .tx{display:flex;align-items:center;gap:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin-top:10px}
+  .tx-date{font-size:12px;color:var(--muted);font-weight:700;width:56px;flex-shrink:0;text-align:center;line-height:1.2}
+  .tx-date b{display:block;font-size:18px;color:var(--text)}
+  .tx-main{flex:1;min-width:0}
+  .tx-title{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tx-sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .tx-amt{font-weight:900;font-size:17px;white-space:nowrap}
+  .tx.income .tx-amt{color:var(--income)}
+  .tx.expense .tx-amt{color:var(--text)}
+  .tx .del{background:none;border:none;color:var(--muted);font-size:16px;padding:4px 8px;border-radius:8px}
+  .tx .del:hover{color:var(--bad);background:#0d0f14}
+  .tx .tag-cat{display:inline-block;background:#0d0f14;border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--muted);margin-right:6px}
 
   /* ---------- Goals ---------- */
   .goal{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:14px}
@@ -161,26 +160,74 @@
   .dots span{width:8px;height:8px;border-radius:50%;background:var(--line)}
   .dots span.on{background:var(--accent)}
 
-  .foot{max-width:1080px;margin:40px auto 0;padding:0 20px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  .foot a{color:var(--muted)}
-  .reset{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px}
+  .foot{max-width:1080px;margin:40px auto 0;padding:0 20px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+  .foot .actions{display:flex;gap:14px;flex-wrap:wrap}
+  .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px;padding:0}
+  .linkbtn:hover{color:var(--text)}
+  .hide{display:none!important}
 
-  @media (max-width:640px){
-    .summary{grid-template-columns:1fr}
+  /* ---------- Impulse / Net worth ---------- */
+  .nw{font-size:32px;font-weight:900;letter-spacing:-.5px;margin:2px 0}
+  .nw.pos{color:var(--good)}.nw.neg{color:var(--bad)}
+  .avl-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;background:#0d0f14;border:1px solid var(--line)}
+  .avl-bar .a{background:linear-gradient(90deg,#1e4a37,#38d39f);min-width:2px;transition:width .4s ease}
+  .avl-bar .l{background:linear-gradient(90deg,#4a221e,#ff5c39);min-width:2px;transition:width .4s ease}
+  .avl-legend{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;font-weight:700}
+  .avl-legend .a{color:var(--good)}.avl-legend .l{color:var(--bad)}
+  .chip{display:inline-block;background:#0d0f14;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--muted);margin:8px 6px 0 0}
+  .chip b{color:var(--text)}
+  .lineitem{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
+  .lineitem .nm{flex:1;font-weight:700;font-size:14px;min-width:0}
+  .lineitem .vl{font-weight:800}
+  .lineitem.asset .vl{color:var(--good)}.lineitem.liab .vl{color:var(--bad)}
+  .lineitem .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
+  .lineitem .del:hover{color:var(--bad)}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:640px){.twocol{grid-template-columns:1fr}}
+
+  .meter{position:relative;height:34px;border-radius:10px;margin:6px 0;
+    background:linear-gradient(90deg,#10231a 0%,#143024 24%,#1d222c 50%,#301a14 76%,#2a1410 100%);border:1px solid var(--line)}
+  .meter .mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.15)}
+  .meter .needle{position:absolute;top:-6px;bottom:-6px;width:4px;border-radius:3px;background:var(--text);box-shadow:0 0 0 3px rgba(0,0,0,.4);transition:left .45s cubic-bezier(.2,.8,.2,1)}
+  .meter-lbl{display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:6px}
+  .meter-lbl .cl{color:var(--good)}.meter-lbl .fr{color:var(--accent-2)}
+  .checkcard{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:16px;animation:fade .3s ease}
+  .checkcard.want{border-color:#4a221e}.checkcard.asset{border-color:#1e4a37}
+  .verdict{font-size:22px;font-weight:900;letter-spacing:-.4px}
+  .verdict.want{color:var(--accent-2)}.verdict.asset{color:var(--good)}.verdict.need{color:var(--accent)}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+  .metric{background:#0d0f14;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .metric .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;line-height:1.3}
+  .metric .v{font-size:20px;font-weight:900;margin-top:5px;letter-spacing:-.3px}
+  .qline{font-style:italic;color:var(--muted);font-size:14px;margin:10px 0 2px}
+  .check-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .scorecards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  @media(max-width:720px){.scorecards{grid-template-columns:repeat(2,1fr)}}
+  .decision{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:9px}
+  .decision .badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:4px 9px;border-radius:6px;flex-shrink:0}
+  .decision.skip .badge{background:#10231a;color:var(--good);border:1px solid #1e4a37}
+  .decision.buy .badge{background:#2a1410;color:var(--accent-2);border:1px solid #4a221e}
+  .decision .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .decision .am{font-weight:900}
+  .decision.skip .am{color:var(--good)}
+  .decision .del{background:none;border:none;color:var(--muted);cursor:pointer}
+  .decision .del:hover{color:var(--bad)}
+
+  @media (max-width:720px){ .summary{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:560px){
     .quote-controls{align-items:stretch;width:100%}
-    .quote-controls .hit{text-align:center}
+    .monthnav .m{min-width:150px;font-size:17px}
   }
 </style>
 </head>
 <body>
 
-  <!-- ============ HERO / MOTIVATION ============ -->
   <header class="hero">
     <div class="hero-inner">
       <div class="brand">
         <span class="logo">UN<b>FILTERED</b></span>
         <span class="tag">Zero-Based Budgeting</span>
-        <span class="tag">No Nonsense · All Dreams</span>
+        <span class="tag">Track Every Dollar</span>
       </div>
       <div class="quote-wrap">
         <div class="quote" id="quote">Loading the truth…</div>
@@ -199,6 +246,8 @@
   <div class="wrap">
     <nav class="tabs">
       <button class="tab" data-view="budget">Budget</button>
+      <button class="tab" data-view="tx">Transactions</button>
+      <button class="tab" data-view="impulse">Impulse Check</button>
       <button class="tab" data-view="goals">Dreams &amp; Goals</button>
       <button class="tab" data-view="learn">Money School</button>
     </nav>
@@ -206,44 +255,122 @@
     <!-- ============ BUDGET ============ -->
     <section class="view" id="view-budget">
       <div class="panel">
-        <h2>Every dollar gets a job.</h2>
-        <p class="sub">This is zero-based budgeting. Your income minus everything you assign must equal <b>zero</b>. Not a penny left wandering around.</p>
-        <div class="row">
-          <label class="fld">Monthly income
-            <input type="number" id="income" placeholder="0" min="0" step="1">
-          </label>
-          <button class="btn ghost sm" id="starterBtn" style="align-self:flex-end">Load starter categories</button>
+        <div class="monthnav">
+          <button id="mPrev" title="Previous month">‹</button>
+          <div class="m" id="mLabel">—</div>
+          <button id="mNext" title="Next month">›</button>
         </div>
-      </div>
-
-      <div class="panel">
         <div class="summary" id="summary"></div>
+        <p class="sub" style="margin:-4px 0 16px">Zero-based budgeting: assign your income down to <b>$0</b>. Income comes from what you log in <b>Transactions</b> — log a paycheck first, then give every dollar a job here.</p>
 
         <div class="row" style="margin-bottom:6px">
           <label class="fld" style="flex:1">New category
             <input type="text" id="catName" placeholder="e.g. Groceries, Rent, Fun Money">
           </label>
-          <button class="btn primary" id="addCat" style="align-self:flex-end">Add category</button>
+          <button class="btn primary" id="addCat">Add category</button>
+          <button class="btn ghost" id="starterBtn">Starter set</button>
+          <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
+        </div>
+        <div id="cats"></div>
+      </div>
+    </section>
+
+    <!-- ============ TRANSACTIONS ============ -->
+    <section class="view" id="view-tx">
+      <div class="panel">
+        <h2>Log money in &amp; money out</h2>
+        <p class="sub">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
+
+        <div class="typetoggle" id="typeToggle">
+          <button data-t="expense" class="on">− Expense</button>
+          <button data-t="income">+ Income</button>
         </div>
 
-        <div id="cats"></div>
+        <div class="row">
+          <label class="fld">Amount
+            <input type="number" id="txAmt" placeholder="0.00" min="0" step="0.01" style="width:130px">
+          </label>
+          <label class="fld expense-only" id="fldCat">Category
+            <select id="txCat"></select>
+          </label>
+          <label class="fld income-only hide" id="fldSrc">Source
+            <input type="text" id="txSrc" placeholder="Paycheck, Side gig…">
+          </label>
+          <label class="fld">Date
+            <input type="date" id="txDate">
+          </label>
+          <label class="fld" style="flex:1">Note
+            <input type="text" id="txNote" placeholder="Optional">
+          </label>
+          <button class="btn primary" id="addTx">Log it</button>
+        </div>
       </div>
 
       <div class="panel">
-        <h2>Log a spend</h2>
-        <p class="sub">Reality check. Assigning money is the plan — logging spends is the truth.</p>
-        <div class="row">
-          <label class="fld">Category
-            <select id="txCat"></select>
-          </label>
-          <label class="fld">Amount
-            <input type="number" id="txAmt" placeholder="0" min="0" step="0.01" style="width:130px">
-          </label>
-          <label class="fld" style="flex:1">Note (optional)
-            <input type="text" id="txNote" placeholder="What was it?">
-          </label>
-          <button class="btn primary" id="addTx" style="align-self:flex-end">Log it</button>
+        <div class="summary" id="txSummary" style="grid-template-columns:repeat(4,1fr)"></div>
+        <div class="filters">
+          <button class="pill on" data-f="all">All</button>
+          <button class="pill" data-f="income">Income</button>
+          <button class="pill" data-f="expense">Expenses</button>
+          <input type="text" id="txSearch" placeholder="Search notes, sources, categories…">
+          <button class="btn sm ghost" id="allMonthsBtn">Showing: this month</button>
         </div>
+        <div id="txList"></div>
+      </div>
+    </section>
+
+    <!-- ============ IMPULSE ============ -->
+    <section class="view" id="view-impulse">
+      <div class="panel">
+        <h2>Before you buy — run it by me.</h2>
+        <p class="sub">The companion that makes you earn the purchase. Drop in what's tempting you and I'll show what it really costs — in hours of your life, and in distance from your dreams. Then you decide, on the record.</p>
+        <div class="row">
+          <label class="fld" style="flex:1">What are you eyeing?
+            <input type="text" id="impName" placeholder="Sneakers, gadget, another coffee…">
+          </label>
+          <label class="fld">Price $
+            <input type="number" id="impAmt" min="0" step="0.01" placeholder="0.00" style="width:120px">
+          </label>
+          <label class="fld">What is it, really?
+            <select id="impKind">
+              <option value="want">A want / impulse</option>
+              <option value="need">A real need</option>
+              <option value="asset">An asset (holds or grows value)</option>
+            </select>
+          </label>
+          <button class="btn primary" id="impRun">Run the check</button>
+        </div>
+        <div id="impResult"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Assets vs. Liabilities</h2>
+        <p class="sub">Every dollar you control is either working for your dreams (an asset) or against them (a liability). Here's where you actually stand.</p>
+        <div class="nw" id="nwNum">$0</div>
+        <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="l" style="width:50%"></div></div>
+        <div class="avl-legend"><span class="a" id="avlA">Assets $0</span><span class="l" id="avlL">Liabilities $0</span></div>
+        <div id="nwChips"></div>
+        <div class="twocol" style="margin-top:18px">
+          <div>
+            <label class="fld" style="width:100%">Add asset
+              <div class="row" style="gap:8px"><input type="text" id="assetName" placeholder="Savings, car, investments…" style="flex:1;min-width:80px"><input type="number" id="assetVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addAsset">＋</button></div>
+            </label>
+            <div id="assetList"></div>
+          </div>
+          <div>
+            <label class="fld" style="width:100%">Add liability
+              <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addLiab">＋</button></div>
+            </label>
+            <div id="liabList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Your impulse scoreboard</h2>
+        <p class="sub">Proof that questioning the purchase pays. Every skip is money that stayed on your team.</p>
+        <div class="scorecards" id="impScore"></div>
+        <div id="impLog"></div>
       </div>
     </section>
 
@@ -257,12 +384,12 @@
             <input type="text" id="goalName" placeholder="Debt-free · Emergency fund · Trip · Business">
           </label>
           <label class="fld">Target $
-            <input type="number" id="goalTarget" placeholder="0" min="1" step="1" style="width:130px">
+            <input type="number" id="goalTarget" placeholder="0" min="1" step="1" style="width:120px">
           </label>
           <label class="fld">By when
             <input type="date" id="goalDate">
           </label>
-          <button class="btn primary" id="addGoal" style="align-self:flex-end">Add dream</button>
+          <button class="btn primary" id="addGoal">Add dream</button>
         </div>
       </div>
       <div id="goals"></div>
@@ -285,20 +412,23 @@
 
   <div class="foot">
     <span>UNFILTERED · a working prototype. Everything saves to this browser only — nothing leaves your device.</span>
-    <button class="reset" id="resetBtn">Reset all data</button>
+    <div class="actions">
+      <button class="linkbtn" id="exportBtn">Export data</button>
+      <button class="linkbtn" id="importBtn">Import</button>
+      <button class="linkbtn" id="resetBtn">Reset all</button>
+      <input type="file" id="importFile" accept="application/json" class="hide">
+    </div>
   </div>
 
 <script>
 /* ============================================================
-   UNFILTERED — zero-based budgeting prototype
-   Vanilla JS, localStorage persistence, no dependencies.
-   All quotes/lessons are original copy (no copyrighted text).
+   UNFILTERED — full budgeting tracker (income + expenses)
+   Vanilla JS, localStorage, no dependencies. Original copy.
    ============================================================ */
-
-const STORE_KEY = 'unfiltered_budget_v1';
+const STORE_KEY = 'unfiltered_budget_v2';
 
 const QUOTES = {
-  clean: [
+  clean:[
     "Broke is a moment. Poor is a decision. Choose again today.",
     "Your dream costs money. Your budget is how you buy it.",
     "Every dollar you assign on purpose is a dollar that stops betraying you.",
@@ -308,7 +438,7 @@ const QUOTES = {
     "Discipline is just remembering what you actually want.",
     "A budget isn't a cage. It's the map to the life you keep talking about."
   ],
-  blunt: [
+  blunt:[
     "Nobody is coming to fix your money. That's the bad news and the good news.",
     "You can afford the dream or you can afford the excuses. Not both.",
     "Stop 'treating yourself' into a hole you have to climb out of sober.",
@@ -318,7 +448,7 @@ const QUOTES = {
     "Comfort is expensive. Freedom is cheaper than you think.",
     "You checked your phone 80 times today. Check your budget once."
   ],
-  savage: [
+  savage:[
     "You want the results but you're negotiating with the work. Cut it out.",
     "Your future self is watching you order this. Look them in the eye.",
     "Zero dollars unaccounted for. Zero excuses accepted. Get to work.",
@@ -329,321 +459,510 @@ const QUOTES = {
     "Nobody remembers what you almost built. Fund the real one."
   ]
 };
-
-const GOAL_NUDGES = [
+const GOAL_NUDGES=[
   "This is the one. Feed it first.",
   "Every deposit is a vote for the person you're becoming.",
   "Boring consistency builds this. Show up.",
   "Closer than yesterday. Don't blink now.",
   "The gap is shrinking because you decided it would."
 ];
-
-const LESSONS = [
-  {t:"Zero-Based Budgeting",
-   p:"Give every single dollar a job before the month starts. Income minus all your assignments equals zero — not because you spent it all, but because 'savings' and 'goals' are jobs too. Money left unassigned is money that quietly disappears. When every dollar is claimed, you stop wondering where it went, because you already decided.",
-   try:"Take last month's income. Assign it, on paper, down to $0 — including a line for your dream."},
-  {t:"Pay Yourself First",
-   p:"Most people save whatever's left at the end of the month. Spoiler: nothing's left. Flip it. The moment money hits your account, the first 'bill' you pay is your own future — savings and goals come off the top, before spending gets a vote. You live on the rest. It feels backwards. It works forwards.",
-   try:"Set one automatic transfer to savings for the day after you get paid. Even $20 counts."},
-  {t:"The Emergency Fund",
-   p:"An emergency fund is the wall between a bad day and a bad year. Start with a small starter buffer — enough to cover a surprise car repair or a missed shift — then build toward covering several months of essentials. This isn't your dream fund; it's the thing that protects the dream fund from getting raided every time life happens.",
-   try:"Open a separate account you can't see on your main app. Name it 'DO NOT TOUCH'. Fund it weekly."},
-  {t:"Sinking Funds",
-   p:"The bills that wreck budgets aren't the surprises — they're the predictable ones you pretend not to see coming: the holidays, the annual insurance, the car tires. A sinking fund breaks a big future cost into small monthly chunks you set aside in advance. December stops being an ambush when you've been quietly funding it since March.",
-   try:"List every 'once a year' expense. Divide each by 12. That's your monthly set-aside per fund."},
-  {t:"Debt Snowball vs. Avalanche",
-   p:"Two ways to kill debt. The Avalanche attacks the highest interest rate first — mathematically cheapest. The Snowball attacks the smallest balance first — emotionally strongest, because early wins keep you in the fight. The best method is the one you'll actually finish. Money is math, but paying it off is behavior.",
-   try:"List your debts. Pick Avalanche if you're driven by numbers, Snowball if you need momentum. Then attack one while paying minimums on the rest."},
-  {t:"The 24-Hour Rule",
-   p:"Impulse spending isn't a math problem, it's a timing problem. For any non-essential 'want,' put it in a 24-hour holding pen before you buy. Most wants are just a mood wearing a price tag — give it a day and the urge evaporates. The ones that survive the wait are usually the ones actually worth your dollars.",
-   try:"Next time you're about to check out on something you didn't plan for — close the tab. Revisit tomorrow."},
-  {t:"Value Per Dollar, Not Price",
-   p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning and your sanity might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation — that's aim.",
-   try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."}
+const LESSONS=[
+  {t:"Zero-Based Budgeting",p:"Give every single dollar a job before the month starts. Income minus all your assignments equals zero — not because you spent it all, but because 'savings' and 'goals' are jobs too. Money left unassigned is money that quietly disappears. When every dollar is claimed, you stop wondering where it went, because you already decided.",try:"Take last month's income. Assign it, on paper, down to $0 — including a line for your dream."},
+  {t:"Pay Yourself First",p:"Most people save whatever's left at the end of the month. Spoiler: nothing's left. Flip it. The moment money hits your account, the first 'bill' you pay is your own future — savings and goals come off the top, before spending gets a vote. You live on the rest. It feels backwards. It works forwards.",try:"Set one automatic transfer to savings for the day after you get paid. Even $20 counts."},
+  {t:"The Emergency Fund",p:"An emergency fund is the wall between a bad day and a bad year. Start with a small starter buffer — enough to cover a surprise car repair or a missed shift — then build toward covering several months of essentials. This isn't your dream fund; it's the thing that protects the dream fund from getting raided every time life happens.",try:"Open a separate account you can't see on your main app. Name it 'DO NOT TOUCH'. Fund it weekly."},
+  {t:"Sinking Funds",p:"The bills that wreck budgets aren't the surprises — they're the predictable ones you pretend not to see coming: the holidays, the annual insurance, the car tires. A sinking fund breaks a big future cost into small monthly chunks you set aside in advance. December stops being an ambush when you've been quietly funding it since March.",try:"List every 'once a year' expense. Divide each by 12. That's your monthly set-aside per fund."},
+  {t:"Debt Snowball vs. Avalanche",p:"Two ways to kill debt. The Avalanche attacks the highest interest rate first — mathematically cheapest. The Snowball attacks the smallest balance first — emotionally strongest, because early wins keep you in the fight. The best method is the one you'll actually finish. Money is math, but paying it off is behavior.",try:"List your debts. Pick Avalanche if you're driven by numbers, Snowball if you need momentum. Attack one, pay minimums on the rest."},
+  {t:"The 24-Hour Rule",p:"Impulse spending isn't a math problem, it's a timing problem. For any non-essential 'want,' put it in a 24-hour holding pen before you buy. Most wants are just a mood wearing a price tag — give it a day and the urge evaporates. The ones that survive the wait are usually the ones actually worth your dollars.",try:"Next time you're about to check out on something you didn't plan for — close the tab. Revisit tomorrow."},
+  {t:"Value Per Dollar, Not Price",p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation — that's aim.",try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."}
 ];
 
 /* ---------- state ---------- */
-let state = load();
-
 function defaultState(){
-  return { income:0, categories:[], txns:[], goals:[], intensity:'blunt', lesson:0 };
+  return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
+           categories:[], budgets:{}, transactions:[], goals:[],
+           assets:[], liabilities:[], impulse:[] };
 }
+function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(!raw) return defaultState();
-    return Object.assign(defaultState(), JSON.parse(raw));
-  }catch(e){ return defaultState(); }
+  try{ const r=localStorage.getItem(STORE_KEY); if(!r) return defaultState();
+       return Object.assign(defaultState(), JSON.parse(r)); }
+  catch(e){ return defaultState(); }
 }
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+let state = load();
+if(!state.activeMonth) state.activeMonth = thisMonth();
+
+/* ---------- helpers ---------- */
 const uid = () => Math.random().toString(36).slice(2,9);
-const money = n => (n<0?'-':'') + '$' + Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+const money = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function shiftMonth(key,delta){ let [y,m]=key.split('-').map(Number); m+=delta; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return `${y}-${String(m).padStart(2,'0')}`; }
+function fmtMonth(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleString(undefined,{month:'long',year:'numeric'}); }
+function monthOf(dateStr){ return (dateStr||'').slice(0,7); }
+function catName(id){ const c=state.categories.find(x=>x.id===id); return c?c.name:'Uncategorized'; }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
+function assignedFor(catId,month){ return (state.budgets[month]&&state.budgets[month][catId])||0; }
+function txnsInMonth(month){ return state.transactions.filter(t=>monthOf(t.date)===month); }
+function spentFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='expense'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
+function monthIncome(month){ return txnsInMonth(month).filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
+function monthExpense(month){ return txnsInMonth(month).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
+function allTimeBalance(){ return state.transactions.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0); }
 
 /* ---------- quote engine ---------- */
-let lastQuote = '';
+let lastQuote='';
 function newQuote(){
-  const pool = QUOTES[state.intensity] || QUOTES.blunt;
-  let q = pool[Math.floor(Math.random()*pool.length)];
-  let guard = 0;
-  while(q === lastQuote && pool.length > 1 && guard++ < 8){
-    q = pool[Math.floor(Math.random()*pool.length)];
-  }
-  lastQuote = q;
-  const el = document.getElementById('quote');
-  el.style.opacity = 0;
-  setTimeout(()=>{ el.textContent = q; el.style.opacity = 1; }, 120);
+  const pool=QUOTES[state.intensity]||QUOTES.blunt;
+  let q=pool[Math.floor(Math.random()*pool.length)],g=0;
+  while(q===lastQuote&&pool.length>1&&g++<8) q=pool[Math.floor(Math.random()*pool.length)];
+  lastQuote=q; const el=document.getElementById('quote');
+  el.style.opacity=0; setTimeout(()=>{el.textContent=q;el.style.opacity=1;},120);
 }
-document.getElementById('quote').style.transition = 'opacity .12s ease';
-document.getElementById('hitBtn').addEventListener('click', newQuote);
-document.getElementById('intensity').addEventListener('click', e=>{
-  const b = e.target.closest('button'); if(!b) return;
-  state.intensity = b.dataset.lvl; save();
-  renderIntensity(); newQuote();
+document.getElementById('quote').style.transition='opacity .12s ease';
+document.getElementById('hitBtn').addEventListener('click',newQuote);
+document.getElementById('intensity').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  state.intensity=b.dataset.lvl; save(); renderIntensity(); newQuote();
 });
-function renderIntensity(){
-  document.querySelectorAll('#intensity button').forEach(b=>{
-    b.classList.toggle('on', b.dataset.lvl === state.intensity);
-  });
-}
+function renderIntensity(){ document.querySelectorAll('#intensity button').forEach(b=>b.classList.toggle('on',b.dataset.lvl===state.intensity)); }
 
 /* ---------- tabs ---------- */
-document.querySelectorAll('.tab').forEach(t=>{
-  t.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
-    document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
-    t.classList.add('on');
-    document.getElementById('view-'+t.dataset.view).classList.add('on');
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); document.getElementById('view-'+t.dataset.view).classList.add('on');
+}));
+
+/* ---------- month nav ---------- */
+document.getElementById('mPrev').addEventListener('click',()=>{ state.activeMonth=shiftMonth(state.activeMonth,-1); save(); renderBudget(); renderTx(); });
+document.getElementById('mNext').addEventListener('click',()=>{ state.activeMonth=shiftMonth(state.activeMonth,1); save(); renderBudget(); renderTx(); });
+
+/* ---------- categories ---------- */
+document.getElementById('addCat').addEventListener('click',()=>{
+  const el=document.getElementById('catName'); const name=el.value.trim(); if(!name) return;
+  state.categories.push({id:uid(),name}); el.value=''; save(); renderBudget(); renderTxForm();
+});
+document.getElementById('catName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
+document.getElementById('starterBtn').addEventListener('click',()=>{
+  ['Rent / Housing','Utilities','Groceries','Transportation','Phone / Internet','Debt Payments','Emergency Fund','Fun Money','Dream Fund'].forEach(n=>{
+    if(!state.categories.some(c=>c.name.toLowerCase()===n.toLowerCase())) state.categories.push({id:uid(),name:n});
   });
+  save(); renderBudget(); renderTxForm();
 });
-document.querySelector('.tab').classList.add('on');
-document.getElementById('view-budget').classList.add('on');
-
-/* ---------- budget ---------- */
-const incomeEl = document.getElementById('income');
-incomeEl.addEventListener('input', ()=>{
-  state.income = parseFloat(incomeEl.value) || 0; save(); renderBudget();
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  const prev=shiftMonth(state.activeMonth,-1), src=state.budgets[prev];
+  if(!src||!Object.keys(src).length){ alert('Nothing to copy — last month has no assignments.'); return; }
+  state.budgets[state.activeMonth]=Object.assign({},src); save(); renderBudget();
 });
 
-document.getElementById('addCat').addEventListener('click', ()=>{
-  const el = document.getElementById('catName');
-  const name = el.value.trim(); if(!name) return;
-  state.categories.push({ id:uid(), name, assigned:0 });
-  el.value=''; save(); renderBudget();
-});
-document.getElementById('catName').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
-
-document.getElementById('starterBtn').addEventListener('click', ()=>{
-  const starters = ['Rent / Housing','Utilities','Groceries','Transportation','Phone / Internet','Debt Payments','Emergency Fund','Fun Money','Dream Fund'];
-  starters.forEach(n=>{
-    if(!state.categories.some(c=>c.name.toLowerCase()===n.toLowerCase()))
-      state.categories.push({id:uid(), name:n, assigned:0});
-  });
-  save(); renderBudget();
-});
-
-document.getElementById('addTx').addEventListener('click', ()=>{
-  const cat = document.getElementById('txCat').value;
-  const amt = parseFloat(document.getElementById('txAmt').value);
-  const note = document.getElementById('txNote').value.trim();
-  if(!cat || !amt || amt<=0) return;
-  state.txns.push({id:uid(), catId:cat, amount:amt, note, date:new Date().toISOString().slice(0,10)});
-  document.getElementById('txAmt').value=''; document.getElementById('txNote').value='';
-  save(); renderBudget();
-});
-
-function spentFor(catId){
-  return state.txns.filter(t=>t.catId===catId).reduce((s,t)=>s+t.amount,0);
-}
-
+/* ---------- budget render ---------- */
 function renderBudget(){
-  incomeEl.value = state.income || '';
-  const assigned = state.categories.reduce((s,c)=>s+(c.assigned||0),0);
-  const spent = state.txns.reduce((s,t)=>s+t.amount,0);
-  const ltb = (state.income||0) - assigned;
+  document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth) + (state.activeMonth===thisMonth()?'<small>This month</small>':'<small>&nbsp;</small>');
+  const M=state.activeMonth;
+  const income=monthIncome(M);
+  const assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const spent=monthExpense(M);
+  const ltb=income-assigned;
 
-  // summary
-  let ltbClass = 'ltb', msg='', vClass='';
-  if(Math.abs(ltb) < 0.005){ ltbClass+=' zero'; msg='Zero-based. Every dollar has a job. This is the move.'; }
-  else if(ltb < 0){ ltbClass+=' over'; msg="You've assigned more than you make. Cut something."; }
-  else { msg='Keep going — assign this down to $0.'; vClass='pos'; }
+  let cls='ltb',msg='',vc='';
+  if(income===0){ msg='Log some income in Transactions, then give it a job.'; vc='pos'; }
+  else if(Math.abs(ltb)<0.005){ cls+=' zero'; msg='Zero-based. Every dollar has a job. This is the move.'; }
+  else if(ltb<0){ cls+=' over'; msg="You've assigned more than you earned. Cut something."; }
+  else { msg='Keep going — assign this down to $0.'; vc='pos'; }
 
-  document.getElementById('summary').innerHTML = `
-    <div class="stat ${ltbClass}">
-      <div class="k">Left to budget</div>
-      <div class="v ${vClass}">${money(ltb)}</div>
-      <div class="msg">${msg}</div>
-    </div>
-    <div class="stat"><div class="k">Income</div><div class="v">${money(state.income||0)}</div></div>
+  document.getElementById('summary').innerHTML=`
+    <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div><div class="msg">${msg}</div></div>
+    <div class="stat"><div class="k">Income</div><div class="v good">${money(income)}</div></div>
     <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div></div>
-    <div class="stat"><div class="k">Spent so far</div><div class="v">${money(spent)}</div></div>
-  `;
+    <div class="stat"><div class="k">Spent</div><div class="v">${money(spent)}</div></div>
+    <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div></div>`;
 
-  // categories
-  const box = document.getElementById('cats');
+  const box=document.getElementById('cats');
   if(!state.categories.length){
-    box.innerHTML = `<div class="empty">No categories yet. Add one above, or hit “Load starter categories” to skip the blank page.</div>`;
+    box.innerHTML=`<div class="empty">No categories yet. Add one above, or hit “Starter set” to skip the blank page.</div>`;
   } else {
-    box.innerHTML = state.categories.map(c=>{
-      const sp = spentFor(c.id);
-      const rem = (c.assigned||0) - sp;
-      const pct = c.assigned>0 ? Math.min(100,(sp/c.assigned)*100) : (sp>0?100:0);
-      const over = sp > c.assigned && c.assigned>=0 && (sp>0);
-      const remClass = rem<0?'over':(rem>0?'good':'');
+    box.innerHTML=state.categories.map(c=>{
+      const a=assignedFor(c.id,M), sp=spentFor(c.id,M), rem=a-sp;
+      const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
+      const over=sp>a&&sp>0;
+      const rc=rem<0?'over':(rem>0?'good':'');
       return `<div class="cat ${over?'overspent':''}">
         <div class="cat-top">
           <span class="cat-name">${escapeHtml(c.name)}</span>
-          <span class="cat-assign">Assign $
-            <input type="number" min="0" step="1" value="${c.assigned||0}" data-cat="${c.id}">
-          </span>
+          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" value="${a||0}" data-cat="${c.id}"></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
-        <div class="cat-meta">
-          <span>Spent ${money(sp)} of ${money(c.assigned||0)}</span>
-          <span class="rem ${remClass}">${rem<0?'Over by '+money(-rem):money(rem)+' left'}</span>
-        </div>
+        <div class="cat-meta"><span>Spent ${money(sp)} of ${money(a)}</span><span class="rem ${rc}">${rem<0?'Over by '+money(-rem):money(rem)+' left'}</span></div>
       </div>`;
     }).join('');
   }
-
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
-    inp.addEventListener('input', ()=>{
-      const c = state.categories.find(x=>x.id===inp.dataset.cat);
-      if(c){ c.assigned = parseFloat(inp.value)||0; save(); refreshSummaryOnly(); }
-    });
-    inp.addEventListener('change', renderBudget);
+    inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=parseFloat(inp.value)||0; save(); refreshBudgetSummary(); });
+    inp.addEventListener('change',renderBudget);
   });
-  box.querySelectorAll('button[data-del]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      state.categories = state.categories.filter(c=>c.id!==btn.dataset.del);
-      state.txns = state.txns.filter(t=>t.catId!==btn.dataset.del);
-      save(); renderBudget();
-    });
-  });
+  box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.del;
+    state.categories=state.categories.filter(c=>c.id!==id);
+    Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) delete state.budgets[m][id]; });
+    // keep transactions for history; they become "Uncategorized"
+    save(); renderBudget(); renderTx();
+  }));
+}
+function refreshBudgetSummary(){
+  const M=state.activeMonth, income=monthIncome(M);
+  const assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const spent=monthExpense(M), ltb=income-assigned;
+  const stat=document.querySelector('#summary .stat.ltb'); if(!stat) return;
+  stat.className='stat ltb'+(income===0?'':(Math.abs(ltb)<0.005?' zero':(ltb<0?' over':'')));
+  let msg,vc='';
+  if(income===0){msg='Log some income in Transactions, then give it a job.';vc='pos';}
+  else if(Math.abs(ltb)<0.005) msg='Zero-based. Every dollar has a job. This is the move.';
+  else if(ltb<0) msg="You've assigned more than you earned. Cut something.";
+  else {msg='Keep going — assign this down to $0.';vc='pos';}
+  stat.querySelector('.v').className='v '+vc; stat.querySelector('.v').textContent=money(ltb); stat.querySelector('.msg').textContent=msg;
+  const stats=document.querySelectorAll('#summary .stat');
+  if(stats[2]) stats[2].querySelector('.v').textContent=money(assigned);
+  if(stats[4]) { const el=stats[4].querySelector('.v'); el.textContent=money(assigned-spent); el.className='v '+((assigned-spent)<0?'bad':'good'); }
+}
 
-  // tx dropdown
-  const sel = document.getElementById('txCat');
+/* ---------- transactions ---------- */
+let txType='expense', txFilter='all', txAllMonths=false;
+document.getElementById('typeToggle').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  txType=b.dataset.t;
+  document.querySelectorAll('#typeToggle button').forEach(x=>x.classList.toggle('on',x.dataset.t===txType));
+  document.querySelectorAll('.expense-only').forEach(x=>x.classList.toggle('hide',txType!=='expense'));
+  document.querySelectorAll('.income-only').forEach(x=>x.classList.toggle('hide',txType!=='income'));
+});
+document.getElementById('addTx').addEventListener('click',()=>{
+  const amt=parseFloat(document.getElementById('txAmt').value);
+  const date=document.getElementById('txDate').value||todayStr();
+  const note=document.getElementById('txNote').value.trim();
+  if(!amt||amt<=0){ alert('Enter an amount.'); return; }
+  if(txType==='expense'){
+    const catId=document.getElementById('txCat').value;
+    if(!catId){ alert('Add a category first (Budget tab).'); return; }
+    state.transactions.push({id:uid(),type:'expense',amount:amt,catId,date,note});
+  } else {
+    const source=document.getElementById('txSrc').value.trim()||'Income';
+    state.transactions.push({id:uid(),type:'income',amount:amt,source,date,note});
+  }
+  document.getElementById('txAmt').value=''; document.getElementById('txNote').value=''; document.getElementById('txSrc').value='';
+  // jump active month to the transaction's month so the user sees it land
+  state.activeMonth=monthOf(date);
+  save(); renderBudget(); renderTx();
+});
+document.querySelectorAll('.filters .pill').forEach(p=>p.addEventListener('click',()=>{
+  txFilter=p.dataset.f;
+  document.querySelectorAll('.filters .pill').forEach(x=>x.classList.toggle('on',x===p));
+  renderTxList();
+}));
+document.getElementById('txSearch').addEventListener('input',renderTxList);
+document.getElementById('allMonthsBtn').addEventListener('click',()=>{
+  txAllMonths=!txAllMonths;
+  document.getElementById('allMonthsBtn').textContent = txAllMonths?'Showing: all time':'Showing: this month';
+  renderTx();
+});
+
+function renderTxForm(){
+  const sel=document.getElementById('txCat');
   sel.innerHTML = state.categories.length
     ? state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
     : `<option value="">Add a category first</option>`;
+  if(!document.getElementById('txDate').value) document.getElementById('txDate').value=todayStr();
 }
-
-// lightweight summary refresh while typing assign values (avoids re-rendering inputs & losing focus)
-function refreshSummaryOnly(){
-  const assigned = state.categories.reduce((s,c)=>s+(c.assigned||0),0);
-  const spent = state.txns.reduce((s,t)=>s+t.amount,0);
-  const ltb = (state.income||0) - assigned;
-  const stat = document.querySelector('#summary .stat.ltb');
-  if(!stat) return;
-  stat.className = 'stat ltb' + (Math.abs(ltb)<0.005?' zero':(ltb<0?' over':''));
-  let msg, vClass='';
-  if(Math.abs(ltb)<0.005) msg='Zero-based. Every dollar has a job. This is the move.';
-  else if(ltb<0) msg="You've assigned more than you make. Cut something.";
-  else { msg='Keep going — assign this down to $0.'; vClass='pos'; }
-  stat.querySelector('.v').className='v '+vClass;
-  stat.querySelector('.v').textContent=money(ltb);
-  stat.querySelector('.msg').textContent=msg;
-  const stats = document.querySelectorAll('#summary .stat');
-  if(stats[2]) stats[2].querySelector('.v').textContent=money(assigned);
+function renderTx(){
+  renderTxForm();
+  const M=state.activeMonth;
+  const inc=txAllMonths?state.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0):monthIncome(M);
+  const exp=txAllMonths?state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0):monthExpense(M);
+  document.getElementById('txSummary').innerHTML=`
+    <div class="stat"><div class="k">${txAllMonths?'All-time income':'Income'}</div><div class="v good">${money(inc)}</div></div>
+    <div class="stat"><div class="k">${txAllMonths?'All-time spent':'Spent'}</div><div class="v">${money(exp)}</div></div>
+    <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp)<0?'bad':'good'}">${money(inc-exp)}</div></div>
+    <div class="stat"><div class="k">Balance (all time)</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
+  renderTxList();
+}
+function renderTxList(){
+  const M=state.activeMonth;
+  const q=(document.getElementById('txSearch').value||'').toLowerCase();
+  let list=(txAllMonths?state.transactions.slice():txnsInMonth(M));
+  if(txFilter!=='all') list=list.filter(t=>t.type===txFilter);
+  if(q) list=list.filter(t=>{
+    const hay=[t.note,t.source,t.type==='expense'?catName(t.catId):''].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
+  const box=document.getElementById('txList');
+  if(!list.length){ box.innerHTML=`<div class="empty" style="margin-top:14px">No transactions here yet. Log one above.</div>`; return; }
+  box.innerHTML=list.map(t=>{
+    const d=new Date(t.date+'T00:00:00');
+    const day=isNaN(d)?'--':d.toLocaleString(undefined,{day:'numeric'});
+    const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
+    const title=t.type==='income'?escapeHtml(t.source||'Income'):(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
+    const sub=t.type==='income'?('Income'+(t.note?' · '+escapeHtml(t.note):'')):('Expense'+(txAllMonths?' · '+monthOf(t.date):''));
+    return `<div class="tx ${t.type}">
+      <div class="tx-date">${mon}<b>${day}</b></div>
+      <div class="tx-main"><div class="tx-title">${title}</div><div class="tx-sub">${sub}</div></div>
+      <div class="tx-amt">${t.type==='income'?'+':'−'}${money(t.amount)}</div>
+      <button class="del" data-deltx="${t.id}" title="Delete">✕</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button[data-deltx]').forEach(btn=>btn.addEventListener('click',()=>{
+    state.transactions=state.transactions.filter(t=>t.id!==btn.dataset.deltx);
+    save(); renderBudget(); renderTx();
+  }));
 }
 
 /* ---------- goals ---------- */
-document.getElementById('addGoal').addEventListener('click', ()=>{
-  const name = document.getElementById('goalName').value.trim();
-  const target = parseFloat(document.getElementById('goalTarget').value);
-  const date = document.getElementById('goalDate').value;
-  if(!name || !target || target<=0) return;
-  state.goals.push({id:uid(), name, target, saved:0, date});
-  document.getElementById('goalName').value='';
-  document.getElementById('goalTarget').value='';
-  document.getElementById('goalDate').value='';
+document.getElementById('addGoal').addEventListener('click',()=>{
+  const name=document.getElementById('goalName').value.trim();
+  const target=parseFloat(document.getElementById('goalTarget').value);
+  const date=document.getElementById('goalDate').value;
+  if(!name||!target||target<=0) return;
+  state.goals.push({id:uid(),name,target,saved:0,date});
+  document.getElementById('goalName').value=''; document.getElementById('goalTarget').value=''; document.getElementById('goalDate').value='';
   save(); renderGoals();
 });
-
 function renderGoals(){
-  const box = document.getElementById('goals');
-  if(!state.goals.length){
-    box.innerHTML = `<div class="panel"><div class="empty">No dreams on the board yet. That's the first problem to fix. Add one above.</div></div>`;
-    return;
-  }
-  box.innerHTML = state.goals.map((g,i)=>{
-    const pct = Math.min(100, (g.saved/g.target)*100);
-    const done = g.saved >= g.target;
-    const nudge = done ? "Funded. You actually did it. Now set a bigger one." : GOAL_NUDGES[i % GOAL_NUDGES.length];
-    const deadline = g.date ? `Target date: ${g.date}` : 'No deadline set';
+  const box=document.getElementById('goals');
+  if(!state.goals.length){ box.innerHTML=`<div class="panel"><div class="empty">No dreams on the board yet. That's the first problem to fix. Add one above.</div></div>`; return; }
+  box.innerHTML=state.goals.map((g,i)=>{
+    const pct=Math.min(100,(g.saved/g.target)*100), done=g.saved>=g.target;
+    const nudge=done?"Funded. You actually did it. Now set a bigger one.":GOAL_NUDGES[i%GOAL_NUDGES.length];
+    const deadline=g.date?`Target date: ${g.date}`:'No deadline set';
     return `<div class="goal ${done?'done':''}">
-      <div class="goal-top">
-        <div>
-          <div class="goal-name">${escapeHtml(g.name)}</div>
-          <div class="goal-dead">${deadline}</div>
-        </div>
-        <div class="goal-pct">${Math.round(pct)}%</div>
-      </div>
+      <div class="goal-top"><div><div class="goal-name">${escapeHtml(g.name)}</div><div class="goal-dead">${deadline}</div></div><div class="goal-pct">${Math.round(pct)}%</div></div>
       <div class="bar"><span style="width:${pct}%"></span></div>
-      <div class="goal-nums">
-        <span><b>${money(g.saved)}</b> saved</span>
-        <span>of <b>${money(g.target)}</b> · ${money(Math.max(0,g.target-g.saved))} to go</span>
-      </div>
+      <div class="goal-nums"><span><b>${money(g.saved)}</b> saved</span><span>of <b>${money(g.target)}</b> · ${money(Math.max(0,g.target-g.saved))} to go</span></div>
       <div class="goal-nudge">${nudge}</div>
       <div class="goal-actions">
         <input type="number" placeholder="Add $" min="0" step="1" data-add="${g.id}" style="width:120px">
         <button class="btn sm primary" data-addbtn="${g.id}">Add to dream</button>
         <button class="btn sm danger ghost" data-delgoal="${g.id}">Delete</button>
-      </div>
-    </div>`;
+      </div></div>`;
   }).join('');
-
-  box.querySelectorAll('button[data-addbtn]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const inp = box.querySelector(`input[data-add="${btn.dataset.addbtn}"]`);
-      const add = parseFloat(inp.value);
-      if(!add || add<=0) return;
-      const g = state.goals.find(x=>x.id===btn.dataset.addbtn);
-      if(g){ g.saved = Math.max(0, g.saved + add); save(); renderGoals(); }
-    });
-  });
-  box.querySelectorAll('button[data-delgoal]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      state.goals = state.goals.filter(g=>g.id!==btn.dataset.delgoal);
-      save(); renderGoals();
-    });
-  });
+  box.querySelectorAll('button[data-addbtn]').forEach(btn=>btn.addEventListener('click',()=>{
+    const inp=box.querySelector(`input[data-add="${btn.dataset.addbtn}"]`); const add=parseFloat(inp.value);
+    if(!add||add<=0) return; const g=state.goals.find(x=>x.id===btn.dataset.addbtn);
+    if(g){ g.saved=Math.max(0,g.saved+add); save(); renderGoals(); }
+  }));
+  box.querySelectorAll('button[data-delgoal]').forEach(btn=>btn.addEventListener('click',()=>{
+    state.goals=state.goals.filter(g=>g.id!==btn.dataset.delgoal); save(); renderGoals();
+  }));
 }
 
 /* ---------- learn ---------- */
 function renderLesson(){
-  const i = ((state.lesson % LESSONS.length) + LESSONS.length) % LESSONS.length;
-  const L = LESSONS[i];
-  document.getElementById('lesson').innerHTML = `
-    <div class="num">Lesson ${i+1} of ${LESSONS.length}</div>
-    <h3>${L.t}</h3>
-    <p>${L.p}</p>
-    <div class="try"><b>Try this →</b> ${L.try}</div>
-  `;
-  document.getElementById('dots').innerHTML = LESSONS.map((_,d)=>`<span class="${d===i?'on':''}"></span>`).join('');
+  const i=((state.lesson%LESSONS.length)+LESSONS.length)%LESSONS.length; const L=LESSONS[i];
+  document.getElementById('lesson').innerHTML=`<div class="num">Lesson ${i+1} of ${LESSONS.length}</div><h3>${L.t}</h3><p>${L.p}</p><div class="try"><b>Try this →</b> ${L.try}</div>`;
+  document.getElementById('dots').innerHTML=LESSONS.map((_,d)=>`<span class="${d===i?'on':''}"></span>`).join('');
 }
-document.getElementById('nextLesson').addEventListener('click', ()=>{ state.lesson++; save(); renderLesson(); });
-document.getElementById('prevLesson').addEventListener('click', ()=>{ state.lesson--; save(); renderLesson(); });
+document.getElementById('nextLesson').addEventListener('click',()=>{ state.lesson++; save(); renderLesson(); });
+document.getElementById('prevLesson').addEventListener('click',()=>{ state.lesson--; save(); renderLesson(); });
 
-/* ---------- reset ---------- */
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(confirm('Wipe all budget, goals, and settings from this browser? No undo.')){
-    localStorage.removeItem(STORE_KEY);
-    state = defaultState();
-    boot();
+/* ---------- data export / import / reset ---------- */
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='unfiltered-budget-backup.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); state=Object.assign(defaultState(),d); if(!state.activeMonth) state.activeMonth=thisMonth(); save(); boot(); alert('Imported.'); }
+    catch(err){ alert('That file could not be read.'); } };
+  r.readAsText(f); e.target.value='';
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(confirm('Wipe all budget, transactions, goals, and settings from this browser? No undo.')){
+    localStorage.removeItem(STORE_KEY); state=defaultState(); boot();
   }
 });
 
-/* ---------- util ---------- */
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ============================================================
+   IMPULSE ACCOUNTABILITY + ASSETS/LIABILITIES
+   ============================================================ */
+const IMP_QUESTIONS=[
+  "Will you even remember this in 30 days?",
+  "Is this the thing — or just a feeling wearing a price tag?",
+  "Would you buy it twice? If not, maybe not once.",
+  "Does this get you closer to the dream, or just through the afternoon?",
+  "If you had to hand over the cash right now, would you still want it?",
+  "Is this a decision, or is this a mood?"
+];
+const IMP_WANT={
+  clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],
+  blunt:["Be honest — you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],
+  savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]
+};
+const IMP_ASSET={
+  clean:["Now this can actually work for you.","An asset — spend it with intention."],
+  blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],
+  savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit."]
+};
+const IMP_NEED={
+  clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],
+  blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it belongs in the budget, not on impulse."],
+  savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?"]
+};
+const SKIP_WINS=["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."];
+
+function sumAssets(){ return state.assets.reduce((s,a)=>s+(a.value||0),0); }
+function sumLiab(){ return state.liabilities.reduce((s,l)=>s+(l.value||0),0); }
+function netWorth(){ return sumAssets()-sumLiab(); }
+function avgMonthlyIncome(){
+  const byM={}; state.transactions.filter(t=>t.type==='income').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
+  const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
+}
+function topGoal(){ return state.goals.find(g=>g.saved<g.target)||null; }
+function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip').reduce((s,i)=>s+i.amount,0); }
+function impulseSpent(){ return state.impulse.filter(i=>i.type==='buy').reduce((s,i)=>s+i.amount,0); }
+function skipStreak(){ let n=0; for(let i=state.impulse.length-1;i>=0;i--){ if(state.impulse[i].type==='skip') n++; else break; } return n; }
+function ensureImpulseCategory(){
+  let c=state.categories.find(x=>x.name.toLowerCase()==='impulse / wants');
+  if(!c){ c={id:uid(),name:'Impulse / Wants'}; state.categories.push(c); }
+  return c;
+}
+
+/* --- net worth panel --- */
+function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}${money(o.value)}</span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
+function renderNetWorth(){
+  const A=sumAssets(),L=sumLiab(),NW=A-L,total=A+L;
+  const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
+  const bar=document.getElementById('avlBar');
+  bar.querySelector('.a').style.width=(total>0?(A/total*100):50)+'%';
+  bar.querySelector('.l').style.width=(total>0?(L/total*100):50)+'%';
+  document.getElementById('avlA').textContent='Assets '+money(A);
+  document.getElementById('avlL').textContent='Liabilities '+money(L);
+  const cash=allTimeBalance(), dreams=state.goals.reduce((s,g)=>s+g.saved,0);
+  document.getElementById('nwChips').innerHTML=
+    `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
+    `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
+    `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
+  document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>lineItem(a,'asset')).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
+  document.getElementById('liabList').innerHTML=state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>';
+  document.querySelectorAll('#view-impulse button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
+    const [cls,id]=b.dataset.delitem.split(':');
+    if(cls==='asset') state.assets=state.assets.filter(x=>x.id!==id); else state.liabilities=state.liabilities.filter(x=>x.id!==id);
+    save(); renderNetWorth();
+  }));
+}
+document.getElementById('addAsset').addEventListener('click',()=>{
+  const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
+  if(!n||!v||v<0) return; state.assets.push({id:uid(),name:n,value:v});
+  document.getElementById('assetName').value=''; document.getElementById('assetVal').value=''; save(); renderNetWorth();
+});
+document.getElementById('addLiab').addEventListener('click',()=>{
+  const n=document.getElementById('liabName').value.trim(), v=parseFloat(document.getElementById('liabVal').value);
+  if(!n||!v||v<0) return; state.liabilities.push({id:uid(),name:n,value:v});
+  document.getElementById('liabName').value=''; document.getElementById('liabVal').value=''; save(); renderNetWorth();
+});
+
+/* --- impulse check --- */
+let pendingCheck=null;
+document.getElementById('impRun').addEventListener('click',()=>{
+  const name=document.getElementById('impName').value.trim()||'This purchase';
+  const amt=parseFloat(document.getElementById('impAmt').value);
+  const kind=document.getElementById('impKind').value;
+  if(!amt||amt<=0){ alert('Enter a price.'); return; }
+  pendingCheck={name,amt,kind}; renderCheckResult();
+});
+document.getElementById('impAmt').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('impRun').click(); });
+
+function renderCheckResult(){
+  const {name,amt,kind}=pendingCheck;
+  const avg=avgMonthlyIncome(), g=topGoal(), NW=netWorth();
+  const size=Math.min(1, avg>0? amt/avg : amt/500);
+  let left = kind==='want'? 70+size*24 : kind==='need'? 50 : 32-size*24;
+  left=Math.max(5,Math.min(95,left));
+  const needleColor = kind==='want'?'var(--accent-2)':kind==='need'?'var(--accent)':'var(--good)';
+
+  const metrics=[];
+  if(avg>0){ const hrs=amt/(avg/160); metrics.push(['Hours of your life',(hrs>=10?Math.round(hrs):hrs.toFixed(1))+' hrs']); }
+  if(g){
+    const remaining=Math.max(0.01,g.target-g.saved);
+    metrics.push(['Of “'+g.name+'”', Math.round(Math.min(999,amt/remaining*100))+'%']);
+    if(g.date){
+      const days=(new Date(g.date+'T00:00:00')-new Date(todayStr()+'T00:00:00'))/86400000;
+      if(days>0){ const perDay=remaining/days; if(perDay>0){ const d=amt/perDay; metrics.push([kind==='asset'?'In dream-days':'Delays that dream',(d>=1?Math.round(d):d.toFixed(1))+' days']); } }
+    }
+  }
+  if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
+  metrics.push(['Skips to fund a $500 goal', Math.max(1,Math.round(500/amt))+'×']);
+
+  const pool=(kind==='want'?IMP_WANT:kind==='asset'?IMP_ASSET:IMP_NEED)[state.intensity]||IMP_WANT.blunt;
+  const line=pool[Math.floor(Math.random()*pool.length)];
+  const q=IMP_QUESTIONS[Math.floor(Math.random()*IMP_QUESTIONS.length)];
+  const vlabel=kind==='want'?'Further from your dreams':kind==='asset'?'Could move you forward':'Necessary — track it';
+  const open=state.goals.filter(x=>x.saved<x.target);
+  const goalSelect=open.length?`<select id="impGoal"><option value="">Bank the savings</option>${open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('')}</select>`:'';
+
+  document.getElementById('impResult').innerHTML=`
+    <div class="checkcard ${kind}">
+      <div class="verdict ${kind}">${escapeHtml(name)} — ${money(amt)}</div>
+      <div class="qline">${escapeHtml(line)}</div>
+      <div class="meter-lbl"><span class="cl">◄ Closer</span><span>${vlabel}</span><span class="fr">Further ►</span></div>
+      <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:${needleColor}"></div></div>
+      <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
+      <div class="qline">${escapeHtml(q)}</div>
+      <div class="check-actions">
+        <button class="btn income" id="impSkip">I skipped it 💪</button>
+        ${goalSelect}
+        <button class="btn ghost" id="impBuy">I bought it anyway</button>
+      </div>
+    </div>`;
+
+  document.getElementById('impSkip').addEventListener('click',()=>{
+    const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';
+    const ev={id:uid(),type:'skip',name:pendingCheck.name,amount:pendingCheck.amt,date:todayStr()};
+    if(goalId){ const gg=state.goals.find(x=>x.id===goalId); if(gg){ gg.saved+=pendingCheck.amt; ev.goalId=goalId; } }
+    state.impulse.push(ev); const amt2=ev.amount;
+    pendingCheck=null; document.getElementById('impName').value=''; document.getElementById('impAmt').value='';
+    save(); renderImpulse(); renderNetWorth(); renderGoals();
+    const win=SKIP_WINS[Math.floor(Math.random()*SKIP_WINS.length)];
+    document.getElementById('impResult').innerHTML=`<div class="checkcard asset"><div class="verdict asset">Skipped. ${escapeHtml(win)}</div><p class="sub" style="margin:8px 0 0">${goalId?'Sent '+money(amt2)+' straight to your dream.':money(amt2)+' saved and banked to your discipline score.'}</p></div>`;
+  });
+  document.getElementById('impBuy').addEventListener('click',()=>{
+    const c=ensureImpulseCategory(), date=todayStr(), amt2=pendingCheck.amt, nm=pendingCheck.name;
+    const tx={id:uid(),type:'expense',amount:amt2,catId:c.id,date,note:nm+' (impulse)'};
+    state.transactions.push(tx);
+    state.impulse.push({id:uid(),type:'buy',name:nm,amount:amt2,date,txId:tx.id});
+    state.activeMonth=monthOf(date); pendingCheck=null;
+    document.getElementById('impName').value=''; document.getElementById('impAmt').value='';
+    save(); renderImpulse(); renderBudget(); renderTx();
+    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">Logged. No shame — just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged as an expense under “Impulse / Wants.” Streak reset. Next one's a skip.</p></div>`;
+  });
+}
+
+function renderImpulse(){
+  const saved=impulseSaved(), spent=impulseSpent(), net=saved-spent;
+  document.getElementById('impScore').innerHTML=`
+    <div class="stat"><div class="k">Saved by skipping</div><div class="v good">${money(saved)}</div></div>
+    <div class="stat"><div class="k">Spent on impulse</div><div class="v ${spent>0?'bad':''}">${money(spent)}</div></div>
+    <div class="stat"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
+    <div class="stat"><div class="k">Net discipline</div><div class="v ${net<0?'bad':'good'}">${money(net)}</div></div>`;
+  const log=state.impulse.slice().reverse(), box=document.getElementById('impLog');
+  if(!log.length){ box.innerHTML=`<div class="empty" style="margin-top:8px">No calls made yet. Next time something tempts you, run it by me first.</div>`; return; }
+  box.innerHTML=log.map(e=>`<div class="decision ${e.type}"><span class="badge">${e.type==='skip'?'Skipped':'Bought'}</span><span class="nm">${escapeHtml(e.name)}${e.goalId?' → dream':''}</span><span class="am">${e.type==='skip'?'+':'−'}${money(e.amount)}</span><button class="del" data-delimp="${e.id}" title="Delete">✕</button></div>`).join('');
+  box.querySelectorAll('button[data-delimp]').forEach(b=>b.addEventListener('click',()=>{
+    const ev=state.impulse.find(x=>x.id===b.dataset.delimp); if(!ev) return;
+    if(ev.type==='buy'&&ev.txId) state.transactions=state.transactions.filter(t=>t.id!==ev.txId);
+    if(ev.type==='skip'&&ev.goalId){ const g=state.goals.find(x=>x.id===ev.goalId); if(g) g.saved=Math.max(0,g.saved-ev.amount); }
+    state.impulse=state.impulse.filter(x=>x.id!==ev.id);
+    save(); renderImpulse(); renderNetWorth(); renderBudget(); renderTx(); renderGoals();
+  }));
+}
 
 /* ---------- boot ---------- */
 function boot(){
-  renderIntensity();
-  newQuote();
-  renderBudget();
-  renderGoals();
-  renderLesson();
+  renderIntensity(); newQuote();
+  renderBudget(); renderTx(); renderGoals(); renderLesson();
+  renderNetWorth(); renderImpulse();
+  document.querySelector('.tab').classList.add('on');
+  document.getElementById('view-budget').classList.add('on');
 }
 boot();
 </script>
