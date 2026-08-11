@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNFILTERED — Zero-Based Budgeting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  :root{
+    --bg:#0d0f14;
+    --panel:#161a22;
+    --panel-2:#1d222c;
+    --line:#2a303c;
+    --text:#f2f4f8;
+    --muted:#8b93a3;
+    --accent:#c6ff3a;      /* electric lime — loud, "no filter" energy */
+    --accent-2:#ff5c39;    /* warning / over-budget */
+    --good:#38d39f;
+    --bad:#ff5c66;
+    --shadow:0 20px 50px rgba(0,0,0,.45);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;padding-bottom:60px}
+  button{font-family:inherit;cursor:pointer}
+  input,select{font-family:inherit}
+  ::selection{background:var(--accent);color:#0d0f14}
+
+  /* ---------- Top motivation banner ---------- */
+  .hero{
+    background:linear-gradient(135deg,#12151c 0%,#191d27 100%);
+    border-bottom:1px solid var(--line);
+    padding:26px 20px 30px;
+  }
+  .hero-inner{max-width:1080px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .brand .logo{
+    font-weight:900;font-size:22px;letter-spacing:-.5px;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .brand .logo b{color:var(--accent)}
+  .brand .tag{
+    font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);
+    border:1px solid var(--line);border-radius:50px;padding:5px 12px;
+  }
+  .quote-wrap{margin-top:22px;display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+  .quote{
+    flex:1;min-width:260px;font-size:clamp(20px,3.4vw,34px);font-weight:800;line-height:1.15;
+    letter-spacing:-.5px;
+  }
+  .quote .accent{color:var(--accent)}
+  .quote-controls{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+  .hit{
+    background:var(--accent);color:#0d0f14;border:none;border-radius:12px;
+    padding:12px 18px;font-weight:800;font-size:14px;white-space:nowrap;
+    transition:transform .12s ease, box-shadow .12s ease;
+    box-shadow:0 8px 22px rgba(198,255,58,.25);
+  }
+  .hit:hover{transform:translateY(-2px)}
+  .hit:active{transform:translateY(0)}
+  .intensity{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+  .intensity button{
+    background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;
+    padding:7px 12px;border-radius:8px;letter-spacing:.3px;
+  }
+  .intensity button.on{background:var(--accent);color:#0d0f14}
+
+  /* ---------- Layout ---------- */
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .tabs{display:flex;gap:6px;margin:22px 0 4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{
+    background:none;border:none;color:var(--muted);font-weight:700;font-size:15px;
+    padding:14px 16px;position:relative;
+  }
+  .tab.on{color:var(--text)}
+  .tab.on::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:3px;background:var(--accent);border-radius:3px}
+
+  .view{display:none;padding:26px 0}
+  .view.on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---------- Cards / panels ---------- */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+  .panel + .panel{margin-top:18px}
+  .panel h2{font-size:18px;font-weight:800;margin-bottom:4px}
+  .panel .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  label.fld{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  input[type=text],input[type=number],input[type=date],select{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:11px 13px;font-size:15px;min-width:0;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  .btn{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:11px 16px;font-weight:700;font-size:14px;
+  }
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#0d0f14;border-color:var(--accent)}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:7px 11px;font-size:13px}
+  .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+
+  /* ---------- Budget summary ---------- */
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+  .stat .v{font-size:26px;font-weight:900;margin-top:6px;letter-spacing:-.5px}
+  .ltb{grid-column:1/-1;background:linear-gradient(135deg,#1a2410,#232f14);border-color:#3a4a1e}
+  .ltb.zero{background:linear-gradient(135deg,#10231a,#143024);border-color:#1e4a37}
+  .ltb.over{background:linear-gradient(135deg,#2a1410,#301a14);border-color:#4a221e}
+  .ltb .v{font-size:34px}
+  .ltb .msg{margin-top:8px;font-weight:700;font-size:14px}
+  .ltb.zero .v,.ltb.zero .msg{color:var(--good)}
+  .ltb.over .v,.ltb.over .msg{color:var(--accent-2)}
+  .ltb .v.pos{color:var(--accent)}
+
+  /* ---------- Category list ---------- */
+  .cat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
+  .cat-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px}
+  .cat-assign{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+  .cat-assign input{width:110px;padding:8px 10px;font-size:14px}
+  .bar{height:8px;background:#0d0f14;border-radius:6px;margin-top:12px;overflow:hidden}
+  .bar > span{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .3s ease}
+  .cat-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--muted)}
+  .cat-meta .rem.good{color:var(--good)}
+  .cat-meta .rem.over{color:var(--bad)}
+  .cat.overspent{border-color:#4a221e}
+  .cat.overspent .bar>span{background:var(--accent-2)}
+
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
+
+  /* ---------- Goals ---------- */
+  .goal{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:14px}
+  .goal.done{border-color:#1e4a37;background:linear-gradient(135deg,#10231a,#161d27)}
+  .goal-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+  .goal-name{font-size:19px;font-weight:900;letter-spacing:-.3px}
+  .goal-dead{font-size:12px;color:var(--muted);margin-top:2px}
+  .goal-pct{font-size:30px;font-weight:900;color:var(--accent)}
+  .goal.done .goal-pct{color:var(--good)}
+  .goal .bar{height:12px}
+  .goal-nums{display:flex;justify-content:space-between;margin-top:10px;font-size:14px}
+  .goal-nums b{font-weight:800}
+  .goal-nudge{margin-top:12px;font-style:italic;color:var(--accent);font-weight:600;font-size:14px}
+  .goal.done .goal-nudge{color:var(--good)}
+  .goal-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  /* ---------- Learn ---------- */
+  .lesson{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:24px}
+  .lesson .num{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:800}
+  .lesson h3{font-size:24px;font-weight:900;margin:8px 0 12px;letter-spacing:-.4px}
+  .lesson p{color:#cfd4de;line-height:1.65;font-size:15px}
+  .lesson .try{margin-top:16px;padding:14px 16px;background:#0d0f14;border-left:3px solid var(--accent);border-radius:8px;font-size:14px}
+  .lesson .try b{color:var(--accent)}
+  .lesson-nav{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+  .dots{display:flex;gap:6px;flex-wrap:wrap}
+  .dots span{width:8px;height:8px;border-radius:50%;background:var(--line)}
+  .dots span.on{background:var(--accent)}
+
+  .foot{max-width:1080px;margin:40px auto 0;padding:0 20px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .foot a{color:var(--muted)}
+  .reset{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px}
+
+  @media (max-width:640px){
+    .summary{grid-template-columns:1fr}
+    .quote-controls{align-items:stretch;width:100%}
+    .quote-controls .hit{text-align:center}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ HERO / MOTIVATION ============ -->
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="brand">
+        <span class="logo">UN<b>FILTERED</b></span>
+        <span class="tag">Zero-Based Budgeting</span>
+        <span class="tag">No Nonsense · All Dreams</span>
+      </div>
+      <div class="quote-wrap">
+        <div class="quote" id="quote">Loading the truth…</div>
+        <div class="quote-controls">
+          <button class="hit" id="hitBtn">Hit me again ⚡</button>
+          <div class="intensity" id="intensity">
+            <button data-lvl="clean">Clean</button>
+            <button data-lvl="blunt">Blunt</button>
+            <button data-lvl="savage">Savage</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <nav class="tabs">
+      <button class="tab" data-view="budget">Budget</button>
+      <button class="tab" data-view="goals">Dreams &amp; Goals</button>
+      <button class="tab" data-view="learn">Money School</button>
+    </nav>
+
+    <!-- ============ BUDGET ============ -->
+    <section class="view" id="view-budget">
+      <div class="panel">
+        <h2>Every dollar gets a job.</h2>
+        <p class="sub">This is zero-based budgeting. Your income minus everything you assign must equal <b>zero</b>. Not a penny left wandering around.</p>
+        <div class="row">
+          <label class="fld">Monthly income
+            <input type="number" id="income" placeholder="0" min="0" step="1">
+          </label>
+          <button class="btn ghost sm" id="starterBtn" style="align-self:flex-end">Load starter categories</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="summary" id="summary"></div>
+
+        <div class="row" style="margin-bottom:6px">
+          <label class="fld" style="flex:1">New category
+            <input type="text" id="catName" placeholder="e.g. Groceries, Rent, Fun Money">
+          </label>
+          <button class="btn primary" id="addCat" style="align-self:flex-end">Add category</button>
+        </div>
+
+        <div id="cats"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Log a spend</h2>
+        <p class="sub">Reality check. Assigning money is the plan — logging spends is the truth.</p>
+        <div class="row">
+          <label class="fld">Category
+            <select id="txCat"></select>
+          </label>
+          <label class="fld">Amount
+            <input type="number" id="txAmt" placeholder="0" min="0" step="0.01" style="width:130px">
+          </label>
+          <label class="fld" style="flex:1">Note (optional)
+            <input type="text" id="txNote" placeholder="What was it?">
+          </label>
+          <button class="btn primary" id="addTx" style="align-self:flex-end">Log it</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ GOALS ============ -->
+    <section class="view" id="view-goals">
+      <div class="panel">
+        <h2>What are you actually chasing?</h2>
+        <p class="sub">A budget with no dream behind it is just a spreadsheet. Name the thing. Put a number on it. Watch it get closer.</p>
+        <div class="row">
+          <label class="fld" style="flex:1">Dream / goal
+            <input type="text" id="goalName" placeholder="Debt-free · Emergency fund · Trip · Business">
+          </label>
+          <label class="fld">Target $
+            <input type="number" id="goalTarget" placeholder="0" min="1" step="1" style="width:130px">
+          </label>
+          <label class="fld">By when
+            <input type="date" id="goalDate">
+          </label>
+          <button class="btn primary" id="addGoal" style="align-self:flex-end">Add dream</button>
+        </div>
+      </div>
+      <div id="goals"></div>
+    </section>
+
+    <!-- ============ LEARN ============ -->
+    <section class="view" id="view-learn">
+      <div class="panel">
+        <h2>Money School</h2>
+        <p class="sub">The techniques the "financially comfortable" already know. Plain English. No gatekeeping.</p>
+        <div class="lesson" id="lesson"></div>
+        <div class="lesson-nav">
+          <button class="btn sm" id="prevLesson">← Back</button>
+          <div class="dots" id="dots"></div>
+          <button class="btn sm" id="nextLesson">Next →</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="foot">
+    <span>UNFILTERED · a working prototype. Everything saves to this browser only — nothing leaves your device.</span>
+    <button class="reset" id="resetBtn">Reset all data</button>
+  </div>
+
+<script>
+/* ============================================================
+   UNFILTERED — zero-based budgeting prototype
+   Vanilla JS, localStorage persistence, no dependencies.
+   All quotes/lessons are original copy (no copyrighted text).
+   ============================================================ */
+
+const STORE_KEY = 'unfiltered_budget_v1';
+
+const QUOTES = {
+  clean: [
+    "Broke is a moment. Poor is a decision. Choose again today.",
+    "Your dream costs money. Your budget is how you buy it.",
+    "Every dollar you assign on purpose is a dollar that stops betraying you.",
+    "You don't need more money first. You need a plan for the money you've got.",
+    "Small on purpose beats big by accident. Start where you stand.",
+    "The goal isn't to be rich someday. It's to be in control today.",
+    "Discipline is just remembering what you actually want.",
+    "A budget isn't a cage. It's the map to the life you keep talking about."
+  ],
+  blunt: [
+    "Nobody is coming to fix your money. That's the bad news and the good news.",
+    "You can afford the dream or you can afford the excuses. Not both.",
+    "Stop 'treating yourself' into a hole you have to climb out of sober.",
+    "That subscription you forgot about is funding someone else's dream, not yours.",
+    "You're not bad with money. You just never told it where to go.",
+    "The gap between you and the goal is a spreadsheet you keep avoiding.",
+    "Comfort is expensive. Freedom is cheaper than you think.",
+    "You checked your phone 80 times today. Check your budget once."
+  ],
+  savage: [
+    "You want the results but you're negotiating with the work. Cut it out.",
+    "Your future self is watching you order this. Look them in the eye.",
+    "Zero dollars unaccounted for. Zero excuses accepted. Get to work.",
+    "You didn't lose the money. You gave it away one 'small' thing at a time.",
+    "The dream doesn't care that you were tired. Assign the dollars anyway.",
+    "Being broke and comfortable is still being broke. Pick discomfort with a purpose.",
+    "You keep waiting to feel ready. Ready is a decision, not a feeling. Decide.",
+    "Nobody remembers what you almost built. Fund the real one."
+  ]
+};
+
+const GOAL_NUDGES = [
+  "This is the one. Feed it first.",
+  "Every deposit is a vote for the person you're becoming.",
+  "Boring consistency builds this. Show up.",
+  "Closer than yesterday. Don't blink now.",
+  "The gap is shrinking because you decided it would."
+];
+
+const LESSONS = [
+  {t:"Zero-Based Budgeting",
+   p:"Give every single dollar a job before the month starts. Income minus all your assignments equals zero — not because you spent it all, but because 'savings' and 'goals' are jobs too. Money left unassigned is money that quietly disappears. When every dollar is claimed, you stop wondering where it went, because you already decided.",
+   try:"Take last month's income. Assign it, on paper, down to $0 — including a line for your dream."},
+  {t:"Pay Yourself First",
+   p:"Most people save whatever's left at the end of the month. Spoiler: nothing's left. Flip it. The moment money hits your account, the first 'bill' you pay is your own future — savings and goals come off the top, before spending gets a vote. You live on the rest. It feels backwards. It works forwards.",
+   try:"Set one automatic transfer to savings for the day after you get paid. Even $20 counts."},
+  {t:"The Emergency Fund",
+   p:"An emergency fund is the wall between a bad day and a bad year. Start with a small starter buffer — enough to cover a surprise car repair or a missed shift — then build toward covering several months of essentials. This isn't your dream fund; it's the thing that protects the dream fund from getting raided every time life happens.",
+   try:"Open a separate account you can't see on your main app. Name it 'DO NOT TOUCH'. Fund it weekly."},
+  {t:"Sinking Funds",
+   p:"The bills that wreck budgets aren't the surprises — they're the predictable ones you pretend not to see coming: the holidays, the annual insurance, the car tires. A sinking fund breaks a big future cost into small monthly chunks you set aside in advance. December stops being an ambush when you've been quietly funding it since March.",
+   try:"List every 'once a year' expense. Divide each by 12. That's your monthly set-aside per fund."},
+  {t:"Debt Snowball vs. Avalanche",
+   p:"Two ways to kill debt. The Avalanche attacks the highest interest rate first — mathematically cheapest. The Snowball attacks the smallest balance first — emotionally strongest, because early wins keep you in the fight. The best method is the one you'll actually finish. Money is math, but paying it off is behavior.",
+   try:"List your debts. Pick Avalanche if you're driven by numbers, Snowball if you need momentum. Then attack one while paying minimums on the rest."},
+  {t:"The 24-Hour Rule",
+   p:"Impulse spending isn't a math problem, it's a timing problem. For any non-essential 'want,' put it in a 24-hour holding pen before you buy. Most wants are just a mood wearing a price tag — give it a day and the urge evaporates. The ones that survive the wait are usually the ones actually worth your dollars.",
+   try:"Next time you're about to check out on something you didn't plan for — close the tab. Revisit tomorrow."},
+  {t:"Value Per Dollar, Not Price",
+   p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning and your sanity might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation — that's aim.",
+   try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."}
+];
+
+/* ---------- state ---------- */
+let state = load();
+
+function defaultState(){
+  return { income:0, categories:[], txns:[], goals:[], intensity:'blunt', lesson:0 };
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultState();
+    return Object.assign(defaultState(), JSON.parse(raw));
+  }catch(e){ return defaultState(); }
+}
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+const uid = () => Math.random().toString(36).slice(2,9);
+const money = n => (n<0?'-':'') + '$' + Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+
+/* ---------- quote engine ---------- */
+let lastQuote = '';
+function newQuote(){
+  const pool = QUOTES[state.intensity] || QUOTES.blunt;
+  let q = pool[Math.floor(Math.random()*pool.length)];
+  let guard = 0;
+  while(q === lastQuote && pool.length > 1 && guard++ < 8){
+    q = pool[Math.floor(Math.random()*pool.length)];
+  }
+  lastQuote = q;
+  const el = document.getElementById('quote');
+  el.style.opacity = 0;
+  setTimeout(()=>{ el.textContent = q; el.style.opacity = 1; }, 120);
+}
+document.getElementById('quote').style.transition = 'opacity .12s ease';
+document.getElementById('hitBtn').addEventListener('click', newQuote);
+document.getElementById('intensity').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  state.intensity = b.dataset.lvl; save();
+  renderIntensity(); newQuote();
+});
+function renderIntensity(){
+  document.querySelectorAll('#intensity button').forEach(b=>{
+    b.classList.toggle('on', b.dataset.lvl === state.intensity);
+  });
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    document.getElementById('view-'+t.dataset.view).classList.add('on');
+  });
+});
+document.querySelector('.tab').classList.add('on');
+document.getElementById('view-budget').classList.add('on');
+
+/* ---------- budget ---------- */
+const incomeEl = document.getElementById('income');
+incomeEl.addEventListener('input', ()=>{
+  state.income = parseFloat(incomeEl.value) || 0; save(); renderBudget();
+});
+
+document.getElementById('addCat').addEventListener('click', ()=>{
+  const el = document.getElementById('catName');
+  const name = el.value.trim(); if(!name) return;
+  state.categories.push({ id:uid(), name, assigned:0 });
+  el.value=''; save(); renderBudget();
+});
+document.getElementById('catName').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
+
+document.getElementById('starterBtn').addEventListener('click', ()=>{
+  const starters = ['Rent / Housing','Utilities','Groceries','Transportation','Phone / Internet','Debt Payments','Emergency Fund','Fun Money','Dream Fund'];
+  starters.forEach(n=>{
+    if(!state.categories.some(c=>c.name.toLowerCase()===n.toLowerCase()))
+      state.categories.push({id:uid(), name:n, assigned:0});
+  });
+  save(); renderBudget();
+});
+
+document.getElementById('addTx').addEventListener('click', ()=>{
+  const cat = document.getElementById('txCat').value;
+  const amt = parseFloat(document.getElementById('txAmt').value);
+  const note = document.getElementById('txNote').value.trim();
+  if(!cat || !amt || amt<=0) return;
+  state.txns.push({id:uid(), catId:cat, amount:amt, note, date:new Date().toISOString().slice(0,10)});
+  document.getElementById('txAmt').value=''; document.getElementById('txNote').value='';
+  save(); renderBudget();
+});
+
+function spentFor(catId){
+  return state.txns.filter(t=>t.catId===catId).reduce((s,t)=>s+t.amount,0);
+}
+
+function renderBudget(){
+  incomeEl.value = state.income || '';
+  const assigned = state.categories.reduce((s,c)=>s+(c.assigned||0),0);
+  const spent = state.txns.reduce((s,t)=>s+t.amount,0);
+  const ltb = (state.income||0) - assigned;
+
+  // summary
+  let ltbClass = 'ltb', msg='', vClass='';
+  if(Math.abs(ltb) < 0.005){ ltbClass+=' zero'; msg='Zero-based. Every dollar has a job. This is the move.'; }
+  else if(ltb < 0){ ltbClass+=' over'; msg="You've assigned more than you make. Cut something."; }
+  else { msg='Keep going — assign this down to $0.'; vClass='pos'; }
+
+  document.getElementById('summary').innerHTML = `
+    <div class="stat ${ltbClass}">
+      <div class="k">Left to budget</div>
+      <div class="v ${vClass}">${money(ltb)}</div>
+      <div class="msg">${msg}</div>
+    </div>
+    <div class="stat"><div class="k">Income</div><div class="v">${money(state.income||0)}</div></div>
+    <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div></div>
+    <div class="stat"><div class="k">Spent so far</div><div class="v">${money(spent)}</div></div>
+  `;
+
+  // categories
+  const box = document.getElementById('cats');
+  if(!state.categories.length){
+    box.innerHTML = `<div class="empty">No categories yet. Add one above, or hit “Load starter categories” to skip the blank page.</div>`;
+  } else {
+    box.innerHTML = state.categories.map(c=>{
+      const sp = spentFor(c.id);
+      const rem = (c.assigned||0) - sp;
+      const pct = c.assigned>0 ? Math.min(100,(sp/c.assigned)*100) : (sp>0?100:0);
+      const over = sp > c.assigned && c.assigned>=0 && (sp>0);
+      const remClass = rem<0?'over':(rem>0?'good':'');
+      return `<div class="cat ${over?'overspent':''}">
+        <div class="cat-top">
+          <span class="cat-name">${escapeHtml(c.name)}</span>
+          <span class="cat-assign">Assign $
+            <input type="number" min="0" step="1" value="${c.assigned||0}" data-cat="${c.id}">
+          </span>
+          <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
+        </div>
+        <div class="bar"><span style="width:${pct}%"></span></div>
+        <div class="cat-meta">
+          <span>Spent ${money(sp)} of ${money(c.assigned||0)}</span>
+          <span class="rem ${remClass}">${rem<0?'Over by '+money(-rem):money(rem)+' left'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  box.querySelectorAll('input[data-cat]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const c = state.categories.find(x=>x.id===inp.dataset.cat);
+      if(c){ c.assigned = parseFloat(inp.value)||0; save(); refreshSummaryOnly(); }
+    });
+    inp.addEventListener('change', renderBudget);
+  });
+  box.querySelectorAll('button[data-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.categories = state.categories.filter(c=>c.id!==btn.dataset.del);
+      state.txns = state.txns.filter(t=>t.catId!==btn.dataset.del);
+      save(); renderBudget();
+    });
+  });
+
+  // tx dropdown
+  const sel = document.getElementById('txCat');
+  sel.innerHTML = state.categories.length
+    ? state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+    : `<option value="">Add a category first</option>`;
+}
+
+// lightweight summary refresh while typing assign values (avoids re-rendering inputs & losing focus)
+function refreshSummaryOnly(){
+  const assigned = state.categories.reduce((s,c)=>s+(c.assigned||0),0);
+  const spent = state.txns.reduce((s,t)=>s+t.amount,0);
+  const ltb = (state.income||0) - assigned;
+  const stat = document.querySelector('#summary .stat.ltb');
+  if(!stat) return;
+  stat.className = 'stat ltb' + (Math.abs(ltb)<0.005?' zero':(ltb<0?' over':''));
+  let msg, vClass='';
+  if(Math.abs(ltb)<0.005) msg='Zero-based. Every dollar has a job. This is the move.';
+  else if(ltb<0) msg="You've assigned more than you make. Cut something.";
+  else { msg='Keep going — assign this down to $0.'; vClass='pos'; }
+  stat.querySelector('.v').className='v '+vClass;
+  stat.querySelector('.v').textContent=money(ltb);
+  stat.querySelector('.msg').textContent=msg;
+  const stats = document.querySelectorAll('#summary .stat');
+  if(stats[2]) stats[2].querySelector('.v').textContent=money(assigned);
+}
+
+/* ---------- goals ---------- */
+document.getElementById('addGoal').addEventListener('click', ()=>{
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value);
+  const date = document.getElementById('goalDate').value;
+  if(!name || !target || target<=0) return;
+  state.goals.push({id:uid(), name, target, saved:0, date});
+  document.getElementById('goalName').value='';
+  document.getElementById('goalTarget').value='';
+  document.getElementById('goalDate').value='';
+  save(); renderGoals();
+});
+
+function renderGoals(){
+  const box = document.getElementById('goals');
+  if(!state.goals.length){
+    box.innerHTML = `<div class="panel"><div class="empty">No dreams on the board yet. That's the first problem to fix. Add one above.</div></div>`;
+    return;
+  }
+  box.innerHTML = state.goals.map((g,i)=>{
+    const pct = Math.min(100, (g.saved/g.target)*100);
+    const done = g.saved >= g.target;
+    const nudge = done ? "Funded. You actually did it. Now set a bigger one." : GOAL_NUDGES[i % GOAL_NUDGES.length];
+    const deadline = g.date ? `Target date: ${g.date}` : 'No deadline set';
+    return `<div class="goal ${done?'done':''}">
+      <div class="goal-top">
+        <div>
+          <div class="goal-name">${escapeHtml(g.name)}</div>
+          <div class="goal-dead">${deadline}</div>
+        </div>
+        <div class="goal-pct">${Math.round(pct)}%</div>
+      </div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+      <div class="goal-nums">
+        <span><b>${money(g.saved)}</b> saved</span>
+        <span>of <b>${money(g.target)}</b> · ${money(Math.max(0,g.target-g.saved))} to go</span>
+      </div>
+      <div class="goal-nudge">${nudge}</div>
+      <div class="goal-actions">
+        <input type="number" placeholder="Add $" min="0" step="1" data-add="${g.id}" style="width:120px">
+        <button class="btn sm primary" data-addbtn="${g.id}">Add to dream</button>
+        <button class="btn sm danger ghost" data-delgoal="${g.id}">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('button[data-addbtn]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const inp = box.querySelector(`input[data-add="${btn.dataset.addbtn}"]`);
+      const add = parseFloat(inp.value);
+      if(!add || add<=0) return;
+      const g = state.goals.find(x=>x.id===btn.dataset.addbtn);
+      if(g){ g.saved = Math.max(0, g.saved + add); save(); renderGoals(); }
+    });
+  });
+  box.querySelectorAll('button[data-delgoal]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.goals = state.goals.filter(g=>g.id!==btn.dataset.delgoal);
+      save(); renderGoals();
+    });
+  });
+}
+
+/* ---------- learn ---------- */
+function renderLesson(){
+  const i = ((state.lesson % LESSONS.length) + LESSONS.length) % LESSONS.length;
+  const L = LESSONS[i];
+  document.getElementById('lesson').innerHTML = `
+    <div class="num">Lesson ${i+1} of ${LESSONS.length}</div>
+    <h3>${L.t}</h3>
+    <p>${L.p}</p>
+    <div class="try"><b>Try this →</b> ${L.try}</div>
+  `;
+  document.getElementById('dots').innerHTML = LESSONS.map((_,d)=>`<span class="${d===i?'on':''}"></span>`).join('');
+}
+document.getElementById('nextLesson').addEventListener('click', ()=>{ state.lesson++; save(); renderLesson(); });
+document.getElementById('prevLesson').addEventListener('click', ()=>{ state.lesson--; save(); renderLesson(); });
+
+/* ---------- reset ---------- */
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(confirm('Wipe all budget, goals, and settings from this browser? No undo.')){
+    localStorage.removeItem(STORE_KEY);
+    state = defaultState();
+    boot();
+  }
+});
+
+/* ---------- util ---------- */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- boot ---------- */
+function boot(){
+  renderIntensity();
+  newQuote();
+  renderBudget();
+  renderGoals();
+  renderLesson();
+}
+boot();
+</script>
+</body>
+</html>
