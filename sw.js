@@ -1,7 +1,8 @@
 /* UNFILTERED service worker — offline shell + fresh updates */
-const CACHE = 'unfiltered-v1';
+const CACHE = 'unfiltered-v2';
 const ASSETS = [
-  './budget.html',
+  './',
+  './index.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
@@ -27,13 +28,13 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // Network-first for the app page so updates roll out; fall back to cache offline.
-  if (req.mode === 'navigate' || url.pathname.endsWith('budget.html')) {
+  if (req.mode === 'navigate' || url.pathname.endsWith('index.html')) {
     e.respondWith(
       fetch(req).then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy));
         return res;
-      }).catch(() => caches.match(req).then(r => r || caches.match('./budget.html')))
+      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
     );
     return;
   }
