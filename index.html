@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>UNFILTERED — Zero-Based Budgeting</title>
 <meta name="description" content="No-nonsense zero-based budgeting with a gut check for every purchase.">
-<meta name="theme-color" content="#0d0f14">
+<meta name="theme-color" content="#0b1421">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -18,18 +18,20 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
   :root{
-    --bg:#0d0f14;
-    --panel:#161a22;
-    --panel-2:#1d222c;
-    --line:#2a303c;
-    --text:#f2f4f8;
-    --muted:#8b93a3;
-    --accent:#c6ff3a;
-    --accent-2:#ff5c39;
-    --good:#38d39f;
-    --bad:#ff5c66;
-    --income:#38d39f;
-    --shadow:0 20px 50px rgba(0,0,0,.45);
+    --bg:#0b1421;
+    --panel:#131f30;
+    --panel-2:#1a2840;
+    --line:#2a3a52;
+    --ink:#070d17;
+    --text:#eef2f8;
+    --muted:#90a0b8;
+    --accent:#e6b24d;
+    --accent-rgb:230,178,77;
+    --accent-2:#e0663c;
+    --good:#35c99a;
+    --bad:#f76d6d;
+    --income:#35c99a;
+    --shadow:0 20px 50px rgba(0,0,0,.5);
   }
 
   *{margin:0;padding:0;box-sizing:border-box}
@@ -37,10 +39,10 @@
   body{min-height:100vh;padding-bottom:60px}
   button{font-family:inherit;cursor:pointer}
   input,select{font-family:inherit}
-  ::selection{background:var(--accent);color:#0d0f14}
+  ::selection{background:var(--accent);color:var(--ink)}
 
   /* ---------- Hero ---------- */
-  .hero{background:linear-gradient(135deg,#12151c 0%,#191d27 100%);border-bottom:1px solid var(--line);padding:26px 20px 30px}
+  .hero{background:linear-gradient(135deg,#0e1a2b 0%,#16273d 100%);border-bottom:1px solid var(--line);padding:26px 20px 30px}
   .hero-inner{max-width:1080px;margin:0 auto}
   .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .brand .logo{font-weight:900;font-size:22px;letter-spacing:-.5px;display:inline-flex;align-items:center;gap:8px}
@@ -49,11 +51,11 @@
   .quote-wrap{margin-top:22px;display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
   .quote{flex:1;min-width:260px;font-size:clamp(20px,3.4vw,34px);font-weight:800;line-height:1.15;letter-spacing:-.5px}
   .quote-controls{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
-  .hit{background:var(--accent);color:#0d0f14;border:none;border-radius:12px;padding:12px 18px;font-weight:800;font-size:14px;white-space:nowrap;transition:transform .12s ease;box-shadow:0 8px 22px rgba(198,255,58,.25)}
+  .hit{background:var(--accent);color:var(--ink);border:none;border-radius:12px;padding:12px 18px;font-weight:800;font-size:14px;white-space:nowrap;transition:transform .12s ease;box-shadow:0 8px 22px rgba(230,178,77,.25)}
   .hit:hover{transform:translateY(-2px)}
   .intensity{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
   .intensity button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px}
-  .intensity button.on{background:var(--accent);color:#0d0f14}
+  .intensity button.on{background:var(--accent);color:var(--ink)}
 
   /* ---------- Layout ---------- */
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
@@ -77,7 +79,7 @@
   input:focus,select:focus{outline:none;border-color:var(--accent)}
   .btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px 16px;font-weight:700;font-size:14px}
   .btn:hover{border-color:var(--accent)}
-  .btn.primary{background:var(--accent);color:#0d0f14;border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:var(--ink);border-color:var(--accent)}
   .btn.income{background:var(--income);color:#08120d;border-color:var(--income)}
   .btn.ghost{background:transparent}
   .btn.sm{padding:7px 11px;font-size:13px}
@@ -111,7 +113,7 @@
   .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px}
   .cat-assign{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
   .cat-assign input{width:110px;padding:8px 10px;font-size:14px}
-  .bar{height:8px;background:#0d0f14;border-radius:6px;margin-top:12px;overflow:hidden}
+  .bar{height:8px;background:var(--ink);border-radius:6px;margin-top:12px;overflow:hidden}
   .bar > span{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .3s ease}
   .cat-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--muted)}
   .cat-meta .rem.good{color:var(--good)}.cat-meta .rem.over{color:var(--bad)}
@@ -122,12 +124,12 @@
   /* ---------- Transactions ---------- */
   .typetoggle{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
   .typetoggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:14px;padding:9px 18px;border-radius:8px}
-  .typetoggle button.on[data-t=expense]{background:var(--accent);color:#0d0f14}
+  .typetoggle button.on[data-t=expense]{background:var(--accent);color:var(--ink)}
   .typetoggle button.on[data-t=income]{background:var(--income);color:#08120d}
 
   .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
   .pill{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:50px;padding:7px 14px;font-weight:700;font-size:13px}
-  .pill.on{background:var(--text);color:#0d0f14;border-color:var(--text)}
+  .pill.on{background:var(--text);color:var(--ink);border-color:var(--text)}
   .filters input[type=text]{flex:1;min-width:140px}
 
   .tx{display:flex;align-items:center;gap:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin-top:10px}
@@ -140,8 +142,8 @@
   .tx.income .tx-amt{color:var(--income)}
   .tx.expense .tx-amt{color:var(--text)}
   .tx .del{background:none;border:none;color:var(--muted);font-size:16px;padding:4px 8px;border-radius:8px}
-  .tx .del:hover{color:var(--bad);background:#0d0f14}
-  .tx .tag-cat{display:inline-block;background:#0d0f14;border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--muted);margin-right:6px}
+  .tx .del:hover{color:var(--bad);background:var(--ink)}
+  .tx .tag-cat{display:inline-block;background:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--muted);margin-right:6px}
 
   /* ---------- Goals ---------- */
   .goal{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:14px}
@@ -163,7 +165,7 @@
   .lesson .num{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:800}
   .lesson h3{font-size:24px;font-weight:900;margin:8px 0 12px;letter-spacing:-.4px}
   .lesson p{color:#cfd4de;line-height:1.65;font-size:15px}
-  .lesson .try{margin-top:16px;padding:14px 16px;background:#0d0f14;border-left:3px solid var(--accent);border-radius:8px;font-size:14px}
+  .lesson .try{margin-top:16px;padding:14px 16px;background:var(--ink);border-left:3px solid var(--accent);border-radius:8px;font-size:14px}
   .lesson .try b{color:var(--accent)}
   .lesson-nav{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
   .dots{display:flex;gap:6px;flex-wrap:wrap}
@@ -176,15 +178,42 @@
   .linkbtn:hover{color:var(--text)}
   .hide{display:none!important}
 
+  /* ---------- Home landing ---------- */
+  .home-hero{background:linear-gradient(135deg,#0e1a2b,#16273d);border:1px solid var(--line);border-radius:20px;padding:34px 26px;box-shadow:var(--shadow)}
+  .hh-eye{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:800}
+  .hh-title{font-size:clamp(28px,6vw,44px);font-weight:900;letter-spacing:-1px;margin:10px 0;line-height:1.05}
+  .hh-sub{color:#c4cfe0;font-size:16px;line-height:1.5;max-width:560px}
+  .hh-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+  .snapshot{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+  @media(max-width:600px){.snapshot{grid-template-columns:repeat(2,1fr)}}
+  .snap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px}
+  .snap .k{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+  .snap .v{font-size:22px;font-weight:900;margin-top:5px;letter-spacing:-.4px}
+  .paths-head{margin:28px 0 4px;text-align:center}
+  .ph-eye{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);font-weight:800}
+  .ph-title{font-size:26px;font-weight:900;letter-spacing:-.5px}
+  .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+  @media(max-width:600px){.paths{grid-template-columns:repeat(2,1fr)}}
+  .path-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;transition:transform .12s ease,border-color .12s ease}
+  .path-card:hover{transform:translateY(-3px);border-color:var(--accent)}
+  .pc-ic{font-size:24px;background:var(--ink);border:1px solid var(--line);border-radius:12px;width:48px;height:48px;display:flex;align-items:center;justify-content:center}
+  .pc-t{font-weight:900;font-size:16px}
+  .pc-s{font-size:12px;color:var(--muted);font-weight:600}
+  .features{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px}
+  @media(max-width:720px){.features{grid-template-columns:repeat(2,1fr)}}
+  .feat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .feat .ft-t{font-weight:800;color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+  .feat .ft-d{font-size:13px;color:#c4cfe0;margin-top:6px;line-height:1.5}
+
   /* ---------- Impulse / Net worth ---------- */
   .nw{font-size:32px;font-weight:900;letter-spacing:-.5px;margin:2px 0}
   .nw.pos{color:var(--good)}.nw.neg{color:var(--bad)}
-  .avl-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;background:#0d0f14;border:1px solid var(--line)}
+  .avl-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;background:var(--ink);border:1px solid var(--line)}
   .avl-bar .a{background:linear-gradient(90deg,#1e4a37,#38d39f);min-width:2px;transition:width .4s ease}
   .avl-bar .l{background:linear-gradient(90deg,#4a221e,#ff5c39);min-width:2px;transition:width .4s ease}
   .avl-legend{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;font-weight:700}
   .avl-legend .a{color:var(--good)}.avl-legend .l{color:var(--bad)}
-  .chip{display:inline-block;background:#0d0f14;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--muted);margin:8px 6px 0 0}
+  .chip{display:inline-block;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--muted);margin:8px 6px 0 0}
   .chip b{color:var(--text)}
   .lineitem{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
   .lineitem .nm{flex:1;font-weight:700;font-size:14px;min-width:0}
@@ -206,7 +235,7 @@
   .verdict{font-size:22px;font-weight:900;letter-spacing:-.4px}
   .verdict.want{color:var(--accent-2)}.verdict.asset{color:var(--good)}.verdict.need{color:var(--accent)}
   .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
-  .metric{background:#0d0f14;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .metric{background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px}
   .metric .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;line-height:1.3}
   .metric .v{font-size:20px;font-weight:900;margin-top:5px;letter-spacing:-.3px}
   .qline{font-style:italic;color:var(--muted);font-size:14px;margin:10px 0 2px}
@@ -224,7 +253,7 @@
   .decision .del:hover{color:var(--bad)}
 
   /* ---------- FAB + modal ---------- */
-  .fab{position:fixed;right:16px;bottom:16px;z-index:50;background:var(--accent);color:#0d0f14;border:none;border-radius:50px;padding:15px 20px;font-weight:900;font-size:15px;box-shadow:0 10px 30px rgba(198,255,58,.4);display:flex;align-items:center;gap:8px;transition:transform .12s ease}
+  .fab{position:fixed;right:16px;bottom:16px;z-index:50;background:var(--accent);color:var(--ink);border:none;border-radius:50px;padding:15px 20px;font-weight:900;font-size:15px;box-shadow:0 10px 30px rgba(230,178,77,.4);display:flex;align-items:center;gap:8px;transition:transform .12s ease}
   .fab:hover{transform:translateY(-2px)}
   .fab.hide{display:none}
   .modal-overlay{position:fixed;inset:0;background:rgba(5,6,9,.74);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-end;justify-content:center}
@@ -237,8 +266,8 @@
 
   /* ---------- badges + celebration ---------- */
   .badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(94px,1fr));gap:10px;margin:6px 0 4px}
-  .badge-card{background:#0d0f14;border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;opacity:.35;filter:grayscale(1);transition:all .3s ease}
-  .badge-card.earned{opacity:1;filter:none;border-color:var(--accent);box-shadow:0 0 0 1px rgba(198,255,58,.25)}
+  .badge-card{background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;opacity:.35;filter:grayscale(1);transition:all .3s ease}
+  .badge-card.earned{opacity:1;filter:none;border-color:var(--accent);box-shadow:0 0 0 1px rgba(230,178,77,.25)}
   .badge-card .ic{font-size:26px;line-height:1}
   .badge-card .bl{font-size:11px;font-weight:800;margin-top:6px;line-height:1.2}
   .badge-card .bd{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.2}
@@ -250,7 +279,7 @@
   .rec{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-top:9px}
   .rec .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;flex-shrink:0}
   .rec.income .tag{background:#10231a;color:var(--good);border:1px solid #1e4a37}
-  .rec.expense .tag{background:#0d0f14;color:var(--muted);border:1px solid var(--line)}
+  .rec.expense .tag{background:var(--ink);color:var(--muted);border:1px solid var(--line)}
   .rec .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
   .rec .del{background:none;border:none;color:var(--muted);cursor:pointer}
@@ -259,7 +288,7 @@
   /* ---------- charts ---------- */
   .cbar{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:13px}
   .cbar .lab{width:110px;flex-shrink:0;color:#cfd4de;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cbar .track{flex:1;background:#0d0f14;border-radius:6px;height:24px;overflow:hidden;border:1px solid var(--line)}
+  .cbar .track{flex:1;background:var(--ink);border-radius:6px;height:24px;overflow:hidden;border:1px solid var(--line)}
   .cbar .fill{height:100%;background:linear-gradient(90deg,#5a7d1f,var(--accent));border-radius:6px;transition:width .4s ease}
   .cbar .val{width:88px;flex-shrink:0;text-align:right;font-weight:800;line-height:1.15}
   .months{display:flex;gap:8px;align-items:flex-end;height:170px;margin-top:10px}
@@ -273,7 +302,7 @@
   .legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
 
   /* ---------- asset psychology ---------- */
-  .kindtoggle{display:inline-flex;background:#0d0f14;border:1px solid var(--line);border-radius:10px;padding:3px;margin-top:10px;gap:3px}
+  .kindtoggle{display:inline-flex;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:3px;margin-top:10px;gap:3px}
   .kindtoggle button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 11px;border-radius:7px}
   .kindtoggle button.on[data-k=real]{background:var(--good);color:#08120d}
   .kindtoggle button.on[data-k=stuff]{background:#caa53a;color:#1a1405}
@@ -304,7 +333,7 @@
   .solve{margin-top:16px;background:#0c1310;border:1px solid #24401f;border-radius:14px;padding:16px 18px}
   .solve-h{font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--accent)}
   .solve-t{font-weight:800;font-size:15px;margin:6px 0 12px;line-height:1.35}
-  .swap{background:#0d0f14;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px}
+  .swap{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px}
   .swap-n{font-weight:800;font-size:14px}
   .swap-c{margin-left:8px;font-size:12px;font-weight:800;color:var(--accent);background:#152012;border:1px solid #24401f;border-radius:6px;padding:2px 8px;white-space:nowrap}
   .swap-d{color:#cfd4de;font-size:13px;margin-top:6px;line-height:1.5}
@@ -343,6 +372,7 @@
 
   <div class="wrap">
     <nav class="tabs">
+      <button class="tab" data-view="home">Home</button>
       <button class="tab" data-view="budget">Budget</button>
       <button class="tab" data-view="tx">Transactions</button>
       <button class="tab" data-view="insights">Insights</button>
@@ -350,6 +380,35 @@
       <button class="tab" data-view="goals">Dreams &amp; Goals</button>
       <button class="tab" data-view="learn">Money School</button>
     </nav>
+
+    <!-- ============ HOME ============ -->
+    <section class="view" id="view-home">
+      <div class="home-hero">
+        <div class="hh-eye">Zero-Based Budgeting · No Filter</div>
+        <h1 class="hh-title">Tell every dollar where to go.</h1>
+        <p class="hh-sub">Budget to zero, gut-check every purchase, and watch your dreams get funded — in plain, unfiltered English.</p>
+        <div class="hh-cta"><button class="btn primary" data-goto="budget">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
+      </div>
+
+      <div class="snapshot" id="homeSnap"></div>
+
+      <div class="paths-head"><div class="ph-eye">Where to next</div><h2 class="ph-title">Pick your path</h2></div>
+      <div class="paths">
+        <button class="path-card" data-goto="budget"><span class="pc-ic">📊</span><span class="pc-t">Budget</span><span class="pc-s">Give every dollar a job</span></button>
+        <button class="path-card" data-goto="tx"><span class="pc-ic">💸</span><span class="pc-t">Transactions</span><span class="pc-s">Track money in &amp; out</span></button>
+        <button class="path-card" data-goto="impulse"><span class="pc-ic">⚡</span><span class="pc-t">Impulse Check</span><span class="pc-s">Earn every purchase</span></button>
+        <button class="path-card" data-goto="insights"><span class="pc-ic">📈</span><span class="pc-t">Insights</span><span class="pc-s">See the trend</span></button>
+        <button class="path-card" data-goto="goals"><span class="pc-ic">🎯</span><span class="pc-t">Dreams &amp; Goals</span><span class="pc-s">Fund what matters</span></button>
+        <button class="path-card" data-goto="learn"><span class="pc-ic">📚</span><span class="pc-t">Money School</span><span class="pc-s">Learn the moves</span></button>
+      </div>
+
+      <div class="features">
+        <div class="feat"><div class="ft-t">Zero-based</div><div class="ft-d">Income minus every job equals zero. Nothing wanders off.</div></div>
+        <div class="feat"><div class="ft-t">Gut check</div><div class="ft-d">Every purchase weighed in hours of your life and days from your dream.</div></div>
+        <div class="feat"><div class="ft-t">Real net worth</div><div class="ft-d">Assets that actually pay you — not the stuff quietly draining you.</div></div>
+        <div class="feat"><div class="ft-t">No filter</div><div class="ft-d">Blunt truth, dialed from Clean to Savage. Your call.</div></div>
+      </div>
+    </section>
 
     <!-- ============ BUDGET ============ -->
     <section class="view" id="view-budget">
@@ -705,9 +764,11 @@ function activateTab(name){
   const v=document.getElementById('view-'+name); if(v) v.classList.add('on');
   const fab=document.getElementById('fab'); if(fab) fab.classList.toggle('hide',name==='impulse');
   if(name==='insights') renderCharts();
+  if(name==='home') renderHome();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
+document.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>activateTab(b.dataset.goto)));
 
 /* ---------- month nav ---------- */
 document.getElementById('mPrev').addEventListener('click',()=>{ state.activeMonth=shiftMonth(state.activeMonth,-1); save(); renderBudget(); renderTx(); });
@@ -1392,10 +1453,10 @@ function renderCharts(){
   const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad), Y=v=>h-pad-((v-mn)/((mx-mn)||1))*(h-2*pad);
   const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.bal).toFixed(1)}`).join(' ');
   const area=`${line} L${X(pts.length-1).toFixed(1)},${h-pad} L${X(0).toFixed(1)},${h-pad} Z`;
-  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.bal).toFixed(1)}" r="3" fill="#c6ff3a"/>`).join('');
+  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.bal).toFixed(1)}" r="3" fill="#e6b24d"/>`).join('');
   const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
   const tc=document.getElementById('trendChart'), latest=pts[pts.length-1].bal;
-  if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(198,255,58,.12)"/><path d="${line}" fill="none" stroke="#c6ff3a" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Latest balance: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b></span></div>`;
+  if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Latest balance: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b></span></div>`;
 }
 
 /* ---------- PWA / installable ---------- */
@@ -1419,10 +1480,22 @@ function boot(){
   renderBudget(); renderTx(); renderGoals(); renderLesson();
   renderNetWorth(); renderImpulse(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
-  if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
   initPWA();
-  document.querySelector('.tab').classList.add('on');
-  document.getElementById('view-budget').classList.add('on');
+  activateTab('home');
+  if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
+}
+function renderHome(){
+  const M=state.activeMonth;
+  const income=monthIncome(M), assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const ltb=income-assigned, spent=monthExpense(M);
+  const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
+  const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
+  const snap=document.getElementById('homeSnap'); if(!snap) return;
+  snap.innerHTML=`
+    <div class="snap"><div class="k">Left to budget</div><div class="v ${ltbCls}">${money(ltb)}</div></div>
+    <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div></div>
+    <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
+    <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div></div>`;
 }
 boot();
 </script>
