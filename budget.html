@@ -262,6 +262,35 @@
   .legend .k{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
   .legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
 
+  /* ---------- asset psychology ---------- */
+  .kindtoggle{display:inline-flex;background:#0d0f14;border:1px solid var(--line);border-radius:10px;padding:3px;margin-top:10px;gap:3px}
+  .kindtoggle button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 11px;border-radius:7px}
+  .kindtoggle button.on[data-k=real]{background:var(--good);color:#08120d}
+  .kindtoggle button.on[data-k=stuff]{background:#caa53a;color:#1a1405}
+  .nwbreak{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 12px;font-size:13px;font-weight:700}
+  .nwbreak .wk{color:var(--muted)}
+  .avl-bar .s{background:linear-gradient(90deg,#6b5a1e,#caa53a);min-width:0;transition:width .4s ease}
+  .lineitem.stuff .vl{color:#e0be55}
+  .lineitem .kindtag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:5px;cursor:pointer;flex-shrink:0}
+  .lineitem.asset .kindtag{background:#10231a;color:var(--good);border:1px solid #1e4a37}
+  .lineitem.stuff .kindtag{background:#241d08;color:#e0be55;border:1px solid #4a3d14}
+  .challenge{background:linear-gradient(135deg,#2a1410,#1d1a10);border:1px solid #4a3d14;border-radius:14px;padding:18px;margin-top:12px;animation:fade .3s ease}
+  .challenge .ttl{font-weight:900;font-size:17px;color:#e0be55;margin-bottom:6px}
+  .challenge p{color:#cfd4de;font-size:14px;line-height:1.55}
+  .challenge .sting{font-weight:800;color:var(--accent-2);margin-top:8px;font-size:14px}
+  .challenge .cx{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+  /* ---------- solutions / try this instead ---------- */
+  .solve{margin-top:16px;background:#0c1310;border:1px solid #24401f;border-radius:14px;padding:16px 18px}
+  .solve-h{font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--accent)}
+  .solve-t{font-weight:800;font-size:15px;margin:6px 0 12px;line-height:1.35}
+  .swap{background:#0d0f14;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px}
+  .swap-n{font-weight:800;font-size:14px}
+  .swap-c{margin-left:8px;font-size:12px;font-weight:800;color:var(--accent);background:#152012;border:1px solid #24401f;border-radius:6px;padding:2px 8px;white-space:nowrap}
+  .swap-d{color:#cfd4de;font-size:13px;margin-top:6px;line-height:1.5}
+  .solve-hint{margin-top:12px;font-size:13px;color:#cfd4de;line-height:1.55}
+  .solve-hint b{color:var(--accent)}
+
   @media (max-width:720px){ .summary{grid-template-columns:repeat(2,1fr)} }
   @media (max-width:560px){
     .quote-controls{align-items:stretch;width:100%}
@@ -439,16 +468,19 @@
 
       <div class="panel">
         <h2>Assets vs. Liabilities</h2>
-        <p class="sub">Every dollar you control is either working for your dreams (an asset) or against them (a liability). Here's where you actually stand.</p>
+        <p class="sub"><b style="color:var(--text)">The real definition:</b> an asset puts money IN your pocket. A liability takes money OUT. Not what you were sold — what's actually true. Net worth counts everything you'd walk away with, but only money-making assets are buying your freedom.</p>
         <div class="nw" id="nwNum">$0</div>
-        <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="l" style="width:50%"></div></div>
+        <div class="nwbreak" id="nwBreak"></div>
+        <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="s" style="width:0%"></div><div class="l" style="width:50%"></div></div>
         <div class="avl-legend"><span class="a" id="avlA">Assets $0</span><span class="l" id="avlL">Liabilities $0</span></div>
         <div id="nwChips"></div>
         <div class="twocol" style="margin-top:18px">
           <div>
             <label class="fld" style="width:100%">Add asset
-              <div class="row" style="gap:8px"><input type="text" id="assetName" placeholder="Savings, car, investments…" style="flex:1;min-width:80px"><input type="number" id="assetVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addAsset">＋</button></div>
+              <div class="row" style="gap:8px"><input type="text" id="assetName" placeholder="Rental, stocks, savings…" style="flex:1;min-width:80px"><input type="number" id="assetVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addAsset">＋</button></div>
             </label>
+            <div id="assetKind" class="kindtoggle"><button data-k="real" class="on">💵 Makes money</button><button data-k="stuff">📉 Loses value</button></div>
+            <div id="assetChallenge"></div>
             <div id="assetList"></div>
           </div>
           <div>
@@ -589,7 +621,8 @@ const LESSONS=[
   {t:"Sinking Funds",p:"The bills that wreck budgets aren't the surprises — they're the predictable ones you pretend not to see coming: the holidays, the annual insurance, the car tires. A sinking fund breaks a big future cost into small monthly chunks you set aside in advance. December stops being an ambush when you've been quietly funding it since March.",try:"List every 'once a year' expense. Divide each by 12. That's your monthly set-aside per fund."},
   {t:"Debt Snowball vs. Avalanche",p:"Two ways to kill debt. The Avalanche attacks the highest interest rate first — mathematically cheapest. The Snowball attacks the smallest balance first — emotionally strongest, because early wins keep you in the fight. The best method is the one you'll actually finish. Money is math, but paying it off is behavior.",try:"List your debts. Pick Avalanche if you're driven by numbers, Snowball if you need momentum. Attack one, pay minimums on the rest."},
   {t:"The 24-Hour Rule",p:"Impulse spending isn't a math problem, it's a timing problem. For any non-essential 'want,' put it in a 24-hour holding pen before you buy. Most wants are just a mood wearing a price tag — give it a day and the urge evaporates. The ones that survive the wait are usually the ones actually worth your dollars.",try:"Next time you're about to check out on something you didn't plan for — close the tab. Revisit tomorrow."},
-  {t:"Value Per Dollar, Not Price",p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation — that's aim.",try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."}
+  {t:"Value Per Dollar, Not Price",p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation — that's aim.",try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."},
+  {t:"What's Actually an Asset?",p:"Here's the line nobody drew for you: an asset puts money IN your pocket, a liability takes money OUT. That's the whole test. By that rule, the car in your driveway isn't an asset — it loses value every mile and costs you gas, insurance, and repairs. The house you live in? It takes mortgage, taxes, and upkeep out every month; it only flips to an asset when it pays you rent or you sell for more. This isn't to shame your stuff — it's to stop you feeling rich while you're surrounded by things quietly draining you. Real wealth is the pile that feeds you while you sleep.",try:"Look at everything you call an 'asset.' Cross out anything that doesn't put cash in your pocket. What's left is your real wealth — now grow that number."}
 ];
 
 /* ---------- state ---------- */
@@ -933,6 +966,7 @@ const IMP_NEED={
 const SKIP_WINS=["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."];
 
 function sumAssets(){ return state.assets.reduce((s,a)=>s+(a.value||0),0); }
+function sumAssetsKind(k){ return state.assets.filter(a=>(a.kind||'real')===k).reduce((s,a)=>s+(a.value||0),0); }
 function sumLiab(){ return state.liabilities.reduce((s,l)=>s+(l.value||0),0); }
 function netWorth(){ return sumAssets()-sumLiab(); }
 function avgMonthlyIncome(){
@@ -954,11 +988,13 @@ function ensureImpulseCategory(){
 /* --- net worth panel --- */
 function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}${money(o.value)}</span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
 function renderNetWorth(){
-  const A=sumAssets(),L=sumLiab(),NW=A-L,total=A+L;
+  const realA=sumAssetsKind('real'), stuffA=sumAssetsKind('stuff'), A=realA+stuffA, L=sumLiab(), NW=A-L, working=realA-L, total=A+L;
   const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
-  const bar=document.getElementById('avlBar');
-  bar.querySelector('.a').style.width=(total>0?(A/total*100):50)+'%';
-  bar.querySelector('.l').style.width=(total>0?(L/total*100):50)+'%';
+  document.getElementById('nwBreak').innerHTML=
+    `<span class="wk">Works for you: <b style="color:${working<0?'var(--bad)':'var(--good)'}">${money(working)}</b></span>`+
+    `<span class="wk">Depreciating stuff: <b style="color:#e0be55">${money(stuffA)}</b></span>`;
+  document.getElementById('avlBar').innerHTML=
+    `<div class="a" style="width:${total>0?realA/total*100:50}%"></div><div class="s" style="width:${total>0?stuffA/total*100:0}%"></div><div class="l" style="width:${total>0?L/total*100:50}%"></div>`;
   document.getElementById('avlA').textContent='Assets '+money(A);
   document.getElementById('avlL').textContent='Liabilities '+money(L);
   const cash=allTimeBalance(), dreams=state.goals.reduce((s,g)=>s+g.saved,0);
@@ -966,18 +1002,110 @@ function renderNetWorth(){
     `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
     `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
     `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
-  document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>lineItem(a,'asset')).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
+  document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
+    const k=a.kind||'real';
+    return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">${money(a.value)}</span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>`;
+  }).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
   document.getElementById('liabList').innerHTML=state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>';
+  document.querySelectorAll('#assetList button[data-togglekind]').forEach(b=>b.addEventListener('click',()=>{
+    const a=state.assets.find(x=>x.id===b.dataset.togglekind); if(!a) return;
+    a.kind=(a.kind||'real')==='real'?'stuff':'real'; save(); renderNetWorth();
+  }));
   document.querySelectorAll('#view-impulse button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
     const [cls,id]=b.dataset.delitem.split(':');
     if(cls==='asset') state.assets=state.assets.filter(x=>x.id!==id); else state.liabilities=state.liabilities.filter(x=>x.id!==id);
     save(); renderNetWorth();
   }));
 }
+/* asset psychology: is it REALLY an asset? */
+const VEH=['car','truck','suv','vehicle','auto','jeep','tesla','motorcycle','boat','yacht','rv','camper','atv','jet ski'];
+const HOUSE_W=['house','home','condo','apartment'];
+const OTHER_W=['tv','television','phone','iphone','laptop','couch','furniture','clothes','shoes','sneakers','jewelry','purse','handbag','gadget','console'];
+const WATCH=[...VEH,...HOUSE_W,...OTHER_W];
+function watchHit(name){ const n=(name||'').toLowerCase(); return WATCH.find(w=>n.includes(w))||''; }
+const CHALLENGE_CORE={
+  veh:"A car loses value the second you drive it, and keeps bleeding gas, insurance, and repairs every single month. That's money leaving your pocket — the exact opposite of what an asset does.",
+  house:"The home you live in isn't paying you. Mortgage, taxes, insurance, repairs, the surprise roof — that's money out, month after month. It only becomes an asset when it pays YOU rent, or you sell and walk away with more.",
+  gen:"Be honest — does this put money in your pocket, or does it just sit there losing value? If it isn't earning, it isn't an asset. It's stuff you own."
+};
+const CHALLENGE_STING={
+  veh:{clean:"By the honest definition, that's a liability — not an asset.",blunt:"That's a liability wearing an asset's badge. Call it what it is.",savage:"You didn't buy it to build wealth. You bought it to feel something. Own that."},
+  house:{clean:"Until it pays you, it's a roof — not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
+  gen:{clean:"Keep it if you love it — just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."}
+};
+/* solution engine: need a car? try this instead. */
+const SOLUTIONS=[
+  { keys:['car','truck','suv','vehicle','auto','sedan','payment','lease','jeep','tesla','minivan'],
+    title:"You need to get around — you don't need a $500-a-month car payment to do it.",
+    monthlySave:400,
+    swaps:[
+      {n:'An e-bike you actually own', c:'~$25–30/wk', d:'Own it outright in months, not years. No gas, no insurance, no title loan — built for exactly this gap.'},
+      {n:'A reliable used car, paid in cash', c:'one-time', d:'No payment beats a low payment every single time. Save up, buy it outright, drive debt-free.'},
+      {n:'Transit + rideshare mix', c:'~$100–200/mo', d:'Once you add up insurance, gas, and repairs, owning a car often quietly loses.'}
+    ]
+  },
+  { keys:['iphone','phone','pixel','galaxy','samsung','android'],
+    title:"A new flagship phone every year is a subscription you never meant to sign up for.",
+    monthlySave:55,
+    swaps:[
+      {n:"Last year's model, refurbished", c:'40–60% less', d:'Nearly identical, and nobody can tell. Your bank account sure can.'},
+      {n:'Keep yours + a battery swap', c:'~$40', d:'A fresh battery makes an old phone feel new again for a fraction of the price.'}
+    ]
+  },
+  { keys:['couch','furniture','sofa','table','desk','dresser','bed'],
+    title:"Furniture loses half its value the moment it's 'used' — so buy it already used.",
+    monthlySave:0,
+    swaps:[
+      {n:'Marketplace / estate sales', c:'50–70% less', d:'Quality secondhand furniture is everywhere. A little patience pays the difference.'},
+      {n:'Borrow or hand-me-down first', c:'$0', d:'Fill the gap for free while you save for the piece you actually love.'}
+    ]
+  },
+  { keys:['house','home','mortgage','apartment','condo'],
+    title:"More house means more of everything — payment, taxes, upkeep, and heat.",
+    monthlySave:300,
+    swaps:[
+      {n:'House-hack: rent out a room', c:'earns income', d:"Let the property help pay for itself. That's how a home edges toward being a real asset."},
+      {n:'Smaller place, bigger life', c:'less / mo', d:"The cheapest square footage is the kind you don't pay to heat, clean, and furnish."},
+      {n:'A roommate for one year', c:'split rent', d:'Twelve months of splitting rent can fund an entire emergency fund.'}
+    ]
+  }
+];
+function alternativesFor(name){ const n=(name||'').toLowerCase(); return SOLUTIONS.find(s=>s.keys.some(k=>n.includes(k)))||null; }
+function altHTML(name){
+  const s=alternativesFor(name); if(!s) return '';
+  let hint='';
+  if(s.monthlySave>0){
+    hint=`Ballpark savings: <b>${money(s.monthlySave)}/mo</b> — about <b>${money(s.monthlySave*12)}/yr</b> back in your pocket.`;
+    const g=topGoal();
+    if(g){ const remaining=Math.max(0,g.target-g.saved); if(remaining>0){ const months=Math.max(1,Math.ceil(remaining/s.monthlySave)); hint+=` Point it at “${escapeHtml(g.name)}” and you'd fund it in ~<b>${months} month${months>1?'s':''}</b>.`; } }
+  }
+  return `<div class="solve"><div class="solve-h">💡 Try this instead</div><div class="solve-t">${escapeHtml(s.title)}</div>${s.swaps.map(sw=>`<div class="swap"><span class="swap-n">${escapeHtml(sw.n)}</span><span class="swap-c">${escapeHtml(sw.c)}</span><div class="swap-d">${escapeHtml(sw.d)}</div></div>`).join('')}${hint?`<div class="solve-hint">${hint}</div>`:''}</div>`;
+}
+let assetKind='real';
+document.getElementById('assetKind').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return; assetKind=b.dataset.k;
+  document.querySelectorAll('#assetKind button').forEach(x=>x.classList.toggle('on',x.dataset.k===assetKind));
+});
+function clearChallenge(){ const el=document.getElementById('assetChallenge'); if(el) el.innerHTML=''; }
+function showAssetChallenge(id,word){
+  const cat=VEH.includes(word)?'veh':HOUSE_W.includes(word)?'house':'gen';
+  const sting=CHALLENGE_STING[cat][state.intensity]||CHALLENGE_STING[cat].blunt;
+  document.getElementById('assetChallenge').innerHTML=`<div class="challenge">
+    <div class="ttl">Hold up — is that really an asset?</div>
+    <p>${CHALLENGE_CORE[cat]}</p>
+    <div class="sting">${escapeHtml(sting)}</div>
+    <div class="cx"><button class="btn sm primary" id="chMove">You're right — move it to “loses value”</button><button class="btn sm ghost" id="chKeep">No, it really pays me</button></div>
+  </div>`;
+  document.getElementById('chMove').addEventListener('click',()=>{ const a=state.assets.find(x=>x.id===id); if(a) a.kind='stuff'; save(); renderNetWorth(); clearChallenge(); });
+  document.getElementById('chKeep').addEventListener('click',clearChallenge);
+}
 document.getElementById('addAsset').addEventListener('click',()=>{
   const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
-  if(!n||!v||v<0) return; state.assets.push({id:uid(),name:n,value:v});
+  if(!n||!v||v<0) return;
+  const id=uid(); state.assets.push({id,name:n,value:v,kind:assetKind});
   document.getElementById('assetName').value=''; document.getElementById('assetVal').value=''; save(); renderNetWorth();
+  const w=(assetKind==='real')?watchHit(n):'';
+  if(w) showAssetChallenge(id,w); else clearChallenge();
 });
 document.getElementById('addLiab').addEventListener('click',()=>{
   const n=document.getElementById('liabName').value.trim(), v=parseFloat(document.getElementById('liabVal').value);
@@ -1046,6 +1174,7 @@ function renderCheckResult(){
       <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:${needleColor}"></div></div>
       <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
       <div class="qline">${escapeHtml(q)}</div>
+      ${altHTML(name)}
       <div class="check-actions">
         <button class="btn income" id="impSkip">I skipped it 💪</button>
         ${goalSelect}
