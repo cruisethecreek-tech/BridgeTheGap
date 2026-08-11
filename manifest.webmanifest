@@ -2,7 +2,7 @@
   "name": "Unfiltered — Zero-Based Budgeting",
   "short_name": "Unfiltered",
   "description": "No-nonsense zero-based budgeting with a gut check for every purchase.",
-  "start_url": "./budget.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0d0f14",
