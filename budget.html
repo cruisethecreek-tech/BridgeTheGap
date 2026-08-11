@@ -213,6 +213,55 @@
   .decision .del{background:none;border:none;color:var(--muted);cursor:pointer}
   .decision .del:hover{color:var(--bad)}
 
+  /* ---------- FAB + modal ---------- */
+  .fab{position:fixed;right:16px;bottom:16px;z-index:50;background:var(--accent);color:#0d0f14;border:none;border-radius:50px;padding:15px 20px;font-weight:900;font-size:15px;box-shadow:0 10px 30px rgba(198,255,58,.4);display:flex;align-items:center;gap:8px;transition:transform .12s ease}
+  .fab:hover{transform:translateY(-2px)}
+  .fab.hide{display:none}
+  .modal-overlay{position:fixed;inset:0;background:rgba(5,6,9,.74);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-end;justify-content:center}
+  .modal-overlay.on{display:flex}
+  .modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:24px 20px calc(28px + env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:slideup .25s ease}
+  @media(min-width:560px){.modal-overlay{align-items:center}.modal{border-radius:20px}}
+  @keyframes slideup{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
+  .modal h3{font-size:20px;font-weight:900;margin-bottom:4px}
+  .modal .x{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
+
+  /* ---------- badges + celebration ---------- */
+  .badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(94px,1fr));gap:10px;margin:6px 0 4px}
+  .badge-card{background:#0d0f14;border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;opacity:.35;filter:grayscale(1);transition:all .3s ease}
+  .badge-card.earned{opacity:1;filter:none;border-color:var(--accent);box-shadow:0 0 0 1px rgba(198,255,58,.25)}
+  .badge-card .ic{font-size:26px;line-height:1}
+  .badge-card .bl{font-size:11px;font-weight:800;margin-top:6px;line-height:1.2}
+  .badge-card .bd{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.2}
+  .celebrate{background:linear-gradient(135deg,#1a2410,#12281c);border:1px solid #3a4a1e;border-radius:14px;padding:16px 18px;margin-bottom:16px}
+  .celebrate .big{font-size:20px;font-weight:900;color:var(--accent);letter-spacing:-.3px}
+  .celebrate .small{font-size:14px;color:#cfd4de;margin-top:4px;line-height:1.5}
+
+  /* ---------- recurring ---------- */
+  .rec{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-top:9px}
+  .rec .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;flex-shrink:0}
+  .rec.income .tag{background:#10231a;color:var(--good);border:1px solid #1e4a37}
+  .rec.expense .tag{background:#0d0f14;color:var(--muted);border:1px solid var(--line)}
+  .rec .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
+  .rec .del{background:none;border:none;color:var(--muted);cursor:pointer}
+  .rec .del:hover{color:var(--bad)}
+
+  /* ---------- charts ---------- */
+  .cbar{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:13px}
+  .cbar .lab{width:110px;flex-shrink:0;color:#cfd4de;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cbar .track{flex:1;background:#0d0f14;border-radius:6px;height:24px;overflow:hidden;border:1px solid var(--line)}
+  .cbar .fill{height:100%;background:linear-gradient(90deg,#5a7d1f,var(--accent));border-radius:6px;transition:width .4s ease}
+  .cbar .val{width:88px;flex-shrink:0;text-align:right;font-weight:800;line-height:1.15}
+  .months{display:flex;gap:8px;align-items:flex-end;height:170px;margin-top:10px}
+  .mcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%}
+  .mcol .pair{display:flex;gap:3px;align-items:flex-end;width:100%;flex:1;justify-content:center}
+  .mcol .bi,.mcol .be{width:44%;border-radius:4px 4px 0 0;min-height:2px;transition:height .4s ease}
+  .mcol .bi{background:var(--good)}.mcol .be{background:var(--accent-2)}
+  .mcol .ml{font-size:11px;color:var(--muted);font-weight:700}
+  .legend{display:flex;gap:16px;font-size:12px;font-weight:700;margin-top:12px;flex-wrap:wrap}
+  .legend .k{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+  .legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+
   @media (max-width:720px){ .summary{grid-template-columns:repeat(2,1fr)} }
   @media (max-width:560px){
     .quote-controls{align-items:stretch;width:100%}
@@ -247,6 +296,7 @@
     <nav class="tabs">
       <button class="tab" data-view="budget">Budget</button>
       <button class="tab" data-view="tx">Transactions</button>
+      <button class="tab" data-view="insights">Insights</button>
       <button class="tab" data-view="impulse">Impulse Check</button>
       <button class="tab" data-view="goals">Dreams &amp; Goals</button>
       <button class="tab" data-view="learn">Money School</button>
@@ -307,6 +357,23 @@
       </div>
 
       <div class="panel">
+        <h2>Recurring</h2>
+        <p class="sub">Set your paycheck and fixed bills once. They post automatically each month so your budget and net worth stay current without you lifting a finger.</p>
+        <div class="row">
+          <label class="fld">Type
+            <select id="recType"><option value="expense">Expense</option><option value="income">Income</option></select>
+          </label>
+          <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
+          <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
+          <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
+          <label class="fld">Day<input type="number" id="recDay" min="1" max="28" value="1" style="width:70px"></label>
+          <button class="btn primary" id="addRec">Add</button>
+        </div>
+        <div id="recList"></div>
+        <div style="margin-top:14px"><button class="btn sm" id="postRec">Post recurring</button></div>
+      </div>
+
+      <div class="panel">
         <div class="summary" id="txSummary" style="grid-template-columns:repeat(4,1fr)"></div>
         <div class="filters">
           <button class="pill on" data-f="all">All</button>
@@ -316,6 +383,26 @@
           <button class="btn sm ghost" id="allMonthsBtn">Showing: this month</button>
         </div>
         <div id="txList"></div>
+      </div>
+    </section>
+
+    <!-- ============ INSIGHTS ============ -->
+    <section class="view" id="view-insights">
+      <div class="panel">
+        <h2>Spending by category</h2>
+        <p class="sub">Where your money actually went in <span id="chartMonth">this month</span>. Use the month arrows on the Budget tab to change the period.</p>
+        <div id="catChart"></div>
+      </div>
+      <div class="panel">
+        <h2>Income vs. spending</h2>
+        <p class="sub">Last 6 months. Green should be taller than red. Every single time.</p>
+        <div id="monthChart" class="months"></div>
+        <div class="legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Income</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Spending</span></div>
+      </div>
+      <div class="panel">
+        <h2>Cash balance trend</h2>
+        <p class="sub">Your running balance across everything you've tracked. The dream is up and to the right.</p>
+        <div id="trendChart"></div>
       </div>
     </section>
 
@@ -347,6 +434,7 @@
           <button class="btn primary" id="impRun">Run the check</button>
         </div>
         <div id="impResult"></div>
+        <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">📌 Save a one-tap gut-check link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
 
       <div class="panel">
@@ -375,8 +463,10 @@
       <div class="panel">
         <h2>Your impulse scoreboard</h2>
         <p class="sub">Proof that questioning the purchase pays. Every skip is money that stayed on your team.</p>
+        <div id="impCelebrate"></div>
         <div class="scorecards" id="impScore"></div>
         <div id="impHours"></div>
+        <div id="impBadges" class="badges"></div>
         <div id="impLog"></div>
       </div>
     </section>
@@ -424,6 +514,25 @@
       <button class="linkbtn" id="importBtn">Import</button>
       <button class="linkbtn" id="resetBtn">Reset all</button>
       <input type="file" id="importFile" accept="application/json" class="hide">
+    </div>
+  </div>
+
+  <button class="fab" id="fab">⚡ Gut check?</button>
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <button class="x" id="modalX">✕</button>
+      <h3>Gut check ⚡</h3>
+      <p class="sub" style="margin-bottom:16px">About to buy something? Run it by me first.</p>
+      <div class="row">
+        <label class="fld" style="flex:1">What are you eyeing?<input type="text" id="mName" placeholder="Sneakers, gadget, coffee…"></label>
+        <label class="fld">Price $<input type="number" id="mAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label class="fld" style="flex:1">What is it, really?
+          <select id="mKind"><option value="want">A want / impulse</option><option value="need">A real need</option><option value="asset">An asset (holds value)</option></select>
+        </label>
+        <button class="btn primary" id="mRun" style="flex:1;min-width:150px">Run the check →</button>
+      </div>
     </div>
   </div>
 
@@ -487,7 +596,7 @@ const LESSONS=[
 function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
-           assets:[], liabilities:[], impulse:[], hourlyWage:0 };
+           assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[] };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -535,11 +644,15 @@ document.getElementById('intensity').addEventListener('click',e=>{
 function renderIntensity(){ document.querySelectorAll('#intensity button').forEach(b=>b.classList.toggle('on',b.dataset.lvl===state.intensity)); }
 
 /* ---------- tabs ---------- */
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+function activateTab(name){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.view===name));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
-  t.classList.add('on'); document.getElementById('view-'+t.dataset.view).classList.add('on');
-}));
+  const v=document.getElementById('view-'+name); if(v) v.classList.add('on');
+  const fab=document.getElementById('fab'); if(fab) fab.classList.toggle('hide',name==='impulse');
+  if(name==='insights') renderCharts();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
 
 /* ---------- month nav ---------- */
 document.getElementById('mPrev').addEventListener('click',()=>{ state.activeMonth=shiftMonth(state.activeMonth,-1); save(); renderBudget(); renderTx(); });
@@ -691,6 +804,8 @@ function renderTx(){
     <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp)<0?'bad':'good'}">${money(inc-exp)}</div></div>
     <div class="stat"><div class="k">Balance (all time)</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
   renderTxList();
+  renderRecurring();
+  renderCharts();
 }
 function renderTxList(){
   const M=state.activeMonth;
@@ -975,6 +1090,18 @@ function renderImpulse(){
     if(saved>0) parts.push(`<span class="chip">Skipped = <b>${fmtHours(saved/H)}</b> of your life kept</span>`);
     hoursBox.innerHTML=parts.join('');
   } else hoursBox.innerHTML='';
+  // monthly celebration
+  const cel=document.getElementById('impCelebrate');
+  const monthSkipped=state.impulse.filter(i=>i.type==='skip'&&monthOf(i.date)===thisMonth()).reduce((s,i)=>s+i.amount,0);
+  if(monthSkipped>0){
+    const g=topGoal(); let line;
+    if(g){ const pct=Math.round(monthSkipped/g.target*100); line=`That's <b>${pct}%</b> of your dream “${escapeHtml(g.name)}.” Keep skipping, keep building.`; }
+    else line='Set a dream on the Goals tab and watch these skips fund it.';
+    cel.innerHTML=`<div class="celebrate"><div class="big">You've skipped ${money(monthSkipped)} this month 💪</div><div class="small">${line}</div></div>`;
+  } else cel.innerHTML='';
+  // badges
+  const st={streak:skipStreak(),saved:saved};
+  document.getElementById('impBadges').innerHTML=BADGES.map(b=>`<div class="badge-card ${b.test(st)?'earned':''}"><div class="ic">${b.icon}</div><div class="bl">${b.label}</div><div class="bd">${b.desc}</div></div>`).join('');
   const log=state.impulse.slice().reverse(), box=document.getElementById('impLog');
   if(!log.length){ box.innerHTML=`<div class="empty" style="margin-top:8px">No calls made yet. Next time something tempts you, run it by me first.</div>`; return; }
   box.innerHTML=log.map(e=>`<div class="decision ${e.type}"><span class="badge">${e.type==='skip'?'Skipped':'Bought'}</span><span class="nm">${escapeHtml(e.name)}${e.goalId?' → dream':''}</span><span class="am">${e.type==='skip'?'+':'−'}${money(e.amount)}</span><button class="del" data-delimp="${e.id}" title="Delete">✕</button></div>`).join('');
@@ -987,12 +1114,129 @@ function renderImpulse(){
   }));
 }
 
+/* ============================================================
+   BADGES, GUT-CHECK MODAL, RECURRING, CHARTS
+   ============================================================ */
+const BADGES=[
+  {id:'streak3', icon:'🔥', label:'On a Roll', desc:'3 skips in a row', test:s=>s.streak>=3},
+  {id:'streak7', icon:'🗓️', label:'Week Strong', desc:'7-skip streak', test:s=>s.streak>=7},
+  {id:'streak14', icon:'🛡️', label:'Ironclad', desc:'14-skip streak', test:s=>s.streak>=14},
+  {id:'streak30', icon:'💎', label:'Unshakeable', desc:'30-skip streak', test:s=>s.streak>=30},
+  {id:'save100', icon:'💵', label:'First $100', desc:'$100 skipped', test:s=>s.saved>=100},
+  {id:'save500', icon:'💰', label:'Serious', desc:'$500 skipped', test:s=>s.saved>=500},
+  {id:'save1000', icon:'🚀', label:'Dream Fuel', desc:'$1,000 skipped', test:s=>s.saved>=1000},
+  {id:'save5000', icon:'👑', label:'Untouchable', desc:'$5,000 skipped', test:s=>s.saved>=5000}
+];
+
+/* --- gut-check modal + shareable link --- */
+const modal=document.getElementById('modal');
+function openModal(){ document.getElementById('mName').value=''; document.getElementById('mAmt').value=''; document.getElementById('mKind').value='want'; modal.classList.add('on'); setTimeout(()=>document.getElementById('mName').focus(),60); }
+function closeModal(){ modal.classList.remove('on'); }
+document.getElementById('fab').addEventListener('click',openModal);
+document.getElementById('modalX').addEventListener('click',closeModal);
+modal.addEventListener('click',e=>{ if(e.target===modal) closeModal(); });
+document.getElementById('mRun').addEventListener('click',()=>{
+  const name=document.getElementById('mName').value.trim()||'This purchase';
+  const amt=parseFloat(document.getElementById('mAmt').value);
+  const kind=document.getElementById('mKind').value;
+  if(!amt||amt<=0){ alert('Enter a price.'); return; }
+  document.getElementById('impName').value=name; document.getElementById('impAmt').value=amt; document.getElementById('impKind').value=kind;
+  pendingCheck={name,amt,kind}; renderCheckResult(); closeModal(); activateTab('impulse');
+  setTimeout(()=>document.getElementById('impResult').scrollIntoView({behavior:'smooth',block:'center'}),200);
+});
+document.getElementById('mAmt').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('mRun').click(); });
+document.getElementById('copyLink').addEventListener('click',()=>{
+  const url=location.origin+location.pathname+'#gutcheck', msg=document.getElementById('copyMsg');
+  const done=()=>{ msg.textContent='Copied! Add it to your home screen for a one-tap check.'; };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done,()=>{msg.textContent=url;});
+  else msg.textContent=url;
+});
+
+/* --- recurring transactions --- */
+document.getElementById('recType').addEventListener('change',()=>{
+  const inc=document.getElementById('recType').value==='income';
+  document.getElementById('recCatWrap').classList.toggle('hide',inc);
+  document.getElementById('recSrcWrap').classList.toggle('hide',!inc);
+});
+document.getElementById('addRec').addEventListener('click',()=>{
+  const type=document.getElementById('recType').value;
+  const amt=parseFloat(document.getElementById('recAmt').value);
+  const day=Math.min(28,Math.max(1,parseInt(document.getElementById('recDay').value)||1));
+  if(!amt||amt<=0){ alert('Enter an amount.'); return; }
+  const item={id:uid(),type,amount:amt,day};
+  if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ alert('Add a category first on the Budget tab.'); return; } item.catId=catId; }
+  else item.source=document.getElementById('recSrc').value.trim()||'Income';
+  state.recurring.push(item);
+  document.getElementById('recAmt').value=''; document.getElementById('recSrc').value='';
+  save(); renderRecurring();
+});
+document.getElementById('postRec').addEventListener('click',()=>{
+  const n=postRecurring(state.activeMonth);
+  if(n){ save(); renderBudget(); renderTx(); renderNetWorth(); alert('Posted '+n+' recurring item'+(n>1?'s':'')+' to '+fmtMonth(state.activeMonth)+'.'); }
+  else alert('Recurring items are already posted for '+fmtMonth(state.activeMonth)+'.');
+});
+function renderRecurring(){
+  const sel=document.getElementById('recCat');
+  if(sel) sel.innerHTML=state.categories.length?state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join(''):'<option value="">Add a category first</option>';
+  const pr=document.getElementById('postRec'); if(pr) pr.textContent='Post recurring to '+fmtMonth(state.activeMonth);
+  const box=document.getElementById('recList'); if(!box) return;
+  if(!state.recurring.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No recurring items yet. Add your paycheck and fixed bills.</div>`; return; }
+  box.innerHTML=state.recurring.map(r=>{
+    const label=r.type==='income'?escapeHtml(r.source||'Income'):escapeHtml(catName(r.catId));
+    return `<div class="rec ${r.type}"><span class="tag">${r.type==='income'?'Income':'Expense'}</span><span class="nm">${label} · day ${r.day}</span><span class="am">${r.type==='income'?'+':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
+  }).join('');
+  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); save(); renderRecurring(); }));
+}
+function postRecurring(month){
+  let added=0;
+  state.recurring.forEach(r=>{
+    if(state.transactions.some(t=>t.recId===r.id&&monthOf(t.date)===month)) return;
+    const date=`${month}-${String(r.day).padStart(2,'0')}`;
+    if(r.type==='income') state.transactions.push({id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id});
+    else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
+    added++;
+  });
+  return added;
+}
+
+/* --- charts --- */
+function last6Months(){ const arr=[]; let m=thisMonth(); for(let i=0;i<6;i++){ arr.unshift(m); m=shiftMonth(m,-1); } return arr; }
+function monShort(m){ return new Date(m+'-01T00:00:00').toLocaleString(undefined,{month:'short'}); }
+function renderCharts(){
+  const M=state.activeMonth;
+  const ml=document.getElementById('chartMonth'); if(ml) ml.textContent=fmtMonth(M);
+  // category spend this month
+  const rows=state.categories.map(c=>({name:c.name,val:spentFor(c.id,M)})).filter(r=>r.val>0).sort((a,b)=>b.val-a.val);
+  const uncat=txnsInMonth(M).filter(t=>t.type==='expense'&&!state.categories.some(c=>c.id===t.catId)).reduce((s,t)=>s+t.amount,0);
+  if(uncat>0) rows.push({name:'Uncategorized',val:uncat});
+  const total=rows.reduce((s,r)=>s+r.val,0), maxV=Math.max(1,...rows.map(r=>r.val));
+  const cc=document.getElementById('catChart');
+  if(cc) cc.innerHTML=rows.length?rows.map(r=>`<div class="cbar"><span class="lab">${escapeHtml(r.name)}</span><span class="track"><span class="fill" style="width:${Math.max(3,r.val/maxV*100)}%"></span></span><span class="val">${money(r.val)}<br><small style="color:var(--muted);font-weight:600">${Math.round(r.val/total*100)}%</small></span></div>`).join(''):`<div class="empty">No spending logged for ${fmtMonth(M)} yet.</div>`;
+  // income vs expense, last 6 months
+  const months=last6Months(), data=months.map(m=>({m,inc:monthIncome(m),exp:monthExpense(m)}));
+  const maxM=Math.max(1,...data.map(d=>Math.max(d.inc,d.exp)));
+  const mc=document.getElementById('monthChart');
+  if(mc) mc.innerHTML=data.map(d=>`<div class="mcol"><div class="pair"><div class="bi" style="height:${d.inc/maxM*100}%" title="Income ${money(d.inc)}"></div><div class="be" style="height:${d.exp/maxM*100}%" title="Spent ${money(d.exp)}"></div></div><div class="ml">${monShort(d.m)}</div></div>`).join('');
+  // cumulative balance trend
+  const pts=months.map(m=>({m,bal:state.transactions.filter(t=>monthOf(t.date)<=m).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0)}));
+  const w=600,h=150,pad=12, vals=pts.map(p=>p.bal), mn=Math.min(0,...vals), mx=Math.max(1,...vals);
+  const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad), Y=v=>h-pad-((v-mn)/((mx-mn)||1))*(h-2*pad);
+  const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.bal).toFixed(1)}`).join(' ');
+  const area=`${line} L${X(pts.length-1).toFixed(1)},${h-pad} L${X(0).toFixed(1)},${h-pad} Z`;
+  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.bal).toFixed(1)}" r="3" fill="#c6ff3a"/>`).join('');
+  const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
+  const tc=document.getElementById('trendChart'), latest=pts[pts.length-1].bal;
+  if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(198,255,58,.12)"/><path d="${line}" fill="none" stroke="#c6ff3a" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Latest balance: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b></span></div>`;
+}
+
 /* ---------- boot ---------- */
 function boot(){
   renderIntensity(); newQuote();
+  if(postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderLesson();
-  renderNetWorth(); renderImpulse();
+  renderNetWorth(); renderImpulse(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
+  if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
   document.querySelector('.tab').classList.add('on');
   document.getElementById('view-budget').classList.add('on');
 }
