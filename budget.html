@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>UNFILTERED — Zero-Based Budgeting</title>
+<meta name="description" content="No-nonsense zero-based budgeting with a gut check for every purchase.">
+<meta name="theme-color" content="#0d0f14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Unfiltered">
+<meta name="application-name" content="Unfiltered">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
@@ -270,7 +280,17 @@
   .nwbreak{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 12px;font-size:13px;font-weight:700}
   .nwbreak .wk{color:var(--muted)}
   .avl-bar .s{background:linear-gradient(90deg,#6b5a1e,#caa53a);min-width:0;transition:width .4s ease}
+  .lineitem.asset,.lineitem.stuff{flex-direction:column;align-items:stretch;gap:0}
+  .li-top{display:flex;align-items:center;gap:10px}
+  .li-cost{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:600;flex-wrap:wrap}
+  .li-cost input{width:80px;padding:6px 9px;font-size:14px}
+  .li-yr{color:var(--accent-2);font-weight:800;margin-left:auto}
   .lineitem.stuff .vl{color:#e0be55}
+  .drainbox{background:linear-gradient(135deg,#2a1410,#1d1512);border:1px solid #4a221e;border-radius:14px;padding:16px 18px;margin:14px 0 4px}
+  .drainbox .db-k{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--accent-2)}
+  .drainbox .db-v{font-size:24px;font-weight:900;margin-top:4px;letter-spacing:-.4px}
+  .drainbox .db-sub{font-size:14px;font-weight:700;color:var(--muted)}
+  .drainbox .db-note{font-size:13px;color:#cfd4de;margin-top:6px;line-height:1.5}
   .lineitem .kindtag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:5px;cursor:pointer;flex-shrink:0}
   .lineitem.asset .kindtag{background:#10231a;color:var(--good);border:1px solid #1e4a37}
   .lineitem.stuff .kindtag{background:#241d08;color:#e0be55;border:1px solid #4a3d14}
@@ -474,6 +494,7 @@
         <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="s" style="width:0%"></div><div class="l" style="width:50%"></div></div>
         <div class="avl-legend"><span class="a" id="avlA">Assets $0</span><span class="l" id="avlL">Liabilities $0</span></div>
         <div id="nwChips"></div>
+        <div id="nwDrain"></div>
         <div class="twocol" style="margin-top:18px">
           <div>
             <label class="fld" style="width:100%">Add asset
@@ -542,6 +563,7 @@
   <div class="foot">
     <span>UNFILTERED · a working prototype. Everything saves to this browser only — nothing leaves your device.</span>
     <div class="actions">
+      <button class="linkbtn" id="installBtn">📲 Install app</button>
       <button class="linkbtn" id="exportBtn">Export data</button>
       <button class="linkbtn" id="importBtn">Import</button>
       <button class="linkbtn" id="resetBtn">Reset all</button>
@@ -1003,10 +1025,20 @@ function renderNetWorth(){
     `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
     `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
   document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
-    const k=a.kind||'real';
-    return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">${money(a.value)}</span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>`;
+    const k=a.kind||'real', yr=(a.cost||0)*12;
+    return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
+      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">${money(a.value)}</span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
+      <div class="li-cost">Drains $<input type="number" min="0" step="1" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
+    </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
   document.getElementById('liabList').innerHTML=state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>';
+  renderDrain();
+  document.querySelectorAll('#assetList input[data-cost]').forEach(inp=>inp.addEventListener('input',()=>{
+    const a=state.assets.find(x=>x.id===inp.dataset.cost); if(!a) return;
+    a.cost=parseFloat(inp.value)||0; save();
+    const yl=document.querySelector(`#assetList [data-costyr="${a.id}"]`); if(yl) yl.textContent=a.cost?'= '+money(a.cost*12)+'/yr to keep':'';
+    renderDrain();
+  }));
   document.querySelectorAll('#assetList button[data-togglekind]').forEach(b=>b.addEventListener('click',()=>{
     const a=state.assets.find(x=>x.id===b.dataset.togglekind); if(!a) return;
     a.kind=(a.kind||'real')==='real'?'stuff':'real'; save(); renderNetWorth();
@@ -1039,7 +1071,7 @@ const SOLUTIONS=[
     title:"You need to get around — you don't need a $500-a-month car payment to do it.",
     monthlySave:400,
     swaps:[
-      {n:'An e-bike you actually own', c:'~$25–30/wk', d:'Own it outright in months, not years. No gas, no insurance, no title loan — built for exactly this gap.'},
+      {n:'An e-bike or e-scooter you own', c:'a fraction of a car', d:'Own it outright for a fraction of a car payment. No gas, no insurance, no monthly note hanging over you.'},
       {n:'A reliable used car, paid in cash', c:'one-time', d:'No payment beats a low payment every single time. Save up, buy it outright, drive debt-free.'},
       {n:'Transit + rideshare mix', c:'~$100–200/mo', d:'Once you add up insurance, gas, and repairs, owning a car often quietly loses.'}
     ]
@@ -1099,10 +1131,18 @@ function showAssetChallenge(id,word){
   document.getElementById('chMove').addEventListener('click',()=>{ const a=state.assets.find(x=>x.id===id); if(a) a.kind='stuff'; save(); renderNetWorth(); clearChallenge(); });
   document.getElementById('chKeep').addEventListener('click',clearChallenge);
 }
+function renderDrain(){
+  const box=document.getElementById('nwDrain'); if(!box) return;
+  const drain=state.assets.reduce((s,a)=>s+(a.cost||0),0);
+  if(drain<=0){ box.innerHTML=''; return; }
+  const H=effectiveHourly();
+  const hrs=H>0?' · '+fmtHours(drain/H)+' of work/mo':'';
+  box.innerHTML=`<div class="drainbox"><div class="db-k">The cost of keeping it all</div><div class="db-v">${money(drain)}/mo <span class="db-sub">· ${money(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month — before you buy a single new thing. That's the part nobody calls an "asset."</div></div>`;
+}
 document.getElementById('addAsset').addEventListener('click',()=>{
   const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
   if(!n||!v||v<0) return;
-  const id=uid(); state.assets.push({id,name:n,value:v,kind:assetKind});
+  const id=uid(); state.assets.push({id,name:n,value:v,kind:assetKind,cost:0});
   document.getElementById('assetName').value=''; document.getElementById('assetVal').value=''; save(); renderNetWorth();
   const w=(assetKind==='real')?watchHit(n):'';
   if(w) showAssetChallenge(id,w); else clearChallenge();
@@ -1358,6 +1398,20 @@ function renderCharts(){
   if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(198,255,58,.12)"/><path d="${line}" fill="none" stroke="#c6ff3a" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Latest balance: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b></span></div>`;
 }
 
+/* ---------- PWA / installable ---------- */
+let deferredPrompt=null;
+function initPWA(){
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  const btn=document.getElementById('installBtn');
+  window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; });
+  window.addEventListener('appinstalled',()=>{ if(btn) btn.style.display='none'; });
+  if(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone){ if(btn) btn.style.display='none'; }
+  if(btn) btn.addEventListener('click',async()=>{
+    if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; }
+    else alert('To install:\n\niPhone (Safari): tap Share → “Add to Home Screen.”\nAndroid (Chrome): menu ⋮ → “Install app.”\n\nThen the gut check is one tap from your home screen.');
+  });
+}
+
 /* ---------- boot ---------- */
 function boot(){
   renderIntensity(); newQuote();
@@ -1366,6 +1420,7 @@ function boot(){
   renderNetWorth(); renderImpulse(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
+  initPWA();
   document.querySelector('.tab').classList.add('on');
   document.getElementById('view-budget').classList.add('on');
 }
