@@ -280,6 +280,17 @@
   .challenge .sting{font-weight:800;color:var(--accent-2);margin-top:8px;font-size:14px}
   .challenge .cx{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
+  /* ---------- solutions / try this instead ---------- */
+  .solve{margin-top:16px;background:#0c1310;border:1px solid #24401f;border-radius:14px;padding:16px 18px}
+  .solve-h{font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--accent)}
+  .solve-t{font-weight:800;font-size:15px;margin:6px 0 12px;line-height:1.35}
+  .swap{background:#0d0f14;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px}
+  .swap-n{font-weight:800;font-size:14px}
+  .swap-c{margin-left:8px;font-size:12px;font-weight:800;color:var(--accent);background:#152012;border:1px solid #24401f;border-radius:6px;padding:2px 8px;white-space:nowrap}
+  .swap-d{color:#cfd4de;font-size:13px;margin-top:6px;line-height:1.5}
+  .solve-hint{margin-top:12px;font-size:13px;color:#cfd4de;line-height:1.55}
+  .solve-hint b{color:var(--accent)}
+
   @media (max-width:720px){ .summary{grid-template-columns:repeat(2,1fr)} }
   @media (max-width:560px){
     .quote-controls{align-items:stretch;width:100%}
@@ -1022,6 +1033,54 @@ const CHALLENGE_STING={
   house:{clean:"Until it pays you, it's a roof — not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
   gen:{clean:"Keep it if you love it — just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."}
 };
+/* solution engine: need a car? try this instead. */
+const SOLUTIONS=[
+  { keys:['car','truck','suv','vehicle','auto','sedan','payment','lease','jeep','tesla','minivan'],
+    title:"You need to get around — you don't need a $500-a-month car payment to do it.",
+    monthlySave:400,
+    swaps:[
+      {n:'An e-bike you actually own', c:'~$25–30/wk', d:'Own it outright in months, not years. No gas, no insurance, no title loan — built for exactly this gap.'},
+      {n:'A reliable used car, paid in cash', c:'one-time', d:'No payment beats a low payment every single time. Save up, buy it outright, drive debt-free.'},
+      {n:'Transit + rideshare mix', c:'~$100–200/mo', d:'Once you add up insurance, gas, and repairs, owning a car often quietly loses.'}
+    ]
+  },
+  { keys:['iphone','phone','pixel','galaxy','samsung','android'],
+    title:"A new flagship phone every year is a subscription you never meant to sign up for.",
+    monthlySave:55,
+    swaps:[
+      {n:"Last year's model, refurbished", c:'40–60% less', d:'Nearly identical, and nobody can tell. Your bank account sure can.'},
+      {n:'Keep yours + a battery swap', c:'~$40', d:'A fresh battery makes an old phone feel new again for a fraction of the price.'}
+    ]
+  },
+  { keys:['couch','furniture','sofa','table','desk','dresser','bed'],
+    title:"Furniture loses half its value the moment it's 'used' — so buy it already used.",
+    monthlySave:0,
+    swaps:[
+      {n:'Marketplace / estate sales', c:'50–70% less', d:'Quality secondhand furniture is everywhere. A little patience pays the difference.'},
+      {n:'Borrow or hand-me-down first', c:'$0', d:'Fill the gap for free while you save for the piece you actually love.'}
+    ]
+  },
+  { keys:['house','home','mortgage','apartment','condo'],
+    title:"More house means more of everything — payment, taxes, upkeep, and heat.",
+    monthlySave:300,
+    swaps:[
+      {n:'House-hack: rent out a room', c:'earns income', d:"Let the property help pay for itself. That's how a home edges toward being a real asset."},
+      {n:'Smaller place, bigger life', c:'less / mo', d:"The cheapest square footage is the kind you don't pay to heat, clean, and furnish."},
+      {n:'A roommate for one year', c:'split rent', d:'Twelve months of splitting rent can fund an entire emergency fund.'}
+    ]
+  }
+];
+function alternativesFor(name){ const n=(name||'').toLowerCase(); return SOLUTIONS.find(s=>s.keys.some(k=>n.includes(k)))||null; }
+function altHTML(name){
+  const s=alternativesFor(name); if(!s) return '';
+  let hint='';
+  if(s.monthlySave>0){
+    hint=`Ballpark savings: <b>${money(s.monthlySave)}/mo</b> — about <b>${money(s.monthlySave*12)}/yr</b> back in your pocket.`;
+    const g=topGoal();
+    if(g){ const remaining=Math.max(0,g.target-g.saved); if(remaining>0){ const months=Math.max(1,Math.ceil(remaining/s.monthlySave)); hint+=` Point it at “${escapeHtml(g.name)}” and you'd fund it in ~<b>${months} month${months>1?'s':''}</b>.`; } }
+  }
+  return `<div class="solve"><div class="solve-h">💡 Try this instead</div><div class="solve-t">${escapeHtml(s.title)}</div>${s.swaps.map(sw=>`<div class="swap"><span class="swap-n">${escapeHtml(sw.n)}</span><span class="swap-c">${escapeHtml(sw.c)}</span><div class="swap-d">${escapeHtml(sw.d)}</div></div>`).join('')}${hint?`<div class="solve-hint">${hint}</div>`:''}</div>`;
+}
 let assetKind='real';
 document.getElementById('assetKind').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return; assetKind=b.dataset.k;
@@ -1115,6 +1174,7 @@ function renderCheckResult(){
       <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:${needleColor}"></div></div>
       <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
       <div class="qline">${escapeHtml(q)}</div>
+      ${altHTML(name)}
       <div class="check-actions">
         <button class="btn income" id="impSkip">I skipped it 💪</button>
         ${goalSelect}
