@@ -50,6 +50,22 @@
   .brand .logo{font-weight:900;font-size:24px;letter-spacing:-.8px}
   .brand .logo b{color:var(--accent)}
   .brand .tagline{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.2px;margin-top:3px}
+  .freedom-toggle{margin-left:auto;display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;gap:3px;flex-shrink:0}
+  .freedom-toggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:16px;width:38px;height:34px;border-radius:8px;line-height:1}
+  .freedom-toggle button.on{background:var(--accent);color:var(--ink)}
+  .truerate{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .truerate summary{cursor:pointer;padding:12px 14px;font-weight:700;font-size:14px;color:var(--text);list-style:none;display:flex;align-items:center;gap:8px}
+  .truerate summary::-webkit-details-marker{display:none}
+  .truerate summary::before{content:'▸';color:var(--accent);font-weight:900}
+  .truerate[open] summary::before{content:'▾'}
+  .truerate .tr-body{padding:0 14px 14px}
+  .tr-result{margin-top:12px;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;color:#c4cfe0}
+  .tr-result b{color:var(--accent);font-size:18px}
+  .runwaybox{background:linear-gradient(135deg,#10231a,#12281c);border:1px solid #1e4a37;border-radius:14px;padding:16px 18px;margin:14px 0 4px}
+  .runwaybox .rb-k{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--good)}
+  .runwaybox .rb-v{font-size:26px;font-weight:900;margin-top:4px;letter-spacing:-.4px;color:var(--good)}
+  .runwaybox .rb-note{font-size:13px;color:#cfd4de;margin-top:6px;line-height:1.5}
+  .tx-life{font-size:12px;font-weight:800;color:var(--muted);margin-left:8px;white-space:nowrap}
   .brand .tag{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);border:1px solid var(--line);border-radius:50px;padding:5px 12px}
   .quote-wrap{margin-top:22px;display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
   .quote{flex:1;min-width:260px;font-size:clamp(20px,3.4vw,34px);font-weight:800;line-height:1.15;letter-spacing:-.5px}
@@ -415,6 +431,10 @@
           <span class="logo">Account<b>ability</b></span>
           <span class="tagline">Every dollar answers to you.</span>
         </div>
+        <div class="freedom-toggle" id="freedomToggle" title="Switch between dollars and hours of your life">
+          <button data-mode="usd">$</button>
+          <button data-mode="life">⌛</button>
+        </div>
       </div>
       <div class="quote-wrap">
         <div class="quote" id="quote">Loading the truth…</div>
@@ -593,6 +613,19 @@
           </label>
           <div id="wageNote" class="sub" style="margin:0;align-self:flex-end;max-width:340px"></div>
         </div>
+        <details class="truerate" id="trueRate">
+          <summary>Calculate your True Net Hourly Wage</summary>
+          <div class="tr-body">
+            <p class="sub" style="margin:6px 0 12px">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs — the commute, the gas, the work lunches — spread over the time the job actually eats.</p>
+            <div class="row">
+              <label class="fld">Take-home / month<input type="number" id="trTakeHome" min="0" step="50" placeholder="e.g. 3200" style="width:130px"></label>
+              <label class="fld">Commute + prep (hrs/week)<input type="number" id="trCommute" min="0" step="0.5" placeholder="e.g. 7" style="width:120px"></label>
+              <label class="fld">Work overhead / month $<input type="number" id="trOverhead" min="0" step="10" placeholder="gas, lunches, outfits" style="width:150px"></label>
+              <button class="btn primary" id="trCompute" style="align-self:flex-end">Set my true rate</button>
+            </div>
+            <div class="tr-result" id="trResult" style="display:none"></div>
+          </div>
+        </details>
         <div class="row">
           <label class="fld" style="flex:1">Target
             <input type="text" id="impName" placeholder="Sneakers, gadget, another coffee…">
@@ -628,6 +661,7 @@
         <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="s" style="width:0%"></div><div class="l" style="width:50%"></div></div>
         <div class="avl-legend"><span class="a" id="avlA">Assets $0</span><span class="l" id="avlL">Liabilities $0</span></div>
         <div id="nwChips"></div>
+        <div id="nwRunway"></div>
         <div id="nwDrain"></div>
         <div class="twocol" style="margin-top:18px">
           <div>
@@ -846,7 +880,8 @@ function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[],
-           onboarded:false, intake:{}, register:'middle', vault:[] };
+           onboarded:false, intake:{}, register:'middle', vault:[],
+           freedomMode:false, trueRate:{} };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -860,7 +895,34 @@ if(!state.activeMonth) state.activeMonth = thisMonth();
 
 /* ---------- helpers ---------- */
 const uid = () => Math.random().toString(36).slice(2,9);
-const money = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+/* pure dollars */
+const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+/* Pillar 2: dollars -> units of human effort. Magnitude-scaled. */
+const WORKDAY_HRS=8, WORKMONTH_HRS=160;
+function fmtLife(amount){
+  const H=effectiveHourly();
+  if(!H||H<=0) return usd(amount);            // no rate yet — fall back to dollars
+  const neg=amount<0, hrs=Math.abs(amount)/H;
+  let out;
+  if(hrs*60 < 60)            out=Math.max(1,Math.round(hrs*60))+'m';
+  else if(hrs < WORKDAY_HRS) out=(Math.round(hrs*10)/10)+'h';
+  else if(hrs < WORKMONTH_HRS) out=(Math.round(hrs/WORKDAY_HRS*10)/10)+' days';
+  else                       out=(Math.round(hrs/WORKMONTH_HRS*10)/10)+' mo';
+  return (neg?'-':'')+out;
+}
+/* the app formats everything through money(): mode-aware */
+function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
+/* Copy matrix: time-framed labels by register x intensity (Freedom Mode only) */
+const LIFE_LABELS={
+  income:{ genz:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Hours Sold'}, middle:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Life Sold'}, mature:{clean:'Hours Earned',blunt:'Hours Traded',savage:'Life Traded'} },
+  spent:{ genz:{clean:'Hours Spent',blunt:'Hours Surrendered',savage:'Life Surrendered'}, middle:{clean:'Hours Spent',blunt:'Hours Surrendered',savage:'Life Spent'}, mature:{clean:'Hours Spent',blunt:'Hours Given Up',savage:'Life Given Up'} },
+  networth:{ genz:{clean:'Time Banked',blunt:'Time Bought Back',savage:'Freedom Secured'}, middle:{clean:'Time Banked',blunt:'Time Bought Back',savage:'Freedom Bought'}, mature:{clean:'Time Banked',blunt:'Time Reclaimed',savage:'Freedom Earned'} }
+};
+function lifeLabel(field,dollarLabel){
+  if(!state.freedomMode) return dollarLabel;
+  const L=LIFE_LABELS[field]; if(!L) return dollarLabel;
+  const r=L[state.register]||L.middle; return r[state.intensity]||r.blunt;
+}
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function shiftMonth(key,delta){ let [y,m]=key.split('-').map(Number); m+=delta; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return `${y}-${String(m).padStart(2,'0')}`; }
 function fmtMonth(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleString(undefined,{month:'long',year:'numeric'}); }
@@ -953,9 +1015,9 @@ function renderBudget(){
 
   document.getElementById('summary').innerHTML=`
     <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div><div class="msg">${msg}</div></div>
-    <div class="stat"><div class="k">Income</div><div class="v good">${money(income)}</div></div>
+    <div class="stat"><div class="k">${lifeLabel('income','Income')}</div><div class="v good">${money(income)}</div></div>
     <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div></div>
-    <div class="stat"><div class="k">Spent</div><div class="v">${money(spent)}</div></div>
+    <div class="stat"><div class="k">${lifeLabel('spent','Spent')}</div><div class="v">${money(spent)}</div></div>
     <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div></div>`;
 
   const box=document.getElementById('cats');
@@ -1059,8 +1121,8 @@ function renderTx(){
   const inc=txAllMonths?state.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0):monthIncome(M);
   const exp=txAllMonths?state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0):monthExpense(M);
   document.getElementById('txSummary').innerHTML=`
-    <div class="stat"><div class="k">${txAllMonths?'All-time income':'Income'}</div><div class="v good">${money(inc)}</div></div>
-    <div class="stat"><div class="k">${txAllMonths?'All-time spent':'Spent'}</div><div class="v">${money(exp)}</div></div>
+    <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('income','Income')}</div><div class="v good">${money(inc)}</div></div>
+    <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('spent','Spent')}</div><div class="v">${money(exp)}</div></div>
     <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp)<0?'bad':'good'}">${money(inc-exp)}</div></div>
     <div class="stat"><div class="k">Balance (all time)</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
   renderTxList();
@@ -1085,10 +1147,13 @@ function renderTxList(){
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
     const title=t.type==='income'?escapeHtml(t.source||'Income'):(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
     const sub=t.type==='income'?('Income'+(t.note?' · '+escapeHtml(t.note):'')):('Expense'+(txAllMonths?' · '+monthOf(t.date):''));
+    const H=effectiveHourly();
+    let badge='';
+    if(H>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount)})</span>`;
     return `<div class="tx ${t.type}">
       <div class="tx-date">${mon}<b>${day}</b></div>
       <div class="tx-main"><div class="tx-title">${title}</div><div class="tx-sub">${sub}</div></div>
-      <div class="tx-amt">${t.type==='income'?'+':'−'}${money(t.amount)}</div>
+      <div class="tx-amt">${t.type==='income'?'+':'−'}${money(t.amount)}${badge}</div>
       <button class="del" data-deltx="${t.id}" title="Delete">✕</button>
     </div>`;
   }).join('');
@@ -1301,6 +1366,28 @@ function avgMonthlyIncome(){
 function topGoal(){ return state.goals.find(g=>g.saved<g.target)||null; }
 function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (avgMonthlyIncome()>0 ? avgMonthlyIncome()/160 : 0); }
 function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
+/* Pillar 2: essential monthly burn = Cover First assignments (fallbacks below) */
+function essentialMonthly(){
+  const M=state.activeMonth;
+  let sum=0;
+  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ state.categories.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=assignedFor(c.id,M); }); });
+  if(sum<=0) sum=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  if(sum<=0) sum=monthExpense(M);
+  return sum;
+}
+/* Freedom Runway = liquid resources / essential monthly burn, in months */
+function freedomRunway(){
+  const liquid=Math.max(0, sumAssetsKind('real') + Math.max(0,allTimeBalance()) - sumLiab());
+  const ess=essentialMonthly();
+  if(ess<=0 || liquid<=0) return null;
+  return liquid/ess;
+}
+function fmtRunway(months){
+  if(months==null) return '—';
+  if(months>=24) return (Math.round(months/12*10)/10)+' yrs';
+  if(months>=1)  return (Math.round(months*10)/10)+' mo';
+  return (Math.round(months*30))+' days';
+}
 function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip').reduce((s,i)=>s+i.amount,0); }
 function impulseSpent(){ return state.impulse.filter(i=>i.type==='buy').reduce((s,i)=>s+i.amount,0); }
 function skipStreak(){ let n=0; for(let i=state.impulse.length-1;i>=0;i--){ if(state.impulse[i].type==='skip') n++; else break; } return n; }
@@ -1327,6 +1414,13 @@ function renderNetWorth(){
     `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
     `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
     `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
+  // Freedom Runway — how long you could survive without working
+  const rwBox=document.getElementById('nwRunway');
+  if(rwBox){
+    const r=freedomRunway();
+    if(r==null){ rwBox.innerHTML=''; }
+    else rwBox.innerHTML=`<div class="runwaybox"><div class="rb-k">Freedom Runway · ${lifeLabel('networth','Time Bought Back')}</div><div class="rb-v">${fmtRunway(r)}</div><div class="rb-note">If you stopped working today, your liquid money would cover your essentials for this long. Every trap you neutralize pushes it further out.</div></div>`;
+  }
   document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
     const k=a.kind||'real', yr=(a.cost||0)*12;
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
@@ -1474,13 +1568,51 @@ document.getElementById('addLiab').addEventListener('click',()=>{
 const wageEl=document.getElementById('wage');
 wageEl.addEventListener('input',()=>{
   state.hourlyWage=parseFloat(wageEl.value)||0; save();
-  updateWageNote(); renderImpulse(); if(pendingCheck) renderCheckResult();
+  updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
 function updateWageNote(){
   const note=document.getElementById('wageNote'); const h=effectiveHourly();
-  if(state.hourlyWage>0) note.textContent='Locked in. Every '+money(state.hourlyWage)+' you spend = 1 hour of your life at work.';
-  else if(h>0) note.textContent='No wage set — estimating '+money(h)+'/hr from your logged income. Enter your real rate for the truth.';
+  if(state.hourlyWage>0) note.textContent='Locked in. Every '+usd(state.hourlyWage)+' you spend = 1 hour of your life at work.';
+  else if(h>0) note.textContent='No wage set — estimating '+usd(h)+'/hr from your logged income. Enter your real rate for the truth.';
   else note.textContent='Set this to see every purchase in hours of your life.';
+}
+
+/* --- Pillar 2: Freedom Mode toggle --- */
+function renderFreedomToggle(){ document.querySelectorAll('#freedomToggle button').forEach(b=>b.classList.toggle('on', (b.dataset.mode==='life')===!!state.freedomMode)); }
+function renderAll(){
+  renderFreedomToggle();
+  renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
+}
+document.getElementById('freedomToggle').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const want=b.dataset.mode==='life';
+  if(want && effectiveHourly()<=0){ alert('Set your hourly wage first (in the Trap Radar tab) so I can convert dollars into hours of your life.'); activateTab('impulse'); return; }
+  state.freedomMode=want; save(); renderAll();
+});
+
+/* --- True Net Hourly Wage engine --- */
+document.getElementById('trCompute').addEventListener('click',()=>{
+  const take=parseFloat(document.getElementById('trTakeHome').value)||0;
+  const commute=parseFloat(document.getElementById('trCommute').value)||0;
+  const overhead=parseFloat(document.getElementById('trOverhead').value)||0;
+  if(take<=0){ alert('Enter your take-home pay per month.'); return; }
+  const denom=160+(commute*4);
+  const rate=Math.max(0,(take-overhead)/denom);
+  state.hourlyWage=Math.round(rate*100)/100;
+  state.trueRate={take,commute,overhead};
+  save();
+  document.getElementById('wage').value=state.hourlyWage;
+  const naive=take/160;
+  document.getElementById('trResult').style.display='';
+  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive "paycheck ÷ 160" rate was ${usd(naive)}/hr. The job's real cost is bigger than it looks — and now every purchase is priced against the truth.</span>`;
+  updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
+});
+function fillTrueRate(){
+  if(!state.trueRate) return;
+  const t=state.trueRate;
+  if(t.take) document.getElementById('trTakeHome').value=t.take;
+  if(t.commute!=null) document.getElementById('trCommute').value=t.commute;
+  if(t.overhead!=null) document.getElementById('trOverhead').value=t.overhead;
 }
 
 /* --- impulse check --- */
@@ -1837,6 +1969,7 @@ function boot(){
   renderBudget(); renderTx(); renderGoals(); renderLesson();
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
+  renderFreedomToggle(); fillTrueRate();
   initPWA();
   activateTab('home');
   if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
