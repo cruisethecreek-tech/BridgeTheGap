@@ -168,6 +168,16 @@
   .skillitem .payback{font-size:13px;color:var(--good);font-weight:700;margin-top:7px}
   .skillitem .payback.slow{color:#e0be55}
   .tx-yield{font-size:12px;font-weight:800;color:var(--good);margin-left:8px;white-space:nowrap}
+  /* numbered flow steps on the nav grid */
+  .path-card{position:relative}
+  .pc-step{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--ink);font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center}
+  .flow-hint{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;font-weight:700;margin-top:10px}
+  .flow-hint .arr{color:var(--accent);font-weight:900}
+  /* Giving & Circulation */
+  .give-target{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;color:#cfd4de;font-weight:600;margin-bottom:12px}
+  .give-target input{width:70px;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 10px;font-size:15px;text-align:center}
+  .give-prog{height:12px;background:var(--ink);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px}
+  .give-prog>span{display:block;height:100%;background:linear-gradient(90deg,#1e4a37,var(--good));border-radius:6px;transition:width .4s ease}
   @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
   .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:#e6d9b0;line-height:1.45;font-weight:600}
@@ -599,15 +609,16 @@
       <div class="walls" id="wallsGrid"></div>
       <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
 
-      <div class="paths-head"><div class="ph-eye">The flow</div><h2 class="ph-title">Where to go</h2></div>
+      <div class="paths-head"><div class="ph-eye">The flow · in order</div><h2 class="ph-title">Where to go</h2></div>
       <div class="paths">
-        <button class="path-card" data-goto="budget"><span class="pc-ic">📋</span><span class="pc-t">Plan</span><span class="pc-s">Give every dollar a job</span></button>
-        <button class="path-card" data-goto="tx"><span class="pc-ic">🧾</span><span class="pc-t">Track</span><span class="pc-s">Log money in &amp; out</span></button>
-        <button class="path-card" data-goto="impulse"><span class="pc-ic">🛡️</span><span class="pc-t">Defend</span><span class="pc-s">Gut-check every buy</span></button>
-        <button class="path-card" data-goto="goals"><span class="pc-ic">📈</span><span class="pc-t">Build</span><span class="pc-s">Net worth, dreams, wealth</span></button>
-        <button class="path-card" data-goto="learn"><span class="pc-ic">🎓</span><span class="pc-t">Learn</span><span class="pc-s">Lessons &amp; insights</span></button>
-        <button class="path-card" data-goto="settings"><span class="pc-ic">⚙️</span><span class="pc-t">Settings</span><span class="pc-s">Wage, data, setup</span></button>
+        <button class="path-card" data-goto="budget"><span class="pc-step">1</span><span class="pc-ic">📋</span><span class="pc-t">Plan</span><span class="pc-s">Give every dollar a job</span></button>
+        <button class="path-card" data-goto="tx"><span class="pc-step">2</span><span class="pc-ic">🧾</span><span class="pc-t">Track</span><span class="pc-s">Log money in &amp; out</span></button>
+        <button class="path-card" data-goto="impulse"><span class="pc-step">3</span><span class="pc-ic">🛡️</span><span class="pc-t">Defend</span><span class="pc-s">Gut-check every buy</span></button>
+        <button class="path-card" data-goto="goals"><span class="pc-step">4</span><span class="pc-ic">📈</span><span class="pc-t">Build</span><span class="pc-s">Net worth, dreams, giving</span></button>
+        <button class="path-card" data-goto="learn"><span class="pc-step">5</span><span class="pc-ic">🎓</span><span class="pc-t">Learn</span><span class="pc-s">Lessons &amp; insights</span></button>
+        <button class="path-card" data-goto="settings"><span class="pc-step">6</span><span class="pc-ic">⚙️</span><span class="pc-t">Settings</span><span class="pc-s">Wage, data, setup</span></button>
       </div>
+      <div class="flow-hint">Plan <span class="arr">→</span> Track <span class="arr">→</span> Defend <span class="arr">→</span> Build <span class="arr">→</span> Learn</div>
 
       <div class="features">
         <div class="feat"><div class="ft-t">Zero-based</div><div class="ft-d">Income minus every job equals zero. Nothing wanders off.</div></div>
@@ -854,6 +865,23 @@
           <button class="btn primary" id="addSkill">Log it</button>
         </div>
         <div id="skillList"></div>
+      </div>
+
+      <div class="panel">
+        <h2>🌊 Giving &amp; Circulation</h2>
+        <p class="sub">Money is energy. Hoarding stalls it; giving keeps it moving. Set a target, give on purpose, and watch it circulate. This isn't leftover money - it's a discipline of abundance.</p>
+        <div class="give-target">Target: give <input type="number" id="givePct" min="0" max="100" step="1" placeholder="10"> % of income</div>
+        <div class="row">
+          <label class="fld" style="flex:1">Gift / cause
+            <input type="text" id="giveName" placeholder="Tithe, mutual aid, a friend, a cause…">
+          </label>
+          <label class="fld">Amount $
+            <input type="number" id="giveAmt" min="0" step="1" placeholder="0" style="width:110px">
+          </label>
+          <button class="btn primary" id="addGive">Log giving</button>
+        </div>
+        <div id="giveSummary"></div>
+        <div id="giveList"></div>
       </div>
     </section>
 
@@ -1139,7 +1167,8 @@ function defaultState(){
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[],
            onboarded:false, intake:{}, register:'middle', vault:[],
-           freedomMode:false, trueRate:{}, network:[], enough:0, skills:[] };
+           freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
+           giving:[], givingPct:0 };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1234,7 +1263,7 @@ function activateTab(name){
   const fab=document.getElementById('fab'); if(fab) fab.classList.toggle('hide',name==='impulse');
   if(name==='learn') renderCharts();
   if(name==='home') renderHome();
-  if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); }
+  if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='impulse') renderVault();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1608,6 +1637,32 @@ function renderSkills(){
     return `<div class="skillitem"><div class="st"><span class="n">${escapeHtml(s.name)}</span><span class="c">${money(s.cost)}</span><button class="del" data-delskill="${s.id}" title="Delete">✕</button></div><div class="payback ${slow?'slow':''}">${payback}</div></div>`;
   }).join('');
   box.querySelectorAll('button[data-delskill]').forEach(b=>b.addEventListener('click',()=>{ state.skills=state.skills.filter(x=>x.id!==b.dataset.delskill); save(); renderSkills(); }));
+}
+/* Giving & Circulation */
+document.getElementById('addGive').addEventListener('click',()=>{
+  const name=document.getElementById('giveName').value.trim()||'Giving';
+  const amt=parseFloat(document.getElementById('giveAmt').value)||0;
+  if(amt<=0){ return; }
+  state.giving.push({id:uid(),name,amount:amt,date:todayStr()});
+  document.getElementById('giveName').value=''; document.getElementById('giveAmt').value='';
+  save(); renderGiving(); renderHome();
+});
+document.getElementById('givePct').addEventListener('input',()=>{ state.givingPct=Math.max(0,Math.min(100,parseFloat(document.getElementById('givePct').value)||0)); save(); renderGiving(); });
+function givenInMonth(M){ return state.giving.filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0); }
+function renderGiving(){
+  const box=document.getElementById('giveList'), sum=document.getElementById('giveSummary'); if(!box) return;
+  const pctEl=document.getElementById('givePct'); if(pctEl && document.activeElement!==pctEl) pctEl.value=state.givingPct||'';
+  const M=state.activeMonth, income=monthIncome(M), givenM=givenInMonth(M), allTime=state.giving.reduce((s,g)=>s+g.amount,0);
+  const target=(state.givingPct>0&&income>0)?income*state.givingPct/100:0;
+  if(sum){
+    let html=`<div class="chip">Given this month: <b>${money(givenM)}</b></div><div class="chip">All-time: <b>${money(allTime)}</b></div>`;
+    if(income>0) html+=`<div class="chip">${Math.round(givenM/income*100)}% of income</div>`;
+    if(target>0){ const pct=Math.min(100,givenM/target*100); html+=`<div class="give-prog" style="margin-top:10px"><span style="width:${pct}%"></span></div><div class="sub" style="margin:6px 0 0">${givenM>=target?`🌊 Target met - ${money(givenM)} given, keeping it flowing.`:`${money(target-givenM)} to reach your ${state.givingPct}% target this month.`}</div>`; }
+    sum.innerHTML=html;
+  }
+  if(!state.giving.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">Nothing given yet. Even a small amount, on purpose, changes your relationship with money.</div>`; return; }
+  box.innerHTML=state.giving.slice().reverse().map(g=>`<div class="netitem"><span class="n">${escapeHtml(g.name)}<small>${g.date}</small></span><span class="amt" style="color:var(--good)">${money(g.amount)}</span><button class="del" data-delgive="${g.id}" title="Delete">✕</button></div>`).join('');
+  box.querySelectorAll('button[data-delgive]').forEach(b=>b.addEventListener('click',()=>{ state.giving=state.giving.filter(x=>x.id!==b.dataset.delgive); save(); renderGiving(); }));
 }
 
 /* ---------- learn ---------- */
@@ -2462,7 +2517,7 @@ document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarde
 function boot(){
   renderIntensity(); renderRegister(); newQuote();
   if(postRecurring(thisMonth())>0) save();
-  renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderLesson();
+  renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   renderFreedomToggle(); fillTrueRate();
@@ -2531,6 +2586,10 @@ function renderNextSteps(){
   if(!state.hourlyWage) steps.push(['settings','⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.']);
   if(unlocked>0) steps.push(['impulse','🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.']);
   if(!state.goals.length) steps.push(['goals','🎯','Name one dream','A budget with nothing behind it is just a spreadsheet.']);
+  const givenM=(state.giving||[]).filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0);
+  const giveTarget=(state.givingPct>0&&income>0)?income*state.givingPct/100:0;
+  if(giveTarget>0 && givenM<giveTarget) steps.push(['goals','🌊',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.']);
+  else if(!state.giving.length && income>0) steps.push(['goals','🌊','Give something forward','Even a small amount, on purpose, changes your relationship with money.']);
   if(!steps.length) steps.push(['tx','✅','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.']);
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
     steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-goto="${s[0]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[1]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[2])}</span><span class="ns-s">${escapeHtml(s[3])}</span></span><span class="ns-arrow">→</span></button>`).join('');
@@ -2549,7 +2608,7 @@ function renderEnough(income){
   let msg;
   if(!enough) msg=`Set the monthly income that covers a genuinely good, comfortable life. Past that line, more money should buy <b>freedom</b>, not lifestyle creep.`;
   else if(income<=0) msg=`Your Enough line is ${money(enough)}/mo. Log income to see where you stand against it.`;
-  else if(creep) msg=`You're <b>${money(surplus)}</b> over your Enough line this month. That's not "spend more" money - that's <b>freedom</b> money. Route it to a Skill, Leverage, or Circulation goal before it evaporates into upgrades.`;
+  else if(creep) msg=`You're <b>${money(surplus)}</b> over your Enough line this month. That's not "spend more" money - that's <b>freedom</b> money. Route it to a Skill or Leverage goal, or <b>give some forward</b> - before it evaporates into upgrades.`;
   else msg=`You're within your Enough line (${money(enough)}/mo). Solid. Every dollar you lift income above this is pure freedom fuel.`;
   box.innerHTML=`<div class="enoughcard ${creep?'creep':''}">
     <div class="ec-k">The "Enough" anchor</div>
