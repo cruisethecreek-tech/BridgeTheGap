@@ -7,20 +7,30 @@ Nothing leaves the device.
 
 ---
 
-## The flow (7 tabs, in order)
+## The flow (primary nav + More)
 
-The nav follows a money journey: **Dashboard → Plan → Track → Defend → Build → Learn → Settings.**
-(Internal view ids in parentheses are unchanged for code stability.)
+The bottom nav leads with the three core jobs and tucks the support surfaces behind
+a **More** toggle, so a new user sees a sharp, low-clutter front door instead of seven
+competing tabs. **Shield** (the anti-impulse differentiator) carries a gold accent.
 
-| Tab | What it does | Key code |
-|---|---|---|
-| **Dashboard** (`home`) | Hero (voice-adapted), a guided **"Do this next"** step list, live snapshot, **"Enough" anchor**, **Cover First** grid, nav cards. | `renderHome`, `renderNextSteps`, `renderEnough`, `renderWalls` |
-| **Plan** (`budget`) | Zero-based budgeting per month: categories + **subcategories** (pool split), **Recurring** engine, **duplicate-tidy** banner, **Auto-Rebalance**. | `renderBudget`, `autoRebalance`, `renderRecurring`, `mergeDuplicates` |
-| **Track** (`tx`) | Ledger of income + expenses, **energy tags**, filters/search, **Zero-Blindspot Shield**. | `renderTx`, `renderTxList`, `blindspotShield` |
-| **Defend** (`impulse`) | The **Anti-Trap** system only: Trap Radar scan, 24-Hour Cooling Vault, War Chest scoreboard. | `renderCheckResult`, `renderVault`, `renderImpulse` |
-| **Build** (`goals`) | Wealth: **Net Worth** + Assets/Liabilities, **Sovereignty Audit**, Goals (with strategic types), **Network Capital**. | `renderNetWorth`, `renderSovereignty`, `renderGoals`, `renderNetwork` |
-| **Learn** (`learn`) | Money School lessons **+** Insights charts (spending, income-vs-spend, trend, **Abundance & Circulation**). | `renderLesson`, `renderCharts`, `renderCirculation` |
-| **Settings** (`settings`) | True Net Hourly Wage engine, plus setup chat / install / export / import / reset. | `updateWageNote`, `trCompute` |
+**Primary:** Home · Plan · **Shield** · Build   **More ▾:** Track · Learn · Settings.
+
+The underlying money journey is unchanged: **Plan → Track → Shield → Build → Learn**
+(shown as the numbered flow on Home). Internal view ids in parentheses are unchanged
+for code stability; only the labels and grouping changed (`Defend` label → **Shield**).
+
+| Tab | Group | What it does | Key code |
+|---|---|---|---|
+| **Home** (`home`) | primary | Hero (voice-adapted), a guided **"Do this next"** step list, live snapshot, **"Enough" anchor**, **Cover First** grid, nav cards. | `renderHome`, `renderNextSteps`, `renderEnough`, `renderWalls` |
+| **Plan** (`budget`) | primary | Zero-based budgeting per month: categories + **subcategories** (pool split), **Recurring** engine, **duplicate-tidy** banner, **Auto-Rebalance**. | `renderBudget`, `autoRebalance`, `renderRecurring`, `mergeDuplicates` |
+| **Shield** (`impulse`) | primary | The **Anti-Trap** system: Trap Radar scan, 24-Hour Cooling Vault, War Chest scoreboard. | `renderCheckResult`, `renderVault`, `renderImpulse` |
+| **Build** (`goals`) | primary | Wealth: **Net Worth** + Assets/Liabilities, **Sovereignty Audit**, Goals (with strategic types), **Network Capital**. | `renderNetWorth`, `renderSovereignty`, `renderGoals`, `renderNetwork` |
+| **Track** (`tx`) | more | Ledger of income + expenses, **energy tags**, filters/search, **Zero-Blindspot Shield**. | `renderTx`, `renderTxList`, `blindspotShield` |
+| **Learn** (`learn`) | more | Money School lessons **+** Insights charts (spending, income-vs-spend, trend, **Abundance & Circulation**). | `renderLesson`, `renderCharts`, `renderCirculation` |
+| **Settings** (`settings`) | more | True Net Hourly Wage engine, plus setup chat / install / export / import / reset. | `updateWageNote`, `trCompute` |
+
+Nav mechanics: `activateTab` auto-opens the More group when a hidden view is active and
+collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the tucked views.
 
 ---
 
@@ -30,6 +40,7 @@ The nav follows a money journey: **Dashboard → Plan → Track → Defend → B
 - **Register** (Gen Z / Middle / Mature) - set at the intake age-gate; 2026-appropriate vocabulary.
 - **Intensity** (Clean / Blunt / Savage) - the header dial; how much mercy.
 - Pickers: `pickVoice` (register×intensity), `pickReg` (register), `pickTrapVoice`. Quote bank `QUOTES`, plus per-feature matrices (`IMP_*`, `TRAP_RESPONSES`, `CHALLENGE_STING`, `REBALANCE_COPY`, `BLINDSPOT_COPY`, `LIFE_LABELS`).
+- **Tone safety lock** - sensitive/essential spend (rent, medical, utilities, groceries, emergencies, and any Cover First essential) forces the **Clean** register regardless of the dial, so the app never roasts someone over a hospital bill or their rent. `SENSITIVE_RX`, `isSensitive`, `effInt`; context-aware pickers `pickVoiceCtx` / `pickTrapVoiceCtx` power the rebalance banner and the impulse gut-check.
 
 **Freedom Mode** (`$` / ⌛ header toggle) - converts every figure into **hours of your life** via `fmtLife` (minutes → hours → work-days → work-months). `money()` is mode-aware; `usd()` is always dollars. Needs an hourly wage. `renderFreedomToggle`, `renderAll`.
 
@@ -43,11 +54,23 @@ The nav follows a money journey: **Dashboard → Plan → Track → Defend → B
 
 **Anti-shame** - overspend shows a calm **Rebalance Banner** (never red errors); the **Blindspot Shield** rewards logging. Copy never says failed/bad/violated/ruined.
 
-**PWA** - installable, offline-capable: `manifest.webmanifest`, `sw.js` (network-first page, cache-first assets), `icon*.png` / `icon.svg`. `initPWA`.
+**Progressive interface** - the app unrolls depth as the user's Freedom Runway grows, so a user in survival mode is not buried in investment tools:
+- **Stage 1 Defense** (<3 mo runway): Cover First + Shield only. Build tab and the offense/mindset tools are hidden.
+- **Stage 2 Expansion** (3-12 mo): Build tab, Net Worth, Offense vs. Defense, Skills, and the Enough anchor unroll.
+- **Stage 3 Sovereignty** (12 mo+): the Sovereignty Audit and Network Capital open.
+- **One-way ratchet**: tools never disappear once earned (`stageReached`); crossing a threshold fires a **milestone celebration** (`celebrateStage`). Panels/tabs are gated by a `data-stage` attribute; `.stage-locked` hides anything above the active stage.
+- **Override**: Settings > Interface depth toggles `uiMode` between `auto` (guided) and `all` (show everything). Existing users are migrated so they never lose a tool they already used (`evidenceStage`).
+- **Retrospective** (`renderRetro`): a Day-1 snapshot (`day1`) vs. now once there's a week of history. Engine: `runwayStage`, `activeStage`, `applyStage`, `STAGE_META`.
+
+**PWA** - installable, offline-capable: `manifest.webmanifest` (with a "Scan a trap" long-press shortcut), `sw.js` (network-first page, cache-first assets), `icon*.png` / `icon.svg`. `initPWA`.
+
+**CSV import** (Track tab) - drag/drop a bank statement; on-device parse with column auto-detection and category auto-guess, review-before-commit. `parseCSV`, `detectCols`, `extractRows`, `guessCat`, `commitImport`.
+
+**Encrypted backup** (Settings) - WebCrypto AES-GCM + PBKDF2 to a portable `.acct` file; restore replaces local state. `encryptBackup`, `restoreBackup`, `renderBackupNote`.
 
 ---
 
-## Data model (`state`, 18 keys)
+## Data model (`state`)
 
 ```
 intensity, register, freedomMode          // voice + display mode
@@ -62,6 +85,9 @@ liabilities: [{id, name, value}]
 impulse: [{id, type, name, amount, date, trap?, hours?, goalId?, txId?}]  // skip|buy
 vault: [{id, name, amount, trap, unlocksAt}]
 hourlyWage, trueRate                      // wage engine
+network, skills, giving, givingPct, enough // mindset & build layer
+uiMode, stageReached, day1                 // progressive interface (auto|all, ratchet, snapshot)
+lastBackup                                 // encrypted-backup timestamp
 lesson, onboarded, intake                 // misc
 ```
 
