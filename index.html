@@ -66,6 +66,38 @@
   .runwaybox .rb-v{font-size:26px;font-weight:900;margin-top:4px;letter-spacing:-.4px;color:var(--good)}
   .runwaybox .rb-note{font-size:13px;color:#cfd4de;margin-top:6px;line-height:1.5}
   .tx-life{font-size:12px;font-weight:800;color:var(--muted);margin-left:8px;white-space:nowrap}
+
+  /* ---------- Pillar 3: Sovereignty Audit ---------- */
+  .sov-tier{display:flex;align-items:center;gap:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .sov-tier .ic{font-size:34px;line-height:1;flex-shrink:0}
+  .sov-tier .t-name{font-weight:900;font-size:19px;letter-spacing:-.3px}
+  .sov-tier .t-sub{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .sov-tier.t1{border-color:#4a221e}.sov-tier.t1 .t-name{color:var(--accent-2)}
+  .sov-tier.t2{border-color:#4a3d14}.sov-tier.t2 .t-name{color:#e0be55}
+  .sov-tier.t3{border-color:#1e4a37}.sov-tier.t3 .t-name{color:var(--good)}
+  .sov-tier.t4{border-color:var(--accent)}.sov-tier.t4 .t-name{color:var(--accent)}
+  .sov-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+  @media(max-width:560px){.sov-metrics{grid-template-columns:1fr}}
+  .sov-m{background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .sov-m .k{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;line-height:1.3}
+  .sov-m .v{font-size:22px;font-weight:900;margin-top:5px;letter-spacing:-.3px}
+  .scr-bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--ink);border:1px solid var(--line);margin-top:9px}
+  .scr-bar .real{background:linear-gradient(90deg,#1e4a37,var(--good))}
+  .scr-bar .stuff{background:linear-gradient(90deg,#6b5a1e,#caa53a)}
+
+  /* ---------- Pillar 4: Rebalance + Blindspot ---------- */
+  .cat.overspent{border-color:#4a3d14}
+  .cat.overspent .bar>span{background:linear-gradient(90deg,#6b5a1e,#caa53a)}
+  .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
+  .rebalance .rb-msg{font-size:13px;color:#e6d9b0;line-height:1.45;font-weight:600}
+  .rebalance .rb-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .rebalance .rb-over{font-weight:900;color:#e0be55}
+  .blindspot{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#10231a,#12281c);border:1px solid #1e4a37;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .blindspot .bs-ic{font-size:26px;flex-shrink:0}
+  .blindspot .bs-k{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--good)}
+  .blindspot .bs-v{font-weight:900;font-size:15px;margin-top:2px}
+  .blindspot .bs-note{font-size:12px;color:#cfd4de;margin-top:2px;line-height:1.4}
+  .logwin{background:linear-gradient(135deg,#10231a,#12281c);border:1px solid #1e4a37;border-radius:10px;padding:10px 13px;margin-top:10px;font-size:13px;color:var(--good);font-weight:700;animation:fade .3s ease}
   .brand .tag{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);border:1px solid var(--line);border-radius:50px;padding:5px 12px}
   .quote-wrap{margin-top:22px;display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
   .quote{flex:1;min-width:260px;font-size:clamp(20px,3.4vw,34px);font-weight:800;line-height:1.15;letter-spacing:-.5px}
@@ -135,7 +167,7 @@
   .bar{height:8px;background:var(--ink);border-radius:6px;margin-top:12px;overflow:hidden}
   .bar > span{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .3s ease}
   .cat-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--muted)}
-  .cat-meta .rem.good{color:var(--good)}.cat-meta .rem.over{color:var(--bad)}
+  .cat-meta .rem.good{color:var(--good)}.cat-meta .rem.over{color:#e0be55}
   .cat.overspent{border-color:#4a221e}.cat.overspent .bar>span{background:var(--accent-2)}
 
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
@@ -550,6 +582,7 @@
           </label>
           <button class="btn primary" id="addTx">Log it</button>
         </div>
+        <div id="logWin"></div>
       </div>
 
       <div class="panel">
@@ -570,6 +603,7 @@
       </div>
 
       <div class="panel">
+        <div id="blindspotBar"></div>
         <div class="summary" id="txSummary" style="grid-template-columns:repeat(4,1fr)"></div>
         <div class="filters">
           <button class="pill on" data-f="all">All</button>
@@ -679,6 +713,12 @@
             <div id="liabList"></div>
           </div>
         </div>
+      </div>
+
+      <div class="panel">
+        <h2>👑 Silent Sovereignty Audit</h2>
+        <p class="sub">Fake wealth looks rich and quietly drains you. Real wealth is silent and pays you. Here's which one you're actually building.</p>
+        <div id="sovAudit"></div>
       </div>
 
       <div class="panel">
@@ -1029,6 +1069,10 @@ function renderBudget(){
       const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
       const over=sp>a&&sp>0;
       const rc=rem<0?'over':(rem>0?'good':'');
+      const rebalance = over ? `<div class="rebalance">
+          <div class="rb-msg">${escapeHtml(pickVoice(REBALANCE_COPY))}</div>
+          <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">⚡ Auto-Rebalance</button></div>
+        </div>` : '';
       return `<div class="cat ${over?'overspent':''}">
         <div class="cat-top">
           <span class="cat-name">${escapeHtml(c.name)}</span>
@@ -1036,7 +1080,8 @@ function renderBudget(){
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
-        <div class="cat-meta"><span>Spent ${money(sp)} of ${money(a)}</span><span class="rem ${rc}">${rem<0?'Over by '+money(-rem):money(rem)+' left'}</span></div>
+        <div class="cat-meta"><span>Spent ${money(sp)} of ${money(a)}</span><span class="rem ${rc}">${rem<0?money(-rem)+' over':money(rem)+' left'}</span></div>
+        ${rebalance}
       </div>`;
     }).join('');
   }
@@ -1051,6 +1096,22 @@ function renderBudget(){
     // keep transactions for history; they become "Uncategorized"
     save(); renderBudget(); renderTx();
   }));
+  box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
+}
+/* essential = one of the Cover First walls */
+function isEssentialCat(name){ const n=(name||'').toLowerCase(); return (typeof WALLS!=='undefined'?WALLS:[]).some(w=>w.match.some(t=>n.includes(t))); }
+/* Pillar 4A: pull unused funds from flexible categories into the overspent one */
+function autoRebalance(catId){
+  const M=state.activeMonth, target=state.categories.find(c=>c.id===catId); if(!target) return;
+  let need=spentFor(catId,M)-assignedFor(catId,M); if(need<=0){ renderBudget(); return; }
+  // donors: non-essential categories with surplus, "Fun Money" style first
+  const donors=state.categories.filter(c=>c.id!==catId && !isEssentialCat(c.name) && (assignedFor(c.id,M)-spentFor(c.id,M))>0)
+    .sort((x,y)=>{ const fx=/fun|misc|extra|blow|guilt|play/.test(x.name.toLowerCase())?0:1, fy=/fun|misc|extra|blow|guilt|play/.test(y.name.toLowerCase())?0:1; if(fx!==fy) return fx-fy; return (assignedFor(y.id,M)-spentFor(y.id,M))-(assignedFor(x.id,M)-spentFor(x.id,M)); });
+  let moved=0;
+  for(const d of donors){ if(need<=0) break; const surplus=assignedFor(d.id,M)-spentFor(d.id,M); const take=Math.min(surplus,need); budgetFor(M)[d.id]=assignedFor(d.id,M)-take; budgetFor(M)[catId]=assignedFor(catId,M)+take; need-=take; moved+=take; }
+  save(); renderBudget();
+  if(moved<=0) alert('No flexible funds to pull right now. Add or free up a non-essential category (like "Fun Money") and try again.');
+  else if(need>0.005) alert('Rebalanced '+money(moved)+' — pulled everything flexible. Still '+money(need)+' short; trim an essential or add income to finish the job.');
 }
 function refreshBudgetSummary(){
   const M=state.activeMonth, income=monthIncome(M);
@@ -1095,6 +1156,7 @@ document.getElementById('addTx').addEventListener('click',()=>{
   // jump active month to the transaction's month so the user sees it land
   state.activeMonth=monthOf(date);
   save(); renderBudget(); renderTx();
+  const lw=document.getElementById('logWin'); if(lw){ lw.innerHTML=`<div class="logwin">🛡️ ${escapeHtml(pickVoice(BLINDSPOT_COPY))}</div>`; setTimeout(()=>{ if(lw.firstChild) lw.innerHTML=''; },6000); }
 });
 document.querySelectorAll('.filters .pill').forEach(p=>p.addEventListener('click',()=>{
   txFilter=p.dataset.f;
@@ -1117,6 +1179,8 @@ function renderTxForm(){
 }
 function renderTx(){
   renderTxForm();
+  const bsBar=document.getElementById('blindspotBar');
+  if(bsBar){ const bs=blindspotShield(); bsBar.innerHTML = bs.count>0 ? `<div class="blindspot"><span class="bs-ic">🛡️</span><div><div class="bs-k">Zero-Blindspot Shield</div><div class="bs-v">${bs.count} on the record · ${bs.streak}-day logging streak 🔥</div><div class="bs-note">Nothing hidden. Every logged dollar is one that can't ambush you.</div></div></div>` : ''; }
   const M=state.activeMonth;
   const inc=txAllMonths?state.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0):monthIncome(M);
   const exp=txAllMonths?state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0):monthExpense(M);
@@ -1261,6 +1325,33 @@ function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[stat
 function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.floor(Math.random()*a.length)]; }
 
 /* ============================================================
+   PILLAR 4: anti-shame copy — slips are data points, never failures
+   ============================================================ */
+const REBALANCE_COPY={
+  genz:{clean:["Small overshoot here — no biggie, let's fix it.","Data point: this one ran a little hot."],blunt:["This one went over. It's just numbers — adjust and keep moving.","Overshot. Just a signal to rebalance, nothing more."],savage:["You went over. Own the number, rebalance, next play.","Over budget here. It's data, not a verdict — fix it and roll."]},
+  middle:{clean:["A little over here — an easy adjustment, not a problem.","Data point: this category ran hot this month."],blunt:["This one went over. That's information to act on — let's rebalance.","Overshot the plan here. Adjust the numbers and move on."],savage:["Over budget. No shame — just move the money and keep control.","You ran hot here. Numbers don't judge. Rebalance and press on."]},
+  mature:{clean:["Slightly over here — a simple adjustment to make.","This category ran a bit hot. Easily corrected."],blunt:["This one exceeded the plan. It's data — let's rebalance it.","Over here. Nothing lost; just reallocate and continue."],savage:["Over the mark. No lecture — reallocate and stay the course.","You overshot. It's a number to fix, not a mistake to carry."]}
+};
+const BLINDSPOT_COPY={
+  genz:{clean:["Logged. Zero blindspots = full control.","On the record. That's how you stay winning."],blunt:["Logged it. No hiding = no surprises. Respect.","On the record. Blindspots are the real enemy — you dodged one."],savage:["Logged. You didn't flinch. That's the whole game.","On the record, no hiding. That's real control, bestie."]},
+  middle:{clean:["Logged on the record. Zero blindspots = full control.","Tracked it. Honesty is the whole advantage."],blunt:["Logged it — no hiding. That's how you keep the wheel.","On the record. Every logged dollar is one that can't ambush you."],savage:["Logged, no flinch. Blindspots are what sink people. Not you.","On the record. That's the discipline nobody sees but everybody needs."]},
+  mature:{clean:["Logged on the record. Clear books, clear control.","Tracked it. Nothing hidden, nothing to fear."],blunt:["Logged — nothing tucked away. That's real stewardship.","On the record. A clear ledger is a calm mind."],savage:["Logged, in full view. Honest books are unshakable ones.","On the record. What you face, you can master."]}
+};
+/* Zero-Blindspot Shield: everything logged is a blindspot removed */
+function blindspotShield(){
+  const count=state.transactions.length;
+  const days=[...new Set(state.transactions.map(t=>t.date))].sort();
+  let streak=0;
+  if(days.length){
+    let cur=days[days.length-1];
+    streak=1;
+    for(let i=days.length-2;i>=0;i--){ const prev=shiftDay(cur,-1); if(days[i]===prev){ streak++; cur=prev; } else if(days[i]===cur){ continue; } else break; }
+  }
+  return {count,streak};
+}
+function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+delta); return d.toISOString().slice(0,10); }
+
+/* ============================================================
    ANTI-TRAP ENGINE — traps, tactical copy, cooling vault
    ============================================================ */
 const TRAPS=[
@@ -1388,6 +1479,41 @@ function fmtRunway(months){
   if(months>=1)  return (Math.round(months*10)/10)+' mo';
   return (Math.round(months*30))+' days';
 }
+/* Pillar 3: Silent Sovereignty Audit */
+function sovereignty(){
+  const real=sumAssetsKind('real'), stuff=sumAssetsKind('stuff'), L=sumLiab(), totalA=real+stuff;
+  const scr = totalA>0 ? real/totalA*100 : 0;
+  const overhead=state.assets.reduce((s,a)=>s+(a.cost||0),0);
+  const ess=essentialMonthly();
+  const unencumbered=Math.max(0, real - L);
+  const pureRunway = ess>0 ? unencumbered/ess : null;
+  const yieldMonthly = real*0.04/12;              // 4% safe-withdrawal proxy
+  const highDrag = ess>0 && overhead>=ess*0.4;
+  let tier;
+  if(ess>0 && yieldMonthly>=ess) tier=4;
+  else if(pureRunway!=null && pureRunway>=12) tier=3;
+  else if(pureRunway!=null && pureRunway>=3 && !highDrag) tier=2;
+  else tier=1;
+  return {real,stuff,L,scr,overhead,ess,pureRunway,yieldMonthly,highDrag,tier};
+}
+const SOV_TIERS={
+  1:{ic:'🛑',name:'Encumbered',sub:'Under 3 months of real runway (or heavy overhead drag). Your stuff owns you more than you own it.'},
+  2:{ic:'⚓',name:'Tethered',sub:'3–11 months of real runway. Freer, but still anchored to the next paycheck.'},
+  3:{ic:'🛡️',name:'Sovereign',sub:'12+ months of real runway. You could walk away from work for a year and be fine.'},
+  4:{ic:'👑',name:'Untouchable',sub:'Your capital yields enough to cover essentials. Work is now optional.'}
+};
+function renderSovereignty(){
+  const box=document.getElementById('sovAudit'); if(!box) return;
+  const s=sovereignty(), t=SOV_TIERS[s.tier];
+  const runwayTxt = s.pureRunway==null?'—':fmtRunway(s.pureRunway);
+  box.innerHTML=`
+    <div class="sov-tier t${s.tier}"><span class="ic">${t.ic}</span><div><div class="t-name">Tier ${s.tier}: ${t.name}</div><div class="t-sub">${t.sub}</div></div></div>
+    <div class="sov-metrics">
+      <div class="sov-m"><div class="k">Sovereign Capital Ratio</div><div class="v">${Math.round(s.scr)}%</div><div class="scr-bar"><div class="real" style="width:${s.scr}%"></div><div class="stuff" style="width:${100-s.scr}%"></div></div></div>
+      <div class="sov-m"><div class="k">Overhead Drag / mo</div><div class="v" style="color:${s.overhead>0?'var(--accent-2)':'var(--good)'}">${money(s.overhead)}</div></div>
+      <div class="sov-m"><div class="k">Pure Freedom Runway</div><div class="v" style="color:var(--good)">${runwayTxt}</div></div>
+    </div>`;
+}
 function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip').reduce((s,i)=>s+i.amount,0); }
 function impulseSpent(){ return state.impulse.filter(i=>i.type==='buy').reduce((s,i)=>s+i.amount,0); }
 function skipStreak(){ let n=0; for(let i=state.impulse.length-1;i>=0;i--){ if(state.impulse[i].type==='skip') n++; else break; } return n; }
@@ -1421,6 +1547,7 @@ function renderNetWorth(){
     if(r==null){ rwBox.innerHTML=''; }
     else rwBox.innerHTML=`<div class="runwaybox"><div class="rb-k">Freedom Runway · ${lifeLabel('networth','Time Bought Back')}</div><div class="rb-v">${fmtRunway(r)}</div><div class="rb-note">If you stopped working today, your liquid money would cover your essentials for this long. Every trap you neutralize pushes it further out.</div></div>`;
   }
+  renderSovereignty();
   document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
     const k=a.kind||'real', yr=(a.cost||0)*12;
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
@@ -1439,6 +1566,7 @@ function renderNetWorth(){
   document.querySelectorAll('#assetList button[data-togglekind]').forEach(b=>b.addEventListener('click',()=>{
     const a=state.assets.find(x=>x.id===b.dataset.togglekind); if(!a) return;
     a.kind=(a.kind||'real')==='real'?'stuff':'real'; save(); renderNetWorth();
+    if(a.kind==='real'){ const w=watchHit(a.name); if(w) showAssetChallenge(a.id,w); }  // audit on edit
   }));
   document.querySelectorAll('#view-impulse button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
     const [cls,id]=b.dataset.delitem.split(':');
@@ -1449,7 +1577,7 @@ function renderNetWorth(){
 /* asset psychology: is it REALLY an asset? */
 const VEH=['car','truck','suv','vehicle','auto','jeep','tesla','motorcycle','boat','yacht','rv','camper','atv','jet ski'];
 const HOUSE_W=['house','home','condo','apartment'];
-const OTHER_W=['tv','television','phone','iphone','laptop','couch','furniture','clothes','shoes','sneakers','jewelry','purse','handbag','gadget','console'];
+const OTHER_W=['tv','television','phone','iphone','laptop','couch','furniture','clothes','shoes','sneakers','jewelry','purse','handbag','gadget','console','watch','rolex','designer','gucci','louis','prada','bag'];
 const WATCH=[...VEH,...HOUSE_W,...OTHER_W];
 function watchHit(name){ const n=(name||'').toLowerCase(); return WATCH.find(w=>n.includes(w))||''; }
 const CHALLENGE_CORE={
