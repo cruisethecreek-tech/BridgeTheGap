@@ -60,7 +60,7 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 - **Stage 3 Sovereignty** (12 mo+): the Sovereignty Audit and Network Capital open.
 - **One-way ratchet**: tools never disappear once earned (`stageReached`); crossing a threshold fires a **milestone celebration** (`celebrateStage`). Panels/tabs are gated by a `data-stage` attribute; `.stage-locked` hides anything above the active stage.
 - **Override**: Settings > Interface depth toggles `uiMode` between `auto` (guided) and `all` (show everything). Existing users are migrated so they never lose a tool they already used (`evidenceStage`).
-- **Retrospective** (`renderRetro`): a Day-1 snapshot (`day1`) vs. now once there's a week of history. Engine: `runwayStage`, `activeStage`, `applyStage`, `STAGE_META`.
+- **Retrospective / timeline** (`renderRetro`): auto-captured monthly snapshots (`captureSnapshot` upserts the current month on boot; past months freeze) drive a **Monthly/Quarterly** net-worth timeline with **3M / 6M / 1Y / All / Custom** date ranges, a start-vs-now delta, and a period table. `metricSnapshot`, `retroSeries`, `quarterKey`; state in `snapshots` + `retroView`. Engine: `runwayStage`, `activeStage`, `applyStage`, `STAGE_META`.
 
 **PWA** - installable, offline-capable: `manifest.webmanifest` (with a "Scan a trap" long-press shortcut), `sw.js` (network-first page, cache-first assets), `icon*.png` / `icon.svg`. `initPWA`.
 
