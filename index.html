@@ -107,6 +107,36 @@
   .dupwarn .dw-msg{font-size:13px;color:#e6d9b0;line-height:1.5}
   .dupwarn .dw-msg b{color:#e0be55}
   .dupwarn button{margin-top:10px}
+
+  /* ---------- Section 2: Mindset & Flow ---------- */
+  .goal-type{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:var(--ink);border:1px solid var(--line);border-radius:20px;padding:3px 10px;margin-top:6px}
+  .goal-actions select,.subrow select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 9px;font-size:13px}
+  .netitem{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-top:9px}
+  .netitem .n{flex:1;font-weight:700;font-size:14px;min-width:0}
+  .netitem .n small{display:block;color:var(--muted);font-weight:600;font-size:12px}
+  .netitem .amt{font-weight:900}
+  .ror{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;white-space:nowrap}
+  .ror.high{background:#10231a;color:var(--good);border:1px solid #1e4a37}
+  .ror.med{background:#241d08;color:#e0be55;border:1px solid #4a3d14}
+  .ror.low{background:#2a1410;color:var(--accent-2);border:1px solid #4a221e}
+  .enoughcard{background:linear-gradient(135deg,#10231a,#12281c);border:1px solid #1e4a37;border-radius:16px;padding:18px;margin-top:16px}
+  .enoughcard.creep{background:linear-gradient(135deg,#1d1a10,#231d10);border-color:#4a3d14}
+  .enoughcard .ec-k{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--good)}
+  .enoughcard.creep .ec-k{color:#e0be55}
+  .enoughcard .ec-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .enoughcard .ec-row input{width:130px;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font-size:15px}
+  .enoughcard .ec-msg{font-size:14px;color:#cfd4de;margin-top:10px;line-height:1.5}
+  .enoughcard .ec-msg b{color:var(--accent)}
+  .circ-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;background:var(--ink);border:1px solid var(--line);margin-top:10px}
+  .circ-bar .g{background:linear-gradient(90deg,#1e4a37,var(--good))}
+  .circ-bar .b{background:linear-gradient(90deg,#3a4a52,#6b7d8f)}
+  .circ-bar .f{background:linear-gradient(90deg,#4a221e,var(--accent-2))}
+  .circ-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;font-weight:700}
+  .circ-legend .k{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+  .circ-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .energy-sel{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .energy-sel button{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:13px;font-weight:700}
+  .energy-sel button.on{border-color:var(--accent);color:var(--text)}
   @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
   .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:#e6d9b0;line-height:1.45;font-weight:600}
@@ -526,6 +556,7 @@
       </div>
 
       <div class="snapshot" id="homeSnap"></div>
+      <div id="enoughCard"></div>
 
       <div class="walls-head">
         <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
@@ -607,6 +638,14 @@
           </label>
           <button class="btn primary" id="addTx">Log it</button>
         </div>
+        <div class="expense-only" id="energyWrap">
+          <label class="fld" style="width:100%;margin-top:12px">What energy is behind this? <span class="sub" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label>
+          <div class="energy-sel" id="energySel">
+            <button data-energy="growth">🌿 Growth / Flow</button>
+            <button data-energy="baseline">🛡️ Baseline</button>
+            <button data-energy="fear">🛑 Fear / Scarcity</button>
+          </div>
+        </div>
         <div id="logWin"></div>
       </div>
 
@@ -658,6 +697,11 @@
         <h2>Cash balance trend</h2>
         <p class="sub">Your running balance across everything you've tracked. The dream is up and to the right.</p>
         <div id="trendChart"></div>
+      </div>
+      <div class="panel">
+        <h2>🌊 Abundance &amp; Circulation</h2>
+        <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. Tag spends as you log them on the Transactions tab.</p>
+        <div id="circChart"></div>
       </div>
     </section>
 
@@ -772,10 +816,32 @@
           <label class="fld">By when
             <input type="date" id="goalDate">
           </label>
+          <label class="fld">Strategic type
+            <select id="goalType"><option value="foundation">🛡️ Foundation</option><option value="skill">⚡ Skill & Capacity</option><option value="leverage">🤝 Leverage & Network</option><option value="circulation">🌊 Circulation</option></select>
+          </label>
           <button class="btn primary" id="addGoal">Add dream</button>
         </div>
       </div>
       <div id="goals"></div>
+
+      <div class="panel">
+        <h2>🤝 Network Capital</h2>
+        <p class="sub">The highest-yield asset is often a relationship. Track what you invest in people - a mentor lunch, a conference ticket, a strategic dinner - and rate the <b style="color:var(--text)">Return on Relationship</b> so you can tell social investment from social noise.</p>
+        <div class="row">
+          <label class="fld" style="flex:1">Investment
+            <input type="text" id="netName" placeholder="Lunch with mentor, conference ticket…">
+          </label>
+          <label class="fld">Cost $
+            <input type="number" id="netAmt" min="0" step="1" placeholder="0" style="width:110px">
+          </label>
+          <label class="fld">Return on Relationship
+            <select id="netRor"><option value="high">High return 🔥</option><option value="med">Medium return</option><option value="low">Low / noise</option></select>
+          </label>
+          <button class="btn primary" id="addNet">Log it</button>
+        </div>
+        <div id="networkSummary"></div>
+        <div id="networkList"></div>
+      </div>
     </section>
 
     <!-- ============ LEARN ============ -->
@@ -922,6 +988,21 @@ const QUOTES = {
     ]
   }
 };
+/* Mindset & Flow (Section 2) */
+const GOAL_TYPES=[
+  {k:'foundation', ic:'🛡️', label:'Foundation', sub:'Emergency buffer, debt clearance - internal peace'},
+  {k:'skill', ic:'⚡', label:'Skill & Capacity', sub:'Education, tools, health - raise your earning output'},
+  {k:'leverage', ic:'🤝', label:'Leverage & Network', sub:'Masterminds, automation, delegation - scale your time'},
+  {k:'circulation', ic:'🌊', label:'Circulation', sub:'Giving, tithing, community - keep capital moving'}
+];
+function goalTypeOf(k){ return GOAL_TYPES.find(t=>t.k===k)||null; }
+const ENERGY=[
+  {k:'growth', ic:'🌿', label:'Growth / Flow', sub:'Investment, learning, joy, intentional giving'},
+  {k:'baseline', ic:'🛡️', label:'Baseline Protection', sub:'Rent, utilities, food'},
+  {k:'fear', ic:'🛑', label:'Fear / Scarcity', sub:'Panic buys, status, guilt purchases'}
+];
+function energyOf(k){ return ENERGY.find(e=>e.k===k)||null; }
+const ROR=[{k:'high',label:'High return 🔥'},{k:'med',label:'Medium return'},{k:'low',label:'Low / noise'}];
 const GOAL_NUDGES=[
   "This is the one. Feed it first.",
   "Every deposit is a vote for the person you're becoming.",
@@ -946,7 +1027,7 @@ function defaultState(){
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[],
            onboarded:false, intake:{}, register:'middle', vault:[],
-           freedomMode:false, trueRate:{} };
+           freedomMode:false, trueRate:{}, network:[], enough:0 };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1041,6 +1122,7 @@ function activateTab(name){
   const fab=document.getElementById('fab'); if(fab) fab.classList.toggle('hide',name==='impulse');
   if(name==='insights') renderCharts();
   if(name==='home') renderHome();
+  if(name==='goals') renderNetwork();
   if(name==='impulse') renderVault();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1220,6 +1302,12 @@ document.getElementById('typeToggle').addEventListener('click',e=>{
   document.querySelectorAll('.expense-only').forEach(x=>x.classList.toggle('hide',txType!=='expense'));
   document.querySelectorAll('.income-only').forEach(x=>x.classList.toggle('hide',txType!=='income'));
 });
+let txEnergy='';
+document.getElementById('energySel').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  txEnergy = (txEnergy===b.dataset.energy) ? '' : b.dataset.energy;
+  document.querySelectorAll('#energySel button').forEach(x=>x.classList.toggle('on',x.dataset.energy===txEnergy));
+});
 document.getElementById('addTx').addEventListener('click',()=>{
   const amt=parseFloat(document.getElementById('txAmt').value);
   const date=document.getElementById('txDate').value||todayStr();
@@ -1228,11 +1316,12 @@ document.getElementById('addTx').addEventListener('click',()=>{
   if(txType==='expense'){
     const catId=document.getElementById('txCat').value;
     if(!catId){ alert('Add a category first (Budget tab).'); return; }
-    state.transactions.push({id:uid(),type:'expense',amount:amt,catId,date,note});
+    const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy; state.transactions.push(tx);
   } else {
     const source=document.getElementById('txSrc').value.trim()||'Income';
     state.transactions.push({id:uid(),type:'income',amount:amt,source,date,note});
   }
+  txEnergy=''; document.querySelectorAll('#energySel button').forEach(x=>x.classList.remove('on'));
   document.getElementById('txAmt').value=''; document.getElementById('txNote').value=''; document.getElementById('txSrc').value='';
   // jump active month to the transaction's month so the user sees it land
   state.activeMonth=monthOf(date);
@@ -1289,7 +1378,8 @@ function renderTxList(){
     const day=isNaN(d)?'--':d.toLocaleString(undefined,{day:'numeric'});
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
     const title=t.type==='income'?escapeHtml(t.source||'Income'):(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
-    const sub=t.type==='income'?('Income'+(t.note?' · '+escapeHtml(t.note):'')):('Expense'+(txAllMonths?' · '+monthOf(t.date):''));
+    const en=t.energy?energyOf(t.energy):null;
+    const sub=t.type==='income'?('Income'+(t.note?' · '+escapeHtml(t.note):'')):((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
     const H=effectiveHourly();
     let badge='';
     if(H>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount)})</span>`;
@@ -1312,7 +1402,8 @@ document.getElementById('addGoal').addEventListener('click',()=>{
   const target=parseFloat(document.getElementById('goalTarget').value);
   const date=document.getElementById('goalDate').value;
   if(!name||!target||target<=0) return;
-  state.goals.push({id:uid(),name,target,saved:0,date});
+  const goalType=document.getElementById('goalType').value;
+  state.goals.push({id:uid(),name,target,saved:0,date,goalType});
   document.getElementById('goalName').value=''; document.getElementById('goalTarget').value=''; document.getElementById('goalDate').value='';
   save(); renderGoals();
 });
@@ -1323,17 +1414,22 @@ function renderGoals(){
     const pct=Math.min(100,(g.saved/g.target)*100), done=g.saved>=g.target;
     const nudge=done?"Funded. You actually did it. Now set a bigger one.":GOAL_NUDGES[i%GOAL_NUDGES.length];
     const deadline=g.date?`Target date: ${g.date}`:'No deadline set';
+    const gt=goalTypeOf(g.goalType);
+    const typeBadge = gt ? `<span class="goal-type">${gt.ic} ${gt.label}</span>` : '';
+    const typeSel = `<select data-goaltype="${g.id}">${GOAL_TYPES.map(t=>`<option value="${t.k}"${g.goalType===t.k?' selected':''}>${t.ic} ${t.label}</option>`).join('')}</select>`;
     return `<div class="goal ${done?'done':''}">
-      <div class="goal-top"><div><div class="goal-name">${escapeHtml(g.name)}</div><div class="goal-dead">${deadline}</div></div><div class="goal-pct">${Math.round(pct)}%</div></div>
+      <div class="goal-top"><div><div class="goal-name">${escapeHtml(g.name)}</div><div class="goal-dead">${deadline}</div>${typeBadge}</div><div class="goal-pct">${Math.round(pct)}%</div></div>
       <div class="bar"><span style="width:${pct}%"></span></div>
       <div class="goal-nums"><span><b>${money(g.saved)}</b> saved</span><span>of <b>${money(g.target)}</b> · ${money(Math.max(0,g.target-g.saved))} to go</span></div>
       <div class="goal-nudge">${nudge}</div>
       <div class="goal-actions">
         <input type="number" placeholder="Add $" min="0" step="1" data-add="${g.id}" style="width:120px">
         <button class="btn sm primary" data-addbtn="${g.id}">Add to dream</button>
+        ${typeSel}
         <button class="btn sm danger ghost" data-delgoal="${g.id}">Delete</button>
       </div></div>`;
   }).join('');
+  box.querySelectorAll('select[data-goaltype]').forEach(sel=>sel.addEventListener('change',()=>{ const g=state.goals.find(x=>x.id===sel.dataset.goaltype); if(g){ g.goalType=sel.value; save(); renderGoals(); } }));
   box.querySelectorAll('button[data-addbtn]').forEach(btn=>btn.addEventListener('click',()=>{
     const inp=box.querySelector(`input[data-add="${btn.dataset.addbtn}"]`); const add=parseFloat(inp.value);
     if(!add||add<=0) return; const g=state.goals.find(x=>x.id===btn.dataset.addbtn);
@@ -1342,6 +1438,28 @@ function renderGoals(){
   box.querySelectorAll('button[data-delgoal]').forEach(btn=>btn.addEventListener('click',()=>{
     state.goals=state.goals.filter(g=>g.id!==btn.dataset.delgoal); save(); renderGoals();
   }));
+}
+/* 2B: Network Capital */
+document.getElementById('addNet').addEventListener('click',()=>{
+  const name=document.getElementById('netName').value.trim();
+  const amt=parseFloat(document.getElementById('netAmt').value)||0;
+  const ror=document.getElementById('netRor').value;
+  if(!name){ return; }
+  state.network.push({id:uid(),name,amount:amt,ror,date:todayStr()});
+  document.getElementById('netName').value=''; document.getElementById('netAmt').value='';
+  save(); renderNetwork();
+});
+function renderNetwork(){
+  const box=document.getElementById('networkList'), sum=document.getElementById('networkSummary'); if(!box) return;
+  const total=state.network.reduce((s,n)=>s+(n.amount||0),0);
+  const high=state.network.filter(n=>n.ror==='high').reduce((s,n)=>s+(n.amount||0),0);
+  if(sum) sum.innerHTML = state.network.length ? `<div class="chip">Invested in relationships: <b>${money(total)}</b></div><div class="chip">High-ROR: <b>${money(high)}</b></div><div class="chip" style="border-style:dashed">${total>0?Math.round(high/total*100):0}% high-return</div>` : '';
+  if(!state.network.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No relationship investments logged yet. The next lunch might be your best trade.</div>`; return; }
+  box.innerHTML=state.network.slice().reverse().map(n=>{
+    const r=ROR.find(x=>x.k===n.ror)||ROR[1];
+    return `<div class="netitem"><span class="n">${escapeHtml(n.name)}<small>${n.date}</small></span><span class="ror ${n.ror}">${r.label}</span><span class="amt">${money(n.amount)}</span><button class="del" data-delnet="${n.id}" title="Delete">✕</button></div>`;
+  }).join('');
+  box.querySelectorAll('button[data-delnet]').forEach(b=>b.addEventListener('click',()=>{ state.network=state.network.filter(x=>x.id!==b.dataset.delnet); save(); renderNetwork(); }));
 }
 
 /* ---------- learn ---------- */
@@ -1475,7 +1593,7 @@ function logNeutralize(name,amount,trap,goalId){
 /* log a paid ransom (buy) as an Impulse / Wants expense */
 function logRansom(name,amount,trap){
   const c=ensureImpulseCategory(), date=todayStr();
-  const tx={id:uid(),type:'expense',amount,catId:c.id,date,note:name+' (impulse)'};
+  const tx={id:uid(),type:'expense',amount,catId:c.id,date,note:name+' (impulse)',energy:'fear'};
   state.transactions.push(tx);
   state.impulse.push({id:uid(),type:'buy',name,amount,date,txId:tx.id,trap:trap||null});
   state.activeMonth=monthOf(date); return tx;
@@ -2058,6 +2176,25 @@ function renderCharts(){
   const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
   const tc=document.getElementById('trendChart'), latest=pts[pts.length-1].bal;
   if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Latest balance: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b></span></div>`;
+  renderCirculation();
+}
+/* 2D: Abundance & Circulation summary (tagged-expense energy ratio) */
+function renderCirculation(){
+  const box=document.getElementById('circChart'); if(!box) return;
+  const tagged=state.transactions.filter(t=>t.type==='expense'&&t.energy);
+  if(!tagged.length){ box.innerHTML=`<div class="empty">No energy-tagged spends yet. When you log an expense, tap 🌿 / 🛡️ / 🛑 to see your circulation ratio here.</div>`; return; }
+  const g=tagged.filter(t=>t.energy==='growth').reduce((s,t)=>s+t.amount,0);
+  const b=tagged.filter(t=>t.energy==='baseline').reduce((s,t)=>s+t.amount,0);
+  const f=tagged.filter(t=>t.energy==='fear').reduce((s,t)=>s+t.amount,0);
+  const total=g+b+f||1;
+  const gp=Math.round(g/total*100), fp=Math.round(f/total*100);
+  const verdict = gp>=fp*2 ? `<b style="color:var(--good)">Capital is flowing.</b> Far more of your money moves toward growth than leaks to fear. Keep circulating.`
+    : fp>gp ? `<b style="color:var(--accent-2)">Fear is winning the flow.</b> More is leaking to scarcity and status than building you. Redirect one fear-spend into growth this week.`
+    : `Balanced flow. Nudge a little more toward growth and giving - that's where compounding lives.`;
+  box.innerHTML=`
+    <div class="circ-bar"><div class="g" style="width:${g/total*100}%"></div><div class="b" style="width:${b/total*100}%"></div><div class="f" style="width:${f/total*100}%"></div></div>
+    <div class="circ-legend"><span class="k"><span class="sw" style="background:var(--good)"></span>🌿 Growth ${money(g)}</span><span class="k"><span class="sw" style="background:#6b7d8f"></span>🛡️ Baseline ${money(b)}</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>🛑 Fear ${money(f)}</span></div>
+    <p class="sub" style="margin:12px 0 0">${verdict}</p>`;
 }
 
 /* ---------- PWA / installable ---------- */
@@ -2177,7 +2314,7 @@ document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarde
 function boot(){
   renderIntensity(); renderRegister(); newQuote();
   if(postRecurring(thisMonth())>0) save();
-  renderBudget(); renderTx(); renderGoals(); renderLesson();
+  renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderLesson();
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   renderFreedomToggle(); fillTrueRate();
@@ -2206,7 +2343,28 @@ function renderHome(){
     <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div></div>
     <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
     <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div></div>`;
+  renderEnough(income);
   renderWalls();
+}
+/* 2C: the "Enough" anchor + margin-of-safety prompt */
+function renderEnough(income){
+  const box=document.getElementById('enoughCard'); if(!box) return;
+  const enough=state.enough||0;
+  const surplus=income-enough;
+  const creep = enough>0 && income>0 && surplus>0;
+  let msg;
+  if(!enough) msg=`Set the monthly income that covers a genuinely good, comfortable life. Past that line, more money should buy <b>freedom</b>, not lifestyle creep.`;
+  else if(income<=0) msg=`Your Enough line is ${money(enough)}/mo. Log income to see where you stand against it.`;
+  else if(creep) msg=`You're <b>${money(surplus)}</b> over your Enough line this month. That's not "spend more" money - that's <b>freedom</b> money. Route it to a Skill, Leverage, or Circulation goal before it evaporates into upgrades.`;
+  else msg=`You're within your Enough line (${money(enough)}/mo). Solid. Every dollar you lift income above this is pure freedom fuel.`;
+  box.innerHTML=`<div class="enoughcard ${creep?'creep':''}">
+    <div class="ec-k">The "Enough" anchor</div>
+    <div class="ec-row"><span class="sub" style="margin:0">Enough is $</span><input type="number" min="0" step="50" value="${enough||''}" id="enoughInput" placeholder="e.g. 3500"><span class="sub" style="margin:0">/month</span>${creep?`<button class="btn sm primary" data-goto="goals">Route surplus to a goal →</button>`:''}</div>
+    <div class="ec-msg">${msg}</div>
+  </div>`;
+  const inp=document.getElementById('enoughInput');
+  if(inp) inp.addEventListener('input',()=>{ state.enough=parseFloat(inp.value)||0; save(); });
+  if(inp) inp.addEventListener('change',()=>renderEnough(income));
 }
 
 /* ---------- Cover First (essentials) ---------- */
