@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Accountability — Zero-Based Budgeting</title>
+<title>Accountability - Zero-Based Budgeting</title>
 <meta name="description" content="No-nonsense zero-based budgeting with a gut check for every purchase.">
 <meta name="theme-color" content="#0b1421">
 <link rel="manifest" href="manifest.webmanifest">
@@ -88,6 +88,20 @@
   /* ---------- Pillar 4: Rebalance + Blindspot ---------- */
   .cat.overspent{border-color:#4a3d14}
   .cat.overspent .bar>span{background:linear-gradient(90deg,#6b5a1e,#caa53a)}
+  .cat-toggle{background:none;border:none;color:var(--accent);font-size:13px;font-weight:900;cursor:pointer;padding:0 2px 0 0;flex-shrink:0}
+  .cat-count{font-size:11px;font-weight:800;color:var(--muted);background:var(--ink);border:1px solid var(--line);border-radius:20px;padding:1px 7px;margin-left:4px}
+  .cat-split{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px}
+  .cat-split.neg{color:var(--accent-2)}
+  .subrow{display:flex;align-items:center;gap:8px;padding:9px 10px;margin-top:8px;background:var(--ink);border:1px solid var(--line);border-radius:10px}
+  .subrow .sub-name{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .subrow .sub-assign{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
+  .subrow .sub-assign input{width:80px;padding:6px 8px;font-size:13px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px}
+  .subrow .sub-spent{font-size:12px;color:var(--muted);white-space:nowrap}
+  .addsub-row{display:flex;gap:8px;margin-top:8px}
+  .addsub-row input{flex:1;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 11px;font-size:14px;min-width:0}
+  .addsub-row input:focus{outline:none;border-color:var(--accent)}
+  .addsub-first{background:none;border:none;color:var(--accent);font-weight:700;font-size:12px;cursor:pointer;margin-top:8px;padding:0;text-align:left}
+  @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
   .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:#e6d9b0;line-height:1.45;font-weight:600}
   .rebalance .rb-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
@@ -498,7 +512,7 @@
       <div class="home-hero">
         <div class="hh-eye" id="hhEye">Zero-Based Budgeting · No Filter</div>
         <h1 class="hh-title" id="hhTitle">Tell every dollar where to go.</h1>
-        <p class="hh-sub" id="hhSub">Budget to zero, gut-check every purchase, and watch your dreams get funded — in plain, unfiltered English.</p>
+        <p class="hh-sub" id="hhSub">Budget to zero, gut-check every purchase, and watch your dreams get funded - in plain, unfiltered English.</p>
         <div class="hh-cta"><button class="btn primary" data-goto="budget" id="hhCta">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
       </div>
 
@@ -507,7 +521,7 @@
       <div class="walls-head">
         <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
         <h2 class="ph-title">Cover First</h2>
-        <p class="walls-tag" id="wallsTag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun — they keep the lights on and you moving.</p>
+        <p class="walls-tag" id="wallsTag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving.</p>
       </div>
       <div class="walls" id="wallsGrid"></div>
       <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
@@ -525,7 +539,7 @@
       <div class="features">
         <div class="feat"><div class="ft-t">Zero-based</div><div class="ft-d">Income minus every job equals zero. Nothing wanders off.</div></div>
         <div class="feat"><div class="ft-t">Gut check</div><div class="ft-d">Every purchase weighed in hours of your life and days from your dream.</div></div>
-        <div class="feat"><div class="ft-t">Real net worth</div><div class="ft-d">Assets that actually pay you — not the stuff quietly draining you.</div></div>
+        <div class="feat"><div class="ft-t">Real net worth</div><div class="ft-d">Assets that actually pay you - not the stuff quietly draining you.</div></div>
         <div class="feat"><div class="ft-t">No filter</div><div class="ft-d">Blunt truth, dialed from Clean to Savage. Your call.</div></div>
       </div>
     </section>
@@ -535,11 +549,11 @@
       <div class="panel">
         <div class="monthnav">
           <button id="mPrev" title="Previous month">‹</button>
-          <div class="m" id="mLabel">—</div>
+          <div class="m" id="mLabel">-</div>
           <button id="mNext" title="Next month">›</button>
         </div>
         <div class="summary" id="summary"></div>
-        <p class="sub" style="margin:-4px 0 16px">Zero-based budgeting: assign your income down to <b>$0</b>. Income comes from what you log in <b>Transactions</b> — log a paycheck first, then give every dollar a job here.</p>
+        <p class="sub" style="margin:-4px 0 16px">Zero-based budgeting: assign your income down to <b>$0</b>. Income comes from what you log in <b>Transactions</b> - log a paycheck first, then give every dollar a job here.</p>
 
         <div class="row" style="margin-bottom:6px">
           <label class="fld" style="flex:1">New category
@@ -640,8 +654,8 @@
     <!-- ============ IMPULSE ============ -->
     <section class="view" id="view-impulse">
       <div class="panel">
-        <h2>🎯 Trap Radar — scan the target</h2>
-        <p class="sub">Marketing, algorithms, status buys, convenience markups — they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life.</p>
+        <h2>🎯 Trap Radar - scan the target</h2>
+        <p class="sub">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life.</p>
         <div class="row" style="margin-bottom:14px">
           <label class="fld">Your take-home pay per hour
             <input type="number" id="wage" min="0" step="0.5" placeholder="e.g. 22" style="width:150px">
@@ -651,7 +665,7 @@
         <details class="truerate" id="trueRate">
           <summary>Calculate your True Net Hourly Wage</summary>
           <div class="tr-body">
-            <p class="sub" style="margin:6px 0 12px">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs — the commute, the gas, the work lunches — spread over the time the job actually eats.</p>
+            <p class="sub" style="margin:6px 0 12px">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs - the commute, the gas, the work lunches - spread over the time the job actually eats.</p>
             <div class="row">
               <label class="fld">Take-home / month<input type="number" id="trTakeHome" min="0" step="50" placeholder="e.g. 3200" style="width:130px"></label>
               <label class="fld">Commute + prep (hrs/week)<input type="number" id="trCommute" min="0" step="0.5" placeholder="e.g. 7" style="width:120px"></label>
@@ -690,7 +704,7 @@
 
       <div class="panel">
         <h2>Assets vs. Liabilities</h2>
-        <p class="sub"><b style="color:var(--text)">The real definition:</b> an asset puts money IN your pocket. A liability takes money OUT. Not what you were sold — what's actually true. Net worth counts everything you'd walk away with, but only money-making assets are buying your freedom.</p>
+        <p class="sub"><b style="color:var(--text)">The real definition:</b> an asset puts money IN your pocket. A liability takes money OUT. Not what you were sold - what's actually true. Net worth counts everything you'd walk away with, but only money-making assets are buying your freedom.</p>
         <div class="nw" id="nwNum">$0</div>
         <div class="nwbreak" id="nwBreak"></div>
         <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="s" style="width:0%"></div><div class="l" style="width:50%"></div></div>
@@ -724,7 +738,7 @@
 
       <div class="panel">
         <h2>🏆 War Chest &amp; Freedom Scoreboard</h2>
-        <p class="sub">Every trap you neutralize is money — and hours of your life — that stayed yours. This is the proof.</p>
+        <p class="sub">Every trap you neutralize is money - and hours of your life - that stayed yours. This is the proof.</p>
         <div id="impCelebrate"></div>
         <div class="scorecards" id="impScore"></div>
         <div id="impHours"></div>
@@ -770,7 +784,7 @@
   </div>
 
   <div class="foot">
-    <span>Accountability · a working prototype. Everything saves to this browser only — nothing leaves your device.</span>
+    <span>Accountability · a working prototype. Everything saves to this browser only - nothing leaves your device.</span>
     <div class="actions">
       <button class="linkbtn" id="intakeBtn">💬 Setup chat</button>
       <button class="linkbtn" id="installBtn">📲 Install app</button>
@@ -813,7 +827,7 @@
 
 <script>
 /* ============================================================
-   ACCOUNTABILITY — full budgeting tracker (income + expenses)
+   ACCOUNTABILITY - full budgeting tracker (income + expenses)
    Vanilla JS, localStorage, no dependencies. Original copy.
    ============================================================ */
 const STORE_KEY = 'unfiltered_budget_v2';
@@ -850,7 +864,7 @@ const QUOTES = {
       "Your dream needs funding, bestie. The budget is how you secure the bag.",
       "Money with no plan? That's how it ghosts you. Give every dollar a job.",
       "Small wins still count. Start where you're at, no cap.",
-      "You don't need more money yet — you need a plan for what you've got.",
+      "You don't need more money yet - you need a plan for what you've got.",
       "In control today > rich someday. Period.",
       "Discipline is just remembering what you actually want. Lock in."
     ],
@@ -875,14 +889,14 @@ const QUOTES = {
     clean:[
       "A dream without a plan is just a wish. Put real numbers to it.",
       "Money managed on purpose is money that finally works for you.",
-      "Peace of mind isn't bought — it's budgeted, one month at a time.",
+      "Peace of mind isn't bought - it's budgeted, one month at a time.",
       "It's never too late to tell your money where to go.",
       "Control today is worth more than a fortune promised for someday.",
       "The habits you set now become the security you'll lean on later."
     ],
     blunt:[
       "Nobody is going to steward your money for you. That job is yours.",
-      "The quiet leaks — the fees, the forgotten renewals — cost the most.",
+      "The quiet leaks - the fees, the forgotten renewals - cost the most.",
       "You're not careless with money. You simply never gave it instructions.",
       "Comfort has a price. Security costs less than most people assume.",
       "The distance to your goal is a plan you've been putting off.",
@@ -906,14 +920,14 @@ const GOAL_NUDGES=[
   "The gap is shrinking because you decided it would."
 ];
 const LESSONS=[
-  {t:"Zero-Based Budgeting",p:"Give every single dollar a job before the month starts. Income minus all your assignments equals zero — not because you spent it all, but because 'savings' and 'goals' are jobs too. Money left unassigned is money that quietly disappears. When every dollar is claimed, you stop wondering where it went, because you already decided.",try:"Take last month's income. Assign it, on paper, down to $0 — including a line for your dream."},
-  {t:"Pay Yourself First",p:"Most people save whatever's left at the end of the month. Spoiler: nothing's left. Flip it. The moment money hits your account, the first 'bill' you pay is your own future — savings and goals come off the top, before spending gets a vote. You live on the rest. It feels backwards. It works forwards.",try:"Set one automatic transfer to savings for the day after you get paid. Even $20 counts."},
-  {t:"The Emergency Fund",p:"An emergency fund is the wall between a bad day and a bad year. Start with a small starter buffer — enough to cover a surprise car repair or a missed shift — then build toward covering several months of essentials. This isn't your dream fund; it's the thing that protects the dream fund from getting raided every time life happens.",try:"Open a separate account you can't see on your main app. Name it 'DO NOT TOUCH'. Fund it weekly."},
-  {t:"Sinking Funds",p:"The bills that wreck budgets aren't the surprises — they're the predictable ones you pretend not to see coming: the holidays, the annual insurance, the car tires. A sinking fund breaks a big future cost into small monthly chunks you set aside in advance. December stops being an ambush when you've been quietly funding it since March.",try:"List every 'once a year' expense. Divide each by 12. That's your monthly set-aside per fund."},
-  {t:"Debt Snowball vs. Avalanche",p:"Two ways to kill debt. The Avalanche attacks the highest interest rate first — mathematically cheapest. The Snowball attacks the smallest balance first — emotionally strongest, because early wins keep you in the fight. The best method is the one you'll actually finish. Money is math, but paying it off is behavior.",try:"List your debts. Pick Avalanche if you're driven by numbers, Snowball if you need momentum. Attack one, pay minimums on the rest."},
-  {t:"The 24-Hour Rule",p:"Impulse spending isn't a math problem, it's a timing problem. For any non-essential 'want,' put it in a 24-hour holding pen before you buy. Most wants are just a mood wearing a price tag — give it a day and the urge evaporates. The ones that survive the wait are usually the ones actually worth your dollars.",try:"Next time you're about to check out on something you didn't plan for — close the tab. Revisit tomorrow."},
-  {t:"Value Per Dollar, Not Price",p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation — that's aim.",try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."},
-  {t:"What's Actually an Asset?",p:"Here's the line nobody drew for you: an asset puts money IN your pocket, a liability takes money OUT. That's the whole test. By that rule, the car in your driveway isn't an asset — it loses value every mile and costs you gas, insurance, and repairs. The house you live in? It takes mortgage, taxes, and upkeep out every month; it only flips to an asset when it pays you rent or you sell for more. This isn't to shame your stuff — it's to stop you feeling rich while you're surrounded by things quietly draining you. Real wealth is the pile that feeds you while you sleep.",try:"Look at everything you call an 'asset.' Cross out anything that doesn't put cash in your pocket. What's left is your real wealth — now grow that number."}
+  {t:"Zero-Based Budgeting",p:"Give every single dollar a job before the month starts. Income minus all your assignments equals zero - not because you spent it all, but because 'savings' and 'goals' are jobs too. Money left unassigned is money that quietly disappears. When every dollar is claimed, you stop wondering where it went, because you already decided.",try:"Take last month's income. Assign it, on paper, down to $0 - including a line for your dream."},
+  {t:"Pay Yourself First",p:"Most people save whatever's left at the end of the month. Spoiler: nothing's left. Flip it. The moment money hits your account, the first 'bill' you pay is your own future - savings and goals come off the top, before spending gets a vote. You live on the rest. It feels backwards. It works forwards.",try:"Set one automatic transfer to savings for the day after you get paid. Even $20 counts."},
+  {t:"The Emergency Fund",p:"An emergency fund is the wall between a bad day and a bad year. Start with a small starter buffer - enough to cover a surprise car repair or a missed shift - then build toward covering several months of essentials. This isn't your dream fund; it's the thing that protects the dream fund from getting raided every time life happens.",try:"Open a separate account you can't see on your main app. Name it 'DO NOT TOUCH'. Fund it weekly."},
+  {t:"Sinking Funds",p:"The bills that wreck budgets aren't the surprises - they're the predictable ones you pretend not to see coming: the holidays, the annual insurance, the car tires. A sinking fund breaks a big future cost into small monthly chunks you set aside in advance. December stops being an ambush when you've been quietly funding it since March.",try:"List every 'once a year' expense. Divide each by 12. That's your monthly set-aside per fund."},
+  {t:"Debt Snowball vs. Avalanche",p:"Two ways to kill debt. The Avalanche attacks the highest interest rate first - mathematically cheapest. The Snowball attacks the smallest balance first - emotionally strongest, because early wins keep you in the fight. The best method is the one you'll actually finish. Money is math, but paying it off is behavior.",try:"List your debts. Pick Avalanche if you're driven by numbers, Snowball if you need momentum. Attack one, pay minimums on the rest."},
+  {t:"The 24-Hour Rule",p:"Impulse spending isn't a math problem, it's a timing problem. For any non-essential 'want,' put it in a 24-hour holding pen before you buy. Most wants are just a mood wearing a price tag - give it a day and the urge evaporates. The ones that survive the wait are usually the ones actually worth your dollars.",try:"Next time you're about to check out on something you didn't plan for - close the tab. Revisit tomorrow."},
+  {t:"Value Per Dollar, Not Price",p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation - that's aim.",try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."},
+  {t:"What's Actually an Asset?",p:"Here's the line nobody drew for you: an asset puts money IN your pocket, a liability takes money OUT. That's the whole test. By that rule, the car in your driveway isn't an asset - it loses value every mile and costs you gas, insurance, and repairs. The house you live in? It takes mortgage, taxes, and upkeep out every month; it only flips to an asset when it pays you rent or you sell for more. This isn't to shame your stuff - it's to stop you feeling rich while you're surrounded by things quietly draining you. Real wealth is the pile that feeds you while you sleep.",try:"Look at everything you call an 'asset.' Cross out anything that doesn't put cash in your pocket. What's left is your real wealth - now grow that number."}
 ];
 
 /* ---------- state ---------- */
@@ -942,7 +956,7 @@ const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString
 const WORKDAY_HRS=8, WORKMONTH_HRS=160;
 function fmtLife(amount){
   const H=effectiveHourly();
-  if(!H||H<=0) return usd(amount);            // no rate yet — fall back to dollars
+  if(!H||H<=0) return usd(amount);            // no rate yet - fall back to dollars
   const neg=amount<0, hrs=Math.abs(amount)/H;
   let out;
   if(hrs*60 < 60)            out=Math.max(1,Math.round(hrs*60))+'m';
@@ -968,7 +982,17 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<'
 function shiftMonth(key,delta){ let [y,m]=key.split('-').map(Number); m+=delta; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return `${y}-${String(m).padStart(2,'0')}`; }
 function fmtMonth(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleString(undefined,{month:'long',year:'numeric'}); }
 function monthOf(dateStr){ return (dateStr||'').slice(0,7); }
-function catName(id){ const c=state.categories.find(x=>x.id===id); return c?c.name:'Uncategorized'; }
+function catName(id){ const c=state.categories.find(x=>x.id===id); if(!c) return 'Uncategorized'; if(c.parentId){ const p=state.categories.find(x=>x.id===c.parentId); if(p) return p.name+' › '+c.name; } return c.name; }
+/* option list for tx/recurring dropdowns, grouped by parent */
+function categoryOptions(){
+  const tops=state.categories.filter(x=>!x.parentId);
+  if(!tops.length) return '';
+  return tops.map(c=>{
+    const kids=state.categories.filter(k=>k.parentId===c.id);
+    if(!kids.length) return `<option value="${c.id}">${escapeHtml(c.name)}</option>`;
+    return `<optgroup label="${escapeHtml(c.name)}"><option value="${c.id}">${escapeHtml(c.name)} (whole group)</option>${kids.map(k=>`<option value="${k.id}">${escapeHtml(k.name)}</option>`).join('')}</optgroup>`;
+  }).join('');
+}
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
@@ -1039,21 +1063,27 @@ document.getElementById('starterBtn').addEventListener('click',()=>{
 });
 document.getElementById('mergeBtn').addEventListener('click',()=>{
   const n=mergeDuplicates();
-  if(n){ renderBudget(); renderTx(); renderNetWorth(); alert('Tidied up — merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into your essentials. Assignments and transactions were kept and combined.'); }
-  else alert('No duplicates found — your categories are already clean.');
+  if(n){ renderBudget(); renderTx(); renderNetWorth(); alert('Tidied up - merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into your essentials. Assignments and transactions were kept and combined.'); }
+  else alert('No duplicates found - your categories are already clean.');
 });
 document.getElementById('copyBtn').addEventListener('click',()=>{
   const prev=shiftMonth(state.activeMonth,-1), src=state.budgets[prev];
-  if(!src||!Object.keys(src).length){ alert('Nothing to copy — last month has no assignments.'); return; }
+  if(!src||!Object.keys(src).length){ alert('Nothing to copy - last month has no assignments.'); return; }
   state.budgets[state.activeMonth]=Object.assign({},src); save(); renderBudget();
 });
+
+/* ---------- category hierarchy (one level of subcategories) ---------- */
+let collapsedCats=new Set();
+function childrenOf(id){ return state.categories.filter(c=>c.parentId===id); }
+function topCats(){ return state.categories.filter(c=>!c.parentId); }
+function catSpent(id,M){ return spentFor(id,M)+childrenOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
 
 /* ---------- budget render ---------- */
 function renderBudget(){
   document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth) + (state.activeMonth===thisMonth()?'<small>This month</small>':'<small>&nbsp;</small>');
   const M=state.activeMonth;
   const income=monthIncome(M);
-  const assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const assigned=topCats().reduce((s,c)=>s+assignedFor(c.id,M),0);
   const spent=monthExpense(M);
   const ltb=income-assigned;
 
@@ -1061,7 +1091,7 @@ function renderBudget(){
   if(income===0){ msg='Log some income in Transactions, then give it a job.'; vc='pos'; }
   else if(Math.abs(ltb)<0.005){ cls+=' zero'; msg='Zero-based. Every dollar has a job. This is the move.'; }
   else if(ltb<0){ cls+=' over'; msg="You've assigned more than you earned. Cut something."; }
-  else { msg='Keep going — assign this down to $0.'; vc='pos'; }
+  else { msg='Keep going - assign this down to $0.'; vc='pos'; }
 
   document.getElementById('summary').innerHTML=`
     <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div><div class="msg">${msg}</div></div>
@@ -1074,24 +1104,37 @@ function renderBudget(){
   if(!state.categories.length){
     box.innerHTML=`<div class="empty">No categories yet. Add one above, or hit “Starter set” to skip the blank page.</div>`;
   } else {
-    box.innerHTML=state.categories.map(c=>{
-      const a=assignedFor(c.id,M), sp=spentFor(c.id,M), rem=a-sp;
+    box.innerHTML=topCats().map(c=>{
+      const a=assignedFor(c.id,M), sp=catSpent(c.id,M), rem=a-sp;
       const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
       const over=sp>a&&sp>0;
       const rc=rem<0?'over':(rem>0?'good':'');
+      const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
+      const split = isGroup ? a - kids.reduce((s,k)=>s+assignedFor(k.id,M),0) : 0;
       const rebalance = over ? `<div class="rebalance">
           <div class="rb-msg">${escapeHtml(pickVoice(REBALANCE_COPY))}</div>
           <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">⚡ Auto-Rebalance</button></div>
         </div>` : '';
+      const subsHTML = (isGroup && !collapsed) ? kids.map(k=>{
+        const ka=assignedFor(k.id,M), ks=spentFor(k.id,M);
+        return `<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span><button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+      }).join('') : '';
+      const addSub = (isGroup && !collapsed)
+        ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋</button></div>`
+        : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
       return `<div class="cat ${over?'overspent':''}">
         <div class="cat-top">
-          <span class="cat-name">${escapeHtml(c.name)}</span>
+          ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
+          <span class="cat-name">${escapeHtml(c.name)}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>
           <span class="cat-assign">Assign $ <input type="number" min="0" step="1" value="${a||0}" data-cat="${c.id}"></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
         <div class="cat-meta"><span>Spent ${money(sp)} of ${money(a)}</span><span class="rem ${rc}">${rem<0?money(-rem)+' over':money(rem)+' left'}</span></div>
+        ${isGroup?`<div class="cat-split ${split<0?'neg':''}">${split>=0?money(split)+' left to split into subs':money(-split)+' over-split the pool'}</div>`:''}
         ${rebalance}
+        ${subsHTML}
+        ${addSub}
       </div>`;
     }).join('');
   }
@@ -1101,31 +1144,36 @@ function renderBudget(){
   });
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
-    state.categories=state.categories.filter(c=>c.id!==id);
-    Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) delete state.budgets[m][id]; });
+    const toRemove=new Set([id,...childrenOf(id).map(k=>k.id)]);
+    state.categories=state.categories.filter(c=>!toRemove.has(c.id));
+    Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
     // keep transactions for history; they become "Uncategorized"
     save(); renderBudget(); renderTx();
   }));
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
+  box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); renderBudget(); }));
+  box.querySelectorAll('button[data-addsubfirst]').forEach(btn=>btn.addEventListener('click',()=>{ const name=(prompt('First subcategory name (e.g. Electric):')||'').trim(); if(name){ state.categories.push({id:uid(),name,parentId:btn.dataset.addsubfirst}); save(); renderBudget(); renderTxForm(); } }));
+  box.querySelectorAll('button[data-addsub]').forEach(btn=>btn.addEventListener('click',()=>{ const inp=box.querySelector(`input[data-addsub-input="${btn.dataset.addsub}"]`); const name=(inp&&inp.value||'').trim(); if(name){ state.categories.push({id:uid(),name,parentId:btn.dataset.addsub}); save(); renderBudget(); renderTxForm(); } }));
+  box.querySelectorAll('input[data-addsub-input]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const name=inp.value.trim(); if(name){ state.categories.push({id:uid(),name,parentId:inp.dataset.addsubInput}); save(); renderBudget(); renderTxForm(); } } }));
 }
 /* essential = one of the Cover First walls */
 function isEssentialCat(name){ const n=(name||'').toLowerCase(); return (typeof WALLS!=='undefined'?WALLS:[]).some(w=>w.match.some(t=>n.includes(t))); }
 /* Pillar 4A: pull unused funds from flexible categories into the overspent one */
 function autoRebalance(catId){
   const M=state.activeMonth, target=state.categories.find(c=>c.id===catId); if(!target) return;
-  let need=spentFor(catId,M)-assignedFor(catId,M); if(need<=0){ renderBudget(); return; }
-  // donors: non-essential categories with surplus, "Fun Money" style first
-  const donors=state.categories.filter(c=>c.id!==catId && !isEssentialCat(c.name) && (assignedFor(c.id,M)-spentFor(c.id,M))>0)
-    .sort((x,y)=>{ const fx=/fun|misc|extra|blow|guilt|play/.test(x.name.toLowerCase())?0:1, fy=/fun|misc|extra|blow|guilt|play/.test(y.name.toLowerCase())?0:1; if(fx!==fy) return fx-fy; return (assignedFor(y.id,M)-spentFor(y.id,M))-(assignedFor(x.id,M)-spentFor(x.id,M)); });
+  let need=catSpent(catId,M)-assignedFor(catId,M); if(need<=0){ renderBudget(); return; }
+  // donors: top-level non-essential pools with surplus, "Fun Money" style first
+  const donors=topCats().filter(c=>c.id!==catId && !isEssentialCat(c.name) && (assignedFor(c.id,M)-catSpent(c.id,M))>0)
+    .sort((x,y)=>{ const fx=/fun|misc|extra|blow|guilt|play/.test(x.name.toLowerCase())?0:1, fy=/fun|misc|extra|blow|guilt|play/.test(y.name.toLowerCase())?0:1; if(fx!==fy) return fx-fy; return (assignedFor(y.id,M)-catSpent(y.id,M))-(assignedFor(x.id,M)-catSpent(x.id,M)); });
   let moved=0;
-  for(const d of donors){ if(need<=0) break; const surplus=assignedFor(d.id,M)-spentFor(d.id,M); const take=Math.min(surplus,need); budgetFor(M)[d.id]=assignedFor(d.id,M)-take; budgetFor(M)[catId]=assignedFor(catId,M)+take; need-=take; moved+=take; }
+  for(const d of donors){ if(need<=0) break; const surplus=assignedFor(d.id,M)-catSpent(d.id,M); const take=Math.min(surplus,need); budgetFor(M)[d.id]=assignedFor(d.id,M)-take; budgetFor(M)[catId]=assignedFor(catId,M)+take; need-=take; moved+=take; }
   save(); renderBudget();
   if(moved<=0) alert('No flexible funds to pull right now. Add or free up a non-essential category (like "Fun Money") and try again.');
-  else if(need>0.005) alert('Rebalanced '+money(moved)+' — pulled everything flexible. Still '+money(need)+' short; trim an essential or add income to finish the job.');
+  else if(need>0.005) alert('Rebalanced '+money(moved)+' - pulled everything flexible. Still '+money(need)+' short; trim an essential or add income to finish the job.');
 }
 function refreshBudgetSummary(){
   const M=state.activeMonth, income=monthIncome(M);
-  const assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const assigned=topCats().reduce((s,c)=>s+assignedFor(c.id,M),0);
   const spent=monthExpense(M), ltb=income-assigned;
   const stat=document.querySelector('#summary .stat.ltb'); if(!stat) return;
   stat.className='stat ltb'+(income===0?'':(Math.abs(ltb)<0.005?' zero':(ltb<0?' over':'')));
@@ -1133,7 +1181,7 @@ function refreshBudgetSummary(){
   if(income===0){msg='Log some income in Transactions, then give it a job.';vc='pos';}
   else if(Math.abs(ltb)<0.005) msg='Zero-based. Every dollar has a job. This is the move.';
   else if(ltb<0) msg="You've assigned more than you earned. Cut something.";
-  else {msg='Keep going — assign this down to $0.';vc='pos';}
+  else {msg='Keep going - assign this down to $0.';vc='pos';}
   stat.querySelector('.v').className='v '+vc; stat.querySelector('.v').textContent=money(ltb); stat.querySelector('.msg').textContent=msg;
   const stats=document.querySelectorAll('#summary .stat');
   if(stats[2]) stats[2].querySelector('.v').textContent=money(assigned);
@@ -1182,9 +1230,7 @@ document.getElementById('allMonthsBtn').addEventListener('click',()=>{
 
 function renderTxForm(){
   const sel=document.getElementById('txCat');
-  sel.innerHTML = state.categories.length
-    ? state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-    : `<option value="">Add a category first</option>`;
+  sel.innerHTML = state.categories.length ? categoryOptions() : `<option value="">Add a category first</option>`;
   if(!document.getElementById('txDate').value) document.getElementById('txDate').value=todayStr();
 }
 function renderTx(){
@@ -1308,44 +1354,44 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
    ============================================================ */
 const IMP_QUESTIONS={
   genz:["Will you even remember this in 30 days, or is it just a vibe?","Is this the thing, or just a mood with a price tag?","Would you rebuy it full price tomorrow? If not, that's your answer.","Does this get you closer to the bag, or just through the afternoon?","Real talk: need it, or just bored?"],
-  middle:["Will you even remember this in 30 days?","Is this the thing — or just a feeling wearing a price tag?","Would you buy it again next month at full price?","Does this get you closer to the dream, or just through the day?","If you had to hand over the cash right now, would you still want it?"],
+  middle:["Will you even remember this in 30 days?","Is this the thing - or just a feeling wearing a price tag?","Would you buy it again next month at full price?","Does this get you closer to the dream, or just through the day?","If you had to hand over the cash right now, would you still want it?"],
   mature:["Will this still matter to you a month from now?","Is this a want, or a habit dressed up as a need?","Would you spend it again, knowing what you know?","Does this move you toward the life you're building, or just fill an afternoon?","If you paid in cash, in hand, would it still feel worth it?"]
 };
 const IMP_WANT={
-  genz:{clean:["This one's a want, bestie. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real — you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the bag."],savage:["You're about to trade the dream for a dopamine hit. Delulu.","Future you is begging you to close the tab. Listen."]},
-  middle:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be honest — you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]},
-  mature:{clean:["This is a want — give it a night before you decide.","A nice-to-have, not a need. Your call to make."],blunt:["Be honest — this wasn't on your mind an hour ago.","This is comfort spending, and comfort has never built security."],savage:["You're trading a piece of your future for a passing mood.","The person you'll be next year is asking you not to."]}
+  genz:{clean:["This one's a want, bestie. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real - you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the bag."],savage:["You're about to trade the dream for a dopamine hit. Delulu.","Future you is begging you to close the tab. Listen."]},
+  middle:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be honest - you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]},
+  mature:{clean:["This is a want - give it a night before you decide.","A nice-to-have, not a need. Your call to make."],blunt:["Be honest - this wasn't on your mind an hour ago.","This is comfort spending, and comfort has never built security."],savage:["You're trading a piece of your future for a passing mood.","The person you'll be next year is asking you not to."]}
 };
 const IMP_ASSET={
-  genz:{clean:["Okay, this could actually work for you.","An asset — spend it with intention."],blunt:["If it truly holds value, cool. Prove it does.","'Asset' isn't a word you get to use just 'cause you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a fit.","Manifesting 'investment' doesn't make it one."]},
-  middle:{clean:["Now this can actually work for you.","An asset — spend it with intention."],blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit.","Wanting it to be an investment doesn't make it one."]},
-  mature:{clean:["Now that can genuinely work for you.","An asset — spend it with intention."],blunt:["If it truly holds its value, it's no enemy. Make sure it does.","'Asset' is earned, not assumed. Does it pay you back?"],savage:["It's an asset only if you'd sell it and come out ahead. Be sure.","Calling it an investment doesn't make it one."]}
+  genz:{clean:["Okay, this could actually work for you.","An asset - spend it with intention."],blunt:["If it truly holds value, cool. Prove it does.","'Asset' isn't a word you get to use just 'cause you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a fit.","Manifesting 'investment' doesn't make it one."]},
+  middle:{clean:["Now this can actually work for you.","An asset - spend it with intention."],blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit.","Wanting it to be an investment doesn't make it one."]},
+  mature:{clean:["Now that can genuinely work for you.","An asset - spend it with intention."],blunt:["If it truly holds its value, it's no enemy. Make sure it does.","'Asset' is earned, not assumed. Does it pay you back?"],savage:["It's an asset only if you'd sell it and come out ahead. Be sure.","Calling it an investment doesn't make it one."]}
 };
 const IMP_NEED={
-  genz:{clean:["A real need. Handle it and keep moving.","Necessary — log it and go."],blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it goes in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, sure. You don't need the upgraded everything."]},
-  middle:{clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it belongs in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, maybe. The premium version, not so much."]},
-  mature:{clean:["A genuine need. Cover it and carry on.","Necessary — note it and move forward."],blunt:["A true need carries no guilt. But needs have a way of multiplying.","If it's a need, it belongs in the plan, not on impulse."],savage:["Needs are real. The deluxe version of a need is a want. Which is this?","The necessity is real. The upgrade is optional."]}
+  genz:{clean:["A real need. Handle it and keep moving.","Necessary - log it and go."],blunt:["True need? No guilt. But needs multiply - watch it.","If it's a need, it goes in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, sure. You don't need the upgraded everything."]},
+  middle:{clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],blunt:["True need? No guilt. But needs multiply - watch it.","If it's a need, it belongs in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, maybe. The premium version, not so much."]},
+  mature:{clean:["A genuine need. Cover it and carry on.","Necessary - note it and move forward."],blunt:["A true need carries no guilt. But needs have a way of multiplying.","If it's a need, it belongs in the plan, not on impulse."],savage:["Needs are real. The deluxe version of a need is a want. Which is this?","The necessity is real. The upgrade is optional."]}
 };
 const SKIP_WINS={
   genz:["That's money that stayed on your team. 💪","You just paid future you instead. Big W.","Skip logged. The bag got closer.","That's how you lock in. Momentum."],
   middle:["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."],
-  mature:["That's money that stayed where it belongs — with you. 💪","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
+  mature:["That's money that stayed where it belongs - with you. 💪","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
 };
 function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[state.intensity]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
 function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.floor(Math.random()*a.length)]; }
 
 /* ============================================================
-   PILLAR 4: anti-shame copy — slips are data points, never failures
+   PILLAR 4: anti-shame copy - slips are data points, never failures
    ============================================================ */
 const REBALANCE_COPY={
-  genz:{clean:["Small overshoot here — no biggie, let's fix it.","Data point: this one ran a little hot."],blunt:["This one went over. It's just numbers — adjust and keep moving.","Overshot. Just a signal to rebalance, nothing more."],savage:["You went over. Own the number, rebalance, next play.","Over budget here. It's data, not a verdict — fix it and roll."]},
-  middle:{clean:["A little over here — an easy adjustment, not a problem.","Data point: this category ran hot this month."],blunt:["This one went over. That's information to act on — let's rebalance.","Overshot the plan here. Adjust the numbers and move on."],savage:["Over budget. No shame — just move the money and keep control.","You ran hot here. Numbers don't judge. Rebalance and press on."]},
-  mature:{clean:["Slightly over here — a simple adjustment to make.","This category ran a bit hot. Easily corrected."],blunt:["This one exceeded the plan. It's data — let's rebalance it.","Over here. Nothing lost; just reallocate and continue."],savage:["Over the mark. No lecture — reallocate and stay the course.","You overshot. It's a number to fix, not a mistake to carry."]}
+  genz:{clean:["Small overshoot here - no biggie, let's fix it.","Data point: this one ran a little hot."],blunt:["This one went over. It's just numbers - adjust and keep moving.","Overshot. Just a signal to rebalance, nothing more."],savage:["You went over. Own the number, rebalance, next play.","Over budget here. It's data, not a verdict - fix it and roll."]},
+  middle:{clean:["A little over here - an easy adjustment, not a problem.","Data point: this category ran hot this month."],blunt:["This one went over. That's information to act on - let's rebalance.","Overshot the plan here. Adjust the numbers and move on."],savage:["Over budget. No shame - just move the money and keep control.","You ran hot here. Numbers don't judge. Rebalance and press on."]},
+  mature:{clean:["Slightly over here - a simple adjustment to make.","This category ran a bit hot. Easily corrected."],blunt:["This one exceeded the plan. It's data - let's rebalance it.","Over here. Nothing lost; just reallocate and continue."],savage:["Over the mark. No lecture - reallocate and stay the course.","You overshot. It's a number to fix, not a mistake to carry."]}
 };
 const BLINDSPOT_COPY={
-  genz:{clean:["Logged. Zero blindspots = full control.","On the record. That's how you stay winning."],blunt:["Logged it. No hiding = no surprises. Respect.","On the record. Blindspots are the real enemy — you dodged one."],savage:["Logged. You didn't flinch. That's the whole game.","On the record, no hiding. That's real control, bestie."]},
-  middle:{clean:["Logged on the record. Zero blindspots = full control.","Tracked it. Honesty is the whole advantage."],blunt:["Logged it — no hiding. That's how you keep the wheel.","On the record. Every logged dollar is one that can't ambush you."],savage:["Logged, no flinch. Blindspots are what sink people. Not you.","On the record. That's the discipline nobody sees but everybody needs."]},
-  mature:{clean:["Logged on the record. Clear books, clear control.","Tracked it. Nothing hidden, nothing to fear."],blunt:["Logged — nothing tucked away. That's real stewardship.","On the record. A clear ledger is a calm mind."],savage:["Logged, in full view. Honest books are unshakable ones.","On the record. What you face, you can master."]}
+  genz:{clean:["Logged. Zero blindspots = full control.","On the record. That's how you stay winning."],blunt:["Logged it. No hiding = no surprises. Respect.","On the record. Blindspots are the real enemy - you dodged one."],savage:["Logged. You didn't flinch. That's the whole game.","On the record, no hiding. That's real control, bestie."]},
+  middle:{clean:["Logged on the record. Zero blindspots = full control.","Tracked it. Honesty is the whole advantage."],blunt:["Logged it - no hiding. That's how you keep the wheel.","On the record. Every logged dollar is one that can't ambush you."],savage:["Logged, no flinch. Blindspots are what sink people. Not you.","On the record. That's the discipline nobody sees but everybody needs."]},
+  mature:{clean:["Logged on the record. Clear books, clear control.","Tracked it. Nothing hidden, nothing to fear."],blunt:["Logged - nothing tucked away. That's real stewardship.","On the record. A clear ledger is a calm mind."],savage:["Logged, in full view. Honest books are unshakable ones.","On the record. What you face, you can master."]}
 };
 /* Zero-Blindspot Shield: everything logged is a blindspot removed */
 function blindspotShield(){
@@ -1362,7 +1408,7 @@ function blindspotShield(){
 function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+delta); return d.toISOString().slice(0,10); }
 
 /* ============================================================
-   ANTI-TRAP ENGINE — traps, tactical copy, cooling vault
+   ANTI-TRAP ENGINE - traps, tactical copy, cooling vault
    ============================================================ */
 const TRAPS=[
   {v:'scroll', icon:'📱', label:'Scroll Trap', sub:'An ad or feed served it to you'},
@@ -1372,13 +1418,13 @@ const TRAPS=[
 ];
 const TRAP_RESPONSES={
   scroll:{
-    genz:{clean:"That ad found you on purpose — the algorithm clocked your weak spot.",blunt:"Meta ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log off, bestie."},
+    genz:{clean:"That ad found you on purpose - the algorithm clocked your weak spot.",blunt:"Meta ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log off, bestie."},
     middle:{clean:"That ad was engineered to catch you at a weak moment.",blunt:"A company paid real money to put that in front of you. It's working.",savage:"You're the product being sold to. Don't fund your own trap."},
-    mature:{clean:"That ad was placed to catch you off guard — by design.",blunt:"Marketers studied people like you to trigger this exact urge.",savage:"This isn't your idea. It's theirs — and right now they're winning."}
+    mature:{clean:"That ad was placed to catch you off guard - by design.",blunt:"Marketers studied people like you to trigger this exact urge.",savage:"This isn't your idea. It's theirs - and right now they're winning."}
   },
   friction:{
     genz:{clean:"You're paying extra just to skip the walk. Worth it?",blunt:"That's a lazy tax and you're about to tip it 25%.",savage:"You're paying a premium to not stand up. Come on."},
-    middle:{clean:"Convenience has a markup — you're paying it right now.",blunt:"You're paying a tax because you don't feel like it. That adds up fast.",savage:"That's a $25 surcharge on being tired. Cook the food."},
+    middle:{clean:"Convenience has a markup - you're paying it right now.",blunt:"You're paying a tax because you don't feel like it. That adds up fast.",savage:"That's a $25 surcharge on being tired. Cook the food."},
     mature:{clean:"Convenience carries a quiet premium. This is it.",blunt:"You're paying handsomely to avoid a small effort.",savage:"That markup is pure waste dressed up as ease."}
   },
   status:{
@@ -1470,9 +1516,10 @@ function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
 /* Pillar 2: essential monthly burn = Cover First assignments (fallbacks below) */
 function essentialMonthly(){
   const M=state.activeMonth;
+  const tops=state.categories.filter(c=>!c.parentId);
   let sum=0;
-  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ state.categories.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=assignedFor(c.id,M); }); });
-  if(sum<=0) sum=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=assignedFor(c.id,M); }); });
+  if(sum<=0) sum=tops.reduce((s,c)=>s+assignedFor(c.id,M),0);
   if(sum<=0) sum=monthExpense(M);
   return sum;
 }
@@ -1484,7 +1531,7 @@ function freedomRunway(){
   return liquid/ess;
 }
 function fmtRunway(months){
-  if(months==null) return '—';
+  if(months==null) return '-';
   if(months>=24) return (Math.round(months/12*10)/10)+' yrs';
   if(months>=1)  return (Math.round(months*10)/10)+' mo';
   return (Math.round(months*30))+' days';
@@ -1508,14 +1555,14 @@ function sovereignty(){
 }
 const SOV_TIERS={
   1:{ic:'🛑',name:'Encumbered',sub:'Under 3 months of real runway (or heavy overhead drag). Your stuff owns you more than you own it.'},
-  2:{ic:'⚓',name:'Tethered',sub:'3–11 months of real runway. Freer, but still anchored to the next paycheck.'},
+  2:{ic:'⚓',name:'Tethered',sub:'3-11 months of real runway. Freer, but still anchored to the next paycheck.'},
   3:{ic:'🛡️',name:'Sovereign',sub:'12+ months of real runway. You could walk away from work for a year and be fine.'},
   4:{ic:'👑',name:'Untouchable',sub:'Your capital yields enough to cover essentials. Work is now optional.'}
 };
 function renderSovereignty(){
   const box=document.getElementById('sovAudit'); if(!box) return;
   const s=sovereignty(), t=SOV_TIERS[s.tier];
-  const runwayTxt = s.pureRunway==null?'—':fmtRunway(s.pureRunway);
+  const runwayTxt = s.pureRunway==null?'-':fmtRunway(s.pureRunway);
   box.innerHTML=`
     <div class="sov-tier t${s.tier}"><span class="ic">${t.ic}</span><div><div class="t-name">Tier ${s.tier}: ${t.name}</div><div class="t-sub">${t.sub}</div></div></div>
     <div class="sov-metrics">
@@ -1550,7 +1597,7 @@ function renderNetWorth(){
     `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
     `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
     `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
-  // Freedom Runway — how long you could survive without working
+  // Freedom Runway - how long you could survive without working
   const rwBox=document.getElementById('nwRunway');
   if(rwBox){
     const r=freedomRunway();
@@ -1591,56 +1638,56 @@ const OTHER_W=['tv','television','phone','iphone','laptop','couch','furniture','
 const WATCH=[...VEH,...HOUSE_W,...OTHER_W];
 function watchHit(name){ const n=(name||'').toLowerCase(); return WATCH.find(w=>n.includes(w))||''; }
 const CHALLENGE_CORE={
-  veh:"A car loses value the second you drive it, and keeps bleeding gas, insurance, and repairs every single month. That's money leaving your pocket — the exact opposite of what an asset does.",
-  house:"The home you live in isn't paying you. Mortgage, taxes, insurance, repairs, the surprise roof — that's money out, month after month. It only becomes an asset when it pays YOU rent, or you sell and walk away with more.",
-  gen:"Be honest — does this put money in your pocket, or does it just sit there losing value? If it isn't earning, it isn't an asset. It's stuff you own."
+  veh:"A car loses value the second you drive it, and keeps bleeding gas, insurance, and repairs every single month. That's money leaving your pocket - the exact opposite of what an asset does.",
+  house:"The home you live in isn't paying you. Mortgage, taxes, insurance, repairs, the surprise roof - that's money out, month after month. It only becomes an asset when it pays YOU rent, or you sell and walk away with more.",
+  gen:"Be honest - does this put money in your pocket, or does it just sit there losing value? If it isn't earning, it isn't an asset. It's stuff you own."
 };
 const CHALLENGE_STING={
   veh:{
     genz:{clean:"By the real definition that's a liability, not an asset.",blunt:"That's a liability in an asset's fit. Call it what it is.",savage:"You didn't buy it to build wealth, you bought it for the clout. Own it."},
-    middle:{clean:"By the honest definition, that's a liability — not an asset.",blunt:"That's a liability wearing an asset's badge. Call it what it is.",savage:"You didn't buy it to build wealth. You bought it to feel something. Own that."},
-    mature:{clean:"By the honest measure, that's a liability — not an asset.",blunt:"That's a liability dressed as an asset. Name it honestly.",savage:"You bought it for the feeling, not the future. Be honest about that."}
+    middle:{clean:"By the honest definition, that's a liability - not an asset.",blunt:"That's a liability wearing an asset's badge. Call it what it is.",savage:"You didn't buy it to build wealth. You bought it to feel something. Own that."},
+    mature:{clean:"By the honest measure, that's a liability - not an asset.",blunt:"That's a liability dressed as an asset. Name it honestly.",savage:"You bought it for the feeling, not the future. Be honest about that."}
   },
   house:{
-    genz:{clean:"Till it pays you, it's a roof — not a wealth glow-up.",blunt:"That house isn't making you rich, it's making you comfy and calling it a flex.",savage:"Equity you can't touch isn't freedom. Stop counting the cage as a W."},
-    middle:{clean:"Until it pays you, it's a roof — not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
-    mature:{clean:"Until it pays you, it's shelter — not a wealth engine.",blunt:"The home you live in keeps you comfortable; it isn't making you wealthy.",savage:"Equity you can't spend isn't security. Don't mistake the house for the freedom."}
+    genz:{clean:"Till it pays you, it's a roof - not a wealth glow-up.",blunt:"That house isn't making you rich, it's making you comfy and calling it a flex.",savage:"Equity you can't touch isn't freedom. Stop counting the cage as a W."},
+    middle:{clean:"Until it pays you, it's a roof - not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
+    mature:{clean:"Until it pays you, it's shelter - not a wealth engine.",blunt:"The home you live in keeps you comfortable; it isn't making you wealthy.",savage:"Equity you can't spend isn't security. Don't mistake the house for the freedom."}
   },
   gen:{
-    genz:{clean:"Keep it if you love it — just don't call it an asset.",blunt:"Owning it isn't investing. Don't gas it up.",savage:"Stuff doesn't love you back, bestie. And it for sure doesn't pay you."},
-    middle:{clean:"Keep it if you love it — just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."},
-    mature:{clean:"Keep it if it brings you joy — just don't call it an asset.",blunt:"Owning a thing isn't investing. They aren't the same.",savage:"Possessions don't pay you back. Only real assets do."}
+    genz:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't gas it up.",savage:"Stuff doesn't love you back, bestie. And it for sure doesn't pay you."},
+    middle:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."},
+    mature:{clean:"Keep it if it brings you joy - just don't call it an asset.",blunt:"Owning a thing isn't investing. They aren't the same.",savage:"Possessions don't pay you back. Only real assets do."}
   }
 };
 /* solution engine: need a car? try this instead. */
 const SOLUTIONS=[
   { keys:['car','truck','suv','vehicle','auto','sedan','payment','lease','jeep','tesla','minivan'],
-    title:{genz:"You need to get around — you don't need a $500 car note running your life.",middle:"You need to get around — you don't need a $500-a-month car payment to do it.",mature:"You need reliable transportation — not a five-hundred-dollar monthly payment."},
+    title:{genz:"You need to get around - you don't need a $500 car note running your life.",middle:"You need to get around - you don't need a $500-a-month car payment to do it.",mature:"You need reliable transportation - not a five-hundred-dollar monthly payment."},
     monthlySave:400,
     swaps:[
       {n:'An e-bike or e-scooter you own', c:'a fraction of a car', d:'Own it outright for a fraction of a car payment. No gas, no insurance, no monthly note hanging over you.'},
       {n:'A reliable used car, paid in cash', c:'one-time', d:'No payment beats a low payment every single time. Save up, buy it outright, drive debt-free.'},
-      {n:'Transit + rideshare mix', c:'~$100–200/mo', d:'Once you add up insurance, gas, and repairs, owning a car often quietly loses.'}
+      {n:'Transit + rideshare mix', c:'~$100-200/mo', d:'Once you add up insurance, gas, and repairs, owning a car often quietly loses.'}
     ]
   },
   { keys:['iphone','phone','pixel','galaxy','samsung','android'],
     title:{genz:"A new flagship every year? That's a subscription you didn't mean to sign up for.",middle:"A new flagship phone every year is a subscription you never meant to sign up for.",mature:"A brand-new phone every year is a recurring cost with little to show for it."},
     monthlySave:55,
     swaps:[
-      {n:"Last year's model, refurbished", c:'40–60% less', d:'Nearly identical, and nobody can tell. Your bank account sure can.'},
+      {n:"Last year's model, refurbished", c:'40-60% less', d:'Nearly identical, and nobody can tell. Your bank account sure can.'},
       {n:'Keep yours + a battery swap', c:'~$40', d:'A fresh battery makes an old phone feel new again for a fraction of the price.'}
     ]
   },
   { keys:['couch','furniture','sofa','table','desk','dresser','bed'],
-    title:{genz:"Furniture loses half its value the second it's 'used' — so cop it already used.",middle:"Furniture loses half its value the moment it's 'used' — so buy it already used.",mature:"Furniture loses half its value the moment it leaves the store — so buy it gently used."},
+    title:{genz:"Furniture loses half its value the second it's 'used' - so cop it already used.",middle:"Furniture loses half its value the moment it's 'used' - so buy it already used.",mature:"Furniture loses half its value the moment it leaves the store - so buy it gently used."},
     monthlySave:0,
     swaps:[
-      {n:'Marketplace / estate sales', c:'50–70% less', d:'Quality secondhand furniture is everywhere. A little patience pays the difference.'},
+      {n:'Marketplace / estate sales', c:'50-70% less', d:'Quality secondhand furniture is everywhere. A little patience pays the difference.'},
       {n:'Borrow or hand-me-down first', c:'$0', d:'Fill the gap for free while you save for the piece you actually love.'}
     ]
   },
   { keys:['house','home','mortgage','apartment','condo'],
-    title:{genz:"More house = more of everything — payment, taxes, upkeep, and heat.",middle:"More house means more of everything — payment, taxes, upkeep, and heat.",mature:"A larger home means more of everything — payment, taxes, upkeep, and heating."},
+    title:{genz:"More house = more of everything - payment, taxes, upkeep, and heat.",middle:"More house means more of everything - payment, taxes, upkeep, and heat.",mature:"A larger home means more of everything - payment, taxes, upkeep, and heating."},
     monthlySave:300,
     swaps:[
       {n:'House-hack: rent out a room', c:'earns income', d:"Let the property help pay for itself. That's how a home edges toward being a real asset."},
@@ -1654,7 +1701,7 @@ function altHTML(name){
   const s=alternativesFor(name); if(!s) return '';
   let hint='';
   if(s.monthlySave>0){
-    hint=`Ballpark savings: <b>${money(s.monthlySave)}/mo</b> — about <b>${money(s.monthlySave*12)}/yr</b> back in your pocket.`;
+    hint=`Ballpark savings: <b>${money(s.monthlySave)}/mo</b> - about <b>${money(s.monthlySave*12)}/yr</b> back in your pocket.`;
     const g=topGoal();
     if(g){ const remaining=Math.max(0,g.target-g.saved); if(remaining>0){ const months=Math.max(1,Math.ceil(remaining/s.monthlySave)); hint+=` Point it at “${escapeHtml(g.name)}” and you'd fund it in ~<b>${months} month${months>1?'s':''}</b>.`; } }
   }
@@ -1672,10 +1719,10 @@ function showAssetChallenge(id,word){
   const sReg=CHALLENGE_STING[cat][state.register]||CHALLENGE_STING[cat].middle;
   const sting=sReg[state.intensity]||sReg.blunt;
   document.getElementById('assetChallenge').innerHTML=`<div class="challenge">
-    <div class="ttl">Hold up — is that really an asset?</div>
+    <div class="ttl">Hold up - is that really an asset?</div>
     <p>${CHALLENGE_CORE[cat]}</p>
     <div class="sting">${escapeHtml(sting)}</div>
-    <div class="cx"><button class="btn sm primary" id="chMove">You're right — move it to “loses value”</button><button class="btn sm ghost" id="chKeep">No, it really pays me</button></div>
+    <div class="cx"><button class="btn sm primary" id="chMove">You're right - move it to “loses value”</button><button class="btn sm ghost" id="chKeep">No, it really pays me</button></div>
   </div>`;
   document.getElementById('chMove').addEventListener('click',()=>{ const a=state.assets.find(x=>x.id===id); if(a) a.kind='stuff'; save(); renderNetWorth(); clearChallenge(); });
   document.getElementById('chKeep').addEventListener('click',clearChallenge);
@@ -1686,7 +1733,7 @@ function renderDrain(){
   if(drain<=0){ box.innerHTML=''; return; }
   const H=effectiveHourly();
   const hrs=H>0?' · '+fmtHours(drain/H)+' of work/mo':'';
-  box.innerHTML=`<div class="drainbox"><div class="db-k">The cost of keeping it all</div><div class="db-v">${money(drain)}/mo <span class="db-sub">· ${money(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month — before you buy a single new thing. That's the part nobody calls an "asset."</div></div>`;
+  box.innerHTML=`<div class="drainbox"><div class="db-k">The cost of keeping it all</div><div class="db-v">${money(drain)}/mo <span class="db-sub">· ${money(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month - before you buy a single new thing. That's the part nobody calls an "asset."</div></div>`;
 }
 document.getElementById('addAsset').addEventListener('click',()=>{
   const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
@@ -1711,7 +1758,7 @@ wageEl.addEventListener('input',()=>{
 function updateWageNote(){
   const note=document.getElementById('wageNote'); const h=effectiveHourly();
   if(state.hourlyWage>0) note.textContent='Locked in. Every '+usd(state.hourlyWage)+' you spend = 1 hour of your life at work.';
-  else if(h>0) note.textContent='No wage set — estimating '+usd(h)+'/hr from your logged income. Enter your real rate for the truth.';
+  else if(h>0) note.textContent='No wage set - estimating '+usd(h)+'/hr from your logged income. Enter your real rate for the truth.';
   else note.textContent='Set this to see every purchase in hours of your life.';
 }
 
@@ -1742,7 +1789,7 @@ document.getElementById('trCompute').addEventListener('click',()=>{
   document.getElementById('wage').value=state.hourlyWage;
   const naive=take/160;
   document.getElementById('trResult').style.display='';
-  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive "paycheck ÷ 160" rate was ${usd(naive)}/hr. The job's real cost is bigger than it looks — and now every purchase is priced against the truth.</span>`;
+  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive "paycheck ÷ 160" rate was ${usd(naive)}/hr. The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
 function fillTrueRate(){
@@ -1792,7 +1839,7 @@ function renderCheckResult(){
 
   document.getElementById('impResult').innerHTML=`
     <div class="checkcard want">
-      <div class="verdict want">${trapObj.icon} ${escapeHtml(name)} — ${money(amt)}</div>
+      <div class="verdict want">${trapObj.icon} ${escapeHtml(name)} - ${money(amt)}</div>
       <div class="trap-tag">${trapObj.label} detected</div>
       <div class="qline">${escapeHtml(tline)}${hook}</div>
       <div class="meter-lbl"><span class="cl">◄ Freedom</span><span>Trap pull</span><span class="fr">Trap ►</span></div>
@@ -1832,7 +1879,7 @@ function renderCheckResult(){
     pendingCheck=null; clearScan();
     save(); renderImpulse(); renderBudget(); renderTx();
     const H2=effectiveHourly(); const hrTxt=H2>0?` That's about <b>${fmtHours(amt2/H2)}</b> of work to earn back.`:'';
-    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">🏳️ Ransom paid. No shame — just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged under “Impulse / Wants.”${hrTxt} Streak reset. Next trap, you win.</p></div>`;
+    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">🏳️ Ransom paid. No shame - just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged under “Impulse / Wants.”${hrTxt} Streak reset. Next trap, you win.</p></div>`;
   });
 }
 
@@ -1843,7 +1890,7 @@ function renderImpulse(){
   document.getElementById('impScore').innerHTML=`
     <div class="stat"><div class="k">Traps Dodged</div><div class="v good">${dodged}</div></div>
     <div class="stat"><div class="k">War Chest</div><div class="v pos">${money(saved)}</div></div>
-    <div class="stat"><div class="k">Life Reclaimed</div><div class="v good">${H>0?fmtHours(saved/H):'—'}</div></div>
+    <div class="stat"><div class="k">Life Reclaimed</div><div class="v good">${H>0?fmtHours(saved/H):'-'}</div></div>
     <div class="stat"><div class="k">Active Streak</div><div class="v pos">${skipStreak()} 🔥</div></div>`;
   const hoursBox=document.getElementById('impHours');
   if(H>0 && spent>0) hoursBox.innerHTML=`<span class="chip">Ransom paid = <b>${fmtHours(spent/H)}</b> to earn back</span>`;
@@ -1935,7 +1982,7 @@ document.getElementById('postRec').addEventListener('click',()=>{
 });
 function renderRecurring(){
   const sel=document.getElementById('recCat');
-  if(sel) sel.innerHTML=state.categories.length?state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join(''):'<option value="">Add a category first</option>';
+  if(sel) sel.innerHTML=state.categories.length?categoryOptions():'<option value="">Add a category first</option>';
   const pr=document.getElementById('postRec'); if(pr) pr.textContent='Post recurring to '+fmtMonth(state.activeMonth);
   const box=document.getElementById('recList'); if(!box) return;
   if(!state.recurring.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No recurring items yet. Add your paycheck and fixed bills.</div>`; return; }
@@ -2002,27 +2049,27 @@ function initPWA(){
 }
 
 /* ============================================================
-   INTAKE CHAT — conversational onboarding
+   INTAKE CHAT - conversational onboarding
    Engine-critical (★) answers write straight into app state.
    ============================================================ */
 const INTAKE=[
-  {id:'gate', bot:"Welcome to Accountability 👋  First — which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30–55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
-  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up in about two minutes — no judgment, no forms that make you feel dumb. Just a few straight questions, in your words.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
-  {id:'name', bot:"First — what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
-  {id:'income', bot:a=>`${a.name?a.name+', ':''}what's your take-home pay in a normal month — the money that actually lands in your account after taxes? A rough number's fine. ★`, input:'money', key:'income', placeholder:'e.g. 3200'},
-  {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs — in hours of your life. Don't know it? Skip. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22'},
-  {id:'essIntro', bot:"Now the stuff you cover FIRST — your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue'},
-  {id:'roof', bot:"🏠 Roof — rent or mortgage a month? ★", input:'money', key:'roof', optional:true, placeholder:'e.g. 1200'},
-  {id:'food', bot:"🍽️ Food — groceries and eating, monthly? ★", input:'money', key:'food', optional:true, placeholder:'e.g. 500'},
-  {id:'util', bot:"💡 Power & Wi-Fi — electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, placeholder:'e.g. 300'},
-  {id:'transport', bot:"🚗 Getting around — gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, placeholder:'e.g. 200'},
-  {id:'debt', bot:"Real talk — carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
+  {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
+  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up in about two minutes - no judgment, no forms that make you feel dumb. Just a few straight questions, in your words.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
+  {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
+  {id:'income', bot:a=>`${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`, input:'money', key:'income', placeholder:'e.g. 3200'},
+  {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Don't know it? Skip. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22'},
+  {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue'},
+  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, placeholder:'e.g. 1200'},
+  {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, placeholder:'e.g. 500'},
+  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, placeholder:'e.g. 300'},
+  {id:'transport', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, placeholder:'e.g. 200'},
+  {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
   {id:'debtAmt', bot:"Roughly how much, all in?", input:'money', key:'debtAmt', showIf:a=>a.hasDebt==='yes', placeholder:'e.g. 8000'},
-  {id:'dream', bot:"Last big piece — what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', placeholder:'Debt-free · Emergency fund · A trip · A house'},
-  {id:'dreamAmt', bot:a=>`Put a number on it — what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, placeholder:'e.g. 5000'},
-  {id:'tone', bot:"When you're about to blow the budget, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean — keep it kind',value:'clean'},{label:'Blunt — be straight',value:'blunt'},{label:'Savage — no mercy',value:'savage'}]},
+  {id:'dream', bot:"Last big piece - what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', placeholder:'Debt-free · Emergency fund · A trip · A house'},
+  {id:'dreamAmt', bot:a=>`Put a number on it - what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, placeholder:'e.g. 5000'},
+  {id:'tone', bot:"When you're about to blow the budget, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
-  {id:'done', bot:a=>`That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream — you can change any of it anytime.`, input:'finish', cta:'Build my budget →'}
+  {id:'done', bot:a=>`That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`, input:'finish', cta:'Build my budget →'}
 ];
 
 let iaStep=0, iaAns={};
@@ -2114,9 +2161,9 @@ function boot(){
   else if(!state.onboarded) setTimeout(openIntake,350);
 }
 const HOME_COPY={
-  genz:{ eye:"Zero-based budgeting · no cap", title:"Tell every dollar to lock in.", sub:"Budget to zero, gut-check every purchase, and watch the bag grow — no filter, no cap.", cta:"Secure the bag →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun — that's the non-negotiable four." },
-  middle:{ eye:"Zero-based budgeting · no filter", title:"Tell every dollar where to go.", sub:"Budget to zero, gut-check every purchase, and watch your dreams get funded — in plain, unfiltered English.", cta:"Start budgeting →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun — they keep the lights on and you moving." },
-  mature:{ eye:"Zero-based budgeting · straight talk", title:"Give every dollar a purpose.", sub:"Budget to zero, weigh every purchase, and fund what matters — clear, honest, no runaround.", cta:"Build my plan →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Cover these before anything else — they're the foundation the rest stands on." }
+  genz:{ eye:"Zero-based budgeting · no cap", title:"Tell every dollar to lock in.", sub:"Budget to zero, gut-check every purchase, and watch the bag grow - no filter, no cap.", cta:"Secure the bag →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun - that's the non-negotiable four." },
+  middle:{ eye:"Zero-based budgeting · no filter", title:"Tell every dollar where to go.", sub:"Budget to zero, gut-check every purchase, and watch your dreams get funded - in plain, unfiltered English.", cta:"Start budgeting →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving." },
+  mature:{ eye:"Zero-based budgeting · straight talk", title:"Give every dollar a purpose.", sub:"Budget to zero, weigh every purchase, and fund what matters - clear, honest, no runaround.", cta:"Build my plan →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Cover these before anything else - they're the foundation the rest stands on." }
 };
 function renderHome(){
   const hc=HOME_COPY[state.register]||HOME_COPY.middle;
@@ -2153,12 +2200,12 @@ function findOrCreateEssential(canonical){
   if(!c){ c={id:uid(),name:canonical}; state.categories.push(c); }
   return c;
 }
-/* how much "data" a category carries — used to pick the survivor when merging */
+/* how much "data" a category carries - used to pick the survivor when merging */
 function catScore(c){ let s=0; Object.values(state.budgets).forEach(b=>{ if(b&&b[c.id]) s+=b[c.id]; }); s+=state.transactions.filter(t=>t.catId===c.id).length*10000; return s; }
 /* merge categories that map to the same essential (or share a name) into one */
 function mergeDuplicates(){
   const groups={};
-  state.categories.forEach(c=>{ const w=categoryWall(c.name); const key=w?'wall:'+w.cat:'name:'+c.name.trim().toLowerCase(); (groups[key]=groups[key]||[]).push(c); });
+  state.categories.filter(c=>!c.parentId).forEach(c=>{ const w=categoryWall(c.name); const key=w?'wall:'+w.cat:'name:'+c.name.trim().toLowerCase(); (groups[key]=groups[key]||[]).push(c); });
   const remove=new Set(); let merged=0;
   Object.entries(groups).forEach(([key,cats])=>{
     if(cats.length<2) return;
@@ -2166,6 +2213,7 @@ function mergeDuplicates(){
     if(key.startsWith('wall:')){ const canon=key.slice(5); survivor=cats.find(c=>c.name.toLowerCase()===canon.toLowerCase())||cats.slice().sort((a,b)=>catScore(b)-catScore(a))[0]; survivor.name=canon; }
     else survivor=cats.slice().sort((a,b)=>catScore(b)-catScore(a))[0];
     cats.forEach(c=>{ if(c.id===survivor.id) return;
+      state.categories.forEach(k=>{ if(k.parentId===c.id) k.parentId=survivor.id; });  // reparent children
       Object.keys(state.budgets).forEach(m=>{ const b=state.budgets[m]; if(b&&b[c.id]!=null){ b[survivor.id]=(b[survivor.id]||0)+b[c.id]; delete b[c.id]; } });
       state.transactions.forEach(t=>{ if(t.catId===c.id) t.catId=survivor.id; });
       (state.recurring||[]).forEach(r=>{ if(r.catId===c.id) r.catId=survivor.id; });
@@ -2179,7 +2227,7 @@ function renderWalls(){
   const M=state.activeMonth, grid=document.getElementById('wallsGrid'); if(!grid) return;
   let covered=0, anyMissing=false;
   grid.innerHTML=WALLS.map(w=>{
-    const matched=state.categories.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t)));
+    const matched=state.categories.filter(c=>!c.parentId && w.match.some(t=>c.name.toLowerCase().includes(t)));
     if(!matched.length) anyMissing=true;
     const assigned=matched.reduce((s,c)=>s+assignedFor(c.id,M),0);
     const isCovered=assigned>0; if(isCovered) covered++;
