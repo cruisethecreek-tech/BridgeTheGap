@@ -33,6 +33,12 @@
   .btn.buy{background:transparent;color:var(--accent);border:1px solid var(--accent)}
   .btn.buy:hover{background:rgba(230,178,77,.1)}
   .buynote{margin-top:14px;color:var(--muted);font-size:13px;font-weight:600}
+  .lp-sub{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+  .lp-sub input{flex:1;min-width:200px;max-width:340px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:14px 16px;font-size:16px}
+  .lp-sub input:focus{outline:none;border-color:var(--accent)}
+  .subresult{margin-top:14px;font-weight:800;font-size:15px;min-height:1px}
+  .subresult.ok{color:var(--good)}
+  .subresult.err{color:var(--bad)}
 
   /* top bar */
   header{position:sticky;top:0;z-index:50;background:rgba(11,20,33,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
@@ -162,7 +168,7 @@
       <p class="lede">Accountability is zero-based budgeting with a spine. It challenges your impulses in real time, prices every purchase in <b>hours of your life</b>, and tells you the truth other apps are too polite to say. No bank login. No data harvesting. No filter.</p>
       <div class="cta-row">
         <a class="btn primary" href="app.html">Open the app - it's free →</a>
-        <a class="btn buy" data-buy="full" href="#" style="display:none">Get it - one-time</a>
+        <a class="btn buy" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">📖 Get the Method Guide</a>
         <a class="btn ghost" href="#how">See how it works</a>
       </div>
       <div class="trust">
@@ -282,15 +288,30 @@
   </div>
 </section>
 
+<section>
+  <div class="wrap" style="text-align:center;max-width:640px">
+    <div class="kicker">Stay sharp</div>
+    <h2>The Weekly Gut-Check</h2>
+    <p class="sec-sub">One blunt money prompt a week - clarity straight to your inbox. Nothing else.</p>
+    <form id="subForm" class="lp-sub" novalidate>
+      <input type="email" id="subEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" required>
+      <button class="btn primary" type="submit">Join the Weekly Gut-Check</button>
+    </form>
+    <div id="subResult" class="subresult" role="status" aria-live="polite"></div>
+    <p class="buynote">Zero spam. Unsubscribe anytime. Your financial data stays 100% in the app on your device - only your email is shared, and only with the newsletter provider.</p>
+  </div>
+</section>
+
 <section class="final">
   <div class="kicker">Ready?</div>
   <h2>Look your money in the eye.</h2>
   <p class="lede">Free, installable, and it stores nothing about you. Open it and run your first gut-check in under a minute.</p>
   <div class="cta-row" style="justify-content:center">
     <a class="btn primary" href="app.html">Open the app - free →</a>
-    <a class="btn buy" data-buy="full" href="#" style="display:none">Get it - one-time</a>
+    <a class="btn buy" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">📖 Get the Method Guide</a>
+    <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">☕ Support the build</a>
   </div>
-  <p class="buynote" data-buy-note style="display:none">Free to use. Buy it once to support the build - no subscription, ever.</p>
+  <p class="buynote" id="offerFine" style="display:none">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
 </section>
 
 <footer>
@@ -298,29 +319,49 @@
     <div>Accountability - a working prototype. Everything saves to your browser only.</div>
     <div><a href="app.html">Open the app</a> · <a href="#top">Back to top</a></div>
   </div>
+  <div class="wrap" style="margin-top:14px;font-size:12px;color:var(--muted);opacity:.85">Accountability and any guides are educational tools, not personalized financial, investment, tax, or legal advice. For decisions about your specific situation, talk to a licensed professional.</div>
 </footer>
 
 <script>
   /* ============================================================
-     GO LIVE WITH PAYMENTS - edit these two lines only.
-     1. Create a Stripe Payment Link (dashboard.stripe.com > Payment links).
-        On its success page, redirect buyers to your app URL (…/app.html).
-     2. Paste the link below and set the price label. That's it - the
-        "Get it" buttons stay hidden until BUY_URL is a real link, so the
-        page is safe to deploy as free-only until you're ready.
+     GO LIVE - fill these in to switch on the funnel. All OFF by default, so
+     the page is safe to deploy right now (free-only, newsletter previews).
+     Use the SAME values in app.html so both stay in sync.
+       NEWSLETTER_ENDPOINT: form POST URL (Kit/ConvertKit, Formspree, Buttondown,
+         Mailchimp, or your own webhook). Only the email is sent.
+       GUIDE_URL:   link to the paid education guide / course / waitlist.
+       SUPPORT_URL: voluntary tip link (Ko-fi, Buy Me a Coffee, Stripe).
      ============================================================ */
-  var BUY_URL   = "https://buy.stripe.com/REPLACE_WITH_YOUR_LINK";
-  var BUY_PRICE = "$19";
+  var NEWSLETTER_ENDPOINT = "YOUR_FORM_ENDPOINT_URL";
+  var GUIDE_URL           = "YOUR_GUIDE_OR_WAITLIST_URL";
+  var SUPPORT_URL         = "YOUR_SUPPORT_URL";
 
   (function(){
-    var live = BUY_URL && BUY_URL.indexOf("REPLACE_WITH_YOUR_LINK") === -1;
-    if(!live) return;                       // keep buy UI hidden until a real link is set
-    document.querySelectorAll('[data-buy]').forEach(function(a){
-      a.href = BUY_URL; a.target = "_blank"; a.rel = "noopener";
-      if(a.getAttribute('data-buy') === 'full') a.textContent = 'Get it - ' + BUY_PRICE + ' one-time';
-      a.style.display = '';
+    function ok(v){ return v && v.indexOf("YOUR_") === -1; }
+    // reveal the education/support offers only when their URL is set
+    var anyOffer = false;
+    document.querySelectorAll('[data-offer]').forEach(function(a){
+      var url = a.getAttribute('data-offer') === 'guide' ? GUIDE_URL : SUPPORT_URL;
+      if(ok(url)){ a.href = url; a.style.display = ''; anyOffer = true; }
     });
-    document.querySelectorAll('[data-buy-note]').forEach(function(n){ n.style.display = ''; });
+    var fine = document.getElementById('offerFine'); if(fine && anyOffer) fine.style.display = '';
+    // newsletter - backend-neutral POST to whatever provider you set
+    var f = document.getElementById('subForm');
+    if(f){
+      var inp = document.getElementById('subEmail'), res = document.getElementById('subResult');
+      var good = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      f.addEventListener('submit', function(e){
+        e.preventDefault();
+        var email = (inp.value || '').trim();
+        if(!good.test(email)){ res.className = 'subresult err'; res.textContent = "That email looks off - double-check it?"; inp.focus(); return; }
+        function win(){ res.className = 'subresult ok'; res.textContent = "Locked in. Check your inbox for your first prompt."; inp.value = ''; }
+        if(ok(NEWSLETTER_ENDPOINT)){
+          res.className = 'subresult'; res.textContent = 'Sending...';
+          fetch(NEWSLETTER_ENDPOINT, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'email=' + encodeURIComponent(email)})
+            .then(win).catch(function(){ res.className = 'subresult err'; res.textContent = "Hmm, that did not go through. Try again in a sec."; });
+        } else { win(); }   // endpoint not set: preview success, nothing sent
+      });
+    }
   })();
 </script>
 
