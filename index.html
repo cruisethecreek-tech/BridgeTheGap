@@ -410,11 +410,6 @@
             <button data-lvl="blunt">Blunt</button>
             <button data-lvl="savage">Savage</button>
           </div>
-          <div class="intensity" id="register">
-            <button data-reg="genz">Gen Z</button>
-            <button data-reg="middle">Middle</button>
-            <button data-reg="mature">Mature</button>
-          </div>
         </div>
       </div>
     </div>
@@ -434,10 +429,10 @@
     <!-- ============ HOME ============ -->
     <section class="view" id="view-home">
       <div class="home-hero">
-        <div class="hh-eye">Zero-Based Budgeting · No Filter</div>
-        <h1 class="hh-title">Tell every dollar where to go.</h1>
-        <p class="hh-sub">Budget to zero, gut-check every purchase, and watch your dreams get funded — in plain, unfiltered English.</p>
-        <div class="hh-cta"><button class="btn primary" data-goto="budget">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
+        <div class="hh-eye" id="hhEye">Zero-Based Budgeting · No Filter</div>
+        <h1 class="hh-title" id="hhTitle">Tell every dollar where to go.</h1>
+        <p class="hh-sub" id="hhSub">Budget to zero, gut-check every purchase, and watch your dreams get funded — in plain, unfiltered English.</p>
+        <div class="hh-cta"><button class="btn primary" data-goto="budget" id="hhCta">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
       </div>
 
       <div class="snapshot" id="homeSnap"></div>
@@ -445,7 +440,7 @@
       <div class="walls-head">
         <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
         <h2 class="ph-title">Cover First</h2>
-        <p class="walls-tag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun — they keep the lights on and you moving.</p>
+        <p class="walls-tag" id="wallsTag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun — they keep the lights on and you moving.</p>
       </div>
       <div class="walls" id="wallsGrid"></div>
       <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
@@ -876,10 +871,7 @@ document.getElementById('intensity').addEventListener('click',e=>{
   state.intensity=b.dataset.lvl; save(); renderIntensity(); newQuote();
 });
 function renderIntensity(){ document.querySelectorAll('#intensity button').forEach(b=>b.classList.toggle('on',b.dataset.lvl===state.intensity)); }
-document.getElementById('register').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  state.register=b.dataset.reg; save(); renderRegister(); newQuote();
-});
+/* register is chosen at the intake age-gate; no always-on header dial */
 function renderRegister(){ document.querySelectorAll('#register button').forEach(b=>b.classList.toggle('on',b.dataset.reg===(state.register||'middle'))); }
 
 /* ---------- tabs ---------- */
@@ -1152,30 +1144,33 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
 /* ============================================================
    IMPULSE ACCOUNTABILITY + ASSETS/LIABILITIES
    ============================================================ */
-const IMP_QUESTIONS=[
-  "Will you even remember this in 30 days?",
-  "Is this the thing — or just a feeling wearing a price tag?",
-  "Would you buy it twice? If not, maybe not once.",
-  "Does this get you closer to the dream, or just through the afternoon?",
-  "If you had to hand over the cash right now, would you still want it?",
-  "Is this a decision, or is this a mood?"
-];
+const IMP_QUESTIONS={
+  genz:["Will you even remember this in 30 days, or is it just a vibe?","Is this the thing, or just a mood with a price tag?","Would you rebuy it full price tomorrow? If not, that's your answer.","Does this get you closer to the bag, or just through the afternoon?","Real talk: need it, or just bored?"],
+  middle:["Will you even remember this in 30 days?","Is this the thing — or just a feeling wearing a price tag?","Would you buy it again next month at full price?","Does this get you closer to the dream, or just through the day?","If you had to hand over the cash right now, would you still want it?"],
+  mature:["Will this still matter to you a month from now?","Is this a want, or a habit dressed up as a need?","Would you spend it again, knowing what you know?","Does this move you toward the life you're building, or just fill an afternoon?","If you paid in cash, in hand, would it still feel worth it?"]
+};
 const IMP_WANT={
-  clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],
-  blunt:["Be honest — you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],
-  savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]
+  genz:{clean:["This one's a want, bestie. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real — you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the bag."],savage:["You're about to trade the dream for a dopamine hit. Delulu.","Future you is begging you to close the tab. Listen."]},
+  middle:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be honest — you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]},
+  mature:{clean:["This is a want — give it a night before you decide.","A nice-to-have, not a need. Your call to make."],blunt:["Be honest — this wasn't on your mind an hour ago.","This is comfort spending, and comfort has never built security."],savage:["You're trading a piece of your future for a passing mood.","The person you'll be next year is asking you not to."]}
 };
 const IMP_ASSET={
-  clean:["Now this can actually work for you.","An asset — spend it with intention."],
-  blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],
-  savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit."]
+  genz:{clean:["Okay, this could actually work for you.","An asset — spend it with intention."],blunt:["If it truly holds value, cool. Prove it does.","'Asset' isn't a word you get to use just 'cause you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a fit.","Manifesting 'investment' doesn't make it one."]},
+  middle:{clean:["Now this can actually work for you.","An asset — spend it with intention."],blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit.","Wanting it to be an investment doesn't make it one."]},
+  mature:{clean:["Now that can genuinely work for you.","An asset — spend it with intention."],blunt:["If it truly holds its value, it's no enemy. Make sure it does.","'Asset' is earned, not assumed. Does it pay you back?"],savage:["It's an asset only if you'd sell it and come out ahead. Be sure.","Calling it an investment doesn't make it one."]}
 };
 const IMP_NEED={
-  clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],
-  blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it belongs in the budget, not on impulse."],
-  savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?"]
+  genz:{clean:["A real need. Handle it and keep moving.","Necessary — log it and go."],blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it goes in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, sure. You don't need the upgraded everything."]},
+  middle:{clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it belongs in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, maybe. The premium version, not so much."]},
+  mature:{clean:["A genuine need. Cover it and carry on.","Necessary — note it and move forward."],blunt:["A true need carries no guilt. But needs have a way of multiplying.","If it's a need, it belongs in the plan, not on impulse."],savage:["Needs are real. The deluxe version of a need is a want. Which is this?","The necessity is real. The upgrade is optional."]}
 };
-const SKIP_WINS=["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."];
+const SKIP_WINS={
+  genz:["That's money that stayed on your team. 💪","You just paid future you instead. Big W.","Skip logged. The bag got closer.","That's how you lock in. Momentum."],
+  middle:["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."],
+  mature:["That's money that stayed where it belongs — with you. 💪","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
+};
+function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[state.intensity]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
+function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.floor(Math.random()*a.length)]; }
 
 function sumAssets(){ return state.assets.reduce((s,a)=>s+(a.value||0),0); }
 function sumAssetsKind(k){ return state.assets.filter(a=>(a.kind||'real')===k).reduce((s,a)=>s+(a.value||0),0); }
@@ -1251,14 +1246,26 @@ const CHALLENGE_CORE={
   gen:"Be honest — does this put money in your pocket, or does it just sit there losing value? If it isn't earning, it isn't an asset. It's stuff you own."
 };
 const CHALLENGE_STING={
-  veh:{clean:"By the honest definition, that's a liability — not an asset.",blunt:"That's a liability wearing an asset's badge. Call it what it is.",savage:"You didn't buy it to build wealth. You bought it to feel something. Own that."},
-  house:{clean:"Until it pays you, it's a roof — not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
-  gen:{clean:"Keep it if you love it — just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."}
+  veh:{
+    genz:{clean:"By the real definition that's a liability, not an asset.",blunt:"That's a liability in an asset's fit. Call it what it is.",savage:"You didn't buy it to build wealth, you bought it for the clout. Own it."},
+    middle:{clean:"By the honest definition, that's a liability — not an asset.",blunt:"That's a liability wearing an asset's badge. Call it what it is.",savage:"You didn't buy it to build wealth. You bought it to feel something. Own that."},
+    mature:{clean:"By the honest measure, that's a liability — not an asset.",blunt:"That's a liability dressed as an asset. Name it honestly.",savage:"You bought it for the feeling, not the future. Be honest about that."}
+  },
+  house:{
+    genz:{clean:"Till it pays you, it's a roof — not a wealth glow-up.",blunt:"That house isn't making you rich, it's making you comfy and calling it a flex.",savage:"Equity you can't touch isn't freedom. Stop counting the cage as a W."},
+    middle:{clean:"Until it pays you, it's a roof — not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
+    mature:{clean:"Until it pays you, it's shelter — not a wealth engine.",blunt:"The home you live in keeps you comfortable; it isn't making you wealthy.",savage:"Equity you can't spend isn't security. Don't mistake the house for the freedom."}
+  },
+  gen:{
+    genz:{clean:"Keep it if you love it — just don't call it an asset.",blunt:"Owning it isn't investing. Don't gas it up.",savage:"Stuff doesn't love you back, bestie. And it for sure doesn't pay you."},
+    middle:{clean:"Keep it if you love it — just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."},
+    mature:{clean:"Keep it if it brings you joy — just don't call it an asset.",blunt:"Owning a thing isn't investing. They aren't the same.",savage:"Possessions don't pay you back. Only real assets do."}
+  }
 };
 /* solution engine: need a car? try this instead. */
 const SOLUTIONS=[
   { keys:['car','truck','suv','vehicle','auto','sedan','payment','lease','jeep','tesla','minivan'],
-    title:"You need to get around — you don't need a $500-a-month car payment to do it.",
+    title:{genz:"You need to get around — you don't need a $500 car note running your life.",middle:"You need to get around — you don't need a $500-a-month car payment to do it.",mature:"You need reliable transportation — not a five-hundred-dollar monthly payment."},
     monthlySave:400,
     swaps:[
       {n:'An e-bike or e-scooter you own', c:'a fraction of a car', d:'Own it outright for a fraction of a car payment. No gas, no insurance, no monthly note hanging over you.'},
@@ -1267,7 +1274,7 @@ const SOLUTIONS=[
     ]
   },
   { keys:['iphone','phone','pixel','galaxy','samsung','android'],
-    title:"A new flagship phone every year is a subscription you never meant to sign up for.",
+    title:{genz:"A new flagship every year? That's a subscription you didn't mean to sign up for.",middle:"A new flagship phone every year is a subscription you never meant to sign up for.",mature:"A brand-new phone every year is a recurring cost with little to show for it."},
     monthlySave:55,
     swaps:[
       {n:"Last year's model, refurbished", c:'40–60% less', d:'Nearly identical, and nobody can tell. Your bank account sure can.'},
@@ -1275,7 +1282,7 @@ const SOLUTIONS=[
     ]
   },
   { keys:['couch','furniture','sofa','table','desk','dresser','bed'],
-    title:"Furniture loses half its value the moment it's 'used' — so buy it already used.",
+    title:{genz:"Furniture loses half its value the second it's 'used' — so cop it already used.",middle:"Furniture loses half its value the moment it's 'used' — so buy it already used.",mature:"Furniture loses half its value the moment it leaves the store — so buy it gently used."},
     monthlySave:0,
     swaps:[
       {n:'Marketplace / estate sales', c:'50–70% less', d:'Quality secondhand furniture is everywhere. A little patience pays the difference.'},
@@ -1283,7 +1290,7 @@ const SOLUTIONS=[
     ]
   },
   { keys:['house','home','mortgage','apartment','condo'],
-    title:"More house means more of everything — payment, taxes, upkeep, and heat.",
+    title:{genz:"More house = more of everything — payment, taxes, upkeep, and heat.",middle:"More house means more of everything — payment, taxes, upkeep, and heat.",mature:"A larger home means more of everything — payment, taxes, upkeep, and heating."},
     monthlySave:300,
     swaps:[
       {n:'House-hack: rent out a room', c:'earns income', d:"Let the property help pay for itself. That's how a home edges toward being a real asset."},
@@ -1301,7 +1308,8 @@ function altHTML(name){
     const g=topGoal();
     if(g){ const remaining=Math.max(0,g.target-g.saved); if(remaining>0){ const months=Math.max(1,Math.ceil(remaining/s.monthlySave)); hint+=` Point it at “${escapeHtml(g.name)}” and you'd fund it in ~<b>${months} month${months>1?'s':''}</b>.`; } }
   }
-  return `<div class="solve"><div class="solve-h">💡 Try this instead</div><div class="solve-t">${escapeHtml(s.title)}</div>${s.swaps.map(sw=>`<div class="swap"><span class="swap-n">${escapeHtml(sw.n)}</span><span class="swap-c">${escapeHtml(sw.c)}</span><div class="swap-d">${escapeHtml(sw.d)}</div></div>`).join('')}${hint?`<div class="solve-hint">${hint}</div>`:''}</div>`;
+  const title=typeof s.title==='object'?(s.title[state.register]||s.title.middle):s.title;
+  return `<div class="solve"><div class="solve-h">💡 Try this instead</div><div class="solve-t">${escapeHtml(title)}</div>${s.swaps.map(sw=>`<div class="swap"><span class="swap-n">${escapeHtml(sw.n)}</span><span class="swap-c">${escapeHtml(sw.c)}</span><div class="swap-d">${escapeHtml(sw.d)}</div></div>`).join('')}${hint?`<div class="solve-hint">${hint}</div>`:''}</div>`;
 }
 let assetKind='real';
 document.getElementById('assetKind').addEventListener('click',e=>{
@@ -1311,7 +1319,8 @@ document.getElementById('assetKind').addEventListener('click',e=>{
 function clearChallenge(){ const el=document.getElementById('assetChallenge'); if(el) el.innerHTML=''; }
 function showAssetChallenge(id,word){
   const cat=VEH.includes(word)?'veh':HOUSE_W.includes(word)?'house':'gen';
-  const sting=CHALLENGE_STING[cat][state.intensity]||CHALLENGE_STING[cat].blunt;
+  const sReg=CHALLENGE_STING[cat][state.register]||CHALLENGE_STING[cat].middle;
+  const sting=sReg[state.intensity]||sReg.blunt;
   document.getElementById('assetChallenge').innerHTML=`<div class="challenge">
     <div class="ttl">Hold up — is that really an asset?</div>
     <p>${CHALLENGE_CORE[cat]}</p>
@@ -1389,9 +1398,8 @@ function renderCheckResult(){
   if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
   metrics.push(['Skips to fund a $500 goal', Math.max(1,Math.round(500/amt))+'×']);
 
-  const pool=(kind==='want'?IMP_WANT:kind==='asset'?IMP_ASSET:IMP_NEED)[state.intensity]||IMP_WANT.blunt;
-  const line=pool[Math.floor(Math.random()*pool.length)];
-  const q=IMP_QUESTIONS[Math.floor(Math.random()*IMP_QUESTIONS.length)];
+  const line=pickVoice(kind==='want'?IMP_WANT:kind==='asset'?IMP_ASSET:IMP_NEED);
+  const q=pickReg(IMP_QUESTIONS);
   const vlabel=kind==='want'?'Further from your dreams':kind==='asset'?'Could move you forward':'Necessary — track it';
   const open=state.goals.filter(x=>x.saved<x.target);
   const goalSelect=open.length?`<select id="impGoal"><option value="">Bank the savings</option>${open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('')}</select>`:'';
@@ -1419,7 +1427,7 @@ function renderCheckResult(){
     state.impulse.push(ev); const amt2=ev.amount;
     pendingCheck=null; document.getElementById('impName').value=''; document.getElementById('impAmt').value='';
     save(); renderImpulse(); renderNetWorth(); renderGoals();
-    const win=SKIP_WINS[Math.floor(Math.random()*SKIP_WINS.length)];
+    const win=pickReg(SKIP_WINS);
     document.getElementById('impResult').innerHTML=`<div class="checkcard asset"><div class="verdict asset">Skipped. ${escapeHtml(win)}</div><p class="sub" style="margin:8px 0 0">${goalId?'Sent '+money(amt2)+' straight to your dream.':money(amt2)+' saved and banked to your discipline score.'}</p></div>`;
   });
   document.getElementById('impBuy').addEventListener('click',()=>{
@@ -1607,7 +1615,8 @@ function initPWA(){
    Engine-critical (★) answers write straight into app state.
    ============================================================ */
 const INTAKE=[
-  {id:'intro', bot:"Hey — I'll get your money set up in about two minutes. No judgment, no forms that make you feel dumb. Just a few straight questions, in your words.", input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
+  {id:'gate', bot:"Welcome to Accountability 👋  First — which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30–55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
+  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up in about two minutes — no judgment, no forms that make you feel dumb. Just a few straight questions, in your words.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
   {id:'name', bot:"First — what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
   {id:'income', bot:a=>`${a.name?a.name+', ':''}what's your take-home pay in a normal month — the money that actually lands in your account after taxes? A rough number's fine. ★`, input:'money', key:'income', placeholder:'e.g. 3200'},
   {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs — in hours of your life. Don't know it? Skip. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22'},
@@ -1620,8 +1629,7 @@ const INTAKE=[
   {id:'debtAmt', bot:"Roughly how much, all in?", input:'money', key:'debtAmt', showIf:a=>a.hasDebt==='yes', placeholder:'e.g. 8000'},
   {id:'dream', bot:"Last big piece — what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', placeholder:'Debt-free · Emergency fund · A trip · A house'},
   {id:'dreamAmt', bot:a=>`Put a number on it — what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, placeholder:'e.g. 5000'},
-  {id:'register', bot:"So I speak your language — which sounds most like you? ★", input:'choice', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30–55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
-  {id:'tone', bot:"And when you're about to blow the budget, how do you want me to talk to you? ★", input:'choice', key:'tone', options:[{label:'Clean — keep it kind',value:'clean'},{label:'Blunt — be straight',value:'blunt'},{label:'Savage — no mercy',value:'savage'}]},
+  {id:'tone', bot:"When you're about to blow the budget, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean — keep it kind',value:'clean'},{label:'Blunt — be straight',value:'blunt'},{label:'Savage — no mercy',value:'savage'}]},
   {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
   {id:'done', bot:a=>`That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream — you can change any of it anytime.`, input:'finish', cta:'Build my budget →'}
 ];
@@ -1650,6 +1658,12 @@ function renderIntakeDock(s){
   }
   if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
+  if(s.input==='gate'){
+    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkip">I'll set it up myself</button>`;
+    dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
+    document.getElementById('iaSkip').onclick=()=>{ state.onboarded=true; save(); closeIntake(); };
+    return;
+  }
   if(s.input==='choice'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; iaBub(o.label,'me'); iaStore(s.key,o.value); iaAdvance(); });
@@ -1707,7 +1721,15 @@ function boot(){
   if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
   else if(!state.onboarded && !state.transactions.length && !state.categories.length && !state.goals.length && !state.liabilities.length && !state.assets.length) setTimeout(openIntake,350);
 }
+const HOME_COPY={
+  genz:{ eye:"Zero-based budgeting · no cap", title:"Tell every dollar to lock in.", sub:"Budget to zero, gut-check every purchase, and watch the bag grow — no filter, no cap.", cta:"Secure the bag →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun — that's the non-negotiable four." },
+  middle:{ eye:"Zero-based budgeting · no filter", title:"Tell every dollar where to go.", sub:"Budget to zero, gut-check every purchase, and watch your dreams get funded — in plain, unfiltered English.", cta:"Start budgeting →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun — they keep the lights on and you moving." },
+  mature:{ eye:"Zero-based budgeting · straight talk", title:"Give every dollar a purpose.", sub:"Budget to zero, weigh every purchase, and fund what matters — clear, honest, no runaround.", cta:"Build my plan →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Cover these before anything else — they're the foundation the rest stands on." }
+};
 function renderHome(){
+  const hc=HOME_COPY[state.register]||HOME_COPY.middle;
+  const setTxt=(id,t)=>{ const el=document.getElementById(id); if(el) el.textContent=t; };
+  setTxt('hhEye',hc.eye); setTxt('hhTitle',hc.title); setTxt('hhSub',hc.sub); setTxt('hhCta',hc.cta); setTxt('wallsTag',hc.wallsTag);
   const M=state.activeMonth;
   const income=monthIncome(M), assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
   const ltb=income-assigned, spent=monthExpense(M);
