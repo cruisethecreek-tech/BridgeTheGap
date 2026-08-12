@@ -1794,6 +1794,7 @@ document.getElementById('copyBtn').addEventListener('click',()=>{
 
 /* ---------- category hierarchy (one level of subcategories) ---------- */
 let collapsedCats=new Set();
+let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
 /* top-level categories that map to the same essential (leftover duplicates) */
 function duplicateGroups(){
   const groups={};
@@ -1850,16 +1851,17 @@ function renderBudget(){
         </div>` : '';
       const subsHTML = (isGroup && !collapsed) ? kids.map(k=>{
         const ka=assignedFor(k.id,M), ks=spentFor(k.id,M);
-        return `<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span><button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        return `<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span><button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
       }).join('') : '';
-      const addSub = (isGroup && !collapsed)
-        ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋</button></div>`
+      const showAddRow = (isGroup || splitting.has(c.id)) && !collapsed;
+      const addSub = showAddRow
+        ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋ Add</button></div>`
         : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
       return `<div class="cat ${over?'overspent':''}">
         <div class="cat-top">
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
           <span class="cat-name">${escapeHtml(c.name)}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>
-          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" value="${a||0}" data-cat="${c.id}"></span>
+          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" enterkeyhint="next" value="${a||0}" data-cat="${c.id}"></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
@@ -1871,9 +1873,23 @@ function renderBudget(){
       </div>`;
     }).join('');
   }
+  let budgetAdvancing=false;
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
     inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=parseFloat(inp.value)||0; save(); refreshBudgetSummary(); });
-    inp.addEventListener('change',renderBudget);
+    inp.addEventListener('change',()=>{ if(budgetAdvancing) return; renderBudget(); });
+    inp.addEventListener('keydown',e=>{
+      if(e.key!=='Enter') return;
+      e.preventDefault();
+      // commit + refresh math, then flow to the next field so budgeting moves start-to-finish
+      budgetAdvancing=true;
+      const ids=[...box.querySelectorAll('input[data-cat]')].map(x=>x.dataset.cat);
+      const nextId=ids[ids.indexOf(inp.dataset.cat)+1];
+      renderBudget();
+      const next=nextId?box.querySelector('input[data-cat="'+nextId+'"]'):null;
+      if(next){ next.focus(); if(next.select) next.select(); }
+      else { const add=document.getElementById('catName'); if(add) add.focus(); }   // past the last: on to adding a category
+      budgetAdvancing=false;
+    });
   });
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
@@ -1885,9 +1901,20 @@ function renderBudget(){
   }));
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
   box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); renderBudget(); }));
-  box.querySelectorAll('button[data-addsubfirst]').forEach(btn=>btn.addEventListener('click',()=>{ const name=(prompt('First subcategory name (e.g. Electric):')||'').trim(); if(name){ state.categories.push({id:uid(),name,parentId:btn.dataset.addsubfirst}); save(); renderBudget(); renderTxForm(); } }));
-  box.querySelectorAll('button[data-addsub]').forEach(btn=>btn.addEventListener('click',()=>{ const inp=box.querySelector(`input[data-addsub-input="${btn.dataset.addsub}"]`); const name=(inp&&inp.value||'').trim(); if(name){ state.categories.push({id:uid(),name,parentId:btn.dataset.addsub}); save(); renderBudget(); renderTxForm(); } }));
-  box.querySelectorAll('input[data-addsub-input]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const name=inp.value.trim(); if(name){ state.categories.push({id:uid(),name,parentId:inp.dataset.addsubInput}); save(); renderBudget(); renderTxForm(); } } }));
+  // "Split into subcategories" reveals an inline input (no jarring browser prompt) and focuses it
+  box.querySelectorAll('button[data-addsubfirst]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.addsubfirst; splitting.add(id); renderBudget();
+    const inp=box.querySelector('input[data-addsub-input="'+id+'"]'); if(inp) inp.focus();
+  }));
+  const addSubcat=(parentId,name)=>{
+    name=(name||'').trim(); if(!name) return;
+    state.categories.push({id:uid(),name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
+    const inp=box.querySelector('input[data-addsub-input="'+parentId+'"]'); if(inp) inp.focus();   // ready for the next sub
+  };
+  box.querySelectorAll('button[data-addsub]').forEach(btn=>btn.addEventListener('click',()=>{
+    const inp=box.querySelector('input[data-addsub-input="'+btn.dataset.addsub+'"]'); addSubcat(btn.dataset.addsub, inp&&inp.value);
+  }));
+  box.querySelectorAll('input[data-addsub-input]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addSubcat(inp.dataset.addsubInput, inp.value); } }));
 }
 /* essential = one of the Cover First walls */
 function isEssentialCat(name){ const n=(name||'').toLowerCase(); return (typeof WALLS!=='undefined'?WALLS:[]).some(w=>w.match.some(t=>n.includes(t))); }
