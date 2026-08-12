@@ -147,6 +147,27 @@
   .nextstep .ns-s{font-size:12.5px;color:var(--muted);margin-top:2px}
   .nextstep .ns-arrow{color:var(--accent);font-weight:900;font-size:18px;flex-shrink:0}
   .foot .actions{display:none}
+  /* Offense vs Defense */
+  .od-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:12px}
+  .od-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;background:var(--ink);border:1px solid var(--line)}
+  .od-bar .off{background:linear-gradient(90deg,#5a7d1f,var(--accent))}
+  .od-bar .def{background:linear-gradient(90deg,#3a4a52,#6b7d8f)}
+  .od-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;font-weight:700}
+  .od-legend .k{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+  .od-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .od-card .mile{font-size:13px;color:#cfd4de;margin-top:12px;font-weight:600}
+  .od-card .mile b{color:var(--accent)}
+  .od-prompt{margin-top:12px;background:#1a2410;border:1px solid #3a4a1e;border-radius:10px;padding:11px 13px;font-size:13px;color:#dfe8c8;line-height:1.5;font-weight:600}
+  .miles{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .miles .m{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--ink);border:1px solid var(--line);color:var(--muted)}
+  .miles .m.hit{background:#10231a;border-color:#1e4a37;color:var(--good)}
+  .skillitem{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:9px}
+  .skillitem .st{display:flex;align-items:center;gap:10px}
+  .skillitem .st .n{flex:1;font-weight:800;font-size:14px;min-width:0}
+  .skillitem .st .c{font-weight:900}
+  .skillitem .payback{font-size:13px;color:var(--good);font-weight:700;margin-top:7px}
+  .skillitem .payback.slow{color:#e0be55}
+  .tx-yield{font-size:12px;font-weight:800;color:var(--good);margin-left:8px;white-space:nowrap}
   @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
   .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:#e6d9b0;line-height:1.45;font-weight:600}
@@ -567,6 +588,7 @@
 
       <div id="nextSteps"></div>
       <div class="snapshot" id="homeSnap"></div>
+      <div id="offenseCard"></div>
       <div id="enoughCard"></div>
 
       <div class="walls-head">
@@ -657,6 +679,12 @@
           </label>
           <label class="fld income-only hide" id="fldSrc">Source
             <input type="text" id="txSrc" placeholder="Paycheck, Side gig…">
+          </label>
+          <label class="fld income-only hide" id="fldSrcType">Type
+            <select id="txSrcType"><option value="primary">Primary Job</option><option value="side">Side Hustle</option><option value="freelance">Freelance / Service</option><option value="sale">Asset / Item Sale</option><option value="skillmon">Skill Monetization</option></select>
+          </label>
+          <label class="fld income-only hide" id="fldHours">Hours it took
+            <input type="number" id="txHours" min="0" step="0.5" placeholder="opt." style="width:90px">
           </label>
           <label class="fld">Date
             <input type="date" id="txDate">
@@ -808,6 +836,24 @@
         </div>
         <div id="networkSummary"></div>
         <div id="networkList"></div>
+      </div>
+
+      <div class="panel">
+        <h2>⚡ Skill &amp; Capacity Investments</h2>
+        <p class="sub">Courses, certs, tools, events - the spending that raises your <b style="color:var(--text)">earning ceiling</b>. Log the cost and the extra you'd earn per hour, and I'll show the payback. This is offense, not consumption.</p>
+        <div class="row">
+          <label class="fld" style="flex:1">Investment
+            <input type="text" id="skillName" placeholder="Certification, course, tool…">
+          </label>
+          <label class="fld">Cost $
+            <input type="number" id="skillCost" min="0" step="1" placeholder="e.g. 200" style="width:110px">
+          </label>
+          <label class="fld">Extra earned / hr $
+            <input type="number" id="skillGain" min="0" step="0.5" placeholder="e.g. 2" style="width:120px">
+          </label>
+          <button class="btn primary" id="addSkill">Log it</button>
+        </div>
+        <div id="skillList"></div>
       </div>
     </section>
 
@@ -1030,6 +1076,44 @@ const ENERGY=[
   {k:'fear', ic:'🛑', label:'Fear / Scarcity', sub:'Panic buys, status, guilt purchases'}
 ];
 function energyOf(k){ return ENERGY.find(e=>e.k===k)||null; }
+/* Offense / Income-creation engine */
+const INCOME_SOURCES=[
+  {k:'primary', label:'Primary Job'},
+  {k:'side', label:'Side Hustle'},
+  {k:'freelance', label:'Freelance / Service'},
+  {k:'sale', label:'Asset / Item Sale'},
+  {k:'skillmon', label:'Skill Monetization'}
+];
+function isIndependent(srcType){ return !!srcType && srcType!=='primary'; }
+function indieTotal(){ return state.transactions.filter(t=>t.type==='income'&&isIndependent(t.srcType)).reduce((s,t)=>s+t.amount,0); }
+const INDIE_MILES=[50,500,1000,5000];
+function offenseDefense(M){
+  const inc=txnsInMonth(M).filter(t=>t.type==='income');
+  const indieIncome=inc.filter(t=>isIndependent(t.srcType)).reduce((s,t)=>s+t.amount,0);
+  const skillInvest=(state.skills||[]).filter(s=>monthOf(s.date)===M).reduce((a,s)=>a+(s.cost||0),0);
+  const offense=indieIncome+skillInvest;
+  const debtCatIds=state.categories.filter(c=>/debt|loan|credit/.test(c.name.toLowerCase())).map(c=>c.id);
+  const debtPaid=txnsInMonth(M).filter(t=>t.type==='expense'&&debtCatIds.includes(t.catId)).reduce((s,t)=>s+t.amount,0);
+  const frugality=state.impulse.filter(i=>i.type==='skip'&&monthOf(i.date)===M).reduce((s,i)=>s+i.amount,0);
+  const defense=debtPaid+frugality;
+  return {offense,defense,indieIncome,skillInvest,debtPaid,frugality};
+}
+/* Anti-scarcity copy (register x intensity) */
+const SCARCITY_COPY={
+  genz:{clean:["Cutting stops at zero, bestie. Earning has no ceiling - what can you sell this week?","Coupon energy is capped. Income isn't. Go make a hundred bucks."],blunt:["You can't frugality your way to the bag. Solve someone's problem for $100.","Pinching pennies is a treadmill. Start a second stream."],savage:["Clipping coupons won't free you. Go create money on demand.","You're optimizing crumbs. Go bake a bigger loaf."]},
+  middle:{clean:["Cutting expenses has a floor of $0. Income has no ceiling. Aim some energy at earning.","You've trimmed a lot. The bigger lever now is making more."],blunt:["You can't frugality your way to freedom. What problem can you solve for someone this week for $100?","Squeezing pennies is a ceiling. Build a second stream or stay stuck."],savage:["Frugality alone is a slow trap. Go create value and get paid for it.","The floor is nearly zero. Stop scraping it and raise the roof."]},
+  mature:{clean:["Thrift matters, but it bottoms out at zero. Earning is where the real room is.","You've mastered the cutting. Income is the half with no limit."],blunt:["You've optimized the cutting. Now build income - that's the uncapped side.","Frugality is defense. You need offense to actually get ahead."],savage:["Penny-pinching alone is a slow ceiling. Create something people pay for.","The savings well is nearly dry. Go dig an income well."]}
+};
+const INDIE_WIN={
+  genz:{clean:["Independent capital unlocked. Money outside the 9-5. 🔓","You made money on your own terms. That's the move."],blunt:["You proved you can create money on demand. Do it again.","That's a stream the boss can't cut. Widen it."],savage:["That's income they can't lay off. Now go get more.","One-off? Prove it wasn't luck. Run it back."]},
+  middle:{clean:["Independent income logged. Money can come from more than one place.","You just showed money isn't only a paycheck. Build on it."],blunt:["You proved you can create money on demand. Scale it.","One stream is fragile. You just started a second - keep going."],savage:["That's the income they can't fire you from. Grow it.","Now do it on purpose, not by accident."]},
+  mature:{clean:["Income created on your own terms. That's real leverage.","You proved money doesn't only come from an employer. Build on it."],blunt:["That's a stream nobody can revoke. Widen it.","Proof of concept, done. Now make it repeatable."],savage:["That's freedom income. Don't let it be a one-time thing.","Now turn the fluke into a system."]}
+};
+const DEBT_BALANCE={
+  genz:{clean:["Kill the debt to drop your floor - but grow income to raise your ceiling.","Debt down = lower floor. Income up = higher roof. Do both."],blunt:["Clawing out of the hole is half of it. Build a ladder too - earn more.","Payoff lowers the floor. Only income raises the roof."],savage:["Don't just survive the debt. Out-earn it.","Defense clears the hole. Offense builds the tower."]},
+  middle:{clean:["Pay the debt to lower your floor, and expand income to raise your ceiling.","Debt payoff steadies the base. Income lifts the whole thing."],blunt:["Kill the debt to lower your floor, but expand your income to raise your ceiling.","You're all defense. Add one offensive move this month."],savage:["Paying debt is survival. Earning is freedom. Don't stop at survival.","Out-earning the debt beats out-cutting it. Every time."]},
+  mature:{clean:["Retire the debt to steady your base; grow income to lift the ceiling.","Debt down lowers the floor; income up raises the roof. Run both."],blunt:["Debt payoff is defense. Pair it with an income move or you'll tread water.","You've got the payoff handled. Now build the earning side."],savage:["Survival is paying the debt. Freedom is out-earning it.","Don't spend a decade only playing defense. Score some points."]}
+};
 const ROR=[{k:'high',label:'High return 🔥'},{k:'med',label:'Medium return'},{k:'low',label:'Low / noise'}];
 const GOAL_NUDGES=[
   "This is the one. Feed it first.",
@@ -1055,7 +1139,7 @@ function defaultState(){
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[],
            onboarded:false, intake:{}, register:'middle', vault:[],
-           freedomMode:false, trueRate:{}, network:[], enough:0 };
+           freedomMode:false, trueRate:{}, network:[], enough:0, skills:[] };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1150,7 +1234,7 @@ function activateTab(name){
   const fab=document.getElementById('fab'); if(fab) fab.classList.toggle('hide',name==='impulse');
   if(name==='learn') renderCharts();
   if(name==='home') renderHome();
-  if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); }
+  if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); }
   if(name==='impulse') renderVault();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1341,20 +1425,32 @@ document.getElementById('addTx').addEventListener('click',()=>{
   const date=document.getElementById('txDate').value||todayStr();
   const note=document.getElementById('txNote').value.trim();
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
+  let indieCrossed=null;
   if(txType==='expense'){
     const catId=document.getElementById('txCat').value;
     if(!catId){ alert('Add a category first (Budget tab).'); return; }
     const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy; state.transactions.push(tx);
   } else {
     const source=document.getElementById('txSrc').value.trim()||'Income';
-    state.transactions.push({id:uid(),type:'income',amount:amt,source,date,note});
+    const srcType=document.getElementById('txSrcType').value;
+    const hours=parseFloat(document.getElementById('txHours').value)||0;
+    const prevIndie=indieTotal();
+    const tx={id:uid(),type:'income',amount:amt,source,date,note,srcType}; if(hours>0) tx.hours=hours; state.transactions.push(tx);
+    if(isIndependent(srcType)){ const nowIndie=prevIndie+amt; indieCrossed=INDIE_MILES.find(m=>prevIndie<m&&nowIndie>=m)||null; }
   }
   txEnergy=''; document.querySelectorAll('#energySel button').forEach(x=>x.classList.remove('on'));
-  document.getElementById('txAmt').value=''; document.getElementById('txNote').value=''; document.getElementById('txSrc').value='';
+  document.getElementById('txAmt').value=''; document.getElementById('txNote').value=''; document.getElementById('txSrc').value=''; document.getElementById('txHours').value='';
   // jump active month to the transaction's month so the user sees it land
   state.activeMonth=monthOf(date);
-  save(); renderBudget(); renderTx();
-  const lw=document.getElementById('logWin'); if(lw){ lw.innerHTML=`<div class="logwin">🛡️ ${escapeHtml(pickVoice(BLINDSPOT_COPY))}</div>`; setTimeout(()=>{ if(lw.firstChild) lw.innerHTML=''; },6000); }
+  save(); renderBudget(); renderTx(); renderHome();
+  const lw=document.getElementById('logWin');
+  if(lw){
+    let m;
+    if(indieCrossed) m=`🚀 <b>${money(indieCrossed)} independent milestone!</b> ${escapeHtml(pickVoice(INDIE_WIN))}`;
+    else if(txType==='income'&&isIndependent(document.getElementById('txSrcType').value)) m=`🚀 ${escapeHtml(pickVoice(INDIE_WIN))}`;
+    else m=`🛡️ ${escapeHtml(pickVoice(BLINDSPOT_COPY))}`;
+    lw.innerHTML=`<div class="logwin">${m}</div>`; setTimeout(()=>{ if(lw.firstChild) lw.innerHTML=''; },7000);
+  }
 });
 document.querySelectorAll('.filters .pill').forEach(p=>p.addEventListener('click',()=>{
   txFilter=p.dataset.f;
@@ -1407,10 +1503,12 @@ function renderTxList(){
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
     const title=t.type==='income'?escapeHtml(t.source||'Income'):(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
     const en=t.energy?energyOf(t.energy):null;
-    const sub=t.type==='income'?('Income'+(t.note?' · '+escapeHtml(t.note):'')):((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
+    const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
+    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):'')):((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
     const H=effectiveHourly();
     let badge='';
-    if(H>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount)})</span>`;
+    if(t.type==='income' && t.hours>0) badge=`<span class="tx-yield">${usd(t.amount/t.hours)}/hr</span>`;
+    else if(H>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount)})</span>`;
     return `<div class="tx ${t.type}">
       <div class="tx-date">${mon}<b>${day}</b></div>
       <div class="tx-main"><div class="tx-title">${title}</div><div class="tx-sub">${sub}</div></div>
@@ -1488,6 +1586,28 @@ function renderNetwork(){
     return `<div class="netitem"><span class="n">${escapeHtml(n.name)}<small>${n.date}</small></span><span class="ror ${n.ror}">${r.label}</span><span class="amt">${money(n.amount)}</span><button class="del" data-delnet="${n.id}" title="Delete">✕</button></div>`;
   }).join('');
   box.querySelectorAll('button[data-delnet]').forEach(b=>b.addEventListener('click',()=>{ state.network=state.network.filter(x=>x.id!==b.dataset.delnet); save(); renderNetwork(); }));
+}
+/* 2C: Skill & Capacity ROI */
+document.getElementById('addSkill').addEventListener('click',()=>{
+  const name=document.getElementById('skillName').value.trim();
+  const cost=parseFloat(document.getElementById('skillCost').value)||0;
+  const gain=parseFloat(document.getElementById('skillGain').value)||0;
+  if(!name||cost<=0){ return; }
+  state.skills.push({id:uid(),name,cost,gain,date:todayStr()});
+  document.getElementById('skillName').value=''; document.getElementById('skillCost').value=''; document.getElementById('skillGain').value='';
+  save(); renderSkills(); renderHome();
+});
+function renderSkills(){
+  const box=document.getElementById('skillList'); if(!box) return;
+  if(!state.skills.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No skill investments yet. The highest-ROI dollar you spend is often on yourself.</div>`; return; }
+  box.innerHTML=state.skills.slice().reverse().map(s=>{
+    let payback;
+    if(s.gain>0){ const hrs=s.cost/s.gain; payback=`Pays for itself in <b>${hrs>=10?Math.round(hrs):Math.round(hrs*10)/10} working hours</b> at +${usd(s.gain)}/hr.`; }
+    else payback=`Add an "extra earned / hr" to see the payback.`;
+    const slow = s.gain>0 && (s.cost/s.gain)>200;
+    return `<div class="skillitem"><div class="st"><span class="n">${escapeHtml(s.name)}</span><span class="c">${money(s.cost)}</span><button class="del" data-delskill="${s.id}" title="Delete">✕</button></div><div class="payback ${slow?'slow':''}">${payback}</div></div>`;
+  }).join('');
+  box.querySelectorAll('button[data-delskill]').forEach(b=>b.addEventListener('click',()=>{ state.skills=state.skills.filter(x=>x.id!==b.dataset.delskill); save(); renderSkills(); }));
 }
 
 /* ---------- learn ---------- */
@@ -2342,7 +2462,7 @@ document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarde
 function boot(){
   renderIntensity(); renderRegister(); newQuote();
   if(postRecurring(thisMonth())>0) save();
-  renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderLesson();
+  renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderLesson();
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   renderFreedomToggle(); fillTrueRate();
@@ -2372,8 +2492,29 @@ function renderHome(){
     <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
     <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div></div>`;
   renderEnough(income);
+  renderOffenseDefense();
   renderNextSteps();
   renderWalls();
+}
+/* 2A: Offense vs Defense balance */
+function renderOffenseDefense(){
+  const box=document.getElementById('offenseCard'); if(!box) return;
+  const M=state.activeMonth, od=offenseDefense(M), total=od.offense+od.defense;
+  const offW=total>0?od.offense/total*100:0, defW=total>0?od.defense/total*100:50;
+  const indie=indieTotal();
+  const milesHTML=INDIE_MILES.map(m=>`<span class="m ${indie>=m?'hit':''}">${indie>=m?'✓ ':''}${money(m)}</span>`).join('');
+  let prompt='';
+  if(total===0) prompt='Log a side income or a skill investment to start building your Offense. Cutting has a floor; earning has no ceiling.';
+  else if(od.offense===0) prompt=pickVoice(SCARCITY_COPY);
+  else if(offW<25) prompt=pickVoice(DEBT_BALANCE);
+  box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Balance</div><h2 class="ph-title">Offense vs. Defense</h2></div>
+    <div class="od-card">
+      <div class="od-bar"><div class="off" style="width:${offW}%"></div><div class="def" style="width:${defW}%"></div></div>
+      <div class="od-legend"><span class="k"><span class="sw" style="background:var(--accent)"></span>⚔️ Offense ${money(od.offense)}</span><span class="k"><span class="sw" style="background:#6b7d8f"></span>🛡️ Defense ${money(od.defense)}</span></div>
+      <div class="mile">Independent income (all-time): <b>${money(indie)}</b></div>
+      <div class="miles">${milesHTML}</div>
+      ${prompt?`<div class="od-prompt">💡 ${escapeHtml(prompt)}</div>`:''}
+    </div>`;
 }
 /* guided "do this next" - computes the user's most useful next moves */
 function renderNextSteps(){
