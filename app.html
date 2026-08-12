@@ -249,6 +249,28 @@
   .subresult.err{color:var(--bad)}
   .offer-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
   .offerfine{margin-top:10px!important;font-size:12px}
+  /* household mode */
+  .hh-off{display:none!important}
+  .hh-toggle{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;cursor:pointer;margin-top:4px}
+  .hh-toggle input{width:18px;height:18px;accent-color:var(--accent)}
+  .panel.household .hh-tot{font-weight:700;color:var(--muted);font-size:14px;margin-top:4px}
+  .panel.household .hh-tot b{color:var(--text);font-size:20px;font-weight:900;margin-left:6px}
+  .hh-split{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .hh-p{flex:1;min-width:120px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+  .hh-p .nm{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+  .hh-p .v{font-weight:900;font-size:17px}
+  .hh-p .pc{font-size:12px;font-weight:800;color:var(--accent)}
+  .hh-p.b .pc{color:#7fb3e6}
+  .hh-p.j .pc{color:var(--muted)}
+  .hh-bar{display:flex;height:14px;border-radius:8px;overflow:hidden;background:var(--ink);border:1px solid var(--line);margin-top:12px}
+  .hh-bar .a{background:linear-gradient(90deg,#c58f2a,var(--accent))}
+  .hh-bar .b{background:linear-gradient(90deg,#3c6ea5,#7fb3e6)}
+  .hh-fair{margin-top:16px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .hh-fair .k{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800}
+  .hh-fairrow{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:15px;font-weight:600}
+  .hh-fairrow b{color:var(--accent)}
+  .hh-wage{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
+  .hh-wage b{color:var(--text)}
   /* Progressive interface stages */
   [data-stage].stage-locked{display:none!important}
   .stagebar{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:16px}
@@ -684,6 +706,7 @@
       <div id="stageBar"></div>
       <div id="nextSteps"></div>
       <div class="snapshot" id="homeSnap"></div>
+      <div id="householdBox"></div>
       <div id="retroBox"></div>
       <div id="offenseCard" data-stage="2"></div>
       <div id="enoughCard" data-stage="2"></div>
@@ -749,6 +772,7 @@
           <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
           <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
+          <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
           <label class="fld">Day<input type="number" id="recDay" min="1" max="28" value="1" style="width:70px"></label>
           <button class="btn primary" id="addRec">Add</button>
         </div>
@@ -780,6 +804,9 @@
           </label>
           <label class="fld income-only hide" id="fldSrcType">Type
             <select id="txSrcType"><option value="primary">Primary Job</option><option value="side">Side Hustle</option><option value="freelance">Freelance / Service</option><option value="sale">Asset / Item Sale</option><option value="skillmon">Skill Monetization</option></select>
+          </label>
+          <label class="fld income-only household-only hide" id="fldOwner">Earned by
+            <select id="txOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select>
           </label>
           <label class="fld income-only hide" id="fldHours">Hours it took
             <input type="number" id="txHours" min="0" step="0.5" placeholder="opt." style="width:90px">
@@ -1042,6 +1069,20 @@
             <div class="tr-result" id="trResult" style="display:none"></div>
           </div>
         </details>
+      </div>
+
+      <div class="panel">
+        <h2>🏠 Household (couples)</h2>
+        <p class="sub">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials. It's still one private budget on this device - to share it across phones, export the encrypted backup below and have your partner restore it.</p>
+        <label class="hh-toggle"><input type="checkbox" id="hhOn"> We share this budget as a couple</label>
+        <div id="hhFields" style="display:none">
+          <div class="row" style="margin-top:14px">
+            <label class="fld">Your name<input type="text" id="hhNameA" placeholder="You" maxlength="24" style="width:130px"></label>
+            <label class="fld">Partner's name<input type="text" id="hhNameB" placeholder="Partner" maxlength="24" style="width:130px"></label>
+            <label class="fld">Partner's take-home / hr<input type="number" id="hhWageB" min="0" step="0.5" placeholder="e.g. 20" style="width:160px"></label>
+          </div>
+          <p class="sub" style="margin-top:10px">Now the income logger has an "Earned by" picker, and the Home screen shows your combined income, who earns what, and a fair split.</p>
+        </div>
       </div>
 
       <div class="panel">
@@ -1344,7 +1385,8 @@ function defaultState(){
            freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
            uiMode:'auto', stageReached:1, day1:null,
-           snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''} };
+           snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
+           householdOn:false, nameA:'You', nameB:'Partner', wageB:0 };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1402,6 +1444,55 @@ function categoryOptions(){
   }).join('');
 }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------- Household mode (couples): one budget, two earners ---------- */
+function incomeByOwner(month){
+  let a=0,b=0,j=0;
+  txnsInMonth(month).filter(t=>t.type==='income').forEach(t=>{ const o=t.owner||'a'; if(o==='b')b+=t.amount; else if(o==='joint')j+=t.amount; else a+=t.amount; });
+  return {a,b,j,total:a+b+j};
+}
+function renderHousehold(){
+  const box=document.getElementById('householdBox'); if(!box) return;
+  if(!state.householdOn){ box.innerHTML=''; return; }
+  const M=state.activeMonth, inc=incomeByOwner(M);
+  const nameA=escapeHtml(state.nameA||'You'), nameB=escapeHtml(state.nameB||'Partner');
+  const base=inc.a+inc.b, rA=base>0?inc.a/base:.5, rB=base>0?inc.b/base:.5, pct=v=>Math.round(v*100);
+  const ess=(typeof essentialMonthly==='function')?essentialMonthly():0;
+  const wA=effectiveHourly(), wB=state.wageB||0;
+  box.innerHTML=`<div class="panel household">
+    <h2>🏠 Household</h2>
+    <p class="sub">One budget, two earners. It all stays on this device - to share it with your partner's phone, export the encrypted backup in Settings and have them restore it.</p>
+    <div class="hh-tot">Combined income this month <b>${money(inc.total)}</b></div>
+    <div class="hh-split">
+      <div class="hh-p"><span class="nm">${nameA}</span><span class="v">${money(inc.a)}</span><span class="pc">${pct(rA)}%</span></div>
+      <div class="hh-p b"><span class="nm">${nameB}</span><span class="v">${money(inc.b)}</span><span class="pc">${pct(rB)}%</span></div>
+      ${inc.j>0?`<div class="hh-p j"><span class="nm">Joint</span><span class="v">${money(inc.j)}</span><span class="pc">shared</span></div>`:''}
+    </div>
+    <div class="hh-bar"><span class="a" style="width:${pct(rA)}%"></span><span class="b" style="width:${pct(rB)}%"></span></div>
+    ${ess>0&&base>0?`<div class="hh-fair">
+      <div class="k">Fair split of the ${money(ess)} in shared essentials</div>
+      <div class="hh-fairrow"><span>${nameA} covers <b>${money(ess*rA)}</b> · ${pct(rA)}%</span><span>${nameB} covers <b>${money(ess*rB)}</b> · ${pct(rB)}%</span></div>
+      <p class="sub" style="margin:8px 0 0">Proportional to what each of you earns - not a 50/50 that squeezes the lower earner. A guideline, not a rule.</p>
+    </div>`:''}
+    ${(wA>0||wB>0)?`<div class="hh-wage"><span>${nameA}: <b>${wA>0?usd(wA)+'/hr':'set wage'}</b></span><span>${nameB}: <b>${wB>0?usd(wB)+'/hr':'add in Settings'}</b></span></div>`:''}
+  </div>`;
+}
+function renderHouseholdLabels(){
+  document.querySelectorAll('#txOwner, #recOwner').forEach(sel=>{
+    if(sel && sel.options.length>=2){ sel.options[0].textContent=state.nameA||'You'; sel.options[1].textContent=state.nameB||'Partner'; }
+  });
+  const na=document.getElementById('hhNameA'), nb=document.getElementById('hhNameB'), wb=document.getElementById('hhWageB');
+  if(na&&document.activeElement!==na) na.value=(state.nameA&&state.nameA!=='You')?state.nameA:'';
+  if(nb&&document.activeElement!==nb) nb.value=(state.nameB&&state.nameB!=='Partner')?state.nameB:'';
+  if(wb&&document.activeElement!==wb) wb.value=state.wageB||'';
+}
+function applyHousehold(){
+  const on=!!state.householdOn;
+  document.querySelectorAll('.household-only').forEach(el=>el.classList.toggle('hh-off',!on));
+  const hf=document.getElementById('hhFields'); if(hf) hf.style.display=on?'':'none';
+  const cb=document.getElementById('hhOn'); if(cb) cb.checked=on;
+  renderHouseholdLabels(); renderHousehold();
+}
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
 function assignedFor(catId,month){ return (state.budgets[month]&&state.budgets[month][catId])||0; }
@@ -1703,6 +1794,7 @@ document.getElementById('copyBtn').addEventListener('click',()=>{
 
 /* ---------- category hierarchy (one level of subcategories) ---------- */
 let collapsedCats=new Set();
+let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
 /* top-level categories that map to the same essential (leftover duplicates) */
 function duplicateGroups(){
   const groups={};
@@ -1759,16 +1851,17 @@ function renderBudget(){
         </div>` : '';
       const subsHTML = (isGroup && !collapsed) ? kids.map(k=>{
         const ka=assignedFor(k.id,M), ks=spentFor(k.id,M);
-        return `<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span><button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        return `<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span><button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
       }).join('') : '';
-      const addSub = (isGroup && !collapsed)
-        ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋</button></div>`
+      const showAddRow = (isGroup || splitting.has(c.id)) && !collapsed;
+      const addSub = showAddRow
+        ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋ Add</button></div>`
         : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
       return `<div class="cat ${over?'overspent':''}">
         <div class="cat-top">
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
           <span class="cat-name">${escapeHtml(c.name)}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>
-          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" value="${a||0}" data-cat="${c.id}"></span>
+          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" enterkeyhint="next" value="${a||0}" data-cat="${c.id}"></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
@@ -1780,9 +1873,23 @@ function renderBudget(){
       </div>`;
     }).join('');
   }
+  let budgetAdvancing=false;
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
     inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=parseFloat(inp.value)||0; save(); refreshBudgetSummary(); });
-    inp.addEventListener('change',renderBudget);
+    inp.addEventListener('change',()=>{ if(budgetAdvancing) return; renderBudget(); });
+    inp.addEventListener('keydown',e=>{
+      if(e.key!=='Enter') return;
+      e.preventDefault();
+      // commit + refresh math, then flow to the next field so budgeting moves start-to-finish
+      budgetAdvancing=true;
+      const ids=[...box.querySelectorAll('input[data-cat]')].map(x=>x.dataset.cat);
+      const nextId=ids[ids.indexOf(inp.dataset.cat)+1];
+      renderBudget();
+      const next=nextId?box.querySelector('input[data-cat="'+nextId+'"]'):null;
+      if(next){ next.focus(); if(next.select) next.select(); }
+      else { const add=document.getElementById('catName'); if(add) add.focus(); }   // past the last: on to adding a category
+      budgetAdvancing=false;
+    });
   });
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
@@ -1794,9 +1901,20 @@ function renderBudget(){
   }));
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
   box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); renderBudget(); }));
-  box.querySelectorAll('button[data-addsubfirst]').forEach(btn=>btn.addEventListener('click',()=>{ const name=(prompt('First subcategory name (e.g. Electric):')||'').trim(); if(name){ state.categories.push({id:uid(),name,parentId:btn.dataset.addsubfirst}); save(); renderBudget(); renderTxForm(); } }));
-  box.querySelectorAll('button[data-addsub]').forEach(btn=>btn.addEventListener('click',()=>{ const inp=box.querySelector(`input[data-addsub-input="${btn.dataset.addsub}"]`); const name=(inp&&inp.value||'').trim(); if(name){ state.categories.push({id:uid(),name,parentId:btn.dataset.addsub}); save(); renderBudget(); renderTxForm(); } }));
-  box.querySelectorAll('input[data-addsub-input]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const name=inp.value.trim(); if(name){ state.categories.push({id:uid(),name,parentId:inp.dataset.addsubInput}); save(); renderBudget(); renderTxForm(); } } }));
+  // "Split into subcategories" reveals an inline input (no jarring browser prompt) and focuses it
+  box.querySelectorAll('button[data-addsubfirst]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.addsubfirst; splitting.add(id); renderBudget();
+    const inp=box.querySelector('input[data-addsub-input="'+id+'"]'); if(inp) inp.focus();
+  }));
+  const addSubcat=(parentId,name)=>{
+    name=(name||'').trim(); if(!name) return;
+    state.categories.push({id:uid(),name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
+    const inp=box.querySelector('input[data-addsub-input="'+parentId+'"]'); if(inp) inp.focus();   // ready for the next sub
+  };
+  box.querySelectorAll('button[data-addsub]').forEach(btn=>btn.addEventListener('click',()=>{
+    const inp=box.querySelector('input[data-addsub-input="'+btn.dataset.addsub+'"]'); addSubcat(btn.dataset.addsub, inp&&inp.value);
+  }));
+  box.querySelectorAll('input[data-addsub-input]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addSubcat(inp.dataset.addsubInput, inp.value); } }));
 }
 /* essential = one of the Cover First walls */
 function isEssentialCat(name){ const n=(name||'').toLowerCase(); return (typeof WALLS!=='undefined'?WALLS:[]).some(w=>w.match.some(t=>n.includes(t))); }
@@ -1860,7 +1978,9 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const srcType=document.getElementById('txSrcType').value;
     const hours=parseFloat(document.getElementById('txHours').value)||0;
     const prevIndie=indieTotal();
-    const tx={id:uid(),type:'income',amount:amt,source,date,note,srcType}; if(hours>0) tx.hours=hours; state.transactions.push(tx);
+    const tx={id:uid(),type:'income',amount:amt,source,date,note,srcType}; if(hours>0) tx.hours=hours;
+    if(state.householdOn){ const o=document.getElementById('txOwner'); if(o) tx.owner=o.value; }
+    state.transactions.push(tx);
     if(isIndependent(srcType)){ const nowIndie=prevIndie+amt; indieCrossed=INDIE_MILES.find(m=>prevIndie<m&&nowIndie>=m)||null; }
   }
   txEnergy=''; document.querySelectorAll('#energySel button').forEach(x=>x.classList.remove('on'));
@@ -2321,6 +2441,16 @@ function renderBackupNote(){
   const eb=document.getElementById('encBackupBtn'); if(eb) eb.addEventListener('click',encryptBackup);
   const er=document.getElementById('encRestoreBtn'), erf=document.getElementById('encRestoreFile');
   if(er&&erf){ er.addEventListener('click',()=>erf.click()); erf.addEventListener('change',e=>{ if(e.target.files&&e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value=''; }); }
+})();
+
+/* ---------- Household mode controls ---------- */
+(function(){
+  const cb=document.getElementById('hhOn');
+  if(cb) cb.addEventListener('change',()=>{ state.householdOn=cb.checked; save(); applyHousehold(); renderTx(); });
+  const na=document.getElementById('hhNameA'), nb=document.getElementById('hhNameB'), wb=document.getElementById('hhWageB');
+  if(na) na.addEventListener('input',()=>{ state.nameA=na.value.trim()||'You'; save(); renderHouseholdLabels(); renderHousehold(); });
+  if(nb) nb.addEventListener('input',()=>{ state.nameB=nb.value.trim()||'Partner'; save(); renderHouseholdLabels(); renderHousehold(); });
+  if(wb) wb.addEventListener('input',()=>{ state.wageB=parseFloat(wb.value)||0; save(); renderHousehold(); });
 })();
 
 /* ---------- Funnel: Weekly Gut-Check newsletter + education/support offers ---------- */
@@ -2840,6 +2970,7 @@ function renderCheckResult(){
 
   const metrics=[];
   if(H>0) metrics.push([state.hourlyWage>0?'Hours of your life':'Hours of life (est.)', fmtHours(amt/H)]);
+  if(state.householdOn && state.wageB>0) metrics.push(["Hours of "+(state.nameB||'Partner')+"'s life", fmtHours(amt/state.wageB)]);
   if(g){
     const remaining=Math.max(0.01,g.target-g.saved);
     metrics.push(['Of “'+g.name+'”', Math.round(Math.min(999,amt/remaining*100))+'%']);
@@ -2982,6 +3113,7 @@ document.getElementById('recType').addEventListener('change',()=>{
   const inc=document.getElementById('recType').value==='income';
   document.getElementById('recCatWrap').classList.toggle('hide',inc);
   document.getElementById('recSrcWrap').classList.toggle('hide',!inc);
+  document.getElementById('recOwnerWrap').classList.toggle('hide',!inc);
 });
 document.getElementById('addRec').addEventListener('click',()=>{
   const type=document.getElementById('recType').value;
@@ -2990,7 +3122,7 @@ document.getElementById('addRec').addEventListener('click',()=>{
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
   const item={id:uid(),type,amount:amt,day};
   if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ alert('Add a category first on the Budget tab.'); return; } item.catId=catId; }
-  else item.source=document.getElementById('recSrc').value.trim()||'Income';
+  else { item.source=document.getElementById('recSrc').value.trim()||'Income'; if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; } }
   state.recurring.push(item);
   document.getElementById('recAmt').value=''; document.getElementById('recSrc').value='';
   save(); renderRecurring();
@@ -3017,7 +3149,7 @@ function postRecurring(month){
   state.recurring.forEach(r=>{
     if(state.transactions.some(t=>t.recId===r.id&&monthOf(t.date)===month)) return;
     const date=`${month}-${String(r.day).padStart(2,'0')}`;
-    if(r.type==='income') state.transactions.push({id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id});
+    if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
     else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
     added++;
   });
@@ -3197,6 +3329,7 @@ function boot(){
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
+  applyHousehold();
   initPWA();
   if(history.replaceState) history.replaceState({t:'tab',name:'home'},'');
   activateTab('home',true);
@@ -3227,6 +3360,7 @@ function renderHome(){
   renderOffenseDefense();
   renderNextSteps();
   renderWalls();
+  renderHousehold();
   if(typeof applyStage==='function') applyStage();
 }
 /* 2A: Offense vs Defense balance */
