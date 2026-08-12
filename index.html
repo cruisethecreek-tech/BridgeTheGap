@@ -1719,7 +1719,7 @@ function boot(){
   initPWA();
   activateTab('home');
   if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
-  else if(!state.onboarded && !state.transactions.length && !state.categories.length && !state.goals.length && !state.liabilities.length && !state.assets.length) setTimeout(openIntake,350);
+  else if(!state.onboarded) setTimeout(openIntake,350);
 }
 const HOME_COPY={
   genz:{ eye:"Zero-based budgeting · no cap", title:"Tell every dollar to lock in.", sub:"Budget to zero, gut-check every purchase, and watch the bag grow — no filter, no cap.", cta:"Secure the bag →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun — that's the non-negotiable four." },
