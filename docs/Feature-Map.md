@@ -54,11 +54,23 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Anti-shame** - overspend shows a calm **Rebalance Banner** (never red errors); the **Blindspot Shield** rewards logging. Copy never says failed/bad/violated/ruined.
 
-**PWA** - installable, offline-capable: `manifest.webmanifest`, `sw.js` (network-first page, cache-first assets), `icon*.png` / `icon.svg`. `initPWA`.
+**Progressive interface** - the app unrolls depth as the user's Freedom Runway grows, so a user in survival mode is not buried in investment tools:
+- **Stage 1 Defense** (<3 mo runway): Cover First + Shield only. Build tab and the offense/mindset tools are hidden.
+- **Stage 2 Expansion** (3-12 mo): Build tab, Net Worth, Offense vs. Defense, Skills, and the Enough anchor unroll.
+- **Stage 3 Sovereignty** (12 mo+): the Sovereignty Audit and Network Capital open.
+- **One-way ratchet**: tools never disappear once earned (`stageReached`); crossing a threshold fires a **milestone celebration** (`celebrateStage`). Panels/tabs are gated by a `data-stage` attribute; `.stage-locked` hides anything above the active stage.
+- **Override**: Settings > Interface depth toggles `uiMode` between `auto` (guided) and `all` (show everything). Existing users are migrated so they never lose a tool they already used (`evidenceStage`).
+- **Retrospective** (`renderRetro`): a Day-1 snapshot (`day1`) vs. now once there's a week of history. Engine: `runwayStage`, `activeStage`, `applyStage`, `STAGE_META`.
+
+**PWA** - installable, offline-capable: `manifest.webmanifest` (with a "Scan a trap" long-press shortcut), `sw.js` (network-first page, cache-first assets), `icon*.png` / `icon.svg`. `initPWA`.
+
+**CSV import** (Track tab) - drag/drop a bank statement; on-device parse with column auto-detection and category auto-guess, review-before-commit. `parseCSV`, `detectCols`, `extractRows`, `guessCat`, `commitImport`.
+
+**Encrypted backup** (Settings) - WebCrypto AES-GCM + PBKDF2 to a portable `.acct` file; restore replaces local state. `encryptBackup`, `restoreBackup`, `renderBackupNote`.
 
 ---
 
-## Data model (`state`, 18 keys)
+## Data model (`state`)
 
 ```
 intensity, register, freedomMode          // voice + display mode
@@ -73,6 +85,9 @@ liabilities: [{id, name, value}]
 impulse: [{id, type, name, amount, date, trap?, hours?, goalId?, txId?}]  // skip|buy
 vault: [{id, name, amount, trap, unlocksAt}]
 hourlyWage, trueRate                      // wage engine
+network, skills, giving, givingPct, enough // mindset & build layer
+uiMode, stageReached, day1                 // progressive interface (auto|all, ratchet, snapshot)
+lastBackup                                 // encrypted-backup timestamp
 lesson, onboarded, intake                 // misc
 ```
 
