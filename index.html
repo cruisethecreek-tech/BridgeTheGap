@@ -1152,30 +1152,33 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
 /* ============================================================
    IMPULSE ACCOUNTABILITY + ASSETS/LIABILITIES
    ============================================================ */
-const IMP_QUESTIONS=[
-  "Will you even remember this in 30 days?",
-  "Is this the thing — or just a feeling wearing a price tag?",
-  "Would you buy it twice? If not, maybe not once.",
-  "Does this get you closer to the dream, or just through the afternoon?",
-  "If you had to hand over the cash right now, would you still want it?",
-  "Is this a decision, or is this a mood?"
-];
+const IMP_QUESTIONS={
+  genz:["Will you even remember this in 30 days, or is it just a vibe?","Is this the thing, or just a mood with a price tag?","Would you rebuy it full price tomorrow? If not, that's your answer.","Does this get you closer to the bag, or just through the afternoon?","Real talk: need it, or just bored?"],
+  middle:["Will you even remember this in 30 days?","Is this the thing — or just a feeling wearing a price tag?","Would you buy it again next month at full price?","Does this get you closer to the dream, or just through the day?","If you had to hand over the cash right now, would you still want it?"],
+  mature:["Will this still matter to you a month from now?","Is this a want, or a habit dressed up as a need?","Would you spend it again, knowing what you know?","Does this move you toward the life you're building, or just fill an afternoon?","If you paid in cash, in hand, would it still feel worth it?"]
+};
 const IMP_WANT={
-  clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],
-  blunt:["Be honest — you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],
-  savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]
+  genz:{clean:["This one's a want, bestie. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real — you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the bag."],savage:["You're about to trade the dream for a dopamine hit. Delulu.","Future you is begging you to close the tab. Listen."]},
+  middle:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be honest — you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]},
+  mature:{clean:["This is a want — give it a night before you decide.","A nice-to-have, not a need. Your call to make."],blunt:["Be honest — this wasn't on your mind an hour ago.","This is comfort spending, and comfort has never built security."],savage:["You're trading a piece of your future for a passing mood.","The person you'll be next year is asking you not to."]}
 };
 const IMP_ASSET={
-  clean:["Now this can actually work for you.","An asset — spend it with intention."],
-  blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],
-  savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit."]
+  genz:{clean:["Okay, this could actually work for you.","An asset — spend it with intention."],blunt:["If it truly holds value, cool. Prove it does.","'Asset' isn't a word you get to use just 'cause you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a fit.","Manifesting 'investment' doesn't make it one."]},
+  middle:{clean:["Now this can actually work for you.","An asset — spend it with intention."],blunt:["If it truly holds value, it's not the enemy. Prove it does.","'Asset' isn't a word you get to use just because you want it."],savage:["Call it an asset only if you'd resell it and win. Otherwise it's a want in a suit.","Wanting it to be an investment doesn't make it one."]},
+  mature:{clean:["Now that can genuinely work for you.","An asset — spend it with intention."],blunt:["If it truly holds its value, it's no enemy. Make sure it does.","'Asset' is earned, not assumed. Does it pay you back?"],savage:["It's an asset only if you'd sell it and come out ahead. Be sure.","Calling it an investment doesn't make it one."]}
 };
 const IMP_NEED={
-  clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],
-  blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it belongs in the budget, not on impulse."],
-  savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?"]
+  genz:{clean:["A real need. Handle it and keep moving.","Necessary — log it and go."],blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it goes in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, sure. You don't need the upgraded everything."]},
+  middle:{clean:["A real need. Cover it and move on.","Necessary. Track it and keep going."],blunt:["True need? No guilt. But needs multiply — watch it.","If it's a need, it belongs in the budget, not on impulse."],savage:["Needs are real. 'Deluxe' versions of needs are wants. Which is this?","Necessary, maybe. The premium version, not so much."]},
+  mature:{clean:["A genuine need. Cover it and carry on.","Necessary — note it and move forward."],blunt:["A true need carries no guilt. But needs have a way of multiplying.","If it's a need, it belongs in the plan, not on impulse."],savage:["Needs are real. The deluxe version of a need is a want. Which is this?","The necessity is real. The upgrade is optional."]}
 };
-const SKIP_WINS=["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."];
+const SKIP_WINS={
+  genz:["That's money that stayed on your team. 💪","You just paid future you instead. Big W.","Skip logged. The bag got closer.","That's how you lock in. Momentum."],
+  middle:["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."],
+  mature:["That's money that stayed where it belongs — with you. 💪","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
+};
+function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[state.intensity]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
+function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.floor(Math.random()*a.length)]; }
 
 function sumAssets(){ return state.assets.reduce((s,a)=>s+(a.value||0),0); }
 function sumAssetsKind(k){ return state.assets.filter(a=>(a.kind||'real')===k).reduce((s,a)=>s+(a.value||0),0); }
@@ -1389,9 +1392,8 @@ function renderCheckResult(){
   if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
   metrics.push(['Skips to fund a $500 goal', Math.max(1,Math.round(500/amt))+'×']);
 
-  const pool=(kind==='want'?IMP_WANT:kind==='asset'?IMP_ASSET:IMP_NEED)[state.intensity]||IMP_WANT.blunt;
-  const line=pool[Math.floor(Math.random()*pool.length)];
-  const q=IMP_QUESTIONS[Math.floor(Math.random()*IMP_QUESTIONS.length)];
+  const line=pickVoice(kind==='want'?IMP_WANT:kind==='asset'?IMP_ASSET:IMP_NEED);
+  const q=pickReg(IMP_QUESTIONS);
   const vlabel=kind==='want'?'Further from your dreams':kind==='asset'?'Could move you forward':'Necessary — track it';
   const open=state.goals.filter(x=>x.saved<x.target);
   const goalSelect=open.length?`<select id="impGoal"><option value="">Bank the savings</option>${open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('')}</select>`:'';
@@ -1419,7 +1421,7 @@ function renderCheckResult(){
     state.impulse.push(ev); const amt2=ev.amount;
     pendingCheck=null; document.getElementById('impName').value=''; document.getElementById('impAmt').value='';
     save(); renderImpulse(); renderNetWorth(); renderGoals();
-    const win=SKIP_WINS[Math.floor(Math.random()*SKIP_WINS.length)];
+    const win=pickReg(SKIP_WINS);
     document.getElementById('impResult').innerHTML=`<div class="checkcard asset"><div class="verdict asset">Skipped. ${escapeHtml(win)}</div><p class="sub" style="margin:8px 0 0">${goalId?'Sent '+money(amt2)+' straight to your dream.':money(amt2)+' saved and banked to your discipline score.'}</p></div>`;
   });
   document.getElementById('impBuy').addEventListener('click',()=>{
