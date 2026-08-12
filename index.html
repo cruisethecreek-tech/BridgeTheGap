@@ -548,6 +548,7 @@
           <button class="btn primary" id="addCat">Add category</button>
           <button class="btn ghost" id="starterBtn">Starter set</button>
           <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
+          <button class="btn ghost" id="mergeBtn" title="Merge duplicate essentials into one">Tidy duplicates</button>
         </div>
         <div id="cats"></div>
       </div>
@@ -1027,10 +1028,19 @@ document.getElementById('addCat').addEventListener('click',()=>{
 });
 document.getElementById('catName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
 document.getElementById('starterBtn').addEventListener('click',()=>{
-  ['Rent / Housing','Utilities','Groceries','Transportation','Phone / Internet','Debt Payments','Emergency Fund','Fun Money','Dream Fund'].forEach(n=>{
-    if(!state.categories.some(c=>c.name.toLowerCase()===n.toLowerCase())) state.categories.push({id:uid(),name:n});
+  // Cover First names first so we never duplicate the essentials
+  ['Roof','Food','Power & Wi-Fi','Getting Around','Debt Payments','Emergency Fund','Fun Money','Dream Fund'].forEach(n=>{
+    const w=WALLS.find(x=>x.cat===n);
+    const exists = w ? state.categories.some(c=>w.match.some(t=>c.name.toLowerCase().includes(t)))
+                     : state.categories.some(c=>c.name.toLowerCase()===n.toLowerCase());
+    if(!exists) state.categories.push({id:uid(),name:n});
   });
   save(); renderBudget(); renderTxForm();
+});
+document.getElementById('mergeBtn').addEventListener('click',()=>{
+  const n=mergeDuplicates();
+  if(n){ renderBudget(); renderTx(); renderNetWorth(); alert('Tidied up — merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into your essentials. Assignments and transactions were kept and combined.'); }
+  else alert('No duplicates found — your categories are already clean.');
 });
 document.getElementById('copyBtn').addEventListener('click',()=>{
   const prev=shiftMonth(state.activeMonth,-1), src=state.budgets[prev];
@@ -2073,7 +2083,7 @@ function commitIntake(){
   if(a.income>0){ const rec={id:uid(),type:'income',amount:a.income,day:1,source:'Paycheck'}; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount:a.income,source:'Paycheck',date:`${M}-01`,note:'Intake',recId:rec.id}); }
   if(a.wage>0) state.hourlyWage=a.wage;
   [['roof','Roof'],['food','Food'],['util','Power & Wi-Fi'],['transport','Getting Around']].forEach(([k,name])=>{
-    if(a[k]>0){ let c=state.categories.find(x=>x.name.toLowerCase()===name.toLowerCase()); if(!c){ c={id:uid(),name}; state.categories.push(c); } budgetFor(M)[c.id]=a[k]; }
+    if(a[k]>0){ const c=findOrCreateEssential(name); budgetFor(M)[c.id]=a[k]; }
   });
   if(a.hasDebt==='yes' && a.debtAmt>0) state.liabilities.push({id:uid(),name:'Debt',value:a.debtAmt});
   if(a.dream) state.goals.push({id:uid(),name:a.dream,target:a.dreamAmt>0?a.dreamAmt:1000,saved:0,date:''});
@@ -2133,6 +2143,38 @@ const WALLS=[
   {icon:'🏠', name:'Roof', sub:'Rent or mortgage', cat:'Roof', match:['rent','mortgage','housing','shelter','home','roof']},
   {icon:'🚗', name:'Getting Around', sub:'Gas, transit, ride', cat:'Getting Around', match:['transport','car','fuel','bus','transit','uber','lyft','gas','commute','wheels','around']}
 ];
+/* which essential wall (if any) a category name belongs to */
+function categoryWall(name){ const n=(name||'').toLowerCase(); return WALLS.find(w=>w.match.some(t=>n.includes(t)))||null; }
+/* reuse an existing category that already covers this essential, else create the canonical one */
+function findOrCreateEssential(canonical){
+  const w=WALLS.find(x=>x.cat===canonical);
+  let c = w ? state.categories.find(x=>w.match.some(t=>x.name.toLowerCase().includes(t)))
+            : state.categories.find(x=>x.name.toLowerCase()===canonical.toLowerCase());
+  if(!c){ c={id:uid(),name:canonical}; state.categories.push(c); }
+  return c;
+}
+/* how much "data" a category carries — used to pick the survivor when merging */
+function catScore(c){ let s=0; Object.values(state.budgets).forEach(b=>{ if(b&&b[c.id]) s+=b[c.id]; }); s+=state.transactions.filter(t=>t.catId===c.id).length*10000; return s; }
+/* merge categories that map to the same essential (or share a name) into one */
+function mergeDuplicates(){
+  const groups={};
+  state.categories.forEach(c=>{ const w=categoryWall(c.name); const key=w?'wall:'+w.cat:'name:'+c.name.trim().toLowerCase(); (groups[key]=groups[key]||[]).push(c); });
+  const remove=new Set(); let merged=0;
+  Object.entries(groups).forEach(([key,cats])=>{
+    if(cats.length<2) return;
+    let survivor;
+    if(key.startsWith('wall:')){ const canon=key.slice(5); survivor=cats.find(c=>c.name.toLowerCase()===canon.toLowerCase())||cats.slice().sort((a,b)=>catScore(b)-catScore(a))[0]; survivor.name=canon; }
+    else survivor=cats.slice().sort((a,b)=>catScore(b)-catScore(a))[0];
+    cats.forEach(c=>{ if(c.id===survivor.id) return;
+      Object.keys(state.budgets).forEach(m=>{ const b=state.budgets[m]; if(b&&b[c.id]!=null){ b[survivor.id]=(b[survivor.id]||0)+b[c.id]; delete b[c.id]; } });
+      state.transactions.forEach(t=>{ if(t.catId===c.id) t.catId=survivor.id; });
+      (state.recurring||[]).forEach(r=>{ if(r.catId===c.id) r.catId=survivor.id; });
+      remove.add(c.id); merged++;
+    });
+  });
+  if(merged){ state.categories=state.categories.filter(c=>!remove.has(c.id)); save(); }
+  return merged;
+}
 function renderWalls(){
   const M=state.activeMonth, grid=document.getElementById('wallsGrid'); if(!grid) return;
   let covered=0, anyMissing=false;
