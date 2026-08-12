@@ -1039,28 +1039,28 @@ const QUOTES = {
   },
   genz:{
     clean:[
-      "Your dream needs funding, bestie. The budget is how you secure the bag.",
-      "Money with no plan? That's how it ghosts you. Give every dollar a job.",
-      "Small wins still count. Start where you're at, no cap.",
+      "Your dream needs funding. A budget is how you actually get there.",
+      "Money with no plan disappears on you. Give every dollar a job.",
+      "Small wins still count. Start exactly where you are.",
       "You don't need more money yet - you need a plan for what you've got.",
-      "In control today > rich someday. Period.",
+      "In control today beats rich someday. Every time.",
       "Discipline is just remembering what you actually want. Lock in."
     ],
     blunt:[
-      "Nobody's coming to fix your money. Lowkey that's the good news.",
-      "That subscription you forgot about is funding someone else's glow-up, not yours.",
+      "Nobody's coming to fix your money. That's actually the good news.",
+      "That subscription you forgot about is funding someone else's dream, not yours.",
       "You're not bad with money. You just never told it where to go.",
       "The gap between you and the goal is a budget you keep leaving on read.",
-      "You checked your phone 80 times today. Check your budget once, bestie.",
+      "You checked your phone 80 times today. Check your budget once.",
       "'Treating yourself' into debt isn't self-care. It's a trap."
     ],
     savage:[
-      "You're not broke, you're delulu about that cart. Close it.",
-      "Future you is watching you check out and they are NOT clapping.",
-      "That impulse buy? It's giving 'still broke next month.'",
-      "You want the bag but you're negotiating with the work. You're cooked.",
-      "Nobody remembers what you almost built. Fund the real one. On god.",
-      "The vibe check is your bank account, and right now it's failing."
+      "That cart isn't a need - it's a marketing algorithm doing its job. Close it.",
+      "Future you is watching you check out, and they are not clapping.",
+      "That impulse buy is a loan from next-month you. They can't afford it.",
+      "You want the outcome but keep negotiating with the work. Stop negotiating.",
+      "Nobody remembers what you almost built. Fund the real one.",
+      "Your bank account is the only status update that pays rent. Check it."
     ]
   },
   mature:{
@@ -1128,7 +1128,7 @@ function offenseDefense(M){
 }
 /* Anti-scarcity copy (register x intensity) */
 const SCARCITY_COPY={
-  genz:{clean:["Cutting stops at zero, bestie. Earning has no ceiling - what can you sell this week?","Coupon energy is capped. Income isn't. Go make a hundred bucks."],blunt:["You can't frugality your way to the bag. Solve someone's problem for $100.","Pinching pennies is a treadmill. Start a second stream."],savage:["Clipping coupons won't free you. Go create money on demand.","You're optimizing crumbs. Go bake a bigger loaf."]},
+  genz:{clean:["Cutting stops at zero. Earning has no ceiling - what can you sell this week?","Coupons are capped. Income isn't. Go make a hundred bucks."],blunt:["You can't frugality your way to freedom. Solve someone's problem for $100.","Pinching pennies is a treadmill. Start a second stream."],savage:["Clipping coupons won't free you. Go create money on demand.","You're optimizing crumbs. Go bake a bigger loaf."]},
   middle:{clean:["Cutting expenses has a floor of $0. Income has no ceiling. Aim some energy at earning.","You've trimmed a lot. The bigger lever now is making more."],blunt:["You can't frugality your way to freedom. What problem can you solve for someone this week for $100?","Squeezing pennies is a ceiling. Build a second stream or stay stuck."],savage:["Frugality alone is a slow trap. Go create value and get paid for it.","The floor is nearly zero. Stop scraping it and raise the roof."]},
   mature:{clean:["Thrift matters, but it bottoms out at zero. Earning is where the real room is.","You've mastered the cutting. Income is the half with no limit."],blunt:["You've optimized the cutting. Now build income - that's the uncapped side.","Frugality is defense. You need offense to actually get ahead."],savage:["Penny-pinching alone is a slow ceiling. Create something people pay for.","The savings well is nearly dry. Go dig an income well."]}
 };
@@ -1358,7 +1358,7 @@ function renderBudget(){
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
       const split = isGroup ? a - kids.reduce((s,k)=>s+assignedFor(k.id,M),0) : 0;
       const rebalance = over ? `<div class="rebalance">
-          <div class="rb-msg">${escapeHtml(pickVoice(REBALANCE_COPY))}</div>
+          <div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
           <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">⚡ Auto-Rebalance</button></div>
         </div>` : '';
       const subsHTML = (isGroup && !collapsed) ? kids.map(k=>{
@@ -1697,12 +1697,12 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
    IMPULSE ACCOUNTABILITY + ASSETS/LIABILITIES
    ============================================================ */
 const IMP_QUESTIONS={
-  genz:["Will you even remember this in 30 days, or is it just a vibe?","Is this the thing, or just a mood with a price tag?","Would you rebuy it full price tomorrow? If not, that's your answer.","Does this get you closer to the bag, or just through the afternoon?","Real talk: need it, or just bored?"],
+  genz:["Will you even remember this in 30 days, or is it just a mood?","Is this the thing, or just a feeling with a price tag?","Would you rebuy it full price tomorrow? If not, that's your answer.","Does this get you closer to the dream, or just through the afternoon?","Real talk: need it, or just bored?"],
   middle:["Will you even remember this in 30 days?","Is this the thing - or just a feeling wearing a price tag?","Would you buy it again next month at full price?","Does this get you closer to the dream, or just through the day?","If you had to hand over the cash right now, would you still want it?"],
   mature:["Will this still matter to you a month from now?","Is this a want, or a habit dressed up as a need?","Would you spend it again, knowing what you know?","Does this move you toward the life you're building, or just fill an afternoon?","If you paid in cash, in hand, would it still feel worth it?"]
 };
 const IMP_WANT={
-  genz:{clean:["This one's a want, bestie. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real - you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the bag."],savage:["You're about to trade the dream for a dopamine hit. Delulu.","Future you is begging you to close the tab. Listen."]},
+  genz:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real - you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the dream."],savage:["You're about to trade the dream for a 10-minute dopamine hit.","Future you is begging you to close the tab. Listen."]},
   middle:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be honest - you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]},
   mature:{clean:["This is a want - give it a night before you decide.","A nice-to-have, not a need. Your call to make."],blunt:["Be honest - this wasn't on your mind an hour ago.","This is comfort spending, and comfort has never built security."],savage:["You're trading a piece of your future for a passing mood.","The person you'll be next year is asking you not to."]}
 };
@@ -1724,6 +1724,16 @@ const SKIP_WINS={
 function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[state.intensity]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
 function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.floor(Math.random()*a.length)]; }
 
+/* Tone safety lock: sensitive spending (rent, medical, utilities, groceries, emergencies)
+   never gets the Blunt/Savage treatment. Roasting someone over a hospital bill or their
+   rent is how you lose their trust and get deleted. These contexts force Clean. */
+const SENSITIVE_RX=/\b(rent|mortgage|housing|landlord|medical|health|doctor|dentist|hospital|clinic|pharmac|prescription|meds|therap|counsel|insurance|copay|utilit|electric|power|heat|heating|water|sewer|internet|wi-?fi|grocer|groceries|childcare|daycare|tuition|funeral|emergency|urgent care)\b/i;
+function isSensitive(text){ if(!text) return false; const s=String(text); return SENSITIVE_RX.test(s) || (typeof isEssentialCat==='function' && isEssentialCat(s)); }
+function effInt(ctx){ return isSensitive(ctx) ? 'clean' : state.intensity; }
+/* Context-aware pickers: pass the category or purchase name so sensitive spend stays gentle. */
+function pickVoiceCtx(obj,ctx){ const r=obj[state.register]||obj.middle; const a=r[effInt(ctx)]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
+function pickTrapVoiceCtx(trap,ctx){ const t=TRAP_RESPONSES[trap]||TRAP_RESPONSES.scroll; const r=t[state.register]||t.middle; return r[effInt(ctx)]||r.blunt; }
+
 /* ============================================================
    PILLAR 4: anti-shame copy - slips are data points, never failures
    ============================================================ */
@@ -1733,7 +1743,7 @@ const REBALANCE_COPY={
   mature:{clean:["Slightly over here - a simple adjustment to make.","This category ran a bit hot. Easily corrected."],blunt:["This one exceeded the plan. It's data - let's rebalance it.","Over here. Nothing lost; just reallocate and continue."],savage:["Over the mark. No lecture - reallocate and stay the course.","You overshot. It's a number to fix, not a mistake to carry."]}
 };
 const BLINDSPOT_COPY={
-  genz:{clean:["Logged. Zero blindspots = full control.","On the record. That's how you stay winning."],blunt:["Logged it. No hiding = no surprises. Respect.","On the record. Blindspots are the real enemy - you dodged one."],savage:["Logged. You didn't flinch. That's the whole game.","On the record, no hiding. That's real control, bestie."]},
+  genz:{clean:["Logged. Zero blindspots = full control.","On the record. That's how you stay winning."],blunt:["Logged it. No hiding = no surprises. Respect.","On the record. Blindspots are the real enemy - you dodged one."],savage:["Logged. You didn't flinch. That's the whole game.","On the record, no hiding. That's real control."]},
   middle:{clean:["Logged on the record. Zero blindspots = full control.","Tracked it. Honesty is the whole advantage."],blunt:["Logged it - no hiding. That's how you keep the wheel.","On the record. Every logged dollar is one that can't ambush you."],savage:["Logged, no flinch. Blindspots are what sink people. Not you.","On the record. That's the discipline nobody sees but everybody needs."]},
   mature:{clean:["Logged on the record. Clear books, clear control.","Tracked it. Nothing hidden, nothing to fear."],blunt:["Logged - nothing tucked away. That's real stewardship.","On the record. A clear ledger is a calm mind."],savage:["Logged, in full view. Honest books are unshakable ones.","On the record. What you face, you can master."]}
 };
@@ -1762,7 +1772,7 @@ const TRAPS=[
 ];
 const TRAP_RESPONSES={
   scroll:{
-    genz:{clean:"That ad found you on purpose - the algorithm clocked your weak spot.",blunt:"Meta ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log off, bestie."},
+    genz:{clean:"That ad found you on purpose - the algorithm clocked your weak spot.",blunt:"A company ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log off."},
     middle:{clean:"That ad was engineered to catch you at a weak moment.",blunt:"A company paid real money to put that in front of you. It's working.",savage:"You're the product being sold to. Don't fund your own trap."},
     mature:{clean:"That ad was placed to catch you off guard - by design.",blunt:"Marketers studied people like you to trigger this exact urge.",savage:"This isn't your idea. It's theirs - and right now they're winning."}
   },
@@ -1772,7 +1782,7 @@ const TRAP_RESPONSES={
     mature:{clean:"Convenience carries a quiet premium. This is it.",blunt:"You're paying handsomely to avoid a small effort.",savage:"That markup is pure waste dressed up as ease."}
   },
   status:{
-    genz:{clean:"Your current one still slaps. This is for the 'gram.",blunt:"Nobody's checking for that upgrade but you. Save the bag.",savage:"You're buying clout for strangers who won't remember. Nah."},
+    genz:{clean:"The one you have still works. This is for the feed.",blunt:"Nobody's checking for that upgrade but you. Save the money.",savage:"You're buying status for strangers who won't remember. Don't."},
     middle:{clean:"What you have works fine. This is about image.",blunt:"You're buying status for people who aren't paying your bills.",savage:"Don't torch real money on a signal nobody asked for."},
     mature:{clean:"Your current one serves you well. This is vanity.",blunt:"You'd be buying an impression, not an improvement.",savage:"Status bought for strangers is money set on fire."}
   },
@@ -1993,12 +2003,12 @@ const CHALLENGE_STING={
     mature:{clean:"By the honest measure, that's a liability - not an asset.",blunt:"That's a liability dressed as an asset. Name it honestly.",savage:"You bought it for the feeling, not the future. Be honest about that."}
   },
   house:{
-    genz:{clean:"Till it pays you, it's a roof - not a wealth glow-up.",blunt:"That house isn't making you rich, it's making you comfy and calling it a flex.",savage:"Equity you can't touch isn't freedom. Stop counting the cage as a W."},
+    genz:{clean:"Till it pays you, it's a roof - not a wealth engine.",blunt:"That house isn't making you rich, it's making you comfortable and calling it a flex.",savage:"Equity you can't touch isn't freedom. Stop counting the cage as a win."},
     middle:{clean:"Until it pays you, it's a roof - not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
     mature:{clean:"Until it pays you, it's shelter - not a wealth engine.",blunt:"The home you live in keeps you comfortable; it isn't making you wealthy.",savage:"Equity you can't spend isn't security. Don't mistake the house for the freedom."}
   },
   gen:{
-    genz:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't gas it up.",savage:"Stuff doesn't love you back, bestie. And it for sure doesn't pay you."},
+    genz:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't hype it up.",savage:"Stuff doesn't love you back. And it for sure doesn't pay you."},
     middle:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."},
     mature:{clean:"Keep it if it brings you joy - just don't call it an asset.",blunt:"Owning a thing isn't investing. They aren't the same.",savage:"Possessions don't pay you back. Only real assets do."}
   }
@@ -2178,7 +2188,7 @@ function renderCheckResult(){
   if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
   metrics.push(['Traps to fund $500', Math.max(1,Math.round(500/amt))+'×']);
 
-  const tline=pickTrapVoice(trap);
+  const tline=pickTrapVoiceCtx(trap,name);
   const hook=H>0?` That's <b>${fmtHours(amt/H)}</b> of your life.`:'';
   const q=pickReg(IMP_QUESTIONS);
   const open=state.goals.filter(x=>x.saved<x.target);
@@ -2527,7 +2537,7 @@ function boot(){
   else if(!state.onboarded) setTimeout(openIntake,350);
 }
 const HOME_COPY={
-  genz:{ eye:"Zero-based budgeting · no cap", title:"Tell every dollar to lock in.", sub:"Budget to zero, gut-check every purchase, and watch the bag grow - no filter, no cap.", cta:"Secure the bag →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun - that's the non-negotiable four." },
+  genz:{ eye:"Zero-based budgeting · no filter", title:"Tell every dollar to lock in.", sub:"Budget to zero, gut-check every purchase, and watch your money grow - no filter, straight talk.", cta:"Lock in →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun - that's the non-negotiable four." },
   middle:{ eye:"Zero-based budgeting · no filter", title:"Tell every dollar where to go.", sub:"Budget to zero, gut-check every purchase, and watch your dreams get funded - in plain, unfiltered English.", cta:"Start budgeting →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving." },
   mature:{ eye:"Zero-based budgeting · straight talk", title:"Give every dollar a purpose.", sub:"Budget to zero, weigh every purchase, and fund what matters - clear, honest, no runaround.", cta:"Build my plan →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Cover these before anything else - they're the foundation the rest stands on." }
 };
