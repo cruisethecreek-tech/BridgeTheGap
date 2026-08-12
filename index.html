@@ -50,7 +50,9 @@
   .brand .logo{font-weight:900;font-size:24px;letter-spacing:-.8px}
   .brand .logo b{color:var(--accent)}
   .brand .tagline{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.2px;margin-top:3px}
-  .freedom-toggle{margin-left:auto;display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;gap:3px;flex-shrink:0}
+  .freedom-wrap{margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+  .ft-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .freedom-toggle{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;gap:3px;flex-shrink:0}
   .freedom-toggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:16px;width:38px;height:34px;border-radius:8px;line-height:1}
   .freedom-toggle button.on{background:var(--accent);color:var(--ink)}
   .truerate{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -481,9 +483,12 @@
           <span class="logo">Account<b>ability</b></span>
           <span class="tagline">Every dollar answers to you.</span>
         </div>
-        <div class="freedom-toggle" id="freedomToggle" title="Switch between dollars and hours of your life">
-          <button data-mode="usd">$</button>
-          <button data-mode="life">⌛</button>
+        <div class="freedom-wrap">
+          <div class="freedom-toggle" id="freedomToggle" title="Switch between dollars and hours of your life">
+            <button data-mode="usd">$</button>
+            <button data-mode="life">⌛</button>
+          </div>
+          <span class="ft-label" id="ftLabel">Dollars</span>
         </div>
       </div>
       <div class="quote-wrap">
@@ -1781,7 +1786,10 @@ function updateWageNote(){
 }
 
 /* --- Pillar 2: Freedom Mode toggle --- */
-function renderFreedomToggle(){ document.querySelectorAll('#freedomToggle button').forEach(b=>b.classList.toggle('on', (b.dataset.mode==='life')===!!state.freedomMode)); }
+function renderFreedomToggle(){
+  document.querySelectorAll('#freedomToggle button').forEach(b=>b.classList.toggle('on', (b.dataset.mode==='life')===!!state.freedomMode));
+  const lbl=document.getElementById('ftLabel'); if(lbl) lbl.textContent = state.freedomMode ? 'Life-hours' : 'Dollars';
+}
 function renderAll(){
   renderFreedomToggle();
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
@@ -2115,9 +2123,9 @@ function renderIntakeDock(s){
   if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
   if(s.input==='gate'){
-    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkip">I'll set it up myself</button>`;
+    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
-    document.getElementById('iaSkip').onclick=()=>{ state.onboarded=true; save(); closeIntake(); };
+    document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); closeIntake(); };
     return;
   }
   if(s.input==='choice'){
