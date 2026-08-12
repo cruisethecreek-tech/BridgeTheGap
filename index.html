@@ -208,7 +208,7 @@
   .feat .ft-t{font-weight:800;color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.5px}
   .feat .ft-d{font-size:13px;color:#c4cfe0;margin-top:6px;line-height:1.5}
 
-  /* ---------- Four Walls ---------- */
+  /* ---------- Cover First (essentials) ---------- */
   .walls-head{margin:28px 0 4px;text-align:center}
   .walls-tag{color:#c4cfe0;font-size:13px;line-height:1.5;max-width:520px;margin:8px auto 0}
   .walls{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
@@ -414,11 +414,11 @@
 
       <div class="walls-head">
         <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
-        <h2 class="ph-title">Your Four Walls</h2>
+        <h2 class="ph-title">Cover First</h2>
         <p class="walls-tag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun — they keep the lights on and you moving.</p>
       </div>
       <div class="walls" id="wallsGrid"></div>
-      <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my Four Walls</button></div>
+      <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
 
       <div class="paths-head"><div class="ph-eye">Where to next</div><h2 class="ph-title">Pick your path</h2></div>
       <div class="paths">
@@ -1531,7 +1531,7 @@ function renderHome(){
   renderWalls();
 }
 
-/* ---------- Four Walls ---------- */
+/* ---------- Cover First (essentials) ---------- */
 const WALLS=[
   {icon:'🍽️', name:'Food', sub:'Groceries & meals', cat:'Food', match:['food','grocer','meal','eat','dining']},
   {icon:'💡', name:'Power & Wi-Fi', sub:'Utilities & connection', cat:'Power & Wi-Fi', match:['utilit','electric','power','water','internet','wifi','wi-fi','phone','cell','heat']},
