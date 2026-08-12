@@ -239,6 +239,16 @@
   .databox .db-note{font-size:13px;font-weight:700;margin-bottom:10px}
   .databox .db-note.warn{color:#e0be55}
   .databox .db-note.ok{color:var(--good)}
+  /* newsletter + offers */
+  .subform{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .subform input{flex:1;min-width:180px;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;font-size:15px}
+  .subform input:focus{outline:none;border-color:var(--accent)}
+  .subfine{margin-top:10px!important;font-size:12px}
+  .subresult{margin-top:10px;font-weight:800;font-size:14px;min-height:1px}
+  .subresult.ok{color:var(--good)}
+  .subresult.err{color:var(--bad)}
+  .offer-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .offerfine{margin-top:10px!important;font-size:12px}
   /* Progressive interface stages */
   [data-stage].stage-locked{display:none!important}
   .stagebar{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:16px}
@@ -274,7 +284,7 @@
   .retro-table{width:100%;border-collapse:collapse;font-size:13px}
   .retro-table th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:6px 8px;border-bottom:1px solid var(--line)}
   .retro-table td{padding:6px 8px;border-bottom:1px solid var(--line);font-weight:700}
-  .uimode{display:flex;gap:6px;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:4px;width:max-content}
+  .uimode{display:flex;gap:6px;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:4px;width:max-content;max-width:100%;flex-wrap:wrap}
   .uimode button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px}
   .uimode button.on{background:var(--accent);color:var(--ink)}
 
@@ -1035,6 +1045,22 @@
       </div>
 
       <div class="panel">
+        <h2>📬 Weekly Gut-Check</h2>
+        <p class="sub">One blunt money prompt a week. Clarity straight to your inbox - nothing else.</p>
+        <form id="subForm" class="subform" novalidate>
+          <input type="email" id="subEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" required>
+          <button class="btn primary" type="submit">Join the Weekly Check-In</button>
+        </form>
+        <p class="sub subfine">Zero spam. Unsubscribe anytime. Your financial data stays 100% on this device - only your email is shared, and only with the newsletter provider.</p>
+        <div id="subResult" class="subresult" role="status" aria-live="polite"></div>
+        <div class="offer-row">
+          <a class="btn" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">📖 Get the Method Guide</a>
+          <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">☕ Support the build</a>
+        </div>
+        <p class="sub offerfine" id="offerFine" style="display:none">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
+      </div>
+
+      <div class="panel">
         <h2>Setup &amp; data</h2>
         <p class="sub">Everything lives on this device. Nothing leaves it.</p>
         <div class="row">
@@ -1058,7 +1084,7 @@
           <div class="db-head">🪜 Interface depth</div>
           <p class="sub" style="margin:6px 0 10px">Guided mode unrolls advanced tools (offense, net worth, sovereignty) only as your Freedom Runway grows, so early on you see just the survival essentials. Switch to Show everything if you want every tool visible now.</p>
           <div class="uimode" id="uiMode">
-            <button data-m="auto">Guided (unrolls as you grow)</button>
+            <button data-m="auto">Guided</button>
             <button data-m="all">Show everything</button>
           </div>
           <div id="uiModeNote" class="db-note" style="margin-top:10px"></div>
@@ -1116,6 +1142,34 @@
    Vanilla JS, localStorage, no dependencies. Original copy.
    ============================================================ */
 const STORE_KEY = 'unfiltered_budget_v2';
+
+/* ============================================================
+   FUNNEL CONFIG - optional, all OFF until you fill these in.
+   The app stays 100% free and private no matter what. These only turn on an
+   opt-in newsletter and two education/support offers. Set the same values on
+   the landing page (index.html). Until set, the newsletter form previews the
+   success state (nothing is sent) and the offer buttons stay hidden.
+     - NEWSLETTER_ENDPOINT: a form POST URL (Kit/ConvertKit, Formspree,
+       Buttondown, Mailchimp, or your own webhook). Only the email is sent.
+     - GUIDE_URL: link to the paid guide / course / waitlist (Gumroad, Podia...).
+     - SUPPORT_URL: voluntary tip link (Ko-fi, Buy Me a Coffee, Stripe).
+   ============================================================ */
+const NEWSLETTER_ENDPOINT = 'YOUR_FORM_ENDPOINT_URL';
+const GUIDE_URL           = 'YOUR_GUIDE_OR_WAITLIST_URL';
+const SUPPORT_URL         = 'YOUR_SUPPORT_URL';
+const isConfigured = v => !!v && v.indexOf('YOUR_') === -1;
+
+/* tone-matched subscribe feedback (register x intensity) */
+const SUBSCRIBE_WIN={
+  genz:{clean:["Locked in. Check your inbox for your first prompt.","You're in. First gut-check hits your inbox soon."],blunt:["Done. First prompt's on the way - go check.","You're on the list. No spam, just truth."],savage:["Locked in. Now actually read it when it lands.","You're in. Don't let it rot in the promo tab."]},
+  middle:{clean:["Locked in. Check your inbox for your first prompt.","You're subscribed. The first check-in is on its way."],blunt:["Done. First prompt's on the way - keep an eye out.","You're on the list. No spam, just the weekly nudge."],savage:["Locked in. Now actually open it when it lands.","You're in. Make it count - read the first one."]},
+  mature:{clean:["Locked in. Check your inbox for your first prompt.","You're subscribed. Your first check-in is on its way."],blunt:["Done. The first prompt is on its way - watch your inbox.","You're on the list. No spam, just a steady weekly nudge."],savage:["Locked in. Now open it when it arrives.","You're in. The value's only real if you read it."]}
+};
+const SUB_ERR={
+  genz:["That email looks off - double-check it?","Hmm, that's not a real email. Try again."],
+  middle:["That email looks off - mind double-checking?","That doesn't look like a valid email. Try again."],
+  mature:["That email doesn't look right - could you check it?","That isn't a valid email address. Please try again."]
+};
 
 /* ============================================================
    VOICE / SLANG LAYER  --  this is the product, not decoration.
@@ -2267,6 +2321,37 @@ function renderBackupNote(){
   const eb=document.getElementById('encBackupBtn'); if(eb) eb.addEventListener('click',encryptBackup);
   const er=document.getElementById('encRestoreBtn'), erf=document.getElementById('encRestoreFile');
   if(er&&erf){ er.addEventListener('click',()=>erf.click()); erf.addEventListener('change',e=>{ if(e.target.files&&e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value=''; }); }
+})();
+
+/* ---------- Funnel: Weekly Gut-Check newsletter + education/support offers ---------- */
+(function(){
+  // reveal the education/support offers only once their URLs are configured
+  let anyOffer=false;
+  document.querySelectorAll('[data-offer]').forEach(a=>{
+    const url=a.dataset.offer==='guide'?GUIDE_URL:SUPPORT_URL;
+    if(isConfigured(url)){ a.href=url; a.style.display=''; anyOffer=true; }
+  });
+  const fine=document.getElementById('offerFine'); if(fine&&anyOffer) fine.style.display='';
+
+  const f=document.getElementById('subForm'); if(!f) return;
+  const inp=document.getElementById('subEmail'), res=document.getElementById('subResult');
+  const good=/^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  f.addEventListener('submit',e=>{
+    e.preventDefault();
+    const email=(inp.value||'').trim();
+    if(!good.test(email)){ res.className='subresult err'; res.textContent=pickReg(SUB_ERR); inp.focus(); return; }
+    const win=()=>{ res.className='subresult ok'; res.textContent=pickVoice(SUBSCRIBE_WIN); inp.value=''; f.querySelector('button').disabled=false; };
+    if(isConfigured(NEWSLETTER_ENDPOINT)){
+      res.className='subresult'; res.textContent='Sending...'; f.querySelector('button').disabled=true;
+      fetch(NEWSLETTER_ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'email='+encodeURIComponent(email)})
+        .then(win)
+        .catch(()=>{ res.className='subresult err'; res.textContent='Hmm, that did not go through. Try again in a sec.'; f.querySelector('button').disabled=false; });
+    } else {
+      // endpoint not set yet: preview the success flow (nothing is sent)
+      console.warn('[funnel] NEWSLETTER_ENDPOINT not set - previewing success, no email captured.');
+      win();
+    }
+  });
 })();
 
 /* ============================================================

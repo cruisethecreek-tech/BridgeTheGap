@@ -68,6 +68,8 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Encrypted backup** (Settings) - WebCrypto AES-GCM + PBKDF2 to a portable `.acct` file; restore replaces local state. `encryptBackup`, `restoreBackup`, `renderBackupNote`.
 
+**Funnel (opt-in, all off by default)** - the app stays free and private; money is made *alongside* it. A "Weekly Gut-Check" newsletter opt-in (Settings) posts only the email to a provider you set, with tone-matched success (`SUBSCRIBE_WIN`/`SUB_ERR`). Two education/support offers (a Method Guide + a tip link) reveal only when their URLs are set. Config lives at the top of the script: `NEWSLETTER_ENDPOINT`, `GUIDE_URL`, `SUPPORT_URL` (mirror the same values in `index.html`). Framed as **education, not advice**, with a disclaimer. Nothing is gated; financial data never leaves the device.
+
 ---
 
 ## Data model (`state`)
