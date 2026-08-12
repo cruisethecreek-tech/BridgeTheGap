@@ -208,6 +208,21 @@
   .feat .ft-t{font-weight:800;color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.5px}
   .feat .ft-d{font-size:13px;color:#c4cfe0;margin-top:6px;line-height:1.5}
 
+  /* ---------- Cover First (essentials) ---------- */
+  .walls-head{margin:28px 0 4px;text-align:center}
+  .walls-tag{color:#c4cfe0;font-size:13px;line-height:1.5;max-width:520px;margin:8px auto 0}
+  .walls{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+  @media(min-width:720px){.walls{grid-template-columns:repeat(4,1fr)}}
+  .wall{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;color:var(--text);transition:transform .12s ease,border-color .12s ease}
+  .wall:hover{transform:translateY(-3px);border-color:var(--accent)}
+  .wall.covered{border-color:#1e4a37}
+  .wall-ic{font-size:23px;background:var(--ink);border:1px solid var(--line);border-radius:12px;width:46px;height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+  .wall-name{font-weight:900;font-size:15px;display:flex;align-items:center;gap:6px}
+  .wall-check{color:var(--good);font-size:13px}
+  .wall-sub{font-size:12px;color:var(--muted);font-weight:600}
+  .wall-status{font-size:13px;font-weight:800;margin-top:6px;color:var(--accent)}
+  .wall.covered .wall-status{color:var(--good)}
+
   /* ---------- Impulse / Net worth ---------- */
   .nw{font-size:32px;font-weight:900;letter-spacing:-.5px;margin:2px 0}
   .nw.pos{color:var(--good)}.nw.neg{color:var(--bad)}
@@ -396,6 +411,14 @@
       </div>
 
       <div class="snapshot" id="homeSnap"></div>
+
+      <div class="walls-head">
+        <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
+        <h2 class="ph-title">Cover First</h2>
+        <p class="walls-tag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun — they keep the lights on and you moving.</p>
+      </div>
+      <div class="walls" id="wallsGrid"></div>
+      <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
 
       <div class="paths-head"><div class="ph-eye">Where to next</div><h2 class="ph-title">Pick your path</h2></div>
       <div class="paths">
@@ -773,7 +796,11 @@ function activateTab(name){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
-document.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>activateTab(b.dataset.goto)));
+document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) activateTab(g.dataset.goto); });
+document.getElementById('wallsSetup').addEventListener('click',()=>{
+  WALLS.forEach(w=>{ if(!state.categories.some(c=>w.match.some(t=>c.name.toLowerCase().includes(t)))) state.categories.push({id:uid(),name:w.cat}); });
+  save(); renderBudget(); renderRecurring(); renderWalls(); renderHome();
+});
 
 /* ---------- month nav ---------- */
 document.getElementById('mPrev').addEventListener('click',()=>{ state.activeMonth=shiftMonth(state.activeMonth,-1); save(); renderBudget(); renderTx(); });
@@ -1501,6 +1528,34 @@ function renderHome(){
     <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div></div>
     <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
     <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div></div>`;
+  renderWalls();
+}
+
+/* ---------- Cover First (essentials) ---------- */
+const WALLS=[
+  {icon:'🍽️', name:'Food', sub:'Groceries & meals', cat:'Food', match:['food','grocer','meal','eat','dining']},
+  {icon:'💡', name:'Power & Wi-Fi', sub:'Utilities & connection', cat:'Power & Wi-Fi', match:['utilit','electric','power','water','internet','wifi','wi-fi','phone','cell','heat']},
+  {icon:'🏠', name:'Roof', sub:'Rent or mortgage', cat:'Roof', match:['rent','mortgage','housing','shelter','home','roof']},
+  {icon:'🚗', name:'Getting Around', sub:'Gas, transit, ride', cat:'Getting Around', match:['transport','car','fuel','bus','transit','uber','lyft','gas','commute','wheels','around']}
+];
+function renderWalls(){
+  const M=state.activeMonth, grid=document.getElementById('wallsGrid'); if(!grid) return;
+  let covered=0, anyMissing=false;
+  grid.innerHTML=WALLS.map(w=>{
+    const matched=state.categories.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t)));
+    if(!matched.length) anyMissing=true;
+    const assigned=matched.reduce((s,c)=>s+assignedFor(c.id,M),0);
+    const isCovered=assigned>0; if(isCovered) covered++;
+    const status = !matched.length ? 'Not set up' : (isCovered ? money(assigned)+' set aside' : 'Fund it first');
+    return `<button class="wall ${isCovered?'covered':''}" data-goto="budget">
+      <span class="wall-ic">${w.icon}</span>
+      <span class="wall-name">${w.name}${isCovered?' <span class="wall-check">✓</span>':''}</span>
+      <span class="wall-sub">${w.sub}</span>
+      <span class="wall-status">${status}</span>
+    </button>`;
+  }).join('');
+  const prog=document.getElementById('wallsProgress'); if(prog) prog.textContent=`${covered} of 4 covered this month`;
+  const setup=document.getElementById('wallsSetup'); if(setup) setup.style.display = anyMissing ? '' : 'none';
 }
 boot();
 </script>
