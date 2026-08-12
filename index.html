@@ -101,6 +101,10 @@
   .addsub-row input{flex:1;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 11px;font-size:14px;min-width:0}
   .addsub-row input:focus{outline:none;border-color:var(--accent)}
   .addsub-first{background:none;border:none;color:var(--accent);font-weight:700;font-size:12px;cursor:pointer;margin-top:8px;padding:0;text-align:left}
+  .dupwarn{background:#1d1a10;border:1px solid #4a3d14;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .dupwarn .dw-msg{font-size:13px;color:#e6d9b0;line-height:1.5}
+  .dupwarn .dw-msg b{color:#e0be55}
+  .dupwarn button{margin-top:10px}
   @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
   .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:#e6d9b0;line-height:1.45;font-weight:600}
@@ -564,6 +568,7 @@
           <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
           <button class="btn ghost" id="mergeBtn" title="Merge duplicate essentials into one">Tidy duplicates</button>
         </div>
+        <div id="dupBanner"></div>
         <div id="cats"></div>
       </div>
     </section>
@@ -1074,6 +1079,12 @@ document.getElementById('copyBtn').addEventListener('click',()=>{
 
 /* ---------- category hierarchy (one level of subcategories) ---------- */
 let collapsedCats=new Set();
+/* top-level categories that map to the same essential (leftover duplicates) */
+function duplicateGroups(){
+  const groups={};
+  state.categories.filter(c=>!c.parentId).forEach(c=>{ const w=categoryWall(c.name); const key=w?'wall:'+w.cat:'name:'+c.name.trim().toLowerCase(); (groups[key]=groups[key]||[]).push(c); });
+  return Object.values(groups).filter(cats=>cats.length>1).map(cats=>cats.map(c=>c.name));
+}
 function childrenOf(id){ return state.categories.filter(c=>c.parentId===id); }
 function topCats(){ return state.categories.filter(c=>!c.parentId); }
 function catSpent(id,M){ return spentFor(id,M)+childrenOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
@@ -1100,6 +1111,13 @@ function renderBudget(){
     <div class="stat"><div class="k">${lifeLabel('spent','Spent')}</div><div class="v">${money(spent)}</div></div>
     <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div></div>`;
 
+  const dupEl=document.getElementById('dupBanner');
+  if(dupEl){
+    const dups=duplicateGroups();
+    dupEl.innerHTML = dups.length ? `<div class="dupwarn"><div class="dw-msg"><b>Heads up - duplicate categories.</b> These cover the same essential: ${dups.map(names=>names.join(' + ')).join('; ')}. Tidying merges each set into one and keeps all money and history.</div><button class="btn sm primary" id="dupTidy">⚡ Tidy them up</button></div>` : '';
+    const dt=document.getElementById('dupTidy');
+    if(dt) dt.addEventListener('click',()=>{ const n=mergeDuplicates(); renderBudget(); renderTx(); renderNetWorth(); if(n) alert('Merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into one each. Money and transactions were kept and combined.'); });
+  }
   const box=document.getElementById('cats');
   if(!state.categories.length){
     box.innerHTML=`<div class="empty">No categories yet. Add one above, or hit “Starter set” to skip the blank page.</div>`;
