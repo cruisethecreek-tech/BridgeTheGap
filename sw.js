@@ -1,5 +1,5 @@
-/* UNFILTERED service worker — offline shell + fresh updates */
-const CACHE = 'unfiltered-v2';
+/* ACCOUNTABILITY service worker — offline shell + fresh updates */
+const CACHE = 'accountability-v1';
 const ASSETS = [
   './',
   './index.html',
