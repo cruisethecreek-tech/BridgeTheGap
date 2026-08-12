@@ -7,17 +7,20 @@ Nothing leaves the device.
 
 ---
 
-## The 7 tabs (top nav)
+## The flow (7 tabs, in order)
+
+The nav follows a money journey: **Dashboard → Plan → Track → Defend → Build → Learn → Settings.**
+(Internal view ids in parentheses are unchanged for code stability.)
 
 | Tab | What it does | Key code |
 |---|---|---|
-| **Home** | Landing: hero (voice-adapted), live snapshot (Left to budget / Spent / Streak / Net worth), **Cover First** essentials grid, "Pick your path" cards, feature strip. | `renderHome`, `renderWalls` |
-| **Budget** | Zero-based budgeting per month. Categories with assignments + spend bars, **subcategories** (pool split), **duplicate-tidy** banner, **Auto-Rebalance** on overspend. | `renderBudget`, `autoRebalance`, `mergeDuplicates` |
-| **Transactions** | Ledger of income + expenses, recurring engine (auto-posts monthly), filters/search, **Zero-Blindspot Shield**. | `renderTx`, `renderTxList`, `renderRecurring`, `blindspotShield` |
-| **Insights** | Charts: spending-by-category, 6-month income-vs-spending, cash-balance trend (inline SVG). | `renderCharts` |
-| **Impulse Check** | The **Anti-Trap** system: Trap Radar scan, 24-Hour Cooling Vault, War Chest scoreboard, plus **Assets vs. Liabilities** + **Silent Sovereignty Audit**. | `renderCheckResult`, `renderVault`, `renderImpulse`, `renderNetWorth`, `renderSovereignty` |
-| **Dreams & Goals** | Savings goals with progress, deadlines, and per-goal nudges. Fund from impulse skips. | `renderGoals` |
-| **Money School** | Rotating original lessons (zero-based, emergency fund, snowball vs. avalanche, what's an asset…). | `renderLesson`, `LESSONS` |
+| **Dashboard** (`home`) | Hero (voice-adapted), a guided **"Do this next"** step list, live snapshot, **"Enough" anchor**, **Cover First** grid, nav cards. | `renderHome`, `renderNextSteps`, `renderEnough`, `renderWalls` |
+| **Plan** (`budget`) | Zero-based budgeting per month: categories + **subcategories** (pool split), **Recurring** engine, **duplicate-tidy** banner, **Auto-Rebalance**. | `renderBudget`, `autoRebalance`, `renderRecurring`, `mergeDuplicates` |
+| **Track** (`tx`) | Ledger of income + expenses, **energy tags**, filters/search, **Zero-Blindspot Shield**. | `renderTx`, `renderTxList`, `blindspotShield` |
+| **Defend** (`impulse`) | The **Anti-Trap** system only: Trap Radar scan, 24-Hour Cooling Vault, War Chest scoreboard. | `renderCheckResult`, `renderVault`, `renderImpulse` |
+| **Build** (`goals`) | Wealth: **Net Worth** + Assets/Liabilities, **Sovereignty Audit**, Goals (with strategic types), **Network Capital**. | `renderNetWorth`, `renderSovereignty`, `renderGoals`, `renderNetwork` |
+| **Learn** (`learn`) | Money School lessons **+** Insights charts (spending, income-vs-spend, trend, **Abundance & Circulation**). | `renderLesson`, `renderCharts`, `renderCirculation` |
+| **Settings** (`settings`) | True Net Hourly Wage engine, plus setup chat / install / export / import / reset. | `updateWageNote`, `trCompute` |
 
 ---
 

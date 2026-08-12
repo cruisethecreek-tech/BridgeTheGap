@@ -137,6 +137,16 @@
   .energy-sel{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
   .energy-sel button{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:8px 11px;font-size:13px;font-weight:700}
   .energy-sel button.on{border-color:var(--accent);color:var(--text)}
+  /* guided next-step cards */
+  .nextstep{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:10px;cursor:pointer;color:var(--text);transition:transform .12s ease,border-color .12s ease}
+  .nextstep:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .nextstep .ns-n{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--ink);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .nextstep .ns-ic{font-size:22px;flex-shrink:0}
+  .nextstep .ns-body{flex:1;min-width:0;display:flex;flex-direction:column}
+  .nextstep .ns-t{font-weight:800;font-size:15px}
+  .nextstep .ns-s{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .nextstep .ns-arrow{color:var(--accent);font-weight:900;font-size:18px;flex-shrink:0}
+  .foot .actions{display:none}
   @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
   .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:#e6d9b0;line-height:1.45;font-weight:600}
@@ -537,13 +547,13 @@
 
   <div class="wrap">
     <nav class="tabs">
-      <button class="tab" data-view="home">Home</button>
-      <button class="tab" data-view="budget">Budget</button>
-      <button class="tab" data-view="tx">Transactions</button>
-      <button class="tab" data-view="insights">Insights</button>
-      <button class="tab" data-view="impulse">Impulse Check</button>
-      <button class="tab" data-view="goals">Dreams &amp; Goals</button>
-      <button class="tab" data-view="learn">Money School</button>
+      <button class="tab" data-view="home">Dashboard</button>
+      <button class="tab" data-view="budget">Plan</button>
+      <button class="tab" data-view="tx">Track</button>
+      <button class="tab" data-view="impulse">Defend</button>
+      <button class="tab" data-view="goals">Build</button>
+      <button class="tab" data-view="learn">Learn</button>
+      <button class="tab" data-view="settings">Settings</button>
     </nav>
 
     <!-- ============ HOME ============ -->
@@ -555,6 +565,7 @@
         <div class="hh-cta"><button class="btn primary" data-goto="budget" id="hhCta">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
       </div>
 
+      <div id="nextSteps"></div>
       <div class="snapshot" id="homeSnap"></div>
       <div id="enoughCard"></div>
 
@@ -566,14 +577,14 @@
       <div class="walls" id="wallsGrid"></div>
       <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
 
-      <div class="paths-head"><div class="ph-eye">Where to next</div><h2 class="ph-title">Pick your path</h2></div>
+      <div class="paths-head"><div class="ph-eye">The flow</div><h2 class="ph-title">Where to go</h2></div>
       <div class="paths">
-        <button class="path-card" data-goto="budget"><span class="pc-ic">📊</span><span class="pc-t">Budget</span><span class="pc-s">Give every dollar a job</span></button>
-        <button class="path-card" data-goto="tx"><span class="pc-ic">💸</span><span class="pc-t">Transactions</span><span class="pc-s">Track money in &amp; out</span></button>
-        <button class="path-card" data-goto="impulse"><span class="pc-ic">⚡</span><span class="pc-t">Impulse Check</span><span class="pc-s">Earn every purchase</span></button>
-        <button class="path-card" data-goto="insights"><span class="pc-ic">📈</span><span class="pc-t">Insights</span><span class="pc-s">See the trend</span></button>
-        <button class="path-card" data-goto="goals"><span class="pc-ic">🎯</span><span class="pc-t">Dreams &amp; Goals</span><span class="pc-s">Fund what matters</span></button>
-        <button class="path-card" data-goto="learn"><span class="pc-ic">📚</span><span class="pc-t">Money School</span><span class="pc-s">Learn the moves</span></button>
+        <button class="path-card" data-goto="budget"><span class="pc-ic">📋</span><span class="pc-t">Plan</span><span class="pc-s">Give every dollar a job</span></button>
+        <button class="path-card" data-goto="tx"><span class="pc-ic">🧾</span><span class="pc-t">Track</span><span class="pc-s">Log money in &amp; out</span></button>
+        <button class="path-card" data-goto="impulse"><span class="pc-ic">🛡️</span><span class="pc-t">Defend</span><span class="pc-s">Gut-check every buy</span></button>
+        <button class="path-card" data-goto="goals"><span class="pc-ic">📈</span><span class="pc-t">Build</span><span class="pc-s">Net worth, dreams, wealth</span></button>
+        <button class="path-card" data-goto="learn"><span class="pc-ic">🎓</span><span class="pc-t">Learn</span><span class="pc-s">Lessons &amp; insights</span></button>
+        <button class="path-card" data-goto="settings"><span class="pc-ic">⚙️</span><span class="pc-t">Settings</span><span class="pc-s">Wage, data, setup</span></button>
       </div>
 
       <div class="features">
@@ -607,9 +618,26 @@
         <div id="dupBanner"></div>
         <div id="cats"></div>
       </div>
+
+      <div class="panel">
+        <h2>Recurring</h2>
+        <p class="sub">Set your paycheck and fixed bills once. They post automatically each month so your plan and net worth stay current without you lifting a finger.</p>
+        <div class="row">
+          <label class="fld">Type
+            <select id="recType"><option value="expense">Expense</option><option value="income">Income</option></select>
+          </label>
+          <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
+          <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
+          <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
+          <label class="fld">Day<input type="number" id="recDay" min="1" max="28" value="1" style="width:70px"></label>
+          <button class="btn primary" id="addRec">Add</button>
+        </div>
+        <div id="recList"></div>
+        <div style="margin-top:14px"><button class="btn sm" id="postRec">Post recurring</button></div>
+      </div>
     </section>
 
-    <!-- ============ TRANSACTIONS ============ -->
+    <!-- ============ TRACK ============ -->
     <section class="view" id="view-tx">
       <div class="panel">
         <h2>Log money in &amp; money out</h2>
@@ -650,23 +678,6 @@
       </div>
 
       <div class="panel">
-        <h2>Recurring</h2>
-        <p class="sub">Set your paycheck and fixed bills once. They post automatically each month so your budget and net worth stay current without you lifting a finger.</p>
-        <div class="row">
-          <label class="fld">Type
-            <select id="recType"><option value="expense">Expense</option><option value="income">Income</option></select>
-          </label>
-          <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
-          <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
-          <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
-          <label class="fld">Day<input type="number" id="recDay" min="1" max="28" value="1" style="width:70px"></label>
-          <button class="btn primary" id="addRec">Add</button>
-        </div>
-        <div id="recList"></div>
-        <div style="margin-top:14px"><button class="btn sm" id="postRec">Post recurring</button></div>
-      </div>
-
-      <div class="panel">
         <div id="blindspotBar"></div>
         <div class="summary" id="txSummary" style="grid-template-columns:repeat(4,1fr)"></div>
         <div class="filters">
@@ -680,55 +691,11 @@
       </div>
     </section>
 
-    <!-- ============ INSIGHTS ============ -->
-    <section class="view" id="view-insights">
-      <div class="panel">
-        <h2>Spending by category</h2>
-        <p class="sub">Where your money actually went in <span id="chartMonth">this month</span>. Use the month arrows on the Budget tab to change the period.</p>
-        <div id="catChart"></div>
-      </div>
-      <div class="panel">
-        <h2>Income vs. spending</h2>
-        <p class="sub">Last 6 months. Green should be taller than red. Every single time.</p>
-        <div id="monthChart" class="months"></div>
-        <div class="legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Income</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Spending</span></div>
-      </div>
-      <div class="panel">
-        <h2>Cash balance trend</h2>
-        <p class="sub">Your running balance across everything you've tracked. The dream is up and to the right.</p>
-        <div id="trendChart"></div>
-      </div>
-      <div class="panel">
-        <h2>🌊 Abundance &amp; Circulation</h2>
-        <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. Tag spends as you log them on the Transactions tab.</p>
-        <div id="circChart"></div>
-      </div>
-    </section>
-
-    <!-- ============ IMPULSE ============ -->
+    <!-- ============ DEFEND ============ -->
     <section class="view" id="view-impulse">
       <div class="panel">
         <h2>🎯 Trap Radar - scan the target</h2>
-        <p class="sub">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life.</p>
-        <div class="row" style="margin-bottom:14px">
-          <label class="fld">Your take-home pay per hour
-            <input type="number" id="wage" min="0" step="0.5" placeholder="e.g. 22" style="width:150px">
-          </label>
-          <div id="wageNote" class="sub" style="margin:0;align-self:flex-end;max-width:340px"></div>
-        </div>
-        <details class="truerate" id="trueRate">
-          <summary>Calculate your True Net Hourly Wage</summary>
-          <div class="tr-body">
-            <p class="sub" style="margin:6px 0 12px">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs - the commute, the gas, the work lunches - spread over the time the job actually eats.</p>
-            <div class="row">
-              <label class="fld">Take-home / month<input type="number" id="trTakeHome" min="0" step="50" placeholder="e.g. 3200" style="width:130px"></label>
-              <label class="fld">Commute + prep (hrs/week)<input type="number" id="trCommute" min="0" step="0.5" placeholder="e.g. 7" style="width:120px"></label>
-              <label class="fld">Work overhead / month $<input type="number" id="trOverhead" min="0" step="10" placeholder="gas, lunches, outfits" style="width:150px"></label>
-              <button class="btn primary" id="trCompute" style="align-self:flex-end">Set my true rate</button>
-            </div>
-            <div class="tr-result" id="trResult" style="display:none"></div>
-          </div>
-        </details>
+        <p class="sub">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life. <span class="sub" style="margin:0">Set your wage in <b>Settings</b> for exact hours.</span></p>
         <div class="row">
           <label class="fld" style="flex:1">Target
             <input type="text" id="impName" placeholder="Sneakers, gadget, another coffee…">
@@ -756,6 +723,19 @@
         <div id="vaultList"></div>
       </div>
 
+      <div class="panel">
+        <h2>🏆 War Chest &amp; Freedom Scoreboard</h2>
+        <p class="sub">Every trap you neutralize is money - and hours of your life - that stayed yours. This is the proof.</p>
+        <div id="impCelebrate"></div>
+        <div class="scorecards" id="impScore"></div>
+        <div id="impHours"></div>
+        <div id="impBadges" class="badges"></div>
+        <div id="impLog"></div>
+      </div>
+    </section>
+
+    <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
+    <section class="view" id="view-goals">
       <div class="panel">
         <h2>Assets vs. Liabilities</h2>
         <p class="sub"><b style="color:var(--text)">The real definition:</b> an asset puts money IN your pocket. A liability takes money OUT. Not what you were sold - what's actually true. Net worth counts everything you'd walk away with, but only money-making assets are buying your freedom.</p>
@@ -790,19 +770,6 @@
         <div id="sovAudit"></div>
       </div>
 
-      <div class="panel">
-        <h2>🏆 War Chest &amp; Freedom Scoreboard</h2>
-        <p class="sub">Every trap you neutralize is money - and hours of your life - that stayed yours. This is the proof.</p>
-        <div id="impCelebrate"></div>
-        <div class="scorecards" id="impScore"></div>
-        <div id="impHours"></div>
-        <div id="impBadges" class="badges"></div>
-        <div id="impLog"></div>
-      </div>
-    </section>
-
-    <!-- ============ GOALS ============ -->
-    <section class="view" id="view-goals">
       <div class="panel">
         <h2>What are you actually chasing?</h2>
         <p class="sub">A budget with no dream behind it is just a spreadsheet. Name the thing. Put a number on it. Watch it get closer.</p>
@@ -844,7 +811,7 @@
       </div>
     </section>
 
-    <!-- ============ LEARN ============ -->
+    <!-- ============ LEARN (lessons + insights) ============ -->
     <section class="view" id="view-learn">
       <div class="panel">
         <h2>Money School</h2>
@@ -855,6 +822,67 @@
           <div class="dots" id="dots"></div>
           <button class="btn sm" id="nextLesson">Next →</button>
         </div>
+      </div>
+      <div class="panel">
+        <h2>Spending by category</h2>
+        <p class="sub">Where your money actually went in <span id="chartMonth">this month</span>. Use the month arrows on the Plan tab to change the period.</p>
+        <div id="catChart"></div>
+      </div>
+      <div class="panel">
+        <h2>Income vs. spending</h2>
+        <p class="sub">Last 6 months. Green should be taller than red. Every single time.</p>
+        <div id="monthChart" class="months"></div>
+        <div class="legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Income</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Spending</span></div>
+      </div>
+      <div class="panel">
+        <h2>Cash balance trend</h2>
+        <p class="sub">Your running balance across everything you've tracked. The dream is up and to the right.</p>
+        <div id="trendChart"></div>
+      </div>
+      <div class="panel">
+        <h2>🌊 Abundance &amp; Circulation</h2>
+        <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. Tag spends as you log them on the Track tab.</p>
+        <div id="circChart"></div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="view" id="view-settings">
+      <div class="panel">
+        <h2>Your True Hourly Wage</h2>
+        <p class="sub">This one number powers everything: hours-of-life on every purchase, Freedom Mode, and your runway. Set it once.</p>
+        <div class="row" style="margin-bottom:14px">
+          <label class="fld">Take-home pay per hour
+            <input type="number" id="wage" min="0" step="0.5" placeholder="e.g. 22" style="width:150px">
+          </label>
+          <div id="wageNote" class="sub" style="margin:0;align-self:flex-end;max-width:340px"></div>
+        </div>
+        <details class="truerate" id="trueRate">
+          <summary>Calculate your True Net Hourly Wage</summary>
+          <div class="tr-body">
+            <p class="sub" style="margin:6px 0 12px">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs - the commute, the gas, the work lunches - spread over the time the job actually eats.</p>
+            <div class="row">
+              <label class="fld">Take-home / month<input type="number" id="trTakeHome" min="0" step="50" placeholder="e.g. 3200" style="width:130px"></label>
+              <label class="fld">Commute + prep (hrs/week)<input type="number" id="trCommute" min="0" step="0.5" placeholder="e.g. 7" style="width:120px"></label>
+              <label class="fld">Work overhead / month $<input type="number" id="trOverhead" min="0" step="10" placeholder="gas, lunches, outfits" style="width:150px"></label>
+              <button class="btn primary" id="trCompute" style="align-self:flex-end">Set my true rate</button>
+            </div>
+            <div class="tr-result" id="trResult" style="display:none"></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="panel">
+        <h2>Setup &amp; data</h2>
+        <p class="sub">Everything lives on this device. Nothing leaves it.</p>
+        <div class="row">
+          <button class="btn" id="intakeBtn2">💬 Re-run setup chat</button>
+          <button class="btn ghost" id="installBtn2">📲 Install app</button>
+          <button class="btn ghost" id="exportBtn2">Export data</button>
+          <button class="btn ghost" id="importBtn2">Import</button>
+          <button class="btn ghost danger" id="resetBtn2">Reset all</button>
+        </div>
+        <p class="sub" style="margin-top:12px">Voice: your generation is set during the setup chat; Clean / Blunt / Savage is the dial in the header.</p>
       </div>
     </section>
   </div>
@@ -1120,9 +1148,9 @@ function activateTab(name){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   const v=document.getElementById('view-'+name); if(v) v.classList.add('on');
   const fab=document.getElementById('fab'); if(fab) fab.classList.toggle('hide',name==='impulse');
-  if(name==='insights') renderCharts();
+  if(name==='learn') renderCharts();
   if(name==='home') renderHome();
-  if(name==='goals') renderNetwork();
+  if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); }
   if(name==='impulse') renderVault();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -2344,8 +2372,33 @@ function renderHome(){
     <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
     <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div></div>`;
   renderEnough(income);
+  renderNextSteps();
   renderWalls();
 }
+/* guided "do this next" - computes the user's most useful next moves */
+function renderNextSteps(){
+  const box=document.getElementById('nextSteps'); if(!box) return;
+  const M=state.activeMonth, income=monthIncome(M);
+  const assigned=topCats().reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const ltb=income-assigned;
+  const wallsCovered=WALLS.filter(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)>0; }).length;
+  const unlocked=state.vault.filter(v=>v.unlocksAt<=Date.now()).length;
+  const steps=[];
+  if(income<=0) steps.push(['tx','🧾','Log your income','Add this month\'s paycheck so every dollar has something to assign.']);
+  else if(Math.abs(ltb)>=1) steps.push(['budget','📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`,'Budget to zero: every dollar gets a job.']);
+  if(wallsCovered<4) steps.push(['budget','🏠',`Cover your essentials (${wallsCovered}/4)`,'Fund Roof, Food, Power & Wi-Fi, and Getting Around first.']);
+  if(!state.hourlyWage) steps.push(['settings','⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.']);
+  if(unlocked>0) steps.push(['impulse','🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.']);
+  if(!state.goals.length) steps.push(['goals','🎯','Name one dream','A budget with nothing behind it is just a spreadsheet.']);
+  if(!steps.length) steps.push(['tx','✅','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.']);
+  box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
+    steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-goto="${s[0]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[1]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[2])}</span><span class="ns-s">${escapeHtml(s[3])}</span></span><span class="ns-arrow">→</span></button>`).join('');
+}
+document.getElementById('intakeBtn2').addEventListener('click',()=>openIntake());
+document.getElementById('installBtn2').addEventListener('click',()=>document.getElementById('installBtn').click());
+document.getElementById('exportBtn2').addEventListener('click',()=>document.getElementById('exportBtn').click());
+document.getElementById('importBtn2').addEventListener('click',()=>document.getElementById('importBtn').click());
+document.getElementById('resetBtn2').addEventListener('click',()=>document.getElementById('resetBtn').click());
 /* 2C: the "Enough" anchor + margin-of-safety prompt */
 function renderEnough(income){
   const box=document.getElementById('enoughCard'); if(!box) return;
