@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>UNFILTERED — Zero-Based Budgeting</title>
+<title>Accountability — Zero-Based Budgeting</title>
 <meta name="description" content="No-nonsense zero-based budgeting with a gut check for every purchase.">
 <meta name="theme-color" content="#0b1421">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Unfiltered">
-<meta name="application-name" content="Unfiltered">
+<meta name="apple-mobile-web-app-title" content="Accountability">
+<meta name="application-name" content="Accountability">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
@@ -352,7 +352,7 @@
   <header class="hero">
     <div class="hero-inner">
       <div class="brand">
-        <span class="logo">UN<b>FILTERED</b></span>
+        <span class="logo">Account<b>ability</b></span>
         <span class="tag">Zero-Based Budgeting</span>
         <span class="tag">Track Every Dollar</span>
       </div>
@@ -620,7 +620,7 @@
   </div>
 
   <div class="foot">
-    <span>UNFILTERED · a working prototype. Everything saves to this browser only — nothing leaves your device.</span>
+    <span>Accountability · a working prototype. Everything saves to this browser only — nothing leaves your device.</span>
     <div class="actions">
       <button class="linkbtn" id="installBtn">📲 Install app</button>
       <button class="linkbtn" id="exportBtn">Export data</button>
@@ -651,7 +651,7 @@
 
 <script>
 /* ============================================================
-   UNFILTERED — full budgeting tracker (income + expenses)
+   ACCOUNTABILITY — full budgeting tracker (income + expenses)
    Vanilla JS, localStorage, no dependencies. Original copy.
    ============================================================ */
 const STORE_KEY = 'unfiltered_budget_v2';
@@ -1005,7 +1005,7 @@ document.getElementById('prevLesson').addEventListener('click',()=>{ state.lesso
 document.getElementById('exportBtn').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='unfiltered-budget-backup.json'; a.click(); URL.revokeObjectURL(a.href);
+  a.download='accountability-budget-backup.json'; a.click(); URL.revokeObjectURL(a.href);
 });
 document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change',e=>{
