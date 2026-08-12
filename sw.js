@@ -1,8 +1,9 @@
 /* ACCOUNTABILITY service worker — offline shell + fresh updates */
-const CACHE = 'accountability-v1';
+const CACHE = 'accountability-v2';
 const ASSETS = [
   './',
   './index.html',
+  './app.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
@@ -28,13 +29,13 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // Network-first for the app page so updates roll out; fall back to cache offline.
-  if (req.mode === 'navigate' || url.pathname.endsWith('index.html')) {
+  if (req.mode === 'navigate' || url.pathname.endsWith('index.html') || url.pathname.endsWith('app.html')) {
     e.respondWith(
       fetch(req).then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy));
         return res;
-      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+      }).catch(() => caches.match(req).then(r => r || caches.match('./app.html') || caches.match('./index.html')))
     );
     return;
   }

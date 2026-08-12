@@ -2,7 +2,7 @@
   "name": "Accountability - Zero-Based Budgeting",
   "short_name": "Accountability",
   "description": "No-nonsense zero-based budgeting with a gut check for every purchase.",
-  "start_url": "./",
+  "start_url": "app.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0b1421",
@@ -19,7 +19,7 @@
       "name": "Scan a trap",
       "short_name": "Gut check",
       "description": "Run a purchase past the Trap Radar before you buy.",
-      "url": "./#gutcheck",
+      "url": "app.html#gutcheck",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
