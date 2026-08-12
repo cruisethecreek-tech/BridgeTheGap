@@ -1,5 +1,5 @@
 {
-  "name": "Accountability — Zero-Based Budgeting",
+  "name": "Accountability - Zero-Based Budgeting",
   "short_name": "Accountability",
   "description": "No-nonsense zero-based budgeting with a gut check for every purchase.",
   "start_url": "./",
@@ -13,5 +13,14 @@
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan a trap",
+      "short_name": "Gut check",
+      "description": "Run a purchase past the Trap Radar before you buy.",
+      "url": "./#gutcheck",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
   ]
 }

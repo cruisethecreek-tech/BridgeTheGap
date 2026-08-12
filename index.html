@@ -233,6 +233,12 @@
   .imp-table .tt.inc{color:var(--good)}
   .imp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
   .imp-err{color:#e0a3a3;font-weight:700;margin-top:10px}
+  /* encrypted backup */
+  .databox{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:16px}
+  .databox .db-head{font-weight:800;font-size:15px}
+  .databox .db-note{font-size:13px;font-weight:700;margin-bottom:10px}
+  .databox .db-note.warn{color:#e0be55}
+  .databox .db-note.ok{color:var(--good)}
 
   .view{display:none;padding:24px 0}
   .view.on{display:block;animation:fade .25s ease}
@@ -998,6 +1004,16 @@
           <button class="btn ghost" id="importBtn2">Import</button>
           <button class="btn ghost danger" id="resetBtn2">Reset all</button>
         </div>
+        <div class="databox">
+          <div class="db-head">🔒 Keep a safe backup</div>
+          <p class="sub" style="margin:6px 0 10px">Your data lives only in this browser, so clearing your cache or switching devices would wipe it. Save an <b>encrypted</b> backup file you can restore anywhere with your passphrase. The file is scrambled - useless to anyone without the phrase.</p>
+          <div id="backupNote" class="db-note"></div>
+          <div class="row">
+            <button class="btn primary" id="encBackupBtn">🔒 Save encrypted backup</button>
+            <button class="btn ghost" id="encRestoreBtn">🔓 Restore from backup</button>
+            <input type="file" id="encRestoreFile" accept=".acct,application/json" class="hide">
+          </div>
+        </div>
         <p class="sub" style="margin-top:12px">Voice: your generation is set during the setup chat; Clean / Blunt / Savage is the dial in the header.</p>
       </div>
     </section>
@@ -1210,7 +1226,7 @@ function defaultState(){
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[],
            onboarded:false, intake:{}, register:'middle', vault:[],
            freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
-           giving:[], givingPct:0 };
+           giving:[], givingPct:0, lastBackup:null };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1909,6 +1925,70 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
     localStorage.removeItem(STORE_KEY); state=defaultState(); boot();
   }
 });
+
+/* ---------- encrypted backup (WebCrypto AES-GCM, on-device only) ---------- */
+const cryptoOK=()=>!!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
+function abToB64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function b64ToAb(b64){ const s=atob(b64); const b=new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b; }
+async function deriveKey(pass,salt){
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptBackup(){
+  if(!cryptoOK()){ alert('This browser cannot make an encrypted backup here. Use "Export data" for a plain backup instead, or open the installed app.'); return; }
+  const pass=prompt('Choose a passphrase for this backup.\nYou will need the exact phrase to restore it - there is no recovery if you lose it.');
+  if(!pass) return;
+  if(pass.length<6){ alert('Use at least 6 characters so the backup is worth encrypting.'); return; }
+  const confirmPass=prompt('Type the same passphrase again to confirm.');
+  if(confirmPass!==pass){ alert('Those did not match. Backup cancelled.'); return; }
+  try{
+    const salt=crypto.getRandomValues(new Uint8Array(16));
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const key=await deriveKey(pass,salt);
+    const data=new TextEncoder().encode(JSON.stringify(state));
+    const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,data);
+    const envelope={app:'accountability',v:1,alg:'AES-GCM',kdf:'PBKDF2-SHA256',iter:150000,salt:abToB64(salt),iv:abToB64(iv),data:abToB64(ct)};
+    const blob=new Blob([JSON.stringify(envelope,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='accountability-backup-'+state.activeMonth+'.acct'; a.click(); URL.revokeObjectURL(a.href);
+    state.lastBackup=todayStr(); save(); renderBackupNote();
+  }catch(e){ alert('Could not create the backup: '+e.message); }
+}
+async function restoreBackup(file){
+  const r=new FileReader();
+  r.onload=async()=>{ try{
+    const env=JSON.parse(r.result);
+    if(!env||!env.data||!env.salt||!env.iv){
+      // maybe a plain export - let the normal importer try
+      try{ const d=JSON.parse(r.result); if(d&&(d.categories||d.transactions)){ if(confirm('This looks like a plain (unencrypted) backup. Restore it?')){ state=Object.assign(defaultState(),d); if(!state.activeMonth)state.activeMonth=thisMonth(); save(); boot(); alert('Restored.'); } return; } }catch(_){}
+      alert('That does not look like an Accountability backup file.'); return;
+    }
+    if(!cryptoOK()){ alert('This browser cannot decrypt here. Open the installed app and try again.'); return; }
+    const pass=prompt('Enter the passphrase for this backup.');
+    if(!pass) return;
+    const key=await deriveKey(pass,b64ToAb(env.salt));
+    let plain;
+    try{ plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToAb(env.iv)},key,b64ToAb(env.data)); }
+    catch(_){ alert('Wrong passphrase, or the file is damaged. Nothing was changed.'); return; }
+    const d=JSON.parse(new TextDecoder().decode(plain));
+    if(!confirm('Restore this backup? It replaces everything currently in this browser.')) return;
+    state=Object.assign(defaultState(),d); if(!state.activeMonth) state.activeMonth=thisMonth();
+    save(); boot(); alert('Backup restored.');
+  }catch(e){ alert('Could not read that backup file.'); } };
+  r.readAsText(file);
+}
+function renderBackupNote(){
+  const el=document.getElementById('backupNote'); if(!el) return;
+  const busy=(state.transactions&&state.transactions.length)||0;
+  if(state.lastBackup){ el.className='db-note ok'; el.textContent='✓ Last encrypted backup: '+state.lastBackup+'. Save a fresh one after big changes.'; }
+  else if(busy>=3){ el.className='db-note warn'; el.textContent='⚠ No backup yet. You have real data here - one cache clear would erase it. Save a backup now.'; }
+  else { el.className='db-note'; el.textContent=''; }
+}
+(function(){
+  const eb=document.getElementById('encBackupBtn'); if(eb) eb.addEventListener('click',encryptBackup);
+  const er=document.getElementById('encRestoreBtn'), erf=document.getElementById('encRestoreFile');
+  if(er&&erf){ er.addEventListener('click',()=>erf.click()); erf.addEventListener('change',e=>{ if(e.target.files&&e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value=''; }); }
+})();
 
 /* ============================================================
    IMPULSE ACCOUNTABILITY + ASSETS/LIABILITIES
@@ -2748,6 +2828,7 @@ function boot(){
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   renderFreedomToggle(); fillTrueRate();
+  renderBackupNote();
   initPWA();
   activateTab('home');
   if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
