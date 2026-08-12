@@ -1379,7 +1379,10 @@ function renderRegister(){ document.querySelectorAll('#register button').forEach
 
 /* ---------- tabs ---------- */
 const MORE_VIEWS=['tx','learn','settings'];
-function activateTab(name){
+let currentTab='home';
+function activateTab(name,fromHistory){
+  currentTab=name;
+  if(!fromHistory && typeof history!=='undefined' && history.pushState){ history.pushState({t:'tab',name},''); }
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.view===name));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   const v=document.getElementById('view-'+name); if(v) v.classList.add('on');
@@ -1395,6 +1398,33 @@ function activateTab(name){
 }
 document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
 (function(){ const mb=document.getElementById('moreBtn'); if(mb) mb.addEventListener('click',()=>{ const t=document.getElementById('tabs'); const open=t.classList.toggle('more-open'); mb.setAttribute('aria-expanded',open?'true':'false'); }); })();
+
+/* ============================================================
+   Back-button navigation (Android hardware/gesture back + browser back).
+   Each tab push adds a history entry; modals/overlays add one too, so Back
+   closes the overlay first, then walks back through the tab stack, then exits.
+   ============================================================ */
+function pushOverlay(){ if(history.pushState) history.pushState({t:'overlay'},''); }
+function closeTopOverlay(){
+  const cel=document.querySelector('.stagecelebrate'); if(cel){ cel.remove(); return true; }
+  const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
+  const ik=document.getElementById('intake'); if(ik&&ik.classList.contains('on')){ ik.classList.remove('on'); document.body.style.overflow=''; return true; }
+  return false;
+}
+/* dismiss an open overlay via UI: pop its history entry so Back stays in sync */
+function dismissOverlay(){ if(history.state&&history.state.t==='overlay'){ history.back(); } else { closeTopOverlay(); } }
+/* close overlay AND move to a tab (used when an in-modal action navigates) */
+function closeOverlayThenTab(name){
+  if(history.state&&history.state.t==='overlay') history.replaceState({t:'tab',name},'');
+  else if(history.pushState) history.pushState({t:'tab',name},'');
+  closeTopOverlay();
+  activateTab(name,true);
+}
+window.addEventListener('popstate',e=>{
+  if(closeTopOverlay()) return;              // Back closed an open overlay
+  const name=(e.state&&e.state.name)||'home';
+  activateTab(name,true);
+});
 
 /* ============================================================
    Progressive interface - the app unrolls depth as runway grows.
@@ -1453,9 +1483,9 @@ function celebrateStage(stage){
     <button class="btn primary" id="stageOk">See what's new →</button>
   </div>`;
   document.body.appendChild(ov);
-  const close=()=>{ ov.remove(); activateTab('goals'); };
-  ov.querySelector('#stageOk').addEventListener('click',close);
-  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  pushOverlay();
+  ov.querySelector('#stageOk').addEventListener('click',()=>closeOverlayThenTab('goals'));
+  ov.addEventListener('click',e=>{ if(e.target===ov) dismissOverlay(); });
 }
 /* Day-1 snapshot + retrospective (the "flashback") */
 /* A point-in-time reading of the key metrics, stamped to a month.
@@ -2840,18 +2870,18 @@ const BADGES=[
 
 /* --- gut-check modal + shareable link --- */
 const modal=document.getElementById('modal');
-function openModal(){ document.getElementById('mName').value=''; document.getElementById('mAmt').value=''; document.getElementById('mTrap').value='scroll'; modal.classList.add('on'); setTimeout(()=>document.getElementById('mName').focus(),60); }
+function openModal(){ document.getElementById('mName').value=''; document.getElementById('mAmt').value=''; document.getElementById('mTrap').value='scroll'; modal.classList.add('on'); pushOverlay(); setTimeout(()=>document.getElementById('mName').focus(),60); }
 function closeModal(){ modal.classList.remove('on'); }
 document.getElementById('fab').addEventListener('click',openModal);
-document.getElementById('modalX').addEventListener('click',closeModal);
-modal.addEventListener('click',e=>{ if(e.target===modal) closeModal(); });
+document.getElementById('modalX').addEventListener('click',dismissOverlay);
+modal.addEventListener('click',e=>{ if(e.target===modal) dismissOverlay(); });
 document.getElementById('mRun').addEventListener('click',()=>{
   const name=document.getElementById('mName').value.trim()||'This purchase';
   const amt=parseFloat(document.getElementById('mAmt').value);
   const trap=document.getElementById('mTrap').value;
   if(!amt||amt<=0){ alert('Enter a price.'); return; }
   document.getElementById('impName').value=name; document.getElementById('impAmt').value=amt; document.getElementById('impTrap').value=trap;
-  pendingCheck={name,amt,trap}; renderCheckResult(); closeModal(); activateTab('impulse');
+  pendingCheck={name,amt,trap}; renderCheckResult(); closeOverlayThenTab('impulse');
   setTimeout(()=>document.getElementById('impResult').scrollIntoView({behavior:'smooth',block:'center'}),200);
 });
 document.getElementById('mAmt').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('mRun').click(); });
@@ -2997,7 +3027,7 @@ const INTAKE=[
 ];
 
 let iaStep=0, iaAns={};
-function openIntake(){ iaStep=0; iaAns={}; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; runIntakeStep(); }
+function openIntake(){ iaStep=0; iaAns={}; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
 function closeIntake(){ document.getElementById('intake').classList.remove('on'); document.body.style.overflow=''; }
 function iaBub(text,who){ const log=document.getElementById('intakeLog'); const d=document.createElement('div'); d.className='bub '+who; d.textContent=text; log.appendChild(d); log.scrollTop=log.scrollHeight; setTimeout(()=>{log.scrollTop=log.scrollHeight;},40); }
 function iaStore(key,val){ if(key) iaAns[key]=val; }
@@ -3015,7 +3045,7 @@ function renderIntakeDock(s){
   if(s.input==='start'){
     dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaGo">${escapeHtml(s.cta)}</button></div><button class="intake-skip" id="iaSkip">${escapeHtml(s.skip)}</button>`;
     document.getElementById('iaGo').onclick=iaAdvance;
-    document.getElementById('iaSkip').onclick=()=>{ state.onboarded=true; save(); closeIntake(); };
+    document.getElementById('iaSkip').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
   if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
@@ -3023,7 +3053,7 @@ function renderIntakeDock(s){
   if(s.input==='gate'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
-    document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); closeIntake(); };
+    document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
   if(s.input==='choice'){
@@ -3062,14 +3092,13 @@ function commitIntake(){
   if(a.register) state.register=a.register;
   state.intake={name:a.name||'',why:a.why||''};
   state.onboarded=true; save();
-  closeIntake();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderRecurring(); renderCharts();
-  activateTab('home');
+  closeOverlayThenTab('home');
 }
 document.getElementById('intakeBtn').addEventListener('click',openIntake);
-document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); closeIntake(); });
+document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); dismissOverlay(); });
 
 /* ---------- boot ---------- */
 function boot(){
@@ -3084,7 +3113,8 @@ function boot(){
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
   initPWA();
-  activateTab('home');
+  if(history.replaceState) history.replaceState({t:'tab',name:'home'},'');
+  activateTab('home',true);
   if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
   else if(!state.onboarded) setTimeout(openIntake,350);
 }
