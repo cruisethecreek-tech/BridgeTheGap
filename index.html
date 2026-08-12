@@ -262,6 +262,18 @@
   .retro .col.now{border-color:var(--accent)}
   .retro .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800}
   .retro .val{font-weight:800;font-size:13px;margin-top:6px;line-height:1.6}
+  .retro-ctl{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:10px}
+  .rangebtns{display:flex;gap:4px;flex-wrap:wrap}
+  .rgbtn{background:var(--ink);border:1px solid var(--line);color:var(--muted);font-weight:800;font-size:12px;padding:7px 12px;border-radius:8px}
+  .rgbtn.on{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+  .retro-custom{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  .retro-custom input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px}
+  .retro-delta{margin-top:12px;font-weight:800;font-size:13px}
+  .retro-delta.up{color:var(--good)}
+  .retro-delta.down{color:#e0a3a3}
+  .retro-table{width:100%;border-collapse:collapse;font-size:13px}
+  .retro-table th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:6px 8px;border-bottom:1px solid var(--line)}
+  .retro-table td{padding:6px 8px;border-bottom:1px solid var(--line);font-weight:700}
   .uimode{display:flex;gap:6px;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:4px;width:max-content}
   .uimode button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px}
   .uimode button.on{background:var(--accent);color:var(--ink)}
@@ -1277,7 +1289,8 @@ function defaultState(){
            onboarded:false, intake:{}, register:'middle', vault:[],
            freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
-           uiMode:'auto', stageReached:1, day1:null };
+           uiMode:'auto', stageReached:1, day1:null,
+           snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''} };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1445,35 +1458,114 @@ function celebrateStage(stage){
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
 }
 /* Day-1 snapshot + retrospective (the "flashback") */
-function stageSnapshot(){
+/* A point-in-time reading of the key metrics, stamped to a month.
+   Net worth / runway are current-state (can't be back-computed); income /
+   essentials are per-month and accurate for any month. */
+function metricSnapshot(m){
+  m=m||thisMonth();
   const r=(typeof freedomRunway==='function')?freedomRunway():null;
   const sv=(typeof sovereignty==='function')?sovereignty():null;
-  return { date:todayStr(), runway:r, stage:runwayStage(),
+  return { month:m, date:todayStr(), runway:r, stage:runwayStage(),
            drag: sv&&sv.ess>0?Math.round(sv.overhead/sv.ess*100):null,
-           netWorth:(typeof netWorth==='function')?Math.round(netWorth()):null };
+           netWorth:(typeof netWorth==='function')?Math.round(netWorth()):null,
+           income:(typeof monthIncome==='function')?Math.round(monthIncome(m)):null,
+           essentials:(typeof essentialMonthly==='function')?Math.round(essentialMonthly()):null,
+           saved: Math.round((state.goals||[]).reduce((s,g)=>s+(g.saved||0),0)) };
+}
+/* backward-compatible helper still used by boot's day1 capture */
+function stageSnapshot(){ return metricSnapshot(thisMonth()); }
+/* Auto-capture: upsert the current month (keeps "now" fresh); past months freeze. */
+function captureSnapshot(){
+  const m=thisMonth(), snap=metricSnapshot(m);
+  const arr=state.snapshots||(state.snapshots=[]);
+  const i=arr.findIndex(s=>s.month===m);
+  if(i>=0) arr[i]=snap; else arr.push(snap);
+  arr.sort((a,b)=>a.month<b.month?-1:1);
+  save();
 }
 function ensureDay1(){
-  // capture the first moment there's real data to measure against
   const hasData=(state.transactions&&state.transactions.length)||(state.assets&&state.assets.length)||(state.categories&&state.categories.length);
-  if(!state.day1 && hasData){ state.day1=stageSnapshot(); save(); }
+  if(!state.day1 && hasData){ state.day1=metricSnapshot(thisMonth()); save(); }
+}
+/* ---- retrospective series (month or quarter, over a date range) ---- */
+function quarterKey(month){ const [y,m]=month.split('-').map(Number); return `${y}-Q${Math.floor((m-1)/3)+1}`; }
+function retroSeries(){
+  const v=state.retroView||{gran:'month',range:'all'};
+  let snaps=(state.snapshots||[]).slice().sort((a,b)=>a.month<b.month?-1:1);
+  // include day1 as an implicit first point if it predates the first snapshot
+  if(state.day1&&state.day1.month&&!snaps.some(s=>s.month===state.day1.month)) snaps.unshift(Object.assign({},state.day1));
+  if(!snaps.length) return {series:[],gran:v.gran};
+  // range filter
+  let from=v.from, to=v.to;
+  if(v.range!=='custom'){
+    to=snaps[snaps.length-1].month;
+    const n={'3m':3,'6m':6,'1y':12}[v.range];
+    if(n){ from=shiftMonth(to,-(n-1)); } else { from=snaps[0].month; }   // 'all'
+  }
+  let f=snaps.filter(s=>(!from||s.month>=from)&&(!to||s.month<=to));
+  if(v.gran==='quarter'){
+    const byQ={};
+    f.forEach(s=>{ byQ[quarterKey(s.month)]=s; });   // last snap in each quarter wins
+    f=Object.keys(byQ).sort().map(q=>Object.assign({},byQ[q],{label:q}));
+  } else {
+    f=f.map(s=>Object.assign({},s,{label:monShort(s.month)}));
+  }
+  return {series:f,gran:v.gran,from,to};
 }
 function renderRetro(){
   const el=document.getElementById('retroBox'); if(!el) return;
-  const d=state.day1;
-  if(!d){ el.innerHTML=''; return; }
-  const now=stageSnapshot();
-  const days=Math.max(0, Math.round((new Date(now.date)-new Date(d.date))/86400000));
-  if(days<7){ el.innerHTML=''; return; }   // needs a little history to be worth showing
-  const line=(a,b,fmt)=>`${a==null?'-':fmt(a)} → <b>${b==null?'-':fmt(b)}</b>`;
-  const rw=v=>fmtRunway(v), dg=v=>v+'%', st=v=>'Stage '+v, nw=v=>usd(v);
+  const all=(state.snapshots||[]);
+  // need a little history: 2+ captured months, or a week since day 1
+  const day1=state.day1;
+  const daysSince=day1?Math.round((new Date(todayStr())-new Date(day1.date))/86400000):0;
+  if(all.length<2 && daysSince<7){ el.innerHTML=''; return; }
+  const v=state.retroView||{gran:'month',range:'all',from:'',to:''};
+  const {series,gran}=retroSeries();
+  const nw=v=>usd(v), rw=v=>v==null?'-':fmtRunway(v);
+  const first=series[0], last=series[series.length-1];
+  // net-worth timeline (SVG, matching the app's trend chart)
+  let chart='';
+  const pts=series.filter(s=>s.netWorth!=null);
+  if(pts.length>=2){
+    const w=600,h=140,pad=14, vals=pts.map(p=>p.netWorth), mn=Math.min(0,...vals), mx=Math.max(1,...vals);
+    const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad), Y=val=>h-pad-((val-mn)/((mx-mn)||1))*(h-2*pad);
+    const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.netWorth).toFixed(1)}`).join(' ');
+    const area=`${line} L${X(pts.length-1).toFixed(1)},${h-pad} L${X(0).toFixed(1)},${h-pad} Z`;
+    const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.netWorth).toFixed(1)}" r="3" fill="#e6b24d"/>`).join('');
+    const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-2}" fill="#8b93a3" font-size="9" text-anchor="middle">${escapeHtml(p.label)}</text>`).join('');
+    chart=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:12px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg>`;
+  }
+  // period table
+  const rowsHTML=series.map(s=>`<tr><td>${escapeHtml(s.label)}</td><td>${s.netWorth==null?'-':nw(s.netWorth)}</td><td>${rw(s.runway)}</td><td>Stage ${s.stage||1}</td></tr>`).join('');
+  const rangeBtn=(k,lbl)=>`<button class="rgbtn ${v.range===k?'on':''}" data-range="${k}">${lbl}</button>`;
+  const granBtn=(k,lbl)=>`<button class="${v.gran===k?'on':''}" data-gran="${k}">${lbl}</button>`;
+  const delta = (first&&last&&first.netWorth!=null&&last.netWorth!=null) ? last.netWorth-first.netWorth : null;
   el.innerHTML=`<div class="panel"><h2>📜 Your evolution</h2>
-    <p class="sub">Where you started vs. where you are now - ${days} day${days===1?'':'s'} in.</p>
-    <div class="retro">
-      <div class="col"><div class="lbl">Day 1 · ${d.date}</div><div class="val">
-        Runway: ${d.runway==null?'-':rw(d.runway)}<br>Stage: ${st(d.stage)}<br>${d.drag!=null?'Overhead drag: '+dg(d.drag)+'<br>':''}${d.netWorth!=null?'Net worth: '+nw(d.netWorth):''}</div></div>
-      <div class="col now"><div class="lbl">Now · ${now.date}</div><div class="val">
-        Runway: ${now.runway==null?'-':rw(now.runway)}<br>Stage: ${st(now.stage)}<br>${now.drag!=null?'Overhead drag: '+dg(now.drag)+'<br>':''}${now.netWorth!=null?'Net worth: '+nw(now.netWorth):''}</div></div>
-    </div></div>`;
+    <p class="sub">Your money over time. Snapshots are captured automatically each month.</p>
+    <div class="retro-ctl">
+      <div class="uimode" id="retroGran">${granBtn('month','Monthly')}${granBtn('quarter','Quarterly')}</div>
+      <div class="rangebtns">${rangeBtn('3m','3M')}${rangeBtn('6m','6M')}${rangeBtn('1y','1Y')}${rangeBtn('all','All')}${rangeBtn('custom','Custom')}</div>
+    </div>
+    ${v.range==='custom'?`<div class="retro-custom">
+      <label class="fld">From<input type="month" id="retroFrom" value="${v.from||''}"></label>
+      <label class="fld">To<input type="month" id="retroTo" value="${v.to||''}"></label>
+    </div>`:''}
+    ${first&&last?`<div class="retro">
+      <div class="col"><div class="lbl">Start · ${escapeHtml(first.label)}</div><div class="val">Net worth: ${first.netWorth==null?'-':nw(first.netWorth)}<br>Runway: ${rw(first.runway)}<br>Stage: ${first.stage||1}</div></div>
+      <div class="col now"><div class="lbl">Now · ${escapeHtml(last.label)}</div><div class="val">Net worth: ${last.netWorth==null?'-':nw(last.netWorth)}<br>Runway: ${rw(last.runway)}<br>Stage: ${last.stage||1}</div></div>
+    </div>`:''}
+    ${delta!=null?`<div class="retro-delta ${delta>=0?'up':'down'}">${delta>=0?'▲':'▼'} ${nw(Math.abs(delta))} net worth ${delta>=0?'gained':'lost'} over this range.</div>`:''}
+    ${chart}
+    ${series.length?`<div style="overflow-x:auto;margin-top:10px"><table class="retro-table"><thead><tr><th>${gran==='quarter'?'Quarter':'Month'}</th><th>Net worth</th><th>Runway</th><th>Stage</th></tr></thead><tbody>${rowsHTML}</tbody></table></div>`:'<div class="empty" style="margin-top:10px">No snapshots in this range yet.</div>'}
+  </div>`;
+  // wiring
+  el.querySelectorAll('#retroGran button').forEach(b=>b.addEventListener('click',()=>{ state.retroView.gran=b.dataset.gran; save(); renderRetro(); }));
+  el.querySelectorAll('.rgbtn').forEach(b=>b.addEventListener('click',()=>{ state.retroView.range=b.dataset.range;
+    if(b.dataset.range==='custom'){ const ms=(state.snapshots||[]); if(!state.retroView.from&&ms.length){ state.retroView.from=ms[0].month; state.retroView.to=ms[ms.length-1].month; } }
+    save(); renderRetro(); }));
+  const rf=el.querySelector('#retroFrom'), rt=el.querySelector('#retroTo');
+  if(rf) rf.addEventListener('change',()=>{ state.retroView.from=rf.value; save(); renderRetro(); });
+  if(rt) rt.addEventListener('change',()=>{ state.retroView.to=rt.value; save(); renderRetro(); });
 }
 /* Settings: interface-depth toggle */
 function renderUiMode(){
@@ -2990,7 +3082,7 @@ function boot(){
   renderBackupNote();
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
-  ensureDay1(); renderUiMode(); applyStage({silent:true});
+  ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
   initPWA();
   activateTab('home');
   if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
