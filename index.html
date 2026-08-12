@@ -30,6 +30,9 @@
   .btn.primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(230,178,77,.4)}
   .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
   .btn.ghost:hover{border-color:var(--accent)}
+  .btn.buy{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .btn.buy:hover{background:rgba(230,178,77,.1)}
+  .buynote{margin-top:14px;color:var(--muted);font-size:13px;font-weight:600}
 
   /* top bar */
   header{position:sticky;top:0;z-index:50;background:rgba(11,20,33,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
@@ -159,6 +162,7 @@
       <p class="lede">Accountability is zero-based budgeting with a spine. It challenges your impulses in real time, prices every purchase in <b>hours of your life</b>, and tells you the truth other apps are too polite to say. No bank login. No data harvesting. No filter.</p>
       <div class="cta-row">
         <a class="btn primary" href="app.html">Open the app - it's free →</a>
+        <a class="btn buy" data-buy="full" href="#" style="display:none">Get it - one-time</a>
         <a class="btn ghost" href="#how">See how it works</a>
       </div>
       <div class="trust">
@@ -282,7 +286,11 @@
   <div class="kicker">Ready?</div>
   <h2>Look your money in the eye.</h2>
   <p class="lede">Free, installable, and it stores nothing about you. Open it and run your first gut-check in under a minute.</p>
-  <a class="btn primary" href="app.html">Open the app →</a>
+  <div class="cta-row" style="justify-content:center">
+    <a class="btn primary" href="app.html">Open the app - free →</a>
+    <a class="btn buy" data-buy="full" href="#" style="display:none">Get it - one-time</a>
+  </div>
+  <p class="buynote" data-buy-note style="display:none">Free to use. Buy it once to support the build - no subscription, ever.</p>
 </section>
 
 <footer>
@@ -291,6 +299,30 @@
     <div><a href="app.html">Open the app</a> · <a href="#top">Back to top</a></div>
   </div>
 </footer>
+
+<script>
+  /* ============================================================
+     GO LIVE WITH PAYMENTS - edit these two lines only.
+     1. Create a Stripe Payment Link (dashboard.stripe.com > Payment links).
+        On its success page, redirect buyers to your app URL (…/app.html).
+     2. Paste the link below and set the price label. That's it - the
+        "Get it" buttons stay hidden until BUY_URL is a real link, so the
+        page is safe to deploy as free-only until you're ready.
+     ============================================================ */
+  var BUY_URL   = "https://buy.stripe.com/REPLACE_WITH_YOUR_LINK";
+  var BUY_PRICE = "$19";
+
+  (function(){
+    var live = BUY_URL && BUY_URL.indexOf("REPLACE_WITH_YOUR_LINK") === -1;
+    if(!live) return;                       // keep buy UI hidden until a real link is set
+    document.querySelectorAll('[data-buy]').forEach(function(a){
+      a.href = BUY_URL; a.target = "_blank"; a.rel = "noopener";
+      if(a.getAttribute('data-buy') === 'full') a.textContent = 'Get it - ' + BUY_PRICE + ' one-time';
+      a.style.display = '';
+    });
+    document.querySelectorAll('[data-buy-note]').forEach(function(n){ n.style.display = ''; });
+  })();
+</script>
 
 </body>
 </html>
