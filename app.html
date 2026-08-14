@@ -3310,7 +3310,10 @@ const INTAKE=[
   {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up in about two minutes - no judgment, no forms that make you feel dumb. Just a few straight questions, in your words.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
   {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
   {id:'acct', bot:a=>`Quick one so I build the right thing, ${a.name||'friend'}: do you run the household bills, or are you here mainly to keep your own spending in check?`, input:'choice', key:'acct', options:[{label:'I run the budget',value:'full'},{label:'Just my spending',value:'spend'}]},
-  {id:'income', bot:a=>`${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`, input:'money', key:'income', showIf:a=>a.acct!=='spend', placeholder:'e.g. 3200'},
+  {id:'income', bot:a=> a.acct==='spend'
+      ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
+      : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
+    input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
   {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Don't know it? Skip. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22'},
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
   {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
@@ -3363,16 +3366,17 @@ function renderIntakeDock(s){
     return;
   }
   const isMoney=s.input==='money';
-  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>${s.optional?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}`;
+  const optNow=(typeof s.optional==='function')?!!s.optional(iaAns):!!s.optional;
+  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}`;
   const inp=document.getElementById('iaInput'); setTimeout(()=>inp.focus(),60);
   const submit=()=>{
     const raw=inp.value.trim();
     if(isMoney){
-      if(!raw){ if(s.optional){ iaStore(s.key,0); iaBub('Skip','me'); iaAdvance(); } else inp.focus(); return; }
+      if(!raw){ if(optNow){ iaStore(s.key,0); iaBub('Skip','me'); iaAdvance(); } else inp.focus(); return; }
       const n=parseFloat(raw); if(isNaN(n)||n<0){ inp.focus(); return; }
       iaStore(s.key,n); iaBub(money(n),'me'); iaAdvance();
     } else {
-      if(!raw){ if(s.optional){ iaStore(s.key,''); iaBub('Skip','me'); iaAdvance(); } else inp.focus(); return; }
+      if(!raw){ if(optNow){ iaStore(s.key,''); iaBub('Skip','me'); iaAdvance(); } else inp.focus(); return; }
       iaStore(s.key,raw); iaBub(raw,'me'); iaAdvance();
     }
   };
