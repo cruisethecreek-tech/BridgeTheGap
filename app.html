@@ -3309,20 +3309,22 @@ const INTAKE=[
   {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
   {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up in about two minutes - no judgment, no forms that make you feel dumb. Just a few straight questions, in your words.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
   {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
-  {id:'income', bot:a=>`${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`, input:'money', key:'income', placeholder:'e.g. 3200'},
+  {id:'acct', bot:a=>`Quick one so I build the right thing, ${a.name||'friend'}: do you run the household bills, or are you here mainly to keep your own spending in check?`, input:'choice', key:'acct', options:[{label:'I run the budget',value:'full'},{label:'Just my spending',value:'spend'}]},
+  {id:'income', bot:a=>`${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`, input:'money', key:'income', showIf:a=>a.acct!=='spend', placeholder:'e.g. 3200'},
   {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Don't know it? Skip. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22'},
-  {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue'},
-  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, placeholder:'e.g. 1200'},
-  {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, placeholder:'e.g. 500'},
-  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, placeholder:'e.g. 300'},
-  {id:'transport', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, placeholder:'e.g. 200'},
-  {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
+  {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
+  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
+  {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 300'},
+  {id:'transport', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
   {id:'debtAmt', bot:"Roughly how much, all in?", input:'money', key:'debtAmt', showIf:a=>a.hasDebt==='yes', placeholder:'e.g. 8000'},
-  {id:'dream', bot:"Last big piece - what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', placeholder:'Debt-free · Emergency fund · A trip · A house'},
-  {id:'dreamAmt', bot:a=>`Put a number on it - what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, placeholder:'e.g. 5000'},
-  {id:'tone', bot:"When you're about to blow the budget, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
+  {id:'dream', bot:"Last big piece - what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', showIf:a=>a.acct!=='spend', placeholder:'Debt-free · Emergency fund · A trip · A house'},
+  {id:'dreamAmt', bot:a=>`Put a number on it - what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 5000'},
+  {id:'spendLimit', bot:"Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.", input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
+  {id:'tone', bot:"When you're about to blow it, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
-  {id:'done', bot:a=>`That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`, input:'finish', cta:'Build my budget →'}
+  {id:'done', bot:a=>a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`, input:'finish', cta:'Set me up →'}
 ];
 
 let iaStep=0, iaAns={};
@@ -3379,7 +3381,7 @@ function renderIntakeDock(s){
   const sk=document.getElementById('iaSkip2'); if(sk) sk.onclick=()=>{ iaStore(s.key,isMoney?0:''); iaBub('Skip','me'); iaAdvance(); };
 }
 function commitIntake(){
-  const M=state.activeMonth, a=iaAns;
+  const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
   if(a.income>0){ const rec={id:uid(),type:'income',amount:a.income,day:1,source:'Paycheck'}; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount:a.income,source:'Paycheck',date:`${M}-01`,note:'Intake',recId:rec.id}); }
   if(a.wage>0) state.hourlyWage=a.wage;
   [['roof','Roof'],['food','Food'],['util','Power & Wi-Fi'],['transport','Getting Around']].forEach(([k,name])=>{
@@ -3389,11 +3391,17 @@ function commitIntake(){
   if(a.dream) state.goals.push({id:uid(),name:a.dream,target:a.dreamAmt>0?a.dreamAmt:1000,saved:0,date:''});
   if(a.tone) state.intensity=a.tone;
   if(a.register) state.register=a.register;
+  if(spend){                                   // "Just my spending" - no four walls, just tracking
+    state.spendingMode=true;
+    state.spendLimit=a.spendLimit>0?a.spendLimit:0;
+    if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
+  }
   state.intake={name:a.name||'',why:a.why||''};
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderRecurring(); renderCharts();
+  applyHousehold(); applySpending();
   closeOverlayThenTab('home');
 }
 document.getElementById('intakeBtn').addEventListener('click',openIntake);
