@@ -271,6 +271,25 @@
   .hh-fairrow b{color:var(--accent)}
   .hh-wage{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
   .hh-wage b{color:var(--text)}
+  /* "Just my spending" mode */
+  .spending-mode .hide-in-spending{display:none!important}
+  .show-in-spending{display:none}
+  .spending-mode .show-in-spending{display:block}
+  .panel.spending .sp-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .panel.spending .sp-spent{font-weight:900;font-size:30px;letter-spacing:-.5px}
+  .panel.spending .sp-k{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px}
+  .sp-limit{margin-top:14px}
+  .sp-bar{height:16px;border-radius:9px;overflow:hidden;background:var(--ink);border:1px solid var(--line)}
+  .sp-bar span{display:block;height:100%;background:linear-gradient(90deg,#c58f2a,var(--accent))}
+  .sp-bar.over span{background:linear-gradient(90deg,#a4442c,var(--bad))}
+  .sp-limnote{font-size:13px;font-weight:700;margin-top:8px}
+  .sp-limnote.good{color:var(--good)} .sp-limnote.over{color:var(--bad)}
+  .sp-recent{margin-top:16px}
+  .sp-recent .r{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .sp-recent .r .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sp-recent .r .am{font-weight:800;white-space:nowrap}
+  .sp-recent .r .dt{color:var(--muted);font-size:12px;font-weight:600;margin-left:8px}
+  .sp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
   /* Progressive interface stages */
   [data-stage].stage-locked{display:none!important}
   .stagebar{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:16px}
@@ -703,24 +722,25 @@
         <div class="hh-cta"><button class="btn primary" data-goto="budget" id="hhCta">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
       </div>
 
-      <div id="stageBar"></div>
-      <div id="nextSteps"></div>
-      <div class="snapshot" id="homeSnap"></div>
+      <div id="spendingBox" class="show-in-spending"></div>
+      <div id="stageBar" class="hide-in-spending"></div>
+      <div id="nextSteps" class="hide-in-spending"></div>
+      <div class="snapshot hide-in-spending" id="homeSnap"></div>
       <div id="householdBox"></div>
       <div id="retroBox"></div>
       <div id="offenseCard" data-stage="2"></div>
       <div id="enoughCard" data-stage="2"></div>
 
-      <div class="walls-head">
+      <div class="walls-head hide-in-spending">
         <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
         <h2 class="ph-title">Cover First</h2>
         <p class="walls-tag" id="wallsTag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving.</p>
       </div>
-      <div class="walls" id="wallsGrid"></div>
-      <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
+      <div class="walls hide-in-spending" id="wallsGrid"></div>
+      <div class="hide-in-spending" style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
 
-      <div class="paths-head"><div class="ph-eye">The flow · in order</div><h2 class="ph-title">Where to go</h2></div>
-      <div class="paths">
+      <div class="paths-head hide-in-spending"><div class="ph-eye">The flow · in order</div><h2 class="ph-title">Where to go</h2></div>
+      <div class="paths hide-in-spending">
         <button class="path-card" data-goto="budget"><span class="pc-step">1</span><span class="pc-ic">📋</span><span class="pc-t">Plan</span><span class="pc-s">Give every dollar a job</span></button>
         <button class="path-card" data-goto="tx"><span class="pc-step">2</span><span class="pc-ic">🧾</span><span class="pc-t">Track</span><span class="pc-s">Log money in &amp; out</span></button>
         <button class="path-card" data-goto="impulse"><span class="pc-step">3</span><span class="pc-ic">🛡️</span><span class="pc-t">Shield</span><span class="pc-s">Gut-check every buy</span></button>
@@ -728,9 +748,9 @@
         <button class="path-card" data-goto="learn"><span class="pc-step">5</span><span class="pc-ic">🎓</span><span class="pc-t">Learn</span><span class="pc-s">Lessons &amp; insights</span></button>
         <button class="path-card" data-goto="settings"><span class="pc-step">6</span><span class="pc-ic">⚙️</span><span class="pc-t">Settings</span><span class="pc-s">Wage, data, setup</span></button>
       </div>
-      <div class="flow-hint">Plan <span class="arr">→</span> Track <span class="arr">→</span> Shield <span class="arr">→</span> Build <span class="arr">→</span> Learn</div>
+      <div class="flow-hint hide-in-spending">Plan <span class="arr">→</span> Track <span class="arr">→</span> Shield <span class="arr">→</span> Build <span class="arr">→</span> Learn</div>
 
-      <div class="features">
+      <div class="features hide-in-spending">
         <div class="feat"><div class="ft-t">Zero-based</div><div class="ft-d">Income minus every job equals zero. Nothing wanders off.</div></div>
         <div class="feat"><div class="ft-t">Gut check</div><div class="ft-d">Every purchase weighed in hours of your life and days from your dream.</div></div>
         <div class="feat"><div class="ft-t">Real net worth</div><div class="ft-d">Assets that actually pay you - not the stuff quietly draining you.</div></div>
@@ -1072,6 +1092,18 @@
       </div>
 
       <div class="panel">
+        <h2>🛍️ Just my spending</h2>
+        <p class="sub">Not the one who pays the bills? Turn this on to drop the Four Walls and zero-based budgeting entirely. The home screen becomes your spending, your streak, and the gut-check - built for tracking your own purchases (Amazon, coffee, the random stuff), not running the household.</p>
+        <label class="hh-toggle"><input type="checkbox" id="spendOn"> Focus on just my spending</label>
+        <div id="spendFields" style="display:none">
+          <div class="row" style="margin-top:14px">
+            <label class="fld">Monthly spending limit (optional) $<input type="number" id="spendLimit" min="0" step="10" placeholder="e.g. 300" style="width:150px"></label>
+          </div>
+          <p class="sub" style="margin-top:10px">Set a personal "fun money" number and the home screen shows a progress bar - how much you've spent and what's left. Leave it blank for pure tracking, no limit.</p>
+        </div>
+      </div>
+
+      <div class="panel">
         <h2>🏠 Household (couples)</h2>
         <p class="sub">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials. It's still one private budget on this device - to share it across phones, export the encrypted backup below and have your partner restore it.</p>
         <label class="hh-toggle"><input type="checkbox" id="hhOn"> We share this budget as a couple</label>
@@ -1386,7 +1418,8 @@ function defaultState(){
            giving:[], givingPct:0, lastBackup:null,
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
-           householdOn:false, nameA:'You', nameB:'Partner', wageB:0 };
+           householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
+           spendingMode:false, spendLimit:0 };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1492,6 +1525,45 @@ function applyHousehold(){
   const hf=document.getElementById('hhFields'); if(hf) hf.style.display=on?'':'none';
   const cb=document.getElementById('hhOn'); if(cb) cb.checked=on;
   renderHouseholdLabels(); renderHousehold();
+}
+
+/* ---------- "Just my spending" mode: drop the Four Walls, track purchases ---------- */
+function renderSpending(){
+  const box=document.getElementById('spendingBox'); if(!box) return;
+  if(!state.spendingMode){ box.innerHTML=''; return; }
+  const M=state.activeMonth;
+  const spent=txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const lim=state.spendLimit||0, H=effectiveHourly();
+  const recent=state.transactions.filter(t=>t.type==='expense').slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,5);
+  let limHTML='';
+  if(lim>0){
+    const over=spent>lim, pct=Math.min(100,Math.round(spent/lim*100));
+    limHTML=`<div class="sp-limit">
+      <div class="sp-bar ${over?'over':''}"><span style="width:${over?100:pct}%"></span></div>
+      <div class="sp-limnote ${over?'over':'good'}">${over?money(spent-lim)+' over your '+money(lim)+' limit':money(lim-spent)+' left of your '+money(lim)+' this month'}</div>
+    </div>`;
+  }
+  const recentHTML = recent.length
+    ? `<div class="sp-recent">${recent.map(t=>`<div class="r"><span class="nm">${escapeHtml(t.note||catName(t.catId)||'Purchase')}</span><span class="am">-${money(t.amount)}<span class="dt">${(t.date||'').slice(5)}</span></span></div>`).join('')}</div>`
+    : `<div class="sub" style="margin-top:14px">Nothing logged yet. Run a gut-check before your next buy.</div>`;
+  box.innerHTML=`<div class="panel spending">
+    <div class="sp-top">
+      <div><div class="sp-k">Spent this month</div><div class="sp-spent">${money(spent)}</div></div>
+      ${H>0?`<div style="text-align:right"><div class="sp-k">That's</div><div style="font-weight:800">${fmtHours(spent/H)} of life</div></div>`:''}
+    </div>
+    ${limHTML}
+    <div class="sp-actions"><button class="btn primary" id="spendScan">🎯 Gut-check a purchase</button><button class="btn ghost" data-goto="tx">Log what I spent</button></div>
+    ${recentHTML}
+  </div>`;
+  const sc=document.getElementById('spendScan'); if(sc) sc.addEventListener('click',openModal);
+}
+function applySpending(){
+  const on=!!state.spendingMode;
+  const home=document.getElementById('view-home'); if(home) home.classList.toggle('spending-mode',on);
+  const sf=document.getElementById('spendFields'); if(sf) sf.style.display=on?'':'none';
+  const cb=document.getElementById('spendOn'); if(cb) cb.checked=on;
+  const li=document.getElementById('spendLimit'); if(li&&document.activeElement!==li) li.value=state.spendLimit||'';
+  renderSpending();
 }
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
@@ -2451,6 +2523,16 @@ function renderBackupNote(){
   if(na) na.addEventListener('input',()=>{ state.nameA=na.value.trim()||'You'; save(); renderHouseholdLabels(); renderHousehold(); });
   if(nb) nb.addEventListener('input',()=>{ state.nameB=nb.value.trim()||'Partner'; save(); renderHouseholdLabels(); renderHousehold(); });
   if(wb) wb.addEventListener('input',()=>{ state.wageB=parseFloat(wb.value)||0; save(); renderHousehold(); });
+  // "Just my spending" controls
+  const sp=document.getElementById('spendOn');
+  if(sp) sp.addEventListener('change',()=>{
+    state.spendingMode=sp.checked;
+    // a pure spender needs at least one category to log against - seed one so there's zero friction
+    if(sp.checked && !state.categories.length){ state.categories.push({id:uid(),name:'Spending'}); }
+    save(); applySpending(); renderBudget(); renderTx(); renderHome();
+  });
+  const sl=document.getElementById('spendLimit');
+  if(sl) sl.addEventListener('input',()=>{ state.spendLimit=parseFloat(sl.value)||0; save(); renderSpending(); });
 })();
 
 /* ---------- Funnel: Weekly Gut-Check newsletter + education/support offers ---------- */
@@ -3329,7 +3411,7 @@ function boot(){
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
-  applyHousehold();
+  applyHousehold(); applySpending();
   initPWA();
   if(history.replaceState) history.replaceState({t:'tab',name:'home'},'');
   activateTab('home',true);
@@ -3345,6 +3427,13 @@ function renderHome(){
   const hc=HOME_COPY[state.register]||HOME_COPY.middle;
   const setTxt=(id,t)=>{ const el=document.getElementById(id); if(el) el.textContent=t; };
   setTxt('hhEye',hc.eye); setTxt('hhTitle',hc.title); setTxt('hhSub',hc.sub); setTxt('hhCta',hc.cta); setTxt('wallsTag',hc.wallsTag);
+  if(state.spendingMode){
+    setTxt('hhEye','Track · Gut-check · No filter');
+    setTxt('hhTitle','Keep your spending honest.');
+    setTxt('hhSub',"No four walls, no zero-based math - just your purchases, weighed in hours of your life before you buy.");
+    setTxt('hhCta','Gut-check a purchase');
+    const cta=document.getElementById('hhCta'); if(cta) cta.setAttribute('data-goto','impulse');
+  } else { const cta=document.getElementById('hhCta'); if(cta) cta.setAttribute('data-goto','budget'); }
   const M=state.activeMonth;
   const income=monthIncome(M), assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
   const ltb=income-assigned, spent=monthExpense(M);
@@ -3361,6 +3450,7 @@ function renderHome(){
   renderNextSteps();
   renderWalls();
   renderHousehold();
+  renderSpending();
   if(typeof applyStage==='function') applyStage();
 }
 /* 2A: Offense vs Defense balance */

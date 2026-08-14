@@ -68,6 +68,8 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Encrypted backup** (Settings) - WebCrypto AES-GCM + PBKDF2 to a portable `.acct` file; restore replaces local state. `encryptBackup`, `restoreBackup`, `renderBackupNote`.
 
+**"Just my spending" mode** - opt-in in Settings for the partner who doesn't run the bills. Drops the Four Walls and zero-based framing entirely: Home hides Cover First, the flow cards, and the budget snapshot (`.hide-in-spending`) and instead leads with a spending panel (`#spendingBox`) - spent this month, an optional personal limit with a progress bar, hours-of-life, recent purchases, and a gut-check button. Hero copy adapts. Everything else stays reachable (nav unchanged); toggling seeds a "Spending" category if there are none. Keys: `spendingMode`, `spendLimit`. `renderSpending`, `applySpending`.
+
 **Household mode (couples)** - opt-in in Settings; one shared budget that understands two earners, no accounts or sync (stays local). Income can be tagged **Earned by** You / Partner / Joint (`owner` on income tx + recurring). Home shows a Household panel: combined income, per-person split with %, and a **proportional fair-share** of the essentials (income-weighted, not 50/50), plus each partner's true wage. The gut-check also prices a purchase in the partner's life-hours. Sharing across two phones uses the encrypted backup (export/restore). Keys: `householdOn`, `nameA`, `nameB`, `wageB`. `incomeByOwner`, `renderHousehold`, `applyHousehold`.
 
 **Funnel (opt-in, all off by default)** - the app stays free and private; money is made *alongside* it. A "Weekly Gut-Check" newsletter opt-in (Settings) posts only the email to a provider you set, with tone-matched success (`SUBSCRIBE_WIN`/`SUB_ERR`). Two education/support offers (a Method Guide + a tip link) reveal only when their URLs are set. Config lives at the top of the script: `NEWSLETTER_ENDPOINT`, `GUIDE_URL`, `SUPPORT_URL` (mirror the same values in `index.html`). Framed as **education, not advice**, with a disclaimer. Nothing is gated; financial data never leaves the device.
@@ -92,6 +94,7 @@ hourlyWage, trueRate                      // wage engine
 network, skills, giving, givingPct, enough // mindset & build layer
 uiMode, stageReached, day1                 // progressive interface (auto|all, ratchet, snapshot)
 householdOn, nameA, nameB, wageB           // couples mode (income tagged by owner: a|b|joint)
+spendingMode, spendLimit                   // "just my spending" mode + optional personal limit
 lastBackup                                 // encrypted-backup timestamp
 lesson, onboarded, intake                 // misc
 ```
