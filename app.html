@@ -278,6 +278,8 @@
   .panel.spending .sp-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .panel.spending .sp-spent{font-weight:900;font-size:30px;letter-spacing:-.5px}
   .panel.spending .sp-k{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px}
+  .panel.spending .sp-income{margin-top:12px;font-size:14.5px;font-weight:600;color:var(--muted);line-height:1.5}
+  .panel.spending .sp-income b{color:var(--text)}
   .sp-limit{margin-top:14px}
   .sp-bar{height:16px;border-radius:9px;overflow:hidden;background:var(--ink);border:1px solid var(--line)}
   .sp-bar span{display:block;height:100%;background:linear-gradient(90deg,#c58f2a,var(--accent))}
@@ -727,7 +729,7 @@
       <div id="nextSteps" class="hide-in-spending"></div>
       <div class="snapshot hide-in-spending" id="homeSnap"></div>
       <div id="householdBox"></div>
-      <div id="retroBox"></div>
+      <div id="retroBox" class="hide-in-spending"></div>
       <div id="offenseCard" data-stage="2"></div>
       <div id="enoughCard" data-stage="2"></div>
 
@@ -1533,8 +1535,13 @@ function renderSpending(){
   if(!state.spendingMode){ box.innerHTML=''; return; }
   const M=state.activeMonth;
   const spent=txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  const lim=state.spendLimit||0, H=effectiveHourly();
+  const lim=state.spendLimit||0, H=effectiveHourly(), income=monthIncome(M);
   const recent=state.transactions.filter(t=>t.type==='expense').slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,5);
+  let incHTML='';
+  if(income>0){
+    const pct=Math.round(spent/income*100), left=Math.max(0,income-spent);
+    incHTML=`<div class="sp-income">Of your <b>${money(income)}</b> income this month, you've spent <b>${pct}%</b> - <b>${money(left)}</b> still in hand.</div>`;
+  }
   let limHTML='';
   if(lim>0){
     const over=spent>lim, pct=Math.min(100,Math.round(spent/lim*100));
@@ -1551,6 +1558,7 @@ function renderSpending(){
       <div><div class="sp-k">Spent this month</div><div class="sp-spent">${money(spent)}</div></div>
       ${H>0?`<div style="text-align:right"><div class="sp-k">That's</div><div style="font-weight:800">${fmtHours(spent/H)} of life</div></div>`:''}
     </div>
+    ${incHTML}
     ${limHTML}
     <div class="sp-actions"><button class="btn primary" id="spendScan">🎯 Gut-check a purchase</button><button class="btn ghost" data-goto="tx">Log what I spent</button></div>
     ${recentHTML}
@@ -1668,6 +1676,14 @@ function evidenceStage(){ let s=1;
 }
 function applyStage(opts){
   opts=opts||{};
+  // Spending mode is a spender's world - the wealth-stage ladder (net worth,
+  // offense, sovereignty) doesn't apply. Hide every stage-gated tool, and never
+  // level up or celebrate it here.
+  if(state.spendingMode){
+    document.querySelectorAll('[data-stage]').forEach(el=>el.classList.add('stage-locked'));
+    renderStageBar(); renderRetro();
+    return;
+  }
   const rs=runwayStage();
   let leveledUp=null;
   if(state.uiMode!=='all' && rs>(state.stageReached||1)){ state.stageReached=rs; save(); leveledUp=rs; }
