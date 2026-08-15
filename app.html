@@ -380,6 +380,7 @@
   .flip-hint{font-size:12px;color:var(--muted);font-weight:600;margin:10px 0 2px;display:flex;align-items:center;gap:6px}
   .stat-note{font-size:13.5px;font-weight:700;margin-top:12px;color:var(--muted)}
   .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
+  .reflect-note{margin:12px 0 4px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-left:3px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:14px;line-height:1.55;color:var(--text)}
   .cat.cat-flash{animation:catFlash 1.6s ease}
   @keyframes catFlash{0%,100%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),0)}18%{box-shadow:0 0 0 2px var(--accent)}}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
@@ -1052,6 +1053,7 @@
       <div class="panel">
         <h2>💣 Debt Payoff Planner</h2>
         <p class="sub">List what you owe, set what you can throw at it each month, and see the fastest, cheapest way out - with the interest priced in hours of your life.</p>
+        <div id="debtReflectNote"></div>
         <div class="row">
           <label class="fld">Debt<input type="text" id="debtName" placeholder="Visa, car loan…" style="width:150px"></label>
           <label class="fld">Balance $<input type="number" id="debtBal" min="0" step="1" placeholder="0" style="width:110px"></label>
@@ -1914,6 +1916,13 @@ function simulateDebts(debts, monthly, strategy){
 }
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
 function renderDebt(){
+  const rn=document.getElementById('debtReflectNote');
+  if(rn){ const r=(state.intake&&state.intake.reflections)||{};
+    let note='';
+    if(r.commute==='payment') note=`🚗 You told me the car payment weighs on you. Add it here - watch how fast crushing it frees up your monthly cash flow (and your life-hours).`;
+    else if(r.debt==='treading') note=`💪 You said the debt feels like treading water. This is the tool that shows you the shore - a real date you're free, priced in hours of your life.`;
+    rn.innerHTML = note ? `<div class="reflect-note">${note}</div>` : '';
+  }
   const box=document.getElementById('debtList'); if(!box) return;
   box.innerHTML = state.debts.length ? state.debts.map(d=>`
     <div class="debtrow">
@@ -3972,7 +3981,16 @@ const INTAKE=[
       {label:'📉 Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
       {label:'🆕 Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
     ]},
-  {id:'dream', bot:"Last big piece - what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', showIf:a=>a.acct!=='spend', placeholder:'Debt-free · Emergency fund · A trip · A house'},
+  {id:'dream',
+    bot:a=>{
+      if(a.roofFeel==='own') return `Now the big one - what are you actually chasing? You said you're dreaming of owning${a.roofFeelNote?` ("${a.roofFeelNote}")`:' a place'} - want that to be the dream we build toward, or is there a bigger one? ★`;
+      if(a.roofFeel==='outgrow') return `Now the big one - what are you actually chasing? Could be leveling up where you live, could be something else entirely. ★`;
+      if(a.commuteFeel==='payment') return `Now the big one - what are you actually chasing? Killing that car payment counts, by the way - or aim bigger. ★`;
+      return "Last big piece - what are you actually chasing? The dream this whole budget is for. ★";
+    },
+    input:'text', key:'dream',
+    prefill:a=> a.roofFeel==='own' ? (a.roofFeelNote || 'Own a home') : (a.roofFeel==='outgrow' ? 'A better place to live' : (a.commuteFeel==='payment' ? 'Pay off the car' : '')),
+    showIf:a=>a.acct!=='spend', placeholder:'Debt-free · Emergency fund · A trip · A house'},
   {id:'dreamAmt', bot:a=>`Put a number on it - what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 5000'},
   {id:'zeroClose', input:'zeroClose', showIf:a=>a.acct!=='spend' && a.income>0,
     bot:a=>{ const inc=intakeIncomeTotal(a), asg=intakeAssignedTotal(a), left=Math.round(inc-asg);
@@ -4056,9 +4074,10 @@ function renderIntakeDock(s){
     const bk2=document.getElementById('iaBack'); if(bk2) bk2.onclick=iaBack;
     return;
   }
-  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
+  const pre=(typeof s.prefill==='function')?(s.prefill(iaAns)||''):'';
+  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
     +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}${backBtn}</div>`;
-  const inp=document.getElementById('iaInput'); setTimeout(()=>inp.focus(),60);
+  const inp=document.getElementById('iaInput'); setTimeout(()=>{ inp.focus(); if(pre) try{inp.select();}catch(_){} },60);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
   const hb=document.getElementById('iaHelp'); if(hb) hb.onclick=()=>runIntakeHelper(s);
   const submit=()=>{

@@ -44,8 +44,22 @@ one-line reply** so the user feels heard; the richest opens an optional free-tex
 - **Getting Around** (`commuteFeel`): drains me / fine / love it / sick of the car payment.
 - **Debt** (`debtFeel`, only if carrying debt): treading water / slowly winning / just starting.
 All are stored under `state.intake.reflections` (`{roof, roofIdeal, food, commute, debt}`) for
-later personalization (voice, goals, recommendations). Utilities is intentionally skipped -
-it's not emotionally rich, and every extra question risks fatigue.
+later personalization. Utilities is intentionally skipped - it's not emotionally rich, and
+every extra question risks fatigue.
+
+**Reflections drive action (the payoff).** The captured feelings aren't just stored - they
+change what the app does, so the user sees it *listened*:
+- **Dream step remembers the roof aspiration.** If `roofFeel` is `own`/`outgrow`, the dream
+  question calls it back ("You said you're dreaming of owning (\"a place near the water\") -
+  want that to be the dream?") and **pre-fills** the input via a step-level `prefill(a)`
+  (the money/text dock now honors `prefill`). `commuteFeel==='payment'` pre-fills "Pay off
+  the car." One tap turns a feeling into a real goal on the board.
+- **Debt planner acknowledges the pain.** `#debtReflectNote` (in `renderDebt`) shows a
+  tailored line when `reflections.commute==='payment'` ("the car payment weighs on you - add
+  it here, watch it free your cash flow") or `reflections.debt==='treading'` ("this is the
+  tool that shows you the shore"). Styled `.reflect-note`.
+More hooks can hang off the same `reflections` object (e.g. an eating-out watch from
+`food==='out'`).
 
 ## The engine-critical set (★ - never skip these)
 These map to real app fields. If a consultation roams, make sure it still covers these.
