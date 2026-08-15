@@ -3891,7 +3891,12 @@ const INTAKE=[
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
-  {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
+  {id:'wage',
+    bot:a=> a.income>0
+      ? `One number powers the whole "hours of your life" feature - your take-home per hour. You said about ${usd(a.income)} lands each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right? ★`
+      : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
+    input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
+    suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income) : null,
     help:{ cta:"🤔 Help me work it out",
       ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
       placeholder:"e.g. 52000",
@@ -3913,13 +3918,30 @@ const INTAKE=[
   {id:'done', bot:a=>a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`, input:'finish', cta:'Set me up →'}
 ];
 
-let iaStep=0, iaAns={};
-function openIntake(){ iaStep=0; iaAns={}; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
+let iaStep=0, iaAns={}, iaForceInput=false;
+/* estimate take-home hourly from monthly take-home: full-time year ≈ 2,080 hrs */
+function estHourlyFromMonthly(m){ return Math.max(1, Math.round((+m||0)*12/2080)); }
+function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
+/* Edit: step back to the previous answered question and re-open it. The prior
+   bot bubble stays; we drop the current question + the last answer and clear it. */
+function iaBack(){
+  let p=iaStep-1;
+  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'){ p--; continue; } break; }
+  if(p<0) return;
+  const log=document.getElementById('intakeLog');
+  if(log.lastChild && log.lastChild.classList && log.lastChild.classList.contains('bot')) log.removeChild(log.lastChild);
+  if(log.lastChild && log.lastChild.classList && log.lastChild.classList.contains('me')) log.removeChild(log.lastChild);
+  const s=INTAKE[p]; if(s.key) delete iaAns[s.key];
+  iaStep=p; iaForceInput=false;
+  document.getElementById('intakeBar').style.width=Math.round(p/(INTAKE.length-1)*100)+'%';
+  renderIntakeDock(s);
+}
 function closeIntake(){ document.getElementById('intake').classList.remove('on'); document.body.style.overflow=''; }
 function iaBub(text,who){ const log=document.getElementById('intakeLog'); const d=document.createElement('div'); d.className='bub '+who; d.textContent=text; log.appendChild(d); log.scrollTop=log.scrollHeight; setTimeout(()=>{log.scrollTop=log.scrollHeight;},40); }
 function iaStore(key,val){ if(key) iaAns[key]=val; }
 function nextIntakeIndex(from){ let i=from; while(i<INTAKE.length){ const s=INTAKE[i]; if(s.showIf && !s.showIf(iaAns)){ i++; continue; } return i; } return -1; }
 function runIntakeStep(){
+  iaForceInput=false;
   const idx=nextIntakeIndex(iaStep); if(idx<0) return;
   iaStep=idx; const s=INTAKE[idx];
   iaBub(typeof s.bot==='function'?s.bot(iaAns):s.bot,'bot');
@@ -3943,16 +3965,31 @@ function renderIntakeDock(s){
     document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
+  const canBack = iaStep>3;   // editable from the income step onward
+  const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
-    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`;
+    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; iaBub(o.label,'me'); iaStore(s.key,o.value); iaAdvance(); });
+    const bk0=document.getElementById('iaBack'); if(bk0) bk0.onclick=iaBack;
     return;
   }
   const isMoney=s.input==='money';
   const optNow=(typeof s.optional==='function')?!!s.optional(iaAns):!!s.optional;
+  // Derived suggestion (e.g. hourly from monthly income): confirm with a pill, or set your own.
+  const sugg=(isMoney && !iaForceInput && typeof s.suggest==='function') ? s.suggest(iaAns) : null;
+  if(sugg!=null){
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓ Yep, about ${usd(sugg)}/hr</button><button id="iaSuggNo">✎ Set my own rate</button></div>`
+      +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${backBtn}</div>`;
+    document.getElementById('iaSuggYes').onclick=()=>{ iaStore(s.key,sugg); iaBub(usd(sugg)+'/hr','me'); iaAdvance(); };
+    document.getElementById('iaSuggNo').onclick=()=>{ iaForceInput=true; renderIntakeDock(s); };
+    const hb2=document.getElementById('iaHelp'); if(hb2) hb2.onclick=()=>runIntakeHelper(s);
+    const bk2=document.getElementById('iaBack'); if(bk2) bk2.onclick=iaBack;
+    return;
+  }
   dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
-    +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}</div>`;
+    +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}${backBtn}</div>`;
   const inp=document.getElementById('iaInput'); setTimeout(()=>inp.focus(),60);
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
   const hb=document.getElementById('iaHelp'); if(hb) hb.onclick=()=>runIntakeHelper(s);
   const submit=()=>{
     const raw=inp.value.trim();

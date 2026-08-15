@@ -15,7 +15,7 @@ These map to real app fields. If a consultation roams, make sure it still covers
 | ★ Field | Question in the chat | Writes to |
 |---|---|---|
 | ★ Monthly take-home | "What actually lands in your account after taxes?" | Recurring income + this month's income |
-| ★ Pay per hour | "Roughly what do you make per hour, take-home?" | `hourlyWage` (→ hours-to-break-even) |
+| ★ Pay per hour | Derived, not re-asked: if monthly take-home is known, the chat proposes an estimate (income × 12 ÷ 2,080) as a **confirm pill** - "that's about $20/hr, sound right?" [✓ Yep] / [✎ Set my own] / [🤔 Help me work it out]. Only asks cold if income was skipped. | `hourlyWage` (→ hours-to-break-even). `estHourlyFromMonthly`, step `suggest` |
 | ★ Roof | "Rent or mortgage a month?" | Cover First → **Roof** category + assignment |
 | ★ Food | "Groceries and eating, monthly?" | Cover First → **Food** |
 | ★ Power & Wi-Fi | "Electric, water, phone, internet - monthly?" | Cover First → **Power & Wi-Fi** |
@@ -51,6 +51,12 @@ Pull from these to deepen a live consultation; the chatbot ships a tight subset.
 
 **The highest-leverage question**
 - Why does getting this right matter to you, *right now*? - capture this close to their words; it's the "why" that everything else hangs on.
+
+## Editing answers
+Every question from the income step onward shows a **← Back** control (`iaBack`) that
+drops the current question and the last answer, clears it, and re-opens the prior
+step so a figure can be changed - without restarting the chat. Derived-suggestion
+steps track a manual-override flag (`iaForceInput`, reset per step).
 
 ## How to run it (so it stays a conversation)
 - **Warmth first, permission always.** Name the shame and throw it out: "No judgment, no forms that make you feel dumb."
