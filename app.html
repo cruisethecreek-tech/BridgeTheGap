@@ -308,6 +308,19 @@
   .po-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
   .po-row .po-n{font-weight:700}
   .po-row .po-d{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+  .iv-compare{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .iv-card{flex:1;min-width:150px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .iv-card.win{border-color:var(--good);background:rgba(53,201,154,.07)}
+  .iv-net{font-weight:900;font-size:23px;letter-spacing:-.4px;margin-top:4px}
+  .iv-card.win .iv-net{color:var(--good)}
+  .iv-verdict{margin-top:14px;font-size:15px;font-weight:600;line-height:1.5}
+  .iv-verdict b{color:var(--accent)}
+  .iv-flags{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+  .iv-flag{font-size:13.5px;line-height:1.45;padding:10px 12px;border-radius:10px;border:1px solid var(--line)}
+  .iv-flag.inv{background:rgba(53,201,154,.06);border-color:rgba(53,201,154,.3)}
+  .iv-flag.crush{background:rgba(224,102,60,.06);border-color:rgba(224,102,60,.3)}
+  .iv-caveat{margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.55;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .iv-caveat b{color:var(--text)}
   /* Progressive interface stages */
   [data-stage].stage-locked{display:none!important}
   .stagebar{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:16px}
@@ -968,6 +981,15 @@
         <p class="sub" style="margin-top:8px" id="debtStratNote"></p>
         <div id="debtResults"></div>
       </div>
+      <div class="panel" id="investPanel">
+        <h2>💡 Plot twist: invest instead?</h2>
+        <p class="sub">Paying off debt earns a <b>guaranteed</b> return equal to its rate. Investing might earn more - but it's not guaranteed. Here's the honest comparison of aiming that same money at the market instead.</p>
+        <div class="row">
+          <label class="fld">Expected market return %/yr<input type="number" id="investReturn" min="0" step="0.5" placeholder="7" style="width:120px"></label>
+          <div class="uimode" id="investYears"><button data-y="5">5 yrs</button><button data-y="10">10 yrs</button><button data-y="20">20 yrs</button></div>
+        </div>
+        <div id="investResults"></div>
+      </div>
     </section>
 
     <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
@@ -1472,7 +1494,8 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0,
-           debts:[], debtBudget:0, debtStrategy:'avalanche' };
+           debts:[], debtBudget:0, debtStrategy:'avalanche',
+           investReturn:7, investYears:10 };
 }
 function thisMonth(){ return new Date().toISOString().slice(0,7); }
 function load(){
@@ -1709,6 +1732,44 @@ function renderDebtResults(){
     <div class="po-head">Payoff order</div>
     <div class="po-list">${orderHTML}</div>
     <p class="sub" style="margin-top:12px">You're putting <b>${money(budget)}</b>/mo at <b>${money(totalBal)}</b> of debt. Every extra dollar above your ${money(totalMin)} minimums is what buys back those months. Results are estimates.</p>`;
+  renderInvestCompare();
+}
+/* Plot twist: crush the debt vs. pay minimums and invest the rest, same money out */
+function investCompare(debts, monthly, retPct, horizon){
+  const r=retPct/100/12;
+  const run=(crush)=>{
+    let ds=debts.map(d=>({bal:+d.balance||0, apr:+d.apr||0, min:+d.minPayment||0}));
+    let invest=0;
+    for(let m=0;m<horizon;m++){
+      ds.forEach(d=>{ if(d.bal>0.005) d.bal+=d.bal*(d.apr/100/12); });
+      let budget=monthly;
+      ds.forEach(d=>{ if(d.bal>0.005){ const pay=Math.min(d.min,d.bal); d.bal-=pay; budget-=pay; } });
+      if(crush){ const active=ds.filter(d=>d.bal>0.005).sort((a,b)=>b.apr-a.apr); for(const t of active){ if(budget<=0.005) break; const pay=Math.min(budget,t.bal); t.bal-=pay; budget-=pay; } }
+      invest = invest*(1+r) + Math.max(0,budget);
+    }
+    const debtLeft=ds.reduce((s,d)=>s+Math.max(0,d.bal),0);
+    return { invest, debtLeft, net:invest-debtLeft };
+  };
+  return { crush:run(true), investFirst:run(false) };
+}
+function renderInvestCompare(){
+  const box=document.getElementById('investResults'); if(!box) return;
+  const debts=state.debts.filter(d=>(+d.balance||0)>0);
+  const budget=state.debtBudget||0, totalMin=debts.reduce((s,d)=>s+(+d.minPayment||0),0);
+  const ri=document.getElementById('investReturn'); if(ri&&document.activeElement!==ri) ri.value=state.investReturn||'';
+  document.querySelectorAll('#investYears button').forEach(b=>b.classList.toggle('on',+b.dataset.y===(state.investYears||10)));
+  if(!debts.length || budget<totalMin-0.01){ box.innerHTML='<div class="sub" style="margin-top:12px">Add your debts and a monthly amount above to see how paying down compares to investing.</div>'; return; }
+  const ret=state.investReturn||7, yrs=state.investYears||10, hz=yrs*12;
+  const c=investCompare(debts, budget, ret, hz), crushNet=c.crush.net, invNet=c.investFirst.net, diff=invNet-crushNet;
+  const flags=debts.map(d=>({name:d.name, apr:+d.apr||0, invest:(+d.apr||0)<ret}));
+  box.innerHTML=`
+    <div class="iv-compare">
+      <div class="iv-card ${diff<=0?'win':''}"><div class="sp-k">🏔️ Crush the debt first</div><div class="iv-net">${money(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      <div class="iv-card ${diff>0?'win':''}"><div class="sp-k">📈 Minimums + invest the rest</div><div class="iv-net">${money(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+    </div>
+    <div class="iv-verdict">${diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years.` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years - your debt costs more than the market is likely to pay.` : `It's roughly a wash over ${yrs} years - the guaranteed route (crush the debt) is the safer call.`}</div>
+    <div class="iv-flags">${flags.map(f=>`<div class="iv-flag ${f.invest?'inv':'crush'}"><b>${escapeHtml(f.name)} · ${f.apr}%</b> - ${f.invest?`below ${ret}%, so investing the extra likely beats rushing this one`:`beats ${ret}%; crushing it is a guaranteed ${f.apr}% return`}</div>`).join('')}</div>
+    <div class="iv-caveat"><b>Real talk:</b> paying off debt is a <b>guaranteed</b> return; investing is an <b>expected</b> one - the market can drop, and this ignores taxes. Build a small emergency fund and grab any 401(k) match before either. Educational, not personalized financial advice.</div>`;
 }
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
@@ -2714,6 +2775,10 @@ function renderBackupNote(){
   if(bud) bud.addEventListener('input',()=>{ state.debtBudget=parseFloat(bud.value)||0; save(); renderDebtResults(); });
   const strat=document.getElementById('debtStrategy');
   if(strat) strat.addEventListener('click',e=>{ const b=e.target.closest('button[data-s]'); if(!b) return; state.debtStrategy=b.dataset.s; save(); renderDebt(); });
+  const ir=document.getElementById('investReturn');
+  if(ir) ir.addEventListener('input',()=>{ state.investReturn=parseFloat(ir.value)||0; save(); renderInvestCompare(); });
+  const iy=document.getElementById('investYears');
+  if(iy) iy.addEventListener('click',e=>{ const b=e.target.closest('button[data-y]'); if(!b) return; state.investYears=+b.dataset.y; save(); renderInvestCompare(); });
 })();
 
 /* ---------- Funnel: Weekly Gut-Check newsletter + education/support offers ---------- */
