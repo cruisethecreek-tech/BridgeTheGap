@@ -4086,13 +4086,14 @@ const INTAKE=[
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
   {id:'moreIncome', input:'loop', loopKey:'extraIncome', showIf:a=>a.acct!=='spend' && a.income>0,
-    bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the total. Tap Done if it's just the one.`,
+    bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
     chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig'},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
-    amountPrompt:n=>`Roughly how much from ${n.toLowerCase()} a month, take-home?`,
+    namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
+    amountPrompt:n=>`Roughly how much from ${n.toLowerCase()==='partner'?'your partner':n.toLowerCase()} a month, take-home?`,
     done:"Done - that's all my income →"},
   {id:'wage',
     bot:a=> a.income>0
-      ? `One number powers the whole "hours of your life" feature - your take-home per hour. You said about ${usd(a.income)} lands each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right? ★`
+      ? `One number powers the whole "hours of your life" feature - your take-home per hour. You said about ${usd(a.income)} lands in your account each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${intakeIncomeTotal(a)>a.income+1?` (This is just your own paycheck - your partner's pay and side gigs are still counted in the budget total, they just don't change your personal hourly.)`:''} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
     input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
     suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income) : null,
@@ -4130,7 +4131,7 @@ const INTAKE=[
       {label:'🚲 Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
       {label:'💸 Sick of the car payment', value:'payment', reply:"Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
-  {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, showIf:a=>a.acct!=='spend',
+  {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend',
     bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
     chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Eating out',name:'Eating out'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
@@ -4348,9 +4349,12 @@ function bulkLoop(s){
 }
 function askLoopName(s){
   const dock=document.getElementById('intakeDock');
-  dock.innerHTML=`<div class="inrow"><input id="iaLoopName" type="text" placeholder="Name it (e.g. Gym, Storage, Tithe)"><button class="intake-send" id="iaLoopNameGo">Next</button></div><div class="intake-underrow"><button class="intake-skip" id="iaLoopCancel">← Back</button></div>`;
+  const ph=s.namePlaceholder||'Name it';
+  dock.innerHTML=`<div class="inrow"><input id="iaLoopName" type="text" placeholder="${escapeHtml(ph)}"><button class="intake-send" id="iaLoopNameGo">Next</button></div><div id="iaLoopNameHint" class="sub" style="text-align:center;margin-top:8px;display:none">That looks like an amount - give it a <b>label</b> first (like Rental or Freelance), then I'll ask how much.</div><div class="intake-underrow"><button class="intake-skip" id="iaLoopCancel">← Back</button></div>`;
   const inp=document.getElementById('iaLoopName'); setTimeout(()=>inp.focus(),60);
-  const go=()=>{ const n=inp.value.trim(); if(!n){ inp.focus(); return; } askLoopAmount(s,n); };
+  const go=()=>{ const n=inp.value.trim(); if(!n){ inp.focus(); return; }
+    if(/^\$?[\d,.]+$/.test(n)){ document.getElementById('iaLoopNameHint').style.display=''; inp.focus(); return; }  // it's a number, not a label
+    askLoopAmount(s,n); };
   document.getElementById('iaLoopNameGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaLoopCancel').onclick=()=>renderLoop(s);
 }
