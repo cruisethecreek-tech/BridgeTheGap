@@ -17,7 +17,12 @@ remove. Three engine pieces do this (`input:'loop'` and `input:'zeroClose'`):
 1. **Multi-income loop** (`moreIncome`) - after the main paycheck: "anything else land each
    month?" Tap chips (Partner's pay / Side gig / Benefits / Something else), enter an amount
    for each; they're summed into the total income. Each becomes its own recurring income.
-   (The personal *hourly wage* is still derived from the main paycheck only, not household.)
+   (The personal *hourly wage* is still derived from the main paycheck only, not household -
+   the wage step says so when extra income exists, so it never looks like a missed stat.)
+   Custom sources guard against numeric-only names ("that looks like an amount - give it a
+   label"). If a source is named **Partner**, the next step (`householdOffer`) offers the full
+   couples view: opting in flips on Household mode, sets the partner's name, derives their
+   wage from their income, and tags that income `owner:'b'` so the fair split works.
 2. **Expense-building loop** (`expenses`) - after the Four Walls: "the rest of where your
    money goes." A wrap of common-category chips (Subscriptions, Eating out, Insurance,
    Health, Childcare, Debt payment, Fun money, Personal care, Pets, Savings, + Something
