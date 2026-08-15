@@ -21,10 +21,10 @@ for code stability; only the labels and grouping changed (`Defend` label → **S
 
 | Tab | Group | What it does | Key code |
 |---|---|---|---|
-| **Home** (`home`) | primary | Hero (voice-adapted), a guided **"Do this next"** step list, live snapshot, **"Enough" anchor**, **Cover First** grid, nav cards. | `renderHome`, `renderNextSteps`, `renderEnough`, `renderWalls` |
+| **Home** (`home`) | primary | A focused dashboard: home-hero + CTA, a guided **"Do this next"** step list, live snapshot, **"Enough" anchor**, **Cover First** grid. (The old duplicate nav-card grid and the marketing feature cards were removed - the tab bar is the nav, and that copy lives on the landing page.) | `renderHome`, `renderNextSteps`, `renderEnough`, `renderWalls` |
 | **Plan** (`budget`) | primary | Zero-based budgeting per month: categories + **subcategories** (pool split), **Recurring** engine, **duplicate-tidy** banner, **Auto-Rebalance**. | `renderBudget`, `autoRebalance`, `renderRecurring`, `mergeDuplicates` |
 | **Shield** (`impulse`) | primary | The **Anti-Trap** system: Trap Radar scan, 24-Hour Cooling Vault, War Chest scoreboard. | `renderCheckResult`, `renderVault`, `renderImpulse` |
-| **Build** (`goals`) | primary | Wealth: **Net Worth** + Assets/Liabilities, **Sovereignty Audit**, Goals (with strategic types), **Network Capital**. | `renderNetWorth`, `renderSovereignty`, `renderGoals`, `renderNetwork` |
+| **Build** (`goals`) | primary | Wealth, as **collapsible sections** (`<details class="acc">`) so the tab opens calm instead of stacking six panels: **Assets/Liabilities + Net Worth** (open by default), **Dreams & goals**, **Skill & Capacity**, **Giving & Circulation**, then the stage-3 **Network Capital** and **Sovereignty Audit**. | `renderNetWorth`, `renderSovereignty`, `renderGoals`, `renderNetwork` |
 | **Track** (`tx`) | more | Ledger of income + expenses, **energy tags**, filters/search, **Zero-Blindspot Shield**. | `renderTx`, `renderTxList`, `blindspotShield` |
 | **Learn** (`learn`) | more | Money School lessons **+** Insights charts (spending, income-vs-spend, trend, **Abundance & Circulation**). | `renderLesson`, `renderCharts`, `renderCirculation` |
 | **Settings** (`settings`) | more | True Net Hourly Wage engine, plus setup chat / install / export / import / reset. | `updateWageNote`, `trCompute` |
@@ -38,7 +38,7 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Voice engine** - two axes drive all copy:
 - **Register** (Gen Z / Middle / Mature) - set at the intake age-gate; 2026-appropriate vocabulary.
-- **Intensity** (Clean / Blunt / Savage) - the header dial; how much mercy.
+- **Intensity** (Clean / Blunt / Savage) - the **Settings > Voice & tone** dial (moved out of the header so it no longer rides above every screen); how much mercy. The rotating truth-quote hero (`.quote-wrap`) now shows on **Home only** (`body.on-home`), keeping the other tabs' headers lean.
 - Pickers: `pickVoice` (register×intensity), `pickReg` (register), `pickTrapVoice`. Quote bank `QUOTES`, plus per-feature matrices (`IMP_*`, `TRAP_RESPONSES`, `CHALLENGE_STING`, `REBALANCE_COPY`, `BLINDSPOT_COPY`, `LIFE_LABELS`).
 - **Tone safety lock** - sensitive/essential spend (rent, medical, utilities, groceries, emergencies, and any Cover First essential) forces the **Clean** register regardless of the dial, so the app never roasts someone over a hospital bill or their rent. `SENSITIVE_RX`, `isSensitive`, `effInt`; context-aware pickers `pickVoiceCtx` / `pickTrapVoiceCtx` power the rebalance banner and the impulse gut-check.
 
