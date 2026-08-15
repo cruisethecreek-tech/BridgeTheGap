@@ -2872,9 +2872,9 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
 const cryptoOK=()=>!!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
 function abToB64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
 function b64ToAb(b64){ const s=atob(b64); const b=new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b; }
-async function deriveKey(pass,salt){
+async function deriveKey(pass,salt,iter){
   const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter||150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
 async function encryptBackup(){
   if(!cryptoOK()){ alert('This browser cannot make an encrypted backup here. Use "Export data" for a plain backup instead, or open the installed app.'); return; }
@@ -2931,6 +2931,84 @@ function renderBackupNote(){
   const er=document.getElementById('encRestoreBtn'), erf=document.getElementById('encRestoreFile');
   if(er&&erf){ er.addEventListener('click',()=>erf.click()); erf.addEventListener('change',e=>{ if(e.target.files&&e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value=''; }); }
 })();
+
+/* ============================================================
+   SOVEREIGN TIER - Household Sync (opt-in, paid). BLIND VAULT design.
+   ------------------------------------------------------------
+   Brand rule: the free tier stays 100% local and offline - none of the code
+   below runs, and the Supabase SDK is NOT loaded, until a user explicitly opts
+   into Sync. What ever leaves the device is a single AES-256-GCM ciphertext
+   blob encrypted on-device with the user's Sync Passphrase (which we never see
+   and never transmit). Supabase stores only { user_id, encrypted_payload } -
+   "even we can't read your money."
+
+   STEP 1 config - fill these in with your Supabase project values to go live.
+   Until set, the Sync UI shows as "coming soon" and nothing touches the network.
+   ------------------------------------------------------------
+   REQUIRED Supabase setup (run once in the SQL editor):
+
+     create table public.user_vaults (
+       user_id uuid primary key references auth.users(id) on delete cascade,
+       encrypted_payload text,
+       updated_at timestamptz default now()
+     );
+     alter table public.user_vaults enable row level security;
+     create policy "own vault - read"   on public.user_vaults for select using (auth.uid() = user_id);
+     create policy "own vault - upsert" on public.user_vaults for insert with check (auth.uid() = user_id);
+     create policy "own vault - update" on public.user_vaults for update using (auth.uid() = user_id);
+
+   Entitlement (paid gate) is added later: a `paid` boolean set only by a
+   Stripe webhook (Supabase Edge Function), checked in the RLS policy - so a
+   client-side flag can never unlock sync. UI lock alone is cosmetic.
+   ============================================================ */
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SYNC_SDK_URL      = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+const syncConfigured    = () => isConfigured(SUPABASE_URL) && isConfigured(SUPABASE_ANON_KEY);
+
+/* Lazy Supabase client - the SDK loads on first use only, so the free tier
+   never fetches anything. Returns null (never throws) if sync isn't set up. */
+let _sbClient=null, _sbLoading=null;
+async function getSupabase(){
+  if(_sbClient) return _sbClient;
+  if(!syncConfigured()){ console.warn('[sync] Supabase not configured - free/local only.'); return null; }
+  if(!window.supabase){
+    _sbLoading = _sbLoading || new Promise((resolve,reject)=>{
+      const s=document.createElement('script'); s.src=SYNC_SDK_URL; s.async=true;
+      s.onload=resolve; s.onerror=()=>reject(new Error('Could not load the sync engine (are you offline?).'));
+      document.head.appendChild(s);
+    });
+    try{ await _sbLoading; }catch(e){ _sbLoading=null; throw e; }
+  }
+  _sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+  return _sbClient;
+}
+
+/* ---------- STEP 2: Blind Vault E2EE (AES-256-GCM + PBKDF2, on-device) ----------
+   Reuses the same primitives as the encrypted backup. The Sync Passphrase never
+   leaves the device; only the { salt, iv, data } ciphertext envelope does. Lose
+   the passphrase and the vault is unrecoverable by design - that is the point. */
+const VAULT_ITER = 210000; // stronger KDF for data that rests on a server
+async function encryptVault(obj, passphrase){
+  if(!cryptoOK()) throw new Error('This browser cannot encrypt here.');
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(passphrase, salt, VAULT_ITER);
+  const data=new TextEncoder().encode(JSON.stringify(obj));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, data);
+  // envelope is a compact JSON string ready to store in user_vaults.encrypted_payload
+  return JSON.stringify({ app:'accountability', kind:'vault', v:1, alg:'AES-GCM', kdf:'PBKDF2-SHA256', iter:VAULT_ITER, salt:abToB64(salt), iv:abToB64(iv), data:abToB64(ct) });
+}
+async function decryptVault(payloadStr, passphrase){
+  if(!cryptoOK()) throw new Error('This browser cannot decrypt here.');
+  let env; try{ env=JSON.parse(payloadStr); }catch(_){ throw new Error('Vault payload is unreadable.'); }
+  if(!env||!env.data||!env.salt||!env.iv) throw new Error('Not a valid vault payload.');
+  const key=await deriveKey(passphrase, b64ToAb(env.salt), env.iter||150000);
+  let plain;
+  try{ plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToAb(env.iv)}, key, b64ToAb(env.data)); }
+  catch(_){ throw new Error('Wrong passphrase, or the vault is damaged.'); }
+  return JSON.parse(new TextDecoder().decode(plain));
+}
 
 /* ---------- Household mode controls ---------- */
 (function(){
