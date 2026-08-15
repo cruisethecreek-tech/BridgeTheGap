@@ -4172,21 +4172,33 @@ function renderNextSteps(){
   const ltb=income-assigned;
   const wallsCovered=WALLS.filter(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)>0; }).length;
   const unlocked=state.vault.filter(v=>v.unlocksAt<=Date.now()).length;
+  const firstUncovered=WALLS.find(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)<=0; });
   const steps=[];
-  if(income<=0) steps.push(['tx','🧾','Log your income','Add this month\'s paycheck so every dollar has something to assign.']);
-  else if(Math.abs(ltb)>=1) steps.push(['budget','📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`,'Budget to zero: every dollar gets a job.']);
-  if(wallsCovered<4) steps.push(['budget','🏠',`Cover your essentials (${wallsCovered}/4)`,'Fund Roof, Food, Power & Wi-Fi, and Getting Around first.']);
-  if(!state.hourlyWage) steps.push(['settings','⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.']);
-  if(unlocked>0) steps.push(['impulse','🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.']);
-  if(!state.goals.length) steps.push(['goals','🎯','Name one dream','A budget with nothing behind it is just a spreadsheet.']);
+  if(income<=0) steps.push(['🧾','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
+  else if(Math.abs(ltb)>=1) steps.push(['📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`,'Budget to zero: every dollar gets a job.','assign']);
+  if(wallsCovered<4) steps.push(['🏠',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
+  if(!state.hourlyWage) steps.push(['⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.','wage']);
+  if(unlocked>0) steps.push(['🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.','tab:impulse']);
+  if(!state.goals.length) steps.push(['🎯','Name one dream','A budget with nothing behind it is just a spreadsheet.','dream']);
   const givenM=(state.giving||[]).filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0);
   const giveTarget=(state.givingPct>0&&income>0)?income*state.givingPct/100:0;
-  if(giveTarget>0 && givenM<giveTarget) steps.push(['goals','🌊',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.']);
-  else if(!state.giving.length && income>0) steps.push(['goals','🌊','Give something forward','Even a small amount, on purpose, changes your relationship with money.']);
-  if(!steps.length) steps.push(['tx','✅','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.']);
+  if(giveTarget>0 && givenM<giveTarget) steps.push(['🌊',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
+  else if(!state.giving.length && income>0) steps.push(['🌊','Give something forward','Even a small amount, on purpose, changes your relationship with money.','give']);
+  if(!steps.length) steps.push(['✅','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.','tab:tx']);
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
-    steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-goto="${s[0]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[1]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[2])}</span><span class="ns-s">${escapeHtml(s[3])}</span></span><span class="ns-arrow">→</span></button>`).join('');
+    steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`).join('');
 }
+/* deep-link a "Do this next" card to the exact spot + focus */
+function runNextStep(act){
+  if(!act) return;
+  if(act.indexOf('wall:')===0){ const c=act.slice(5); c?goToWall(c):activateTab('budget'); return; }
+  if(act.indexOf('tab:')===0){ activateTab(act.slice(4)); return; }
+  const map={ income:['tx','txAmt'], assign:['budget','catName'], wage:['settings','wage'], dream:['goals','goalName'], give:['goals','giveName'] };
+  const t=map[act]; if(!t){ return; }
+  activateTab(t[0]);
+  setTimeout(()=>{ const el=document.getElementById(t[1]); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },140);
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
 document.getElementById('intakeBtn2').addEventListener('click',()=>openIntake());
 document.getElementById('installBtn2').addEventListener('click',()=>document.getElementById('installBtn').click());
 document.getElementById('exportBtn2').addEventListener('click',()=>document.getElementById('exportBtn').click());
