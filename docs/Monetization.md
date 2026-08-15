@@ -57,6 +57,33 @@ affiliate/partnership content, YouTube/TikTok around the app's ideas (Life-Hour
 currency, Trap Radar, Sovereignty tiers make great content hooks). The app being
 free and private is a *feature* of this funnel, not a leak in it.
 
+### 5. Honest referral links (the reward calendar) - live
+The reward calendar already earns a natural place to point someone: the moment it
+tells a spender "you saved $X today, here's what to do with it." That prompt can
+carry **referral links** to investing apps (Acorns, Stash, SoFi, a HYSA, etc.).
+When a reader signs up through your link, the partner pays a referral bonus. This
+is implemented (`PARTNERS` + `partnerLinks()`), off until you paste real referral
+URLs, and it does **not** compromise the privacy promise, because it shares *zero
+user data* - it is just an outbound link the reader chooses to click. Rules that
+keep it clean:
+
+- **Disclose it, every time.** US law (FTC) requires an affiliate disclosure. The
+  block already carries one ("Accountability may earn a referral bonus... at no
+  extra cost to you"). Keep it visible; never bury it.
+- **Stay education, not advice.** Show *options* and say "do your own research",
+  never "you should invest in X." That line keeps you clear of giving regulated
+  financial advice.
+- **Only list partners you'd actually stand behind**, and only with a referral
+  relationship you truly have. Don't imply a partnership that doesn't exist.
+- **Never trade data for the payout.** The kickback is for the referral click,
+  not for anything about the user. The second it requires sending user data, it
+  becomes channel #-none (see below).
+
+Realistic economics: referral bonuses are lumpy and depend on the partner's
+current promo (often $5-$25 per funded signup, sometimes a share of a bonus).
+It won't replace a salary at small scale, but it's real money that rides on top
+of a free product without gating anyone - which is exactly the point.
+
 ## What NOT to do
 
 - **No in-app license-key gate** presented as secure. It is not, and a savvy
@@ -64,9 +91,11 @@ free and private is a *feature* of this funnel, not a leak in it.
 - **No "Pro unlocks the Vault / Freedom Mode"** style feature-gating in the
   client. Same reason. If a feature is the hook, gating it client-side just
   teaches people to bypass it.
-- **No data collection or bank-affiliate revenue.** It contradicts the whole
-  privacy promise and re-introduces the compliance burden the local model
-  avoids. This is a lane you are choosing on purpose - own it.
+- **No data-for-money affiliate deals.** A *disclosed referral link that shares
+  no user data* (channel #5) is fine and is live. What stays off the table is any
+  deal where the payout depends on sending user data, linking a bank/account, or
+  lead-selling - that contradicts the privacy promise and re-introduces the
+  compliance burden the local model avoids. Outbound links: yes. Data pipes: no.
 
 ## The moat (be realistic)
 

@@ -340,6 +340,27 @@
   .cal-stat .v.good{color:var(--good)} .cal-stat .v.bad{color:var(--bad)}
   .cal-rec{margin-top:14px;background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accent-rgb),.25);border-radius:12px;padding:13px 15px;font-size:14px;line-height:1.55}
   .cal-rec b{color:var(--accent)}
+  .cal-cell.clk{cursor:pointer;transition:transform .08s}
+  .cal-cell.clk:hover{transform:translateY(-1px)}
+  .cal-cell.sel{outline:2px solid var(--accent);outline-offset:1px}
+  .cal-week{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .cal-week .wk-row{display:flex;justify-content:space-between;gap:10px;margin-top:4px;font-weight:800}
+  .cal-week .wk-bar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:8px}
+  .cal-week .wk-bar span{display:block;height:100%;background:var(--good)}
+  .cal-week .wk-bar.over span{background:var(--bad)}
+  .cal-day{margin-top:14px;background:var(--panel);border:1px solid rgba(var(--accent-rgb),.3);border-radius:12px;padding:14px 16px}
+  .cal-day h3{margin:0 0 4px;font-size:16px}
+  .cal-day .cd-save{font-weight:900;font-size:22px;letter-spacing:-.3px}
+  .cal-day .cd-save.good{color:var(--good)} .cal-day .cd-save.bad{color:var(--bad)}
+  .cal-entries{margin-top:10px}
+  .cal-entries .ce{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .cal-entries .ce .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal-entries .ce .am{font-weight:800;white-space:nowrap}
+  .cal-entries .ce .am.in{color:var(--good)}
+  .cal-partners{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .cal-partners a{display:inline-flex;flex-direction:column;gap:1px;background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.35);border-radius:10px;padding:8px 12px;text-decoration:none;color:var(--text);font-weight:800;font-size:14px}
+  .cal-partners a small{font-weight:600;color:var(--muted);font-size:11px}
+  .cal-fine{margin-top:10px;font-size:11px;color:var(--muted);line-height:1.5}
   /* debt payoff planner */
   .debtrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
   .debtrow .dr-name{font-weight:800;flex:1;min-width:90px}
@@ -1358,6 +1379,18 @@ const GUIDE_URL           = 'YOUR_GUIDE_OR_WAITLIST_URL';
 const SUPPORT_URL         = 'YOUR_SUPPORT_URL';
 const isConfigured = v => !!v && v.indexOf('YOUR_') === -1;
 
+/* PARTNER / REFERRAL LINKS - affiliate, OFF until you paste real referral URLs.
+   These surface only in the reward calendar's "what to do with the money you
+   saved" prompt, each with a plain affiliate disclosure (FTC). This is how the
+   free app earns: a referral bonus when someone signs up. It stays education,
+   not advice - we show options and say "do your own research", never "you should".
+   Paste your own referral link into `url` for each; drop or add partners freely. */
+const PARTNERS = [
+  { name:'Acorns', url:'YOUR_ACORNS_REFERRAL_URL', blurb:'auto-invest spare change' },
+  { name:'Stash',  url:'YOUR_STASH_REFERRAL_URL',  blurb:'invest from a few dollars' }
+];
+const partnerLinks = () => PARTNERS.filter(p => isConfigured(p.url));
+
 /* tone-matched subscribe feedback (register x intensity) */
 const SUBSCRIBE_WIN={
   genz:{clean:["Locked in. Check your inbox for your first prompt.","You're in. First gut-check hits your inbox soon."],blunt:["Done. First prompt's on the way - go check.","You're on the list. No spam, just truth."],savage:["Locked in. Now actually read it when it lands.","You're in. Don't let it rot in the promo tab."]},
@@ -1692,15 +1725,53 @@ function renderSpending(){
   </div>`;
   const sc=document.getElementById('spendScan'); if(sc) sc.addEventListener('click',openModal);
 }
-/* Reward calendar: daily allowance from the monthly limit; beat it, day turns green */
-function spendRewardRec(today, ahead){
-  if(today<=0) return `Today's allowance is spent - no shame, the streak resets tomorrow. Come back green.`;
-  const g=(typeof topGoal==='function')?topGoal():null;
-  let s=`You came in <b>${money(today)}</b> under today. Real options: park it in savings, `;
-  s+= g?`send it to "${escapeHtml(g.name)}", ` : `stash it toward a goal, `;
-  s+=`invest it (at 7% it compounds instead of sitting), or bank three of these and take one guilt-free treat.`;
-  if(ahead>0.5) s+=` You're <b>${money(ahead)}</b> ahead for the month - money you chose to keep.`;
-  return s;
+/* Reward calendar: daily allowance from the monthly limit; beat it, day turns green.
+   Smart: tap a day to see what you logged (income + expense entries), how much you
+   saved, and where to put the difference. Plus a live weekly pace strip. */
+let calSelDay=null;
+function spendRewardRec(bankedToday, ahead){
+  if(ahead>0.5) return `You're <b>${money(ahead)}</b> ahead of pace this month - money you chose to keep, not leak. Tap a green day to decide where it goes.`;
+  if(ahead<-0.5) return `You're <b>${money(-ahead)}</b> over pace this month. Not a verdict, just today's number - beat the allowance and it turns around.`;
+  if(bankedToday>0) return `You came in <b>${money(bankedToday)}</b> under today. Bank a few of these and one guilt-free treat is genuinely earned.`;
+  return `Clean slate. Beat today's allowance and the streak starts.`;
+}
+function dayEntries(M,d){ const dd=M+'-'+String(d).padStart(2,'0'); return state.transactions.filter(t=>t.date===dd); }
+function renderCalDay(M, allowance){
+  const el=document.getElementById('calDay'); if(!el||calSelDay==null) return;
+  const [y,mo]=M.split('-').map(Number), d=calSelDay;
+  const entries=dayEntries(M,d);
+  const spent=entries.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const saved=allowance-spent;
+  const label=new Date(y,mo-1,d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+  let rows;
+  if(entries.length){
+    rows=`<div class="cal-entries">${entries.slice().sort((a,b)=>a.type<b.type?1:-1).map(t=>{
+      const inc=t.type==='income';
+      const nm=inc?escapeHtml(t.source||t.note||'Income'):escapeHtml(t.note||catName(t.catId)||'Purchase');
+      return `<div class="ce"><span class="nm">${nm}</span><span class="am ${inc?'in':''}">${inc?'+':'-'}${money(t.amount)}</span></div>`;
+    }).join('')}</div>`;
+  } else {
+    rows=`<div class="sub" style="margin-top:8px">Nothing logged this day - a clean ${money(allowance)} saved.</div>`;
+  }
+  let action='';
+  if(saved>0){
+    const g=(typeof topGoal==='function')?topGoal():null, pl=partnerLinks();
+    const tail = pl.length ? ', or put it to work below' : (g?'' : ', or move it toward a goal');
+    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">What to do with the <b>${money(saved)}</b> you didn't spend: keep it in savings${g?`, send it to "${escapeHtml(g.name)}"`:''}${tail}.</div>`;
+    if(pl.length){
+      action+=`<div class="cal-partners">${pl.map(p=>`<a href="${p.url}" target="_blank" rel="noopener sponsored nofollow">${escapeHtml(p.name)}<small>${escapeHtml(p.blurb)}</small></a>`).join('')}</div>`;
+      action+=`<div class="cal-fine">Partner links - Accountability may earn a referral bonus, at no extra cost to you. Education, not financial advice; do your own research.</div>`;
+    }
+  } else if(spent>allowance){
+    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
+  }
+  el.innerHTML=`<div class="cal-day">
+    <h3>${label}</h3>
+    <div class="cd-save ${saved>=0?'good':'bad'}">${saved>=0?money(saved)+' saved':money(-saved)+' over'}</div>
+    <div class="sub" style="font-size:12px">${money(spent)} spent of ${money(allowance)} allowance</div>
+    ${rows}
+    ${action}
+  </div>`;
 }
 function renderRewardCalendar(){
   const box=document.getElementById('rewardCalBox'); if(!box) return;
@@ -1712,6 +1783,7 @@ function renderRewardCalendar(){
   const isCur=(M===thisMonth()), todayDay=isCur?new Date().getDate():dim;
   const spentByDay={};
   txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spentByDay[d]=(spentByDay[d]||0)+t.amount; });
+  if(calSelDay==null || calSelDay>todayDay) calSelDay=todayDay;
   let cells=''; for(let i=0;i<firstWd;i++) cells+=`<div class="cal-cell empty"></div>`;
   let ahead=0, bankedToday=0;
   for(let d=1;d<=dim;d++){
@@ -1724,19 +1796,36 @@ function renderRewardCalendar(){
       else cls='over';
       if(isCur && d===todayDay) bankedToday=Math.max(0,surplus);
     }
-    cells+=`<div class="cal-cell ${cls}${(isCur&&d===todayDay)?' today':''}"><span class="cd">${d}</span>${mark?`<span class="cm">${mark}</span>`:''}</div>`;
+    const extra = isPast ? ` clk${d===calSelDay?' sel':''}` : '';
+    const dd = isPast ? ` data-day="${d}"` : '';
+    cells+=`<div class="cal-cell ${cls}${(isCur&&d===todayDay)?' today':''}${extra}"${dd}><span class="cd">${d}</span>${mark?`<span class="cm">${mark}</span>`:''}</div>`;
   }
   let streak=0; for(let d=Math.min(dim,todayDay); d>=1; d--){ if((spentByDay[d]||0)<=allowance) streak++; else break; }
+  // weekly pacing: the calendar week (Sun..today) that contains today, within this month
+  const dow=new Date(y,mo-1,todayDay).getDay(), wkStart=Math.max(1,todayDay-dow);
+  let wkSpent=0, wkDays=0; for(let d=wkStart; d<=todayDay; d++){ wkSpent+=(spentByDay[d]||0); wkDays++; }
+  const wkAllow=allowance*wkDays, wkDiff=wkAllow-wkSpent, wkOver=wkSpent>wkAllow;
+  const wkPct=wkAllow>0?Math.min(100,Math.round(wkSpent/wkAllow*100)):0;
   box.innerHTML=`<div class="panel">
     <h2>🗓️ Reward calendar</h2>
-    <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${money(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★.</p>
+    <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${money(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★. <b>Tap any day</b> for what you logged and saved.</p>
     <div class="cal-grid">${['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}${cells}</div>
+    <div class="cal-week">
+      <div class="sp-k">This week's pace</div>
+      <div class="wk-row"><span>${money(wkSpent)} spent</span><span style="color:${wkOver?'var(--bad)':'var(--good)'}">${wkOver?money(-wkDiff)+' over pace':money(wkDiff)+' ahead'}</span></div>
+      <div class="wk-bar ${wkOver?'over':''}"><span style="width:${wkPct}%"></span></div>
+      <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays>1?'s':''} so far this week.</div>
+    </div>
     <div class="cal-stats">
       <div class="cal-stat"><div class="sp-k">Under-budget streak</div><div class="v">${streak} 🔥</div></div>
       <div class="cal-stat"><div class="sp-k">${ahead>=0?'Ahead this month':'Over pace by'}</div><div class="v ${ahead>=0?'good':'bad'}">${money(Math.abs(ahead))}</div></div>
     </div>
+    <div id="calDay"></div>
     <div class="cal-rec">${spendRewardRec(bankedToday, ahead)}</div>
   </div>`;
+  renderCalDay(M, allowance);
+  const grid=box.querySelector('.cal-grid');
+  if(grid) grid.addEventListener('click',e=>{ const c=e.target.closest('.cal-cell[data-day]'); if(!c) return; calSelDay=+c.dataset.day; renderRewardCalendar(); });
 }
 function applySpending(){
   const on=!!state.spendingMode;
