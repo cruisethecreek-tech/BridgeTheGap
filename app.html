@@ -314,6 +314,7 @@
   .hh-fair .k{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800}
   .hh-fairrow{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:15px;font-weight:600}
   .hh-fairrow b{color:var(--accent)}
+  .hh-life{display:inline-block;margin-left:4px;font-size:12px;font-weight:700;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
   .hh-wage{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
   .hh-wage b{color:var(--text)}
   /* "Just my spending" mode */
@@ -1677,8 +1678,8 @@ const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString
    is the SAME basis estHourlyFromMonthly uses to derive an hourly from monthly
    take-home, so one month of pay reads as exactly "1.0 mo" of life, not 1.08. */
 const WORKDAY_HRS=8, WORKMONTH_HRS=2080/12;
-function fmtLife(amount){
-  const H=effectiveHourly();
+function fmtLife(amount, rateOverride){
+  const H=(rateOverride!=null?rateOverride:effectiveHourly());
   if(!H||H<=0) return usd(amount);            // no rate yet - fall back to dollars
   const neg=amount<0, hrs=Math.abs(amount)/H;
   let out;
@@ -1690,6 +1691,11 @@ function fmtLife(amount){
 }
 /* the app formats everything through money(): mode-aware */
 function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
+/* Owner-aware pricing (household mode): a partner-owned dollar costs the PARTNER's
+   life at THEIR wage, not yours. Only diverges when household is on and the partner
+   has a wage set; otherwise everything prices at your own rate, exactly as before. */
+function hourlyFor(owner){ return (state.householdOn && owner==='b' && state.wageB>0) ? state.wageB : effectiveHourly(); }
+function moneyOwner(n, owner){ return state.freedomMode ? fmtLife(n, hourlyFor(owner)) : usd(n); }
 /* Flip stat card: front shows the figure in the current mode; tap to flip to the
    back, which shows the same money in the OTHER currency plus the rate that
    derived it - the "show your work", on demand, so the interface stays compact. */
@@ -1756,17 +1762,17 @@ function renderHousehold(){
   box.innerHTML=`<div class="panel household">
     <h2>🏠 Household</h2>
     <p class="sub">One budget, two earners. It all stays on this device - to share it with your partner's phone, export the encrypted backup in Settings and have them restore it.</p>
-    <div class="hh-tot">Combined income this month <b>${money(inc.total)}</b></div>
+    <div class="hh-tot">Combined income this month <b>${usd(inc.total)}</b></div>
     <div class="hh-split">
-      <div class="hh-p"><span class="nm">${nameA}</span><span class="v">${money(inc.a)}</span><span class="pc">${pct(rA)}%</span></div>
-      <div class="hh-p b"><span class="nm">${nameB}</span><span class="v">${money(inc.b)}</span><span class="pc">${pct(rB)}%</span></div>
-      ${inc.j>0?`<div class="hh-p j"><span class="nm">Joint</span><span class="v">${money(inc.j)}</span><span class="pc">shared</span></div>`:''}
+      <div class="hh-p"><span class="nm">${nameA}</span><span class="v">${moneyOwner(inc.a,'a')}</span><span class="pc">${pct(rA)}%</span></div>
+      <div class="hh-p b"><span class="nm">${nameB}</span><span class="v">${moneyOwner(inc.b,'b')}</span><span class="pc">${pct(rB)}%</span></div>
+      ${inc.j>0?`<div class="hh-p j"><span class="nm">Joint</span><span class="v">${usd(inc.j)}</span><span class="pc">shared</span></div>`:''}
     </div>
     <div class="hh-bar"><span class="a" style="width:${pct(rA)}%"></span><span class="b" style="width:${pct(rB)}%"></span></div>
     ${ess>0&&base>0?`<div class="hh-fair">
-      <div class="k">Fair split of the ${money(ess)} in shared essentials</div>
-      <div class="hh-fairrow"><span>${nameA} covers <b>${money(ess*rA)}</b> · ${pct(rA)}%</span><span>${nameB} covers <b>${money(ess*rB)}</b> · ${pct(rB)}%</span></div>
-      <p class="sub" style="margin:8px 0 0">Proportional to what each of you earns - not a 50/50 that squeezes the lower earner. A guideline, not a rule.</p>
+      <div class="k">Fair split of the ${usd(ess)} in shared essentials</div>
+      <div class="hh-fairrow"><span>${nameA} covers <b>${usd(ess*rA)}</b> · ${pct(rA)}%${wA>0?` <span class="hh-life">${fmtLife(ess*rA,wA)}</span>`:''}</span><span>${nameB} covers <b>${usd(ess*rB)}</b> · ${pct(rB)}%${wB>0?` <span class="hh-life">${fmtLife(ess*rB,wB)}</span>`:''}</span></div>
+      <p class="sub" style="margin:8px 0 0">Proportional to what each of you earns - not a 50/50 that squeezes the lower earner. A guideline, not a rule.${wA>0&&wB>0&&Math.abs(wA-wB)>0.5?` The hours show the real cost: the lower earner pays for their share with more of their life.`:''}</p>
     </div>`:''}
     ${(wA>0||wB>0)?`<div class="hh-wage"><span>${nameA}: <b>${wA>0?usd(wA)+'/hr':'set wage'}</b></span><span>${nameB}: <b>${wB>0?usd(wB)+'/hr':'add in Settings'}</b></span></div>`:''}
   </div>`;
@@ -2893,14 +2899,14 @@ function renderTxList(){
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
     const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):'')):((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
-    const H=effectiveHourly();
+    const owner=t.owner||'a', Ho=hourlyFor(owner);
     let badge='';
     if(t.type==='income' && t.hours>0) badge=`<span class="tx-yield">${usd(t.amount/t.hours)}/hr</span>`;
-    else if(H>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount)})</span>`;
+    else if(Ho>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount,Ho)})</span>`;
     return `<div class="tx ${t.type}">
       <div class="tx-date">${mon}<b>${day}</b></div>
       <div class="tx-main"><div class="tx-title">${title}</div><div class="tx-sub">${sub}</div></div>
-      <div class="tx-amt">${t.type==='income'?'+':'−'}${money(t.amount)}${badge}</div>
+      <div class="tx-amt">${t.type==='income'?'+':'−'}${moneyOwner(t.amount,owner)}${badge}</div>
       <button class="del" data-deltx="${t.id}" title="Delete">✕</button>
     </div>`;
   }).join('');
