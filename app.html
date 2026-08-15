@@ -511,6 +511,10 @@
   .intake-chips button:hover{border-color:var(--accent)}
   .intake-chips button.go{background:var(--accent);color:var(--ink);border-color:var(--accent)}
   .intake-skip{display:block;text-align:center;margin:10px auto 0;background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;cursor:pointer}
+  .intake-underrow{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:10px}
+  .intake-underrow .intake-skip{margin:0}
+  .intake-help{background:rgba(230,178,77,.12);border:1px solid rgba(230,178,77,.35);color:var(--accent);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;cursor:pointer}
+  .intake-help:hover{background:rgba(230,178,77,.2)}
 
   /* ---------- Anti-Trap / Vault ---------- */
   .trap-tag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent-2);background:#2a1410;border:1px solid #4a221e;border-radius:6px;padding:3px 9px;margin-bottom:10px}
@@ -3330,7 +3334,13 @@ const INTAKE=[
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
-  {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Don't know it? Skip. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22'},
+  {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
+    help:{ cta:"🤔 Help me work it out",
+      ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
+      placeholder:"e.g. 52000",
+      run:(annual)=>{ const hr=Math.max(1,Math.round(annual/2080)); return { value:hr,
+        teach:`Here's the trick: a full-time year is about 2,080 work hours (40 hrs a week × 52 weeks). So ${money(annual)} ÷ 2,080 ≈ ${usd(hr)} an hour. That's your starting number - you can fine-tune it to exact take-home later in Settings.` }; } }
+  },
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
   {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
   {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
@@ -3383,8 +3393,10 @@ function renderIntakeDock(s){
   }
   const isMoney=s.input==='money';
   const optNow=(typeof s.optional==='function')?!!s.optional(iaAns):!!s.optional;
-  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}`;
+  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
+    +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}</div>`;
   const inp=document.getElementById('iaInput'); setTimeout(()=>inp.focus(),60);
+  const hb=document.getElementById('iaHelp'); if(hb) hb.onclick=()=>runIntakeHelper(s);
   const submit=()=>{
     const raw=inp.value.trim();
     if(isMoney){
@@ -3399,6 +3411,24 @@ function renderIntakeDock(s){
   document.getElementById('iaSend').onclick=submit;
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
   const sk=document.getElementById('iaSkip2'); if(sk) sk.onclick=()=>{ iaStore(s.key,isMoney?0:''); iaBub('Skip','me'); iaAdvance(); };
+}
+/* Teach-me helper: instead of just skipping, walk them to the answer (e.g. hourly from salary) */
+function runIntakeHelper(s){
+  const h=s.help, dock=document.getElementById('intakeDock');
+  iaBub(h.ask,'bot');
+  dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(h.placeholder||'')}"><button class="intake-send" id="iaHelpGo">Work it out</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
+  const inp=document.getElementById('iaHelpInput'); setTimeout(()=>inp.focus(),60);
+  const go=()=>{
+    const n=parseFloat(inp.value); if(isNaN(n)||n<=0){ inp.focus(); return; }
+    iaBub(money(n),'me');
+    const res=h.run(n);
+    iaBub(res.teach,'bot');
+    iaStore(s.key,res.value);
+    setTimeout(iaAdvance,600);
+  };
+  document.getElementById('iaHelpGo').onclick=go;
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaHelpBack').onclick=()=>renderIntakeDock(s);
 }
 function commitIntake(){
   const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
