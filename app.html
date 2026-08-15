@@ -709,6 +709,7 @@
   .lineitem{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
   .lineitem .nm{flex:1;font-weight:700;font-size:14px;min-width:0}
   .lineitem .vl{font-weight:800}
+  .lineitem .vl .vledit{width:78px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:inherit;font-weight:800;font-size:14px;padding:4px 6px;text-align:right}
   .lineitem.asset .vl{color:var(--good)}.lineitem.liab .vl{color:var(--bad)}
   .lineitem .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
   .lineitem .del:hover{color:var(--bad)}
@@ -1645,7 +1646,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, sweptDays:{},
+           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false,
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -1663,8 +1664,11 @@ if(!state.activeMonth) state.activeMonth = thisMonth();
 const uid = () => Math.random().toString(36).slice(2,9);
 /* pure dollars */
 const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
-/* Pillar 2: dollars -> units of human effort. Magnitude-scaled. */
-const WORKDAY_HRS=8, WORKMONTH_HRS=160;
+/* Pillar 2: dollars -> units of human effort. Magnitude-scaled.
+   WORKMONTH_HRS = a full-time month = 2,080 hrs/yr (40 x 52) / 12 = 173.33. This
+   is the SAME basis estHourlyFromMonthly uses to derive an hourly from monthly
+   take-home, so one month of pay reads as exactly "1.0 mo" of life, not 1.08. */
+const WORKDAY_HRS=8, WORKMONTH_HRS=2080/12;
 function fmtLife(amount){
   const H=effectiveHourly();
   if(!H||H<=0) return usd(amount);            // no rate yet - fall back to dollars
@@ -1851,8 +1855,14 @@ function renderCalDay(M, allowance){
   } else if(saved>0){
     const g=(typeof topGoal==='function')?topGoal():null;
     if(g){
-      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app is holding - it's money that just stayed in your account. Give it a job: bank it toward your dream and watch it become real progress, not just a good day.</div>
-        <button class="cal-bank" data-calsweep="${dd}" data-calamt="${saved}">➕ Bank ${money(saved)} toward "${escapeHtml(g.name)}"</button>`;
+      const bankable=calBankable(M, allowance);                       // real month surplus still unbanked
+      const canBank=Math.min(saved, bankable, Math.max(0, g.target-g.saved));
+      if(bankable<=0.005){
+        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">A clean day - but across the whole month your real surplus so far is <b>${money(Math.max(0,calRealSurplus(M,allowance)))}</b> (a heavier day ate the rest). Nothing left to bank without banking money you didn't actually keep.</div>`;
+      } else {
+        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(canBank)}</b> isn't a pot the app is holding - it's real money you kept this month. Give it a job: bank it toward your dream and watch it become progress, not just a good day.</div>
+          <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">➕ Bank ${money(canBank)} toward "${escapeHtml(g.name)}"</button>`;
+      }
     } else {
       action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Give it one:</div>
         <button class="cal-bank" data-calgoal="1">🎯 Start a goal to bank it toward</button>`;
@@ -1869,14 +1879,25 @@ function renderCalDay(M, allowance){
   </div>`;
   const bank=el.querySelector('[data-calsweep]'); if(bank) bank.onclick=()=>calSweepDay(bank.dataset.calsweep, +bank.dataset.calamt);
   const undo=el.querySelector('[data-calunsweep]'); if(undo) undo.onclick=()=>calUnsweepDay(undo.dataset.calunsweep);
-  const mkg=el.querySelector('[data-calgoal]'); if(mkg) mkg.onclick=()=>{ if(typeof activateTab==='function') activateTab('dreams'); };
+  const mkg=el.querySelector('[data-calgoal]'); if(mkg) mkg.onclick=()=>{ if(typeof runNextStep==='function') runNextStep('dream'); else if(typeof activateTab==='function') activateTab('goals'); };
 }
-/* Bank a day's surplus into the top goal - turns notional "saved" into real
-   goal progress. Recorded per-day so it can't be double-counted, and undone. */
+/* Reward-calendar money math. A day's "saved" is notional (allowance - that day's
+   spend); banking must never credit a goal with more than the month's REAL net
+   surplus so far (allowance x elapsed days - actual spend), minus what's already
+   been banked. Keeps the sweep honest even with a big-spend day elsewhere. */
+function calElapsedDays(M){ const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate(); const tm=(typeof thisMonth==='function')?thisMonth():M; if(M<tm) return dim; if(M>tm) return 0; return Math.min(dim, new Date().getDate()); }
+function calMonthSpent(M){ return txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
+function calMonthSwept(M){ const sw=state.sweptDays||{}; return Object.keys(sw).filter(k=>k.slice(0,7)===M).reduce((s,k)=>s+(+sw[k].amount||0),0); }
+function calRealSurplus(M, allowance){ return allowance*calElapsedDays(M) - calMonthSpent(M); }
+function calBankable(M, allowance){ return Math.max(0, calRealSurplus(M,allowance) - calMonthSwept(M)); }
+function calCurrentAllowance(){ const M=state.activeMonth, lim=state.spendLimit||0; const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate(); return dim>0?lim/dim:0; }
+/* Bank a day's surplus into the top goal - turns real kept money into goal
+   progress. Capped to the month's actual unbanked surplus; recorded per-day and undoable. */
 function calSweepDay(dd, amount){
   const g=(typeof topGoal==='function')?topGoal():null; if(!g||!(amount>0)) return;
-  const add=Math.min(amount, Math.max(0, g.target-g.saved));
-  if(add<=0){ if(typeof toast==='function') toast(`"${g.name}" is already fully funded.`); return; }
+  const M=state.activeMonth, allowance=calCurrentAllowance();
+  const add=Math.min(amount, calBankable(M, allowance), Math.max(0, g.target-g.saved));
+  if(add<=0){ if(typeof toast==='function') toast(`Nothing to bank - your real surplus is already committed.`); renderRewardCalendar(); return; }
   g.saved+=add;
   if(!state.sweptDays) state.sweptDays={};
   state.sweptDays[dd]={amount:add, goalId:g.id};
@@ -3542,7 +3563,23 @@ function avgMonthlyIncome(){
   const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
 }
 function topGoal(){ return state.goals.find(g=>g.saved<g.target)||null; }
-function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (avgMonthlyIncome()>0 ? avgMonthlyIncome()/160 : 0); }
+/* YOUR own take-home only (owner 'a'), averaged over months you earned - so the
+   personal hourly fallback isn't inflated by a partner's or passive income. */
+function personalMonthlyIncome(){
+  const byM={}; state.transactions.filter(t=>t.type==='income' && (t.owner||'a')==='a').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
+  const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
+}
+function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (personalMonthlyIncome()>0 ? personalMonthlyIncome()/WORKMONTH_HRS : 0); }
+/* Keep the auto-derived blended wage honest: if the user hasn't manually set a
+   wage, recompute it from current YOUR-labor income records (each carrying its
+   monthly hours). Dropping a low-paying side gig lifts the rate again, etc. */
+function recomputeBlendedWage(){
+  if(!state.wageAuto) return;
+  const work=state.recurring.filter(r=>r.type==='income' && (r.owner||'a')==='a' && +r.hours>0);
+  if(!work.length) return;
+  const amt=work.reduce((s,r)=>s+(+r.amount||0),0), hrs=work.reduce((s,r)=>s+(+r.hours||0),0);
+  if(hrs>0){ state.hourlyWage=Math.round(amt/hrs*100)/100; }
+}
 function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
 /* Pillar 2: essential monthly burn = Cover First assignments (fallbacks below) */
 function essentialMonthly(){
@@ -3612,7 +3649,7 @@ function ensureImpulseCategory(){
 }
 
 /* --- net worth panel --- */
-function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}${money(o.value)}</span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
+function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" min="0" step="1" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
 function renderNetWorth(){
   const realA=sumAssetsKind('real'), stuffA=sumAssetsKind('stuff'), A=realA+stuffA, L=sumLiab(), NW=A-L, working=realA-L, total=A+L;
   const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
@@ -3639,7 +3676,7 @@ function renderNetWorth(){
   document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
     const k=a.kind||'real', yr=(a.cost||0)*12;
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
-      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">${money(a.value)}</span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
+      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" min="0" step="1" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
       <div class="li-cost">Drains $<input type="number" min="0" step="1" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
@@ -3657,11 +3694,15 @@ function renderNetWorth(){
     a.kind=(a.kind||'real')==='real'?'stuff':'real'; save(); renderNetWorth();
     if(a.kind==='real'){ const w=watchHit(a.name); if(w) showAssetChallenge(a.id,w); }  // audit on edit
   }));
-  document.querySelectorAll('#view-impulse button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#assetList button[data-delitem], #liabList button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
     const [cls,id]=b.dataset.delitem.split(':');
     if(cls==='asset') state.assets=state.assets.filter(x=>x.id!==id); else state.liabilities=state.liabilities.filter(x=>x.id!==id);
     save(); renderNetWorth();
   }));
+  document.querySelectorAll('#assetList input[data-editval], #liabList input[data-editval]').forEach(inp=>{
+    inp.addEventListener('input',()=>{ const [cls,id]=inp.dataset.editval.split(':'); const arr=cls==='asset'?state.assets:state.liabilities; const o=arr.find(x=>x.id===id); if(!o) return; o.value=parseFloat(inp.value)||0; save(); });
+    inp.addEventListener('change',()=>renderNetWorth());
+  });
 }
 /* asset psychology: is it REALLY an asset? */
 const VEH=['car','truck','suv','vehicle','auto','jeep','tesla','motorcycle','boat','yacht','rv','camper','atv','jet ski'];
@@ -3784,7 +3825,7 @@ document.getElementById('addLiab').addEventListener('click',()=>{
 /* --- hourly wage --- */
 const wageEl=document.getElementById('wage');
 wageEl.addEventListener('input',()=>{
-  state.hourlyWage=parseFloat(wageEl.value)||0; save();
+  state.hourlyWage=parseFloat(wageEl.value)||0; state.wageAuto=false; save();   // manual override stops auto-reblending
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
 function updateWageNote(){
@@ -3824,15 +3865,15 @@ document.getElementById('trCompute').addEventListener('click',()=>{
   const commute=parseFloat(document.getElementById('trCommute').value)||0;
   const overhead=parseFloat(document.getElementById('trOverhead').value)||0;
   if(take<=0){ alert('Enter your take-home pay per month.'); return; }
-  const denom=160+(commute*4);
+  const denom=WORKMONTH_HRS+(commute*(52/12));   // full-time month + commute hrs/wk converted to hrs/mo
   const rate=Math.max(0,(take-overhead)/denom);
-  state.hourlyWage=Math.round(rate*100)/100;
+  state.hourlyWage=Math.round(rate*100)/100; state.wageAuto=false;   // an explicit true-rate calc is a manual set
   state.trueRate={take,commute,overhead};
   save();
   document.getElementById('wage').value=state.hourlyWage;
-  const naive=take/160;
+  const naive=take/WORKMONTH_HRS;
   document.getElementById('trResult').style.display='';
-  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive "paycheck ÷ 160" rate was ${usd(naive)}/hr. The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
+  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive paycheck-per-hour rate was ${usd(naive)}/hr (a full-time month is about ${Math.round(WORKMONTH_HRS)} hrs). The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
 function fillTrueRate(){
@@ -4035,7 +4076,7 @@ function renderRecurring(){
     const label=r.type==='income'?escapeHtml(r.source||'Income'):escapeHtml(catName(r.catId));
     return `<div class="rec ${r.type}"><span class="tag">${r.type==='income'?'Income':'Expense'}</span><span class="nm">${label} · day ${r.day}</span><span class="am">${r.type==='income'?'+':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
   }).join('');
-  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); save(); renderRecurring(); }));
+  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
 }
 function postRecurring(month){
   let added=0;
@@ -4234,7 +4275,8 @@ function intakeWorkHours(a){ return (a.extraIncome||[]).reduce((s,x)=>s+(+x.hour
 function intakeBlendedHourly(a){
   const mr=+a.wage||0; if(mr<=0) return 0;
   let amt=+a.income||0, hrs=amt/mr;
-  (a.extraIncome||[]).forEach(x=>{ if(+x.hours>0){ amt+=+x.amount||0; hrs+=+x.hours; } });
+  // only YOUR own labor counts toward YOUR rate - skip partner-owned sources
+  (a.extraIncome||[]).forEach(x=>{ if(+x.hours>0 && !/partner/i.test(x.name||'')){ amt+=+x.amount||0; hrs+=+x.hours; } });
   return hrs>0 ? Math.round((amt/hrs)*100)/100 : mr;
 }
 function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
@@ -4468,15 +4510,15 @@ function renderZeroClose(s){
 }
 function commitIntake(){
   const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
-  const addIncome=(amount,source,owner)=>{ const rec={id:uid(),type:'income',amount,day:1,source}; if(owner) rec.owner=owner; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}); };
-  if(a.income>0) addIncome(a.income,'Paycheck','a');
-  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0) addIncome(+x.amount, x.name||'Income', /partner/i.test(x.name||'')?'b':'a'); });
+  const addIncome=(amount,source,owner,hours)=>{ const rec={id:uid(),type:'income',amount,day:1,source}; if(owner) rec.owner=owner; if(hours>0) rec.hours=hours; state.recurring.push(rec); const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}; if(hours>0) tx.hours=hours; state.transactions.push(tx); };
+  if(a.income>0) addIncome(a.income,'Paycheck','a', a.wage>0 ? a.income/a.wage : 0);   // store main-job hours so the blend can be recomputed later
+  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
   if(a.wantHousehold==='yes'){                   // "set up the couples view" from intake
     state.householdOn=true;
     const partner=(a.extraIncome||[]).find(x=>/partner/i.test(x.name||''));
     if(partner){ state.nameB='Partner'; if(+partner.amount>0) state.wageB=estHourlyFromMonthly(partner.amount); }
   }
-  if(a.wage>0){ const blended=intakeBlendedHourly(a); state.hourlyWage = blended>0 ? blended : a.wage; }
+  if(a.wage>0){ const blended=intakeBlendedHourly(a); state.hourlyWage = blended>0 ? blended : a.wage; state.wageAuto=true; }   // auto-derived: recompute if income/side gigs change
   [['roof','Roof'],['food','Food'],['util','Power & Wi-Fi'],['transport','Getting Around']].forEach(([k,name])=>{
     if(a[k]>0){ const c=findOrCreateEssential(name); budgetFor(M)[c.id]=a[k]; }
   });
