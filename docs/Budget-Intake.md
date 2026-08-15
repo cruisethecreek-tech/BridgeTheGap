@@ -9,6 +9,29 @@ ends, the Home screen is already alive.
 ## Account type - the first fork (spender path recommended)
 Right after the name, the chat asks whether they run the whole household budget or just want to track their own spending (`acct`: full | spend). **The lighter "just my spending" path is presented first and gently recommended** - full zero-based means logging every dollar manually, which is the #1 churn risk for a manual app, so most people start light (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks). Full zero-based is one tap away for anyone who runs the household budget. A **spender** path skips the Four Walls, income, debt, and dream entirely and instead offers an optional spending limit - then lands in "Just my spending" mode. The engine skips steps via each step's `showIf(answers)`. The star (★) set below applies to the **full** path.
 
+## Full path = a conversational budget builder
+For the **full** path, the intake doesn't just capture the essentials - it builds the
+whole zero-based budget in conversation, so every screen afterward is just edit / add /
+remove. Three engine pieces do this (`input:'loop'` and `input:'zeroClose'`):
+
+1. **Multi-income loop** (`moreIncome`) - after the main paycheck: "anything else land each
+   month?" Tap chips (Partner's pay / Side gig / Benefits / Something else), enter an amount
+   for each; they're summed into the total income. Each becomes its own recurring income.
+   (The personal *hourly wage* is still derived from the main paycheck only, not household.)
+2. **Expense-building loop** (`expenses`) - after the Four Walls: "the rest of where your
+   money goes." A wrap of common-category chips (Subscriptions, Eating out, Insurance,
+   Health, Childcare, Debt payment, Fun money, Personal care, Pets, Savings, + Something
+   else). Tap → enter amount → it's added (chosen chips drop off, a running total shows).
+   Each becomes a funded category. This is the "conversational list" that builds the budget.
+3. **Zero-based close** (`zeroClose`) - totals income vs. everything assigned and routes the
+   leftover: "you bring in $X, assigned $Y, $Z is loose - park it in Savings / toward your
+   dream / leave as buffer." Picking savings/goal funds a Savings category with the
+   remainder, so the user walks out already at $0 left to budget.
+
+Engine: `intakeIncomeTotal`, `intakeAssignedTotal`, `findOrCreateCat`, `renderLoop`,
+`askLoopAmount`, `renderZeroClose`; `commitIntake` writes it all. The **spender** path is
+untouched and stays light - it skips all three.
+
 ## The engine-critical set (★ - never skip these)
 These map to real app fields. If a consultation roams, make sure it still covers these.
 
