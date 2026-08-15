@@ -32,6 +32,21 @@ Engine: `intakeIncomeTotal`, `intakeAssignedTotal`, `findOrCreateCat`, `renderLo
 `askLoopAmount`, `renderZeroClose`; `commitIntake` writes it all. The **spender** path is
 untouched and stays light - it skips all three.
 
+## Reflection beats (engagement, not interrogation)
+Between the numbers, the full path interleaves short **pain-point / aspiration** questions
+(`input:'reflect'`, `renderReflect`) so setup feels like a conversation, not a form - and so
+the app captures the emotional signal the numbers miss. One quick chip question per
+emotionally-rich section (not every section), each **skippable**, each with a **tailored
+one-line reply** so the user feels heard; the richest opens an optional free-text aspiration.
+- **Roof** (`roofFeel`): love it / fine / outgrowing / dreaming of owning - the last two open
+  "where would you live if you could?" (`roofFeelNote`).
+- **Food** (`foodStyle`): cook / eat out / both.
+- **Getting Around** (`commuteFeel`): drains me / fine / love it / sick of the car payment.
+- **Debt** (`debtFeel`, only if carrying debt): treading water / slowly winning / just starting.
+All are stored under `state.intake.reflections` (`{roof, roofIdeal, food, commute, debt}`) for
+later personalization (voice, goals, recommendations). Utilities is intentionally skipped -
+it's not emotionally rich, and every extra question risks fatigue.
+
 ## The engine-critical set (★ - never skip these)
 These map to real app fields. If a consultation roams, make sure it still covers these.
 

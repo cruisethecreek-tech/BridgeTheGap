@@ -3932,9 +3932,32 @@ const INTAKE=[
   },
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
   {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
+  {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
+    bot:"Before we move on - honestly, how's the place you live actually treating you?",
+    options:[
+      {label:'❤️ Love it, staying put', value:'love', reply:"Love that. A place that feels like home is worth protecting - that's the whole point of covering it first."},
+      {label:"🤷 It's fine for now", value:'fine', reply:"Fine works. We'll keep it funded so it never quietly turns into your biggest stress."},
+      {label:'😮‍💨 Outgrowing it', value:'outgrow', reply:"Heard you. When it's time to level up, these numbers will tell you exactly when it's doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
+      {label:'🏡 Dreaming of owning', value:'own', reply:"Owning is a big, real one. Hold that thought - the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
+    ]},
   {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'foodStyle', input:'reflect', key:'foodStyle', optional:true, showIf:a=>a.acct!=='spend' && a.food>0,
+    bot:"Quick one - what's your normal with food?",
+    options:[
+      {label:'👩‍🍳 Mostly cook at home', value:'cook', reply:"Cooking's a quiet superpower for your wallet and your health. Respect."},
+      {label:'🥡 Eat out / takeout a lot', value:'out', reply:"No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
+      {label:'⚖️ A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
+    ]},
   {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 300'},
   {id:'transport', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'commuteFeel', input:'reflect', key:'commuteFeel', optional:true, showIf:a=>a.acct!=='spend' && a.transport>0,
+    bot:"How do you feel about getting around day to day?",
+    options:[
+      {label:'😑 The commute drains me', value:'drain', reply:"That drain is real - and Freedom Mode will show you exactly how many hours of life it costs. Sometimes that number changes everything."},
+      {label:"🚗 It's fine", value:'fine', reply:"Good - one less thing weighing on you."},
+      {label:'🚲 Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
+      {label:'💸 Sick of the car payment', value:'payment', reply:"Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
+    ]},
   {id:'expenses', input:'loop', loopKey:'expenses', showIf:a=>a.acct!=='spend',
     bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - add as many as are real, then hit Done. This is what builds your budget.",
     chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Eating out',name:'Eating out'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
@@ -3942,6 +3965,13 @@ const INTAKE=[
     done:"Done - that's my spending →"},
   {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
   {id:'debtAmt', bot:"Roughly how much, all in?", input:'money', key:'debtAmt', showIf:a=>a.hasDebt==='yes', placeholder:'e.g. 8000'},
+  {id:'debtFeel', input:'reflect', key:'debtFeel', optional:true, showIf:a=>a.hasDebt==='yes' && a.debtAmt>0,
+    bot:"And the debt - honestly, how does carrying it feel right now?",
+    options:[
+      {label:'😮‍💨 Treading water', value:'treading', reply:"Treading water is exhausting - but you just named it, and that's the first real step. The Debt planner will show you the way out, priced in your life."},
+      {label:'📉 Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
+      {label:'🆕 Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
+    ]},
   {id:'dream', bot:"Last big piece - what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', showIf:a=>a.acct!=='spend', placeholder:'Debt-free · Emergency fund · A trip · A house'},
   {id:'dreamAmt', bot:a=>`Put a number on it - what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 5000'},
   {id:'zeroClose', input:'zeroClose', showIf:a=>a.acct!=='spend' && a.income>0,
@@ -3998,6 +4028,7 @@ function renderIntakeDock(s){
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
   if(s.input==='loop'){ renderLoop(s); return; }
   if(s.input==='zeroClose'){ renderZeroClose(s); return; }
+  if(s.input==='reflect'){ renderReflect(s); return; }
   if(s.input==='gate'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
@@ -4062,6 +4093,35 @@ function runIntakeHelper(s){
   document.getElementById('iaHelpGo').onclick=go;
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaHelpBack').onclick=()=>renderIntakeDock(s);
+}
+/* Reflection: a quick pain-point / aspiration question between sections. Each
+   option gives a tailored reply (so the user feels heard = engagement); some
+   open an optional free-text follow-up. Answers are stored on iaAns and kept in
+   state.intake for later personalization. Fully skippable. */
+function renderReflect(s){
+  const dock=document.getElementById('intakeDock');
+  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-ri="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`
+    +`<div class="intake-underrow">${s.optional?'<button class="intake-skip" id="iaReflectSkip">Skip</button>':''}${back}</div>`;
+  dock.querySelectorAll('button[data-ri]').forEach(b=>b.onclick=()=>{
+    const o=s.options[+b.dataset.ri];
+    iaBub(o.label,'me');
+    if(s.key) iaAns[s.key]=o.value||o.label;
+    if(o.reply) iaBub(o.reply,'bot');
+    if(o.followup) setTimeout(()=>askReflectNote(s,o), o.reply?520:120);
+    else setTimeout(iaAdvance, o.reply?750:150);
+  });
+  const sk=document.getElementById('iaReflectSkip'); if(sk) sk.onclick=iaAdvance;
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
+function askReflectNote(s,o){
+  const dock=document.getElementById('intakeDock');
+  iaBub(o.followup,'bot');
+  dock.innerHTML=`<div class="inrow"><input id="iaReflectNote" type="text" placeholder="In your words… (optional)"><button class="intake-send" id="iaReflectGo">Send</button></div><div class="intake-underrow"><button class="intake-skip" id="iaReflectSkip2">Skip</button></div>`;
+  const inp=document.getElementById('iaReflectNote'); setTimeout(()=>inp.focus(),60);
+  const go=()=>{ const v=inp.value.trim(); if(v){ iaAns[(s.key||'reflect')+'Note']=v; iaBub(v,'me'); } iaAdvance(); };
+  document.getElementById('iaReflectGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaReflectSkip2').onclick=iaAdvance;
 }
 /* Conversational loop: tap a chip -> enter an amount -> it's added; repeat, then Done.
    Builds iaAns[s.loopKey] = [{name, amount}] - used for income sources and expenses. */
@@ -4138,7 +4198,8 @@ function commitIntake(){
     state.spendLimit=a.spendLimit>0?a.spendLimit:0;
     if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
   }
-  state.intake={name:a.name||'',why:a.why||''};
+  state.intake={name:a.name||'',why:a.why||'',
+    reflections:{ roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
