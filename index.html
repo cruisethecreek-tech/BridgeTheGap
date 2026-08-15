@@ -98,6 +98,14 @@
   .frame img{display:block;width:100%}
   .frame .cap{padding:12px 15px;font-size:13px;color:var(--muted);font-weight:600;border-top:1px solid var(--line)}
   .frame .cap b{color:var(--text)}
+  .reward-row{display:grid;grid-template-columns:300px 1fr;gap:36px;align-items:center;margin-top:34px}
+  .reward-row .frame{max-width:300px;justify-self:center}
+  .reward-copy h3{margin:0 0 10px;font-size:20px}
+  .reward-copy p{color:var(--muted);font-size:16px;line-height:1.6}
+  .partner-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+  .partner-row a{display:inline-flex;flex-direction:column;gap:2px;background:rgba(230,178,77,.1);border:1px solid var(--accent);border-radius:12px;padding:12px 18px;text-decoration:none;color:var(--text);font-weight:800;font-size:16px;transition:transform .12s}
+  .partner-row a:hover{transform:translateY(-2px)}
+  .partner-row a small{font-weight:600;color:var(--muted);font-size:12px}
 
   /* privacy band */
   .band{background:var(--hero-grad);border:1px solid var(--line);border-radius:20px;padding:40px 34px;text-align:center;margin-top:8px}
@@ -148,6 +156,7 @@
     .showcase{grid-template-columns:1fr;max-width:340px;margin-left:auto;margin-right:auto}
     .voice{grid-template-columns:1fr}
     .two{grid-template-columns:1fr}
+    .reward-row{grid-template-columns:1fr;gap:24px}
     .stages{grid-template-columns:1fr}
     .stage .arrow{display:none}
     .lockup .tl{display:none}
@@ -296,6 +305,23 @@
   </div>
 </section>
 
+<section id="rewards">
+  <div class="wrap">
+    <div class="kicker">For the spender</div>
+    <h2>Turn "spent less" into a streak</h2>
+    <p class="sec-sub">Just tracking your own spending, not the whole household? Your monthly limit becomes a daily allowance. Beat it and the day goes green - tap any day to see exactly what you logged and what you saved.</p>
+    <div class="reward-row">
+      <div class="frame"><img src="shots/shot-calendar.png" alt="Reward calendar: a month of green under-budget days, a weekly pace bar, an under-budget streak, and the money saved on the selected day" loading="lazy"></div>
+      <div class="reward-copy">
+        <h3>Then decide where the difference goes</h3>
+        <p>Every day you come in under, the app shows exactly what you kept - and gives you honest options for it: keep it in savings, send it to a goal, or put that little bit to work so it compounds instead of sitting.</p>
+        <div class="partner-row" id="partnerRow" style="display:none"></div>
+        <p class="buynote" id="partnerFine" style="display:none">Partner links - we may earn a referral bonus at no extra cost to you. Educational, not personalized financial advice; do your own research.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section>
   <div class="wrap" style="text-align:center;max-width:640px">
     <div class="kicker">Stay sharp</div>
@@ -339,13 +365,33 @@
          Mailchimp, or your own webhook). Only the email is sent.
        GUIDE_URL:   link to the paid education guide / course / waitlist.
        SUPPORT_URL: voluntary tip link (Ko-fi, Buy Me a Coffee, Stripe).
+       PARTNERS:    affiliate referral links shown in the "For the spender"
+         section. Paste your real referral URLs; keep the same values in
+         app.html. Hidden until set. Each is disclosed as a partner link.
      ============================================================ */
   var NEWSLETTER_ENDPOINT = "YOUR_FORM_ENDPOINT_URL";
   var GUIDE_URL           = "YOUR_GUIDE_OR_WAITLIST_URL";
   var SUPPORT_URL         = "YOUR_SUPPORT_URL";
+  var PARTNERS = [
+    { name:"Acorns", url:"YOUR_ACORNS_REFERRAL_URL", blurb:"auto-invest spare change" },
+    { name:"Stash",  url:"YOUR_STASH_REFERRAL_URL",  blurb:"invest from a few dollars" }
+  ];
 
   (function(){
     function ok(v){ return v && v.indexOf("YOUR_") === -1; }
+    // reveal the spender referral links only for partners whose URL is set
+    var prow = document.getElementById('partnerRow');
+    if(prow){
+      var live = PARTNERS.filter(function(p){ return ok(p.url); });
+      if(live.length){
+        prow.innerHTML = live.map(function(p){
+          return '<a href="' + p.url + '" target="_blank" rel="noopener sponsored nofollow">' +
+            p.name.replace(/[&<>"]/g,'') + '<small>' + p.blurb.replace(/[&<>"]/g,'') + '</small></a>';
+        }).join('');
+        prow.style.display = '';
+        var pf = document.getElementById('partnerFine'); if(pf) pf.style.display = '';
+      }
+    }
     // reveal the education/support offers only when their URL is set
     var anyOffer = false;
     document.querySelectorAll('[data-offer]').forEach(function(a){
