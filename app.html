@@ -376,6 +376,7 @@
   .lifekey .lk-rows{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:700;color:var(--text)}
   .lifekey .lk-eg{margin-top:11px;color:var(--muted);font-weight:600}
   .conv{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;letter-spacing:0}
+  .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
   .cal-cell.clk:hover{transform:translateY(-1px)}
   .cal-cell.sel{outline:2px solid var(--accent);outline-offset:1px}
@@ -862,6 +863,7 @@
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
       <div id="nextSteps" class="hide-in-spending"></div>
+      <div id="lifeKeyHome" class="hide-in-spending"></div>
       <div class="snapshot hide-in-spending" id="homeSnap"></div>
       <div id="householdBox"></div>
       <div id="retroBox" class="hide-in-spending"></div>
@@ -3633,7 +3635,7 @@ function renderCheckResult(){
     }
   }
   if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
-  metrics.push(['Traps to fund $500', Math.max(1,Math.round(500/amt))+'×']);
+  metrics.push(['Traps to fund '+money(500), Math.max(1,Math.round(500/amt))+'×']);
 
   const tline=pickTrapVoiceCtx(trap,name);
   const hook=H>0?` That's <b>${fmtHours(amt/H)}</b> of your life.`:'';
@@ -3643,7 +3645,7 @@ function renderCheckResult(){
 
   document.getElementById('impResult').innerHTML=`
     <div class="checkcard want">
-      <div class="verdict want">${trapObj.icon} ${escapeHtml(name)} - ${money(amt)}</div>
+      <div class="verdict want">${trapObj.icon} ${escapeHtml(name)} - ${money(amt)}${state.freedomMode&&H>0?` <span class="conv-inline">(${usd(amt)})</span>`:''}</div>
       <div class="trap-tag">${trapObj.label} detected</div>
       <div class="qline">${escapeHtml(tline)}${hook}</div>
       <div class="meter-lbl"><span class="cl">◄ Freedom</span><span>Trap pull</span><span class="fr">Trap ►</span></div>
@@ -4066,12 +4068,13 @@ function renderHome(){
   const ltb=income-assigned, spent=monthExpense(M);
   const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
+  const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=lifeKeyHTML();
   const snap=document.getElementById('homeSnap'); if(!snap) return;
   snap.innerHTML=`
-    <div class="snap"><div class="k">Left to budget</div><div class="v ${ltbCls}">${money(ltb)}</div></div>
-    <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div></div>
+    <div class="snap"><div class="k">Left to budget</div><div class="v ${ltbCls}">${money(ltb)}</div>${convNote(ltb)}</div>
+    <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div>${convNote(spent)}</div>
     <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
-    <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div></div>`;
+    <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div>${convNote(nw)}</div>`;
   renderEnough(income);
   renderOffenseDefense();
   renderNextSteps();
