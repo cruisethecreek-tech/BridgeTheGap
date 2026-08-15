@@ -72,13 +72,14 @@
   .theme-toggle{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;font-size:16px;width:38px;height:38px;line-height:1;cursor:pointer;flex:none}
   .theme-toggle:hover{border-color:var(--accent)}
   .hero-inner{max-width:1080px;margin:0 auto}
-  .brand{display:flex;align-items:center;gap:13px}
+  .brand{display:flex;align-items:center;gap:13px;flex-wrap:wrap;row-gap:8px}
   .brand .mark{width:38px;height:38px;flex-shrink:0;color:var(--accent);filter:drop-shadow(0 3px 10px rgba(var(--accent-rgb),.35))}
-  .brand-text{display:flex;flex-direction:column;line-height:1.05}
+  .brand-text{display:flex;flex-direction:column;line-height:1.05;min-width:0}
   .brand .logo{font-weight:900;font-size:24px;letter-spacing:-.8px}
   .brand .logo b{color:var(--accent)}
   .brand .tagline{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:.2px;margin-top:3px}
-  .freedom-wrap{margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+  .hdr-controls{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .freedom-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
   .ft-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
   .freedom-toggle{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;gap:3px;flex-shrink:0}
   .freedom-toggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:16px;width:38px;height:34px;border-radius:8px;line-height:1}
@@ -320,6 +321,25 @@
   .sp-recent .r .am{font-weight:800;white-space:nowrap}
   .sp-recent .r .dt{color:var(--muted);font-size:12px;font-weight:600;margin-left:8px}
   .sp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  /* reward calendar */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:14px}
+  .cal-dow{text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
+  .cal-cell{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel-2);font-size:12px;gap:1px}
+  .cal-cell.empty{border:none;background:none}
+  .cal-cell .cd{font-weight:800;color:var(--muted)}
+  .cal-cell.win{background:rgba(var(--good-rgb),.16);border-color:rgba(var(--good-rgb),.4)}
+  .cal-cell.perfect{background:rgba(var(--good-rgb),.30);border-color:rgba(var(--good-rgb),.6)}
+  .cal-cell.win .cd,.cal-cell.perfect .cd{color:var(--good)}
+  .cal-cell.over{background:rgba(var(--bad-rgb),.13);border-color:rgba(var(--bad-rgb),.35)}
+  .cal-cell.over .cd{color:var(--bad)}
+  .cal-cell.today{outline:2px solid var(--accent);outline-offset:1px}
+  .cal-cell .cm{font-size:11px;line-height:1;color:var(--good)}
+  .cal-stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .cal-stat{flex:1;min-width:130px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .cal-stat .v{font-weight:900;font-size:20px;margin-top:2px}
+  .cal-stat .v.good{color:var(--good)} .cal-stat .v.bad{color:var(--bad)}
+  .cal-rec{margin-top:14px;background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accent-rgb),.25);border-radius:12px;padding:13px 15px;font-size:14px;line-height:1.55}
+  .cal-rec b{color:var(--accent)}
   /* debt payoff planner */
   .debtrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
   .debtrow .dr-name{font-weight:800;flex:1;min-width:90px}
@@ -740,14 +760,16 @@
           <span class="logo">Account<b>ability</b></span>
           <span class="tagline">Every dollar answers to you.</span>
         </div>
-        <div class="freedom-wrap">
-          <div class="freedom-toggle" id="freedomToggle" title="Switch between dollars and hours of your life">
-            <button data-mode="usd">$</button>
-            <button data-mode="life">⌛</button>
+        <div class="hdr-controls">
+          <div class="freedom-wrap">
+            <div class="freedom-toggle" id="freedomToggle" title="Switch between dollars and hours of your life">
+              <button data-mode="usd">$</button>
+              <button data-mode="life">⌛</button>
+            </div>
+            <span class="ft-label" id="ftLabel">Dollars</span>
           </div>
-          <span class="ft-label" id="ftLabel">Dollars</span>
+          <button class="theme-toggle" id="themeToggle" title="Light / dark" aria-label="Toggle light or dark mode">🌙</button>
         </div>
-        <button class="theme-toggle" id="themeToggle" title="Light / dark" aria-label="Toggle light or dark mode">🌙</button>
       </div>
       <div class="quote-wrap">
         <div class="quote" id="quote">Loading the truth…</div>
@@ -788,6 +810,7 @@
       </div>
 
       <div id="spendingBox" class="show-in-spending"></div>
+      <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
       <div id="nextSteps" class="hide-in-spending"></div>
       <div class="snapshot hide-in-spending" id="homeSnap"></div>
@@ -1634,6 +1657,7 @@ function applyHousehold(){
 
 /* ---------- "Just my spending" mode: drop the Four Walls, track purchases ---------- */
 function renderSpending(){
+  renderRewardCalendar();
   const box=document.getElementById('spendingBox'); if(!box) return;
   if(!state.spendingMode){ box.innerHTML=''; return; }
   const M=state.activeMonth;
@@ -1667,6 +1691,52 @@ function renderSpending(){
     ${recentHTML}
   </div>`;
   const sc=document.getElementById('spendScan'); if(sc) sc.addEventListener('click',openModal);
+}
+/* Reward calendar: daily allowance from the monthly limit; beat it, day turns green */
+function spendRewardRec(today, ahead){
+  if(today<=0) return `Today's allowance is spent - no shame, the streak resets tomorrow. Come back green.`;
+  const g=(typeof topGoal==='function')?topGoal():null;
+  let s=`You came in <b>${money(today)}</b> under today. Real options: park it in savings, `;
+  s+= g?`send it to "${escapeHtml(g.name)}", ` : `stash it toward a goal, `;
+  s+=`invest it (at 7% it compounds instead of sitting), or bank three of these and take one guilt-free treat.`;
+  if(ahead>0.5) s+=` You're <b>${money(ahead)}</b> ahead for the month - money you chose to keep.`;
+  return s;
+}
+function renderRewardCalendar(){
+  const box=document.getElementById('rewardCalBox'); if(!box) return;
+  if(!state.spendingMode){ box.innerHTML=''; return; }
+  const M=state.activeMonth, lim=state.spendLimit||0;
+  if(lim<=0){ box.innerHTML=`<div class="panel"><h2>🗓️ Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p></div>`; return; }
+  const [y,mo]=M.split('-').map(Number);
+  const dim=new Date(y,mo,0).getDate(), allowance=lim/dim, firstWd=new Date(y,mo-1,1).getDay();
+  const isCur=(M===thisMonth()), todayDay=isCur?new Date().getDate():dim;
+  const spentByDay={};
+  txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spentByDay[d]=(spentByDay[d]||0)+t.amount; });
+  let cells=''; for(let i=0;i<firstWd;i++) cells+=`<div class="cal-cell empty"></div>`;
+  let ahead=0, bankedToday=0;
+  for(let d=1;d<=dim;d++){
+    const spent=spentByDay[d]||0, isPast = isCur ? d<=todayDay : true;
+    let cls='future', mark='';
+    if(isPast){
+      const surplus=allowance-spent; ahead+=surplus;
+      if(spent===0){ cls='perfect'; mark='★'; }
+      else if(spent<=allowance){ cls='win'; mark='✓'; }
+      else cls='over';
+      if(isCur && d===todayDay) bankedToday=Math.max(0,surplus);
+    }
+    cells+=`<div class="cal-cell ${cls}${(isCur&&d===todayDay)?' today':''}"><span class="cd">${d}</span>${mark?`<span class="cm">${mark}</span>`:''}</div>`;
+  }
+  let streak=0; for(let d=Math.min(dim,todayDay); d>=1; d--){ if((spentByDay[d]||0)<=allowance) streak++; else break; }
+  box.innerHTML=`<div class="panel">
+    <h2>🗓️ Reward calendar</h2>
+    <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${money(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★.</p>
+    <div class="cal-grid">${['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}${cells}</div>
+    <div class="cal-stats">
+      <div class="cal-stat"><div class="sp-k">Under-budget streak</div><div class="v">${streak} 🔥</div></div>
+      <div class="cal-stat"><div class="sp-k">${ahead>=0?'Ahead this month':'Over pace by'}</div><div class="v ${ahead>=0?'good':'bad'}">${money(Math.abs(ahead))}</div></div>
+    </div>
+    <div class="cal-rec">${spendRewardRec(bankedToday, ahead)}</div>
+  </div>`;
 }
 function applySpending(){
   const on=!!state.spendingMode;
