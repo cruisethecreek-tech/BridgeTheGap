@@ -665,6 +665,14 @@
   .intake-underrow .intake-skip{margin:0}
   .loop-sum{max-width:640px;margin:0 auto 10px;font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
   .loop-sum b{color:var(--accent)}
+  .bulk-hint{max-width:640px;margin:0 auto 8px;font-size:12.5px;color:var(--muted);text-align:center}
+  .bulk-list{max-height:40vh;overflow-y:auto;max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:7px;padding-right:2px}
+  .bulk-row{display:flex;align-items:center;gap:8px}
+  .bulk-row .bulk-name{flex:1;font-weight:700;font-size:14px;min-width:0}
+  .bulk-row .bulk-custom{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 11px;font-size:14px;min-width:0}
+  .bulk-row .bulk-amt{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-weight:700;flex-shrink:0}
+  .bulk-row .bulk-amt input{width:82px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 10px;font-size:14px}
+  .bulk-row input:focus{outline:none;border-color:var(--accent)}
   .intake-help{background:rgba(230,178,77,.12);border:1px solid rgba(230,178,77,.35);color:var(--accent);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;cursor:pointer}
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
@@ -4122,8 +4130,8 @@ const INTAKE=[
       {label:'🚲 Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
       {label:'💸 Sick of the car payment', value:'payment', reply:"Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
-  {id:'expenses', input:'loop', loopKey:'expenses', showIf:a=>a.acct!=='spend',
-    bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - add as many as are real, then hit Done. This is what builds your budget.",
+  {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, showIf:a=>a.acct!=='spend',
+    bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
     chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Eating out',name:'Eating out'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
     done:"Done - that's my spending →"},
@@ -4309,11 +4317,34 @@ function renderLoop(s){
   const running = arr.length ? `<div class="loop-sum">Added: ${arr.map(x=>escapeHtml(x.name)+' '+usd(x.amount)).join(' · ')} <b>= ${usd(total)}</b></div>` : '';
   dock.innerHTML=running
     +`<div class="intake-chips">${chips.map((c,i)=>`<button data-ci="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>`
-    +`<div class="intake-chips" style="margin-top:8px"><button class="go" id="iaLoopDone">${escapeHtml(s.done||'Done →')}</button></div>`
+    +`<div class="intake-chips" style="margin-top:8px"><button class="go" id="iaLoopDone">${escapeHtml(s.done||'Done →')}</button>${s.bulk?'<button id="iaLoopBulk">⊞ Add several at once</button>':''}</div>`
     +(back?`<div class="intake-underrow">${back}</div>`:'');
   dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{ const c=chips[+b.dataset.ci]; c.custom?askLoopName(s):askLoopAmount(s,c.name); });
   document.getElementById('iaLoopDone').onclick=()=>{ if(arr.length) iaBub(arr.map(x=>x.name).join(', '),'me'); iaAdvance(); };
+  const bulk=document.getElementById('iaLoopBulk'); if(bulk) bulk.onclick=()=>bulkLoop(s);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
+/* Bulk fallback: fill amounts for all the common categories at once, plus a few
+   blank rows, and add them in one go - no one-at-a-time tapping. */
+function bulkLoop(s){
+  const dock=document.getElementById('intakeDock');
+  const arr=iaAns[s.loopKey]||(iaAns[s.loopKey]=[]);
+  const used=new Set(arr.map(x=>x.name.toLowerCase()));
+  const common=(s.chips||[]).filter(c=>!c.custom && !used.has(c.name.toLowerCase()));
+  const rows = common.map(c=>`<div class="bulk-row"><span class="bulk-name">${escapeHtml(c.name)}</span><span class="bulk-amt">$<input type="number" inputmode="decimal" min="0" step="any" data-bulkc="${escapeHtml(c.name)}" placeholder="0"></span></div>`).join('')
+    + [0,1,2].map(i=>`<div class="bulk-row"><input type="text" class="bulk-custom" data-bulkn="${i}" placeholder="Something else"><span class="bulk-amt">$<input type="number" inputmode="decimal" min="0" step="any" data-bulka="${i}" placeholder="0"></span></div>`).join('');
+  dock.innerHTML=`<div class="bulk-hint">Fill in the ones that apply, skip the rest, add them all at once.</div>
+    <div class="bulk-list">${rows}</div>
+    <div class="intake-chips" style="margin-top:10px"><button class="go" id="iaBulkAdd">Add all →</button><button id="iaBulkBack">← One at a time</button></div>`;
+  document.getElementById('iaBulkAdd').onclick=()=>{
+    const add=[];
+    dock.querySelectorAll('input[data-bulkc]').forEach(inp=>{ const v=parseFloat(inp.value); if(v>0) add.push({name:inp.dataset.bulkc, amount:v}); });
+    dock.querySelectorAll('input[data-bulkn]').forEach(inp=>{ const n=(inp.value||'').trim(); const amtInp=dock.querySelector('input[data-bulka="'+inp.dataset.bulkn+'"]'); const v=parseFloat(amtInp&&amtInp.value); if(n && v>0) add.push({name:n, amount:v}); });
+    add.forEach(x=>{ if(!arr.some(e=>e.name.toLowerCase()===x.name.toLowerCase())) arr.push(x); });
+    if(add.length) iaBub(add.map(x=>x.name+' '+usd(x.amount)).join(', '),'me');
+    renderLoop(s);
+  };
+  document.getElementById('iaBulkBack').onclick=()=>renderLoop(s);
 }
 function askLoopName(s){
   const dock=document.getElementById('intakeDock');
