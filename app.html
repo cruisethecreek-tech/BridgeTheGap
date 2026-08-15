@@ -413,6 +413,11 @@
   .cal-entries .ce .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cal-entries .ce .am{font-weight:800;white-space:nowrap}
   .cal-entries .ce .am.in{color:var(--good)}
+  .cal-bank{margin-top:12px;width:100%;padding:12px 14px;border:none;border-radius:11px;background:var(--accent);color:#0b1220;font-weight:800;font-size:14px;cursor:pointer}
+  .cal-bank:hover{filter:brightness(1.06)}
+  .cal-swept{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(var(--good-rgb,52,168,110),.12);border:1px solid rgba(var(--good-rgb,52,168,110),.35);border-radius:11px;padding:10px 13px;font-size:14px;line-height:1.4}
+  .cal-undo{flex:none;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:5px 11px;font-weight:700;font-size:13px;cursor:pointer}
+  .cal-undo:hover{color:var(--fg)}
   /* debt payoff planner */
   .debtrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
   .debtrow .dr-name{font-weight:800;flex:1;min-width:90px}
@@ -1640,7 +1645,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0,
+           spendingMode:false, spendLimit:0, sweptDays:{},
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -1837,11 +1842,21 @@ function renderCalDay(M, allowance){
   } else {
     rows=`<div class="sub" style="margin-top:8px">Nothing logged this day - a clean ${money(allowance)} saved.</div>`;
   }
+  const dd=M+'-'+String(d).padStart(2,'0');
+  const swept=(state.sweptDays||{})[dd];
   let action='';
-  if(saved>0){
+  if(swept){
+    const gs=state.goals.find(x=>x.id===swept.goalId);
+    action=`<div class="cal-swept"><span>✓ You banked <b>${money(swept.amount)}</b>${gs?` toward "${escapeHtml(gs.name)}"`:''}.</span> <button class="cal-undo" data-calunsweep="${dd}">Undo</button></div>`;
+  } else if(saved>0){
     const g=(typeof topGoal==='function')?topGoal():null;
-    const tail = g ? `, send it to "${escapeHtml(g.name)}", or leave it to compound` : `, move it toward a goal, or leave it to compound`;
-    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">What to do with the <b>${money(saved)}</b> you didn't spend: keep it in savings${tail}. It's money you chose to keep - your call where it goes.</div>`;
+    if(g){
+      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app is holding - it's money that just stayed in your account. Give it a job: bank it toward your dream and watch it become real progress, not just a good day.</div>
+        <button class="cal-bank" data-calsweep="${dd}" data-calamt="${saved}">➕ Bank ${money(saved)} toward "${escapeHtml(g.name)}"</button>`;
+    } else {
+      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Give it one:</div>
+        <button class="cal-bank" data-calgoal="1">🎯 Start a goal to bank it toward</button>`;
+    }
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
   }
@@ -1852,6 +1867,31 @@ function renderCalDay(M, allowance){
     ${rows}
     ${action}
   </div>`;
+  const bank=el.querySelector('[data-calsweep]'); if(bank) bank.onclick=()=>calSweepDay(bank.dataset.calsweep, +bank.dataset.calamt);
+  const undo=el.querySelector('[data-calunsweep]'); if(undo) undo.onclick=()=>calUnsweepDay(undo.dataset.calunsweep);
+  const mkg=el.querySelector('[data-calgoal]'); if(mkg) mkg.onclick=()=>{ if(typeof activateTab==='function') activateTab('dreams'); };
+}
+/* Bank a day's surplus into the top goal - turns notional "saved" into real
+   goal progress. Recorded per-day so it can't be double-counted, and undone. */
+function calSweepDay(dd, amount){
+  const g=(typeof topGoal==='function')?topGoal():null; if(!g||!(amount>0)) return;
+  const add=Math.min(amount, Math.max(0, g.target-g.saved));
+  if(add<=0){ if(typeof toast==='function') toast(`"${g.name}" is already fully funded.`); return; }
+  g.saved+=add;
+  if(!state.sweptDays) state.sweptDays={};
+  state.sweptDays[dd]={amount:add, goalId:g.id};
+  save();
+  if(typeof toast==='function') toast(`Banked ${money(add)} toward "${g.name}".`);
+  if(typeof renderGoals==='function') renderGoals();
+  renderRewardCalendar();
+}
+function calUnsweepDay(dd){
+  const s=(state.sweptDays||{})[dd]; if(!s) return;
+  const g=state.goals.find(x=>x.id===s.goalId); if(g) g.saved=Math.max(0, g.saved-s.amount);
+  delete state.sweptDays[dd];
+  save();
+  if(typeof renderGoals==='function') renderGoals();
+  renderRewardCalendar();
 }
 function renderRewardCalendar(){
   const box=document.getElementById('rewardCalBox'); if(!box) return;
