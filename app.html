@@ -364,6 +364,18 @@
   .dataguard .dg-s{color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:3px}
   .dataguard .dg-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
   .dataguard .dg-x{background:none;border:none;color:var(--muted);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
+  /* life-hours "show your work" key + inline dollar reference */
+  .lifekey{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;margin:0 0 16px;overflow:hidden}
+  .lifekey>summary{list-style:none;cursor:pointer;padding:12px 15px;font-weight:800;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:8px}
+  .lifekey>summary::-webkit-details-marker{display:none}
+  .lifekey>summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:transform .2s ease}
+  .lifekey[open]>summary::after{transform:rotate(180deg)}
+  .lifekey .lk-body{padding:2px 15px 15px;font-size:14px;line-height:1.55;color:var(--muted)}
+  .lifekey .lk-body p{margin:0 0 10px}
+  .lifekey .lk-body b{color:var(--text)}
+  .lifekey .lk-rows{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:700;color:var(--text)}
+  .lifekey .lk-eg{margin-top:11px;color:var(--muted);font-weight:600}
+  .conv{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;letter-spacing:0}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
   .cal-cell.clk:hover{transform:translateY(-1px)}
   .cal-cell.sel{outline:2px solid var(--accent);outline-offset:1px}
@@ -874,6 +886,7 @@
           <button id="mNext" title="Next month">›</button>
         </div>
         <div class="summary" id="summary"></div>
+        <div id="lifeKeyPlan"></div>
         <p class="sub" style="margin:-4px 0 16px">Zero-based budgeting: assign your income down to <b>$0</b>. Income comes from what you log in <b>Transactions</b> - log a paycheck first, then give every dollar a job here.</p>
 
         <div class="row" style="margin-bottom:6px">
@@ -1619,14 +1632,38 @@ function fmtLife(amount){
   if(!H||H<=0) return usd(amount);            // no rate yet - fall back to dollars
   const neg=amount<0, hrs=Math.abs(amount)/H;
   let out;
-  if(hrs*60 < 60)            out=Math.max(1,Math.round(hrs*60))+'m';
-  else if(hrs < WORKDAY_HRS) out=(Math.round(hrs*10)/10)+'h';
-  else if(hrs < WORKMONTH_HRS) out=(Math.round(hrs/WORKDAY_HRS*10)/10)+' days';
-  else                       out=(Math.round(hrs/WORKMONTH_HRS*10)/10)+' mo';
+  if(hrs*60 < 60){ const m=Math.max(1,Math.round(hrs*60)); out=m+' min'; }
+  else if(hrs < WORKDAY_HRS){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
+  else if(hrs < WORKMONTH_HRS){ const v=Math.round(hrs/WORKDAY_HRS*10)/10; out=v+(v===1?' day':' days'); }
+  else { const v=Math.round(hrs/WORKMONTH_HRS*10)/10; out=v+' mo'; }
   return (neg?'-':'')+out;
 }
 /* the app formats everything through money(): mode-aware */
 function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
+/* Show-your-work: a tap-to-open key that proves how a dollar price becomes
+   hours of your life, using the user's real wage. Only in Life-Hours mode. */
+function lifeKeyHTML(){
+  if(!state.freedomMode) return '';
+  const H=effectiveHourly(); if(!H||H<=0) return '';
+  const est = state.hourlyWage>0 ? '' : ' (estimated from your logged income - set your real take-home in Settings for the truth)';
+  return `<details class="lifekey">
+    <summary><span>⌛ How did we get these? Dollars → hours of your life</span></summary>
+    <div class="lk-body">
+      <p>Every price is divided by your real take-home wage of <b>${usd(H)}/hr</b>${est}. You see the time you'd actually work to afford something, not just a number.</p>
+      <div class="lk-rows"><span>1 hour worked</span><b>${usd(H)}</b></div>
+      <div class="lk-rows"><span>1 work-day (${WORKDAY_HRS} hrs)</span><b>${usd(H*WORKDAY_HRS)}</b></div>
+      <div class="lk-rows"><span>1 work-month (${WORKMONTH_HRS} hrs)</span><b>${usd(H*WORKMONTH_HRS)}</b></div>
+      <p class="lk-eg">So a <b>${usd(H*WORKDAY_HRS)}</b> bill costs you <b>1 day</b> of your life; a <b>${usd(H)}</b> coffee, <b>1 hr</b>. Same money, told in the only currency you can't earn back.</p>
+    </div>
+  </details>`;
+}
+/* Inline dollar reference for a life-hours figure, so each number is relatable.
+   Returns '' unless in Life-Hours mode with a wage set. */
+function convNote(n){
+  if(!state.freedomMode) return '';
+  const H=effectiveHourly(); if(!H||H<=0) return '';
+  return `<span class="conv">= ${usd(Math.abs(n))}</span>`;
+}
 /* Copy matrix: time-framed labels by register x intensity (Freedom Mode only) */
 const LIFE_LABELS={
   income:{ genz:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Hours Sold'}, middle:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Life Sold'}, mature:{clean:'Hours Earned',blunt:'Hours Traded',savage:'Life Traded'} },
@@ -2310,11 +2347,12 @@ function renderBudget(){
   else { msg='Keep going - assign this down to $0.'; vc='pos'; }
 
   document.getElementById('summary').innerHTML=`
-    <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div><div class="msg">${msg}</div></div>
-    <div class="stat"><div class="k">${lifeLabel('income','Income')}</div><div class="v good">${money(income)}</div></div>
-    <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div></div>
-    <div class="stat"><div class="k">${lifeLabel('spent','Spent')}</div><div class="v">${money(spent)}</div></div>
-    <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div></div>`;
+    <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div>${convNote(ltb)}<div class="msg">${msg}</div></div>
+    <div class="stat"><div class="k">${lifeLabel('income','Income')}</div><div class="v good">${money(income)}</div>${convNote(income)}</div>
+    <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div>${convNote(assigned)}</div>
+    <div class="stat"><div class="k">${lifeLabel('spent','Spent')}</div><div class="v">${money(spent)}</div>${convNote(spent)}</div>
+    <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div>${convNote(assigned-spent)}</div>`;
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=lifeKeyHTML();
 
   const dupEl=document.getElementById('dupBanner');
   if(dupEl){
