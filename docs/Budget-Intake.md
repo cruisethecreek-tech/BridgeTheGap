@@ -17,8 +17,17 @@ remove. Three engine pieces do this (`input:'loop'` and `input:'zeroClose'`):
 1. **Multi-income loop** (`moreIncome`) - after the main paycheck: "anything else land each
    month?" Tap chips (Partner's pay / Side gig / Benefits / Something else), enter an amount
    for each; they're summed into the total income. Each becomes its own recurring income.
-   (The personal *hourly wage* is still derived from the main paycheck only, not household -
-   the wage step says so when extra income exists, so it never looks like a missed stat.)
+   **Side-gig hours (the "blend your true rate" move).** Work-type sources cost the user's
+   *time*, not just add money. The Side gig chip (and any custom source) follows the amount
+   with a skippable hours question ("roughly how many hours a month does that take? Skip if
+   it's passive, like rent or benefits") stored as `hours` on the income item. The next step
+   `trueRate` reveals the **blended take-home rate**: main-job hours (income ÷ confirmed main
+   rate) plus the captured side-gig hours, so `hourlyWage = (main + side pay) ÷ (main + side
+   hours)`. A low-paying gig **drags the rate down**, so every purchase then costs *more*
+   hours of life - priced against the whole truth, not one paycheck. Passive income (partner,
+   benefits, rental) has no hours and stays out of the wage blend (still in the budget total).
+   Engine: `intakeWorkHours`, `intakeBlendedHourly`, `askLoopHours`; the wage step's own
+   reassurance switches to "I'll blend in your side-gig hours next" when work-hours exist.
    Custom sources guard against numeric-only names ("that looks like an amount - give it a
    label"). If a source is named **Partner**, the next step (`householdOffer`) offers the full
    couples view: opting in flips on Household mode, sets the partner's name, derives their

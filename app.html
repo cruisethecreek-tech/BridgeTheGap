@@ -4085,9 +4085,9 @@ const INTAKE=[
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
-  {id:'moreIncome', input:'loop', loopKey:'extraIncome', showIf:a=>a.acct!=='spend' && a.income>0,
+  {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend' && a.income>0,
     bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
-    chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig'},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
+    chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig',hours:true},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
     namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
     amountPrompt:n=>`Roughly how much from ${n.toLowerCase()==='partner'?'your partner':n.toLowerCase()} a month, take-home?`,
     done:"Done - that's all my income →"},
@@ -4100,7 +4100,7 @@ const INTAKE=[
     ]},
   {id:'wage',
     bot:a=> a.income>0
-      ? `One number powers the whole "hours of your life" feature - your take-home per hour. You said about ${usd(a.income)} lands in your account each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${intakeIncomeTotal(a)>a.income+1?` (This is just your own paycheck - your partner's pay and side gigs are still counted in the budget total, they just don't change your personal hourly.)`:''} ★`
+      ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
     input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
     suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income) : null,
@@ -4110,6 +4110,14 @@ const INTAKE=[
       run:(annual)=>{ const hr=Math.max(1,Math.round(annual/2080)); return { value:hr,
         teach:`Here's the trick: a full-time year is about 2,080 work hours (40 hrs a week × 52 weeks). So ${money(annual)} ÷ 2,080 ≈ ${usd(hr)} an hour. That's your starting number - you can fine-tune it to exact take-home later in Settings.` }; } }
   },
+  {id:'trueRate', input:'continue', showIf:a=>a.acct!=='spend' && a.wage>0 && (a.extraIncome||[]).some(x=>+x.hours>0),
+    bot:a=>{ const mr=+a.wage||0, br=intakeBlendedHourly(a), sh=Math.round(intakeWorkHours(a));
+      const sideAmt=(a.extraIncome||[]).filter(x=>+x.hours>0).reduce((s,x)=>s+(+x.amount||0),0);
+      const down = br < mr - 0.005;
+      const swing = down
+        ? `Because that side work pays less per hour than your main job, it quietly drags your real rate DOWN - so from here every purchase costs a little more of your life, priced honestly.`
+        : `That side work actually lifts your real rate - nice. Either way, I now price everything against the whole truth, not just one paycheck.`;
+      return `Here's the honest math${a.name?', '+a.name:''}: your main job runs about ${usd(mr)}/hr. But that side work is hours of your life too - roughly ${sh} ${sh===1?'hour':'hours'} a month for ${usd(sideAmt)}. Blend every hour you sell and your true take-home rate is ${usd(br)}/hr. ${swing} That's the number behind every "hours of your life" figure from here on.`; }},
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
   {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
   {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
@@ -4177,6 +4185,18 @@ const INTAKE=[
 let iaStep=0, iaAns={}, iaForceInput=false;
 /* estimate take-home hourly from monthly take-home: full-time year ≈ 2,080 hrs */
 function estHourlyFromMonthly(m){ return Math.max(1, Math.round((+m||0)*12/2080)); }
+/* True blended take-home rate: every hour you sell counts. Main-job hours come
+   from the confirmed main rate (income ÷ rate); side-gig hours the user gave us
+   get added in. Passive income (partner, benefits, rental) stays out - it costs
+   no time. A low-paying side gig drags the blended rate down, so purchases cost
+   MORE hours of life, priced against the whole truth. */
+function intakeWorkHours(a){ return (a.extraIncome||[]).reduce((s,x)=>s+(+x.hours||0),0); }
+function intakeBlendedHourly(a){
+  const mr=+a.wage||0; if(mr<=0) return 0;
+  let amt=+a.income||0, hrs=amt/mr;
+  (a.extraIncome||[]).forEach(x=>{ if(+x.hours>0){ amt+=+x.amount||0; hrs+=+x.hours; } });
+  return hrs>0 ? Math.round((amt/hrs)*100)/100 : mr;
+}
 function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
 /* Edit: step back to the previous answered question and re-open it. The prior
    bot bubble stays; we drop the current question + the last answer and clear it. */
@@ -4327,7 +4347,7 @@ function renderLoop(s){
     +`<div class="intake-chips">${chips.map((c,i)=>`<button data-ci="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>`
     +`<div class="intake-chips" style="margin-top:8px"><button class="go" id="iaLoopDone">${escapeHtml(s.done||'Done →')}</button>${s.bulk?'<button id="iaLoopBulk">⊞ Add several at once</button>':''}</div>`
     +(back?`<div class="intake-underrow">${back}</div>`:'');
-  dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{ const c=chips[+b.dataset.ci]; c.custom?askLoopName(s):askLoopAmount(s,c.name); });
+  dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{ const c=chips[+b.dataset.ci]; c.custom?askLoopName(s):askLoopAmount(s,c.name,!!c.hours); });
   document.getElementById('iaLoopDone').onclick=()=>{ if(arr.length) iaBub(arr.map(x=>x.name).join(', '),'me'); iaAdvance(); };
   const bulk=document.getElementById('iaLoopBulk'); if(bulk) bulk.onclick=()=>bulkLoop(s);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
@@ -4361,18 +4381,33 @@ function askLoopName(s){
   const inp=document.getElementById('iaLoopName'); setTimeout(()=>inp.focus(),60);
   const go=()=>{ const n=inp.value.trim(); if(!n){ inp.focus(); return; }
     if(/^\$?[\d,.]+$/.test(n)){ document.getElementById('iaLoopNameHint').style.display=''; inp.focus(); return; }  // it's a number, not a label
-    askLoopAmount(s,n); };
+    askLoopAmount(s,n,!!s.askHours); };  // custom source: offer the hours question (skippable if passive)
   document.getElementById('iaLoopNameGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaLoopCancel').onclick=()=>renderLoop(s);
 }
-function askLoopAmount(s,name){
+function askLoopAmount(s,name,wantHours){
   const dock=document.getElementById('intakeDock');
   iaBub(s.amountPrompt(name),'bot');
   dock.innerHTML=`<div class="inrow"><input id="iaLoopAmt" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 40"><button class="intake-send" id="iaLoopAmtGo">Add</button></div><div class="intake-underrow"><button class="intake-skip" id="iaLoopAmtBack">← Back</button></div>`;
   const inp=document.getElementById('iaLoopAmt'); setTimeout(()=>inp.focus(),60);
-  const go=()=>{ const v=parseFloat(inp.value); if(isNaN(v)||v<0){ inp.focus(); return; } (iaAns[s.loopKey]||(iaAns[s.loopKey]=[])).push({name,amount:v}); iaBub(name+' - '+usd(v),'me'); renderLoop(s); };
+  const go=()=>{ const v=parseFloat(inp.value); if(isNaN(v)||v<0){ inp.focus(); return; }
+    if(wantHours && s.askHours){ askLoopHours(s,name,v); return; }
+    (iaAns[s.loopKey]||(iaAns[s.loopKey]=[])).push({name,amount:v}); iaBub(name+' - '+usd(v),'me'); renderLoop(s); };
   document.getElementById('iaLoopAmtGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaLoopAmtBack').onclick=()=>renderLoop(s);
+}
+/* Side-gig hours: those hours are life too. Capture them (skippable if passive)
+   so the wage engine can blend them into the user's true take-home rate. */
+function askLoopHours(s,name,amount){
+  const dock=document.getElementById('intakeDock');
+  const label=/side gig/i.test(name)?'that side gig':name.toLowerCase();
+  iaBub(`Roughly how many hours a month does ${label} take? Those are hours of your life too - I'll blend them into your true rate. (Skip if it's passive, like rent or benefits.)`,'bot');
+  dock.innerHTML=`<div class="inrow"><input id="iaLoopHrs" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 20"><button class="intake-send" id="iaLoopHrsGo">Add</button></div><div class="intake-underrow"><button class="intake-skip" id="iaLoopHrsSkip">Skip - it's passive</button></div>`;
+  const inp=document.getElementById('iaLoopHrs'); setTimeout(()=>inp.focus(),60);
+  const push=(hrs)=>{ (iaAns[s.loopKey]||(iaAns[s.loopKey]=[])).push({name,amount,hours:hrs>0?hrs:0}); iaBub(name+' - '+usd(amount)+(hrs>0?` · ~${hrs} hr/mo`:''),'me'); renderLoop(s); };
+  const go=()=>{ const h=parseFloat(inp.value); if(isNaN(h)||h<0){ inp.focus(); return; } push(h); };
+  document.getElementById('iaLoopHrsGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaLoopHrsSkip').onclick=()=>push(0);
 }
 /* Zero-based close: route any unassigned income to savings / a goal / buffer */
 function renderZeroClose(s){
@@ -4401,7 +4436,7 @@ function commitIntake(){
     const partner=(a.extraIncome||[]).find(x=>/partner/i.test(x.name||''));
     if(partner){ state.nameB='Partner'; if(+partner.amount>0) state.wageB=estHourlyFromMonthly(partner.amount); }
   }
-  if(a.wage>0) state.hourlyWage=a.wage;
+  if(a.wage>0){ const blended=intakeBlendedHourly(a); state.hourlyWage = blended>0 ? blended : a.wage; }
   [['roof','Roof'],['food','Food'],['util','Power & Wi-Fi'],['transport','Getting Around']].forEach(([k,name])=>{
     if(a[k]>0){ const c=findOrCreateEssential(name); budgetFor(M)[c.id]=a[k]; }
   });
