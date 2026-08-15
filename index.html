@@ -116,6 +116,16 @@
   .p3 h3{margin:0 0 8px;font-size:19px}
   .p3 p{margin:0;color:var(--muted);font-size:15px;line-height:1.55}
   .plan-cta{text-align:center;margin-top:30px}
+  .letter{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:38px 36px;max-width:720px;margin:34px auto 0;box-shadow:var(--shadow)}
+  .letter .kicker{text-align:left}
+  .letter h2{text-align:left;font-size:clamp(23px,3.4vw,30px);margin:8px 0 20px}
+  .letter p{font-size:17px;line-height:1.78;margin:0 0 16px;color:var(--text)}
+  .letter p:last-of-type{margin-bottom:0}
+  .letter .sig{display:flex;align-items:center;gap:14px;margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
+  .letter .sig .mono{width:46px;height:46px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:900;font-size:16px;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .letter .sig .nm{font-weight:800;font-size:17px;color:var(--text)}
+  .letter .sig .role{color:var(--muted);font-size:14px;margin-top:2px}
+  @media(max-width:600px){ .letter{padding:28px 22px} }
 
   /* voice */
   .voice{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
@@ -272,6 +282,27 @@
         <span class="pill">🔑 <b>Encrypted</b> backups</span>
       </div>
       <p class="freenote">So how does it stay free? Not by selling you or your data - it never sees your data. No subscription, no ads, no affiliate links pointing you at where to put your money (that would make us the exact thing this app fights). It's free and it stays free. If it earns a place in your life, you can pay once to support the build - that's the whole model, and it's the honest one for a tool that asks you to trust it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="builder">
+  <div class="wrap">
+    <div class="letter">
+      <div class="kicker">A letter from the builder</div>
+      <h2>Why this exists</h2>
+      <p>I didn't build this to start a tech company. I built it because I got tired of every budgeting app demanding my bank login - and then quietly making money off what it saw in there.</p>
+      <p>I've lived the grind. Between raising three kids, running a small business, and working a shift job, I've listened to all the financial gurus and their debt-free screams. The theory is fine, but it's just not practical for an everyday person trying to stretch a paycheck while keeping a household afloat.</p>
+      <p>So I made the exact opposite. Accountability runs entirely on your device. No account, no bank connection, no analytics, nothing phoning home - you can read the whole source code. It's free. If it earns a place in your life, you can chip in once to support the build. That's the only way it makes money.</p>
+      <p>It's blunt because polite apps didn't work for me. It prices things in hours of your life because that's the only metric that finally made me stop and think before checking out.</p>
+      <p>I built it for myself, and I still use it every day.</p>
+      <div class="sig">
+        <div class="mono">PS</div>
+        <div>
+          <div class="nm">Pat Simms</div>
+          <div class="role">Husband, dad, and small business owner</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
