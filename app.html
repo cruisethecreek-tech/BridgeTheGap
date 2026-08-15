@@ -381,6 +381,19 @@
   .stat-note{font-size:13.5px;font-weight:700;margin-top:12px;color:var(--muted)}
   .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
   .reflect-note{margin:12px 0 4px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-left:3px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:14px;line-height:1.55;color:var(--text)}
+  /* Sovereign-tier sync UI */
+  .syncbox{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+  .sync-head{font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .sync-tag{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);border-radius:30px;padding:3px 9px}
+  .sync-tag.on{color:var(--good);border-color:rgba(var(--good-rgb),.5);background:rgba(var(--good-rgb),.12)}
+  .sync-warn{margin:12px 0;background:rgba(var(--bad-rgb),.1);border:1px solid rgba(var(--bad-rgb),.4);border-left:3px solid var(--bad);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .sync-instr{margin:12px 0;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.55;color:var(--muted)}
+  .sync-instr b{color:var(--text)}
+  .sync-form{display:flex;flex-direction:column;gap:8px;max-width:340px;margin-top:12px}
+  .sync-form input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px 13px;font-size:15px}
+  .sync-form input:focus{outline:none;border-color:var(--accent)}
+  .sync-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .sync-err{margin-top:10px;color:var(--bad);font-size:13.5px;font-weight:700;line-height:1.5}
   .cat.cat-flash{animation:catFlash 1.6s ease}
   @keyframes catFlash{0%,100%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),0)}18%{box-shadow:0 0 0 2px var(--accent)}}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
@@ -652,6 +665,14 @@
   .intake-underrow .intake-skip{margin:0}
   .loop-sum{max-width:640px;margin:0 auto 10px;font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
   .loop-sum b{color:var(--accent)}
+  .bulk-hint{max-width:640px;margin:0 auto 8px;font-size:12.5px;color:var(--muted);text-align:center}
+  .bulk-list{max-height:40vh;overflow-y:auto;max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:7px;padding-right:2px}
+  .bulk-row{display:flex;align-items:center;gap:8px}
+  .bulk-row .bulk-name{flex:1;font-weight:700;font-size:14px;min-width:0}
+  .bulk-row .bulk-custom{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 11px;font-size:14px;min-width:0}
+  .bulk-row .bulk-amt{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-weight:700;flex-shrink:0}
+  .bulk-row .bulk-amt input{width:82px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 10px;font-size:14px}
+  .bulk-row input:focus{outline:none;border-color:var(--accent)}
   .intake-help{background:rgba(230,178,77,.12);border:1px solid rgba(230,178,77,.35);color:var(--accent);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;cursor:pointer}
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
@@ -1288,7 +1309,7 @@
 
       <div class="panel">
         <h2>🏠 Household (couples)</h2>
-        <p class="sub">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials. It's still one private budget on this device - to share it across phones, export the encrypted backup below and have your partner restore it.</p>
+        <p class="sub">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials.</p>
         <label class="hh-toggle"><input type="checkbox" id="hhOn"> We share this budget as a couple</label>
         <div id="hhFields" style="display:none">
           <div class="row" style="margin-top:14px">
@@ -1297,6 +1318,7 @@
             <label class="fld">Partner's take-home / hr<input type="number" id="hhWageB" min="0" step="0.5" placeholder="e.g. 20" style="width:160px"></label>
           </div>
           <p class="sub" style="margin-top:10px">Now the income logger has an "Earned by" picker, and the Home screen shows your combined income, who earns what, and a fair split.</p>
+          <div id="syncPanel" class="syncbox"></div>
         </div>
       </div>
 
@@ -1628,7 +1650,7 @@ function load(){
        return Object.assign(defaultState(), JSON.parse(r)); }
   catch(e){ return defaultState(); }
 }
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); if(typeof scheduleVaultPush==='function') scheduleVaultPush(); }
 let state = load();
 if(!state.activeMonth) state.activeMonth = thisMonth();
 
@@ -1747,6 +1769,7 @@ function applyHousehold(){
   const hf=document.getElementById('hhFields'); if(hf) hf.style.display=on?'':'none';
   const cb=document.getElementById('hhOn'); if(cb) cb.checked=on;
   renderHouseholdLabels(); renderHousehold();
+  if(typeof renderSync==='function') renderSync();
 }
 
 /* ---------- "Just my spending" mode: drop the Four Walls, track purchases ---------- */
@@ -3085,6 +3108,146 @@ async function decryptVault(payloadStr, passphrase){
   return JSON.parse(new TextDecoder().decode(plain));
 }
 
+/* ---------- STEP 3+: Supabase Auth wrappers + Blind Vault sync engine ----------
+   The Sync Passphrase lives ONLY in memory (syncPass) - never localStorage - so a
+   fresh browser session re-asks for it. The vault is the shared household source of
+   truth: pull replaces local with the decrypted vault; push (debounced, on every
+   save) overwrites the vault with local. Last write wins - fine for a couple. */
+let syncPass=null, syncActive=false, syncPushTimer=null, syncPulling=false, syncNote='';
+async function sbSignUp(email,pass){ const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.'); const {data,error}=await sb.auth.signUp({email,password:pass}); if(error) throw new Error(error.message); return data; }
+async function sbSignIn(email,pass){ const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.'); const {data,error}=await sb.auth.signInWithPassword({email,password:pass}); if(error) throw new Error(error.message); return data; }
+async function sbSignOut(){ const sb=await getSupabase(); if(sb) try{ await sb.auth.signOut(); }catch(_){} syncPass=null; syncActive=false; }
+async function sbSession(){ const sb=await getSupabase(); if(!sb) return null; try{ const {data}=await sb.auth.getSession(); return data?data.session:null; }catch(_){ return null; } }
+async function pushToVault(passphrase){
+  const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.');
+  const sess=await sbSession(); if(!sess) throw new Error('You are not signed in to sync.');
+  const pass=passphrase||syncPass; if(!pass) throw new Error('No Sync Passphrase in this session - enter it to resume syncing.');
+  const payload=await encryptVault(state, pass);
+  const {error}=await sb.from('user_vaults').upsert({ user_id:sess.user.id, encrypted_payload:payload, updated_at:new Date().toISOString() }, {onConflict:'user_id'});
+  if(error) throw new Error(error.message);
+  return true;
+}
+async function pullFromVault(passphrase){
+  const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.');
+  const sess=await sbSession(); if(!sess) throw new Error('You are not signed in to sync.');
+  const pass=passphrase||syncPass; if(!pass) throw new Error('No Sync Passphrase in this session.');
+  const {data,error}=await sb.from('user_vaults').select('encrypted_payload').eq('user_id',sess.user.id).maybeSingle();
+  if(error) throw new Error(error.message);
+  if(!data||!data.encrypted_payload) return false;   // nothing stored yet
+  let remote;
+  try{ remote=await decryptVault(data.encrypted_payload, pass); }
+  catch(_){ throw new Error('Invalid Sync Passphrase. We cannot reset this for you. Please try again.'); }
+  syncPulling=true;
+  state=Object.assign(defaultState(), remote); if(!state.activeMonth) state.activeMonth=thisMonth();
+  save();                                             // syncPulling guards the auto-push
+  syncPulling=false;
+  if(typeof renderAll==='function') renderAll();
+  return true;
+}
+/* debounced background push, wired into save() */
+function scheduleVaultPush(){
+  if(!syncActive || !syncPass || syncPulling) return;
+  if(syncPushTimer) clearTimeout(syncPushTimer);
+  syncPushTimer=setTimeout(()=>{ pushToVault().then(()=>{ syncNote='Synced just now.'; if(typeof renderSync==='function') renderSync(); })
+    .catch(e=>{ syncNote='Sync paused: '+e.message; if(typeof renderSync==='function') renderSync(); }); }, 2500);
+}
+
+/* ---------- Sovereign-tier sync UI (Host setup + Joiner + active) ---------- */
+let syncUI={view:'menu', email:'', err:''};
+function renderSync(){
+  const box=document.getElementById('syncPanel'); if(!box) return;
+  if(!state.householdOn){ box.innerHTML=''; return; }
+  if(!syncConfigured()){
+    box.innerHTML=`<div class="sync-head">☁️ Household Sync <span class="sync-tag">Sovereign tier</span></div>
+      <p class="sub" style="margin-top:6px">End-to-end-encrypted sync across both phones is coming. Your budget gets encrypted on your device <b>before</b> it ever leaves - even we won't be able to read it. For now, share via the encrypted backup below.</p>`;
+    return;
+  }
+  const v=syncUI.view, err=syncUI.err?`<div class="sync-err">${escapeHtml(syncUI.err)}</div>`:'';
+  const warn=`<div class="sync-warn">🔑 <b>Read this carefully.</b> Your Sync Passphrase locks your data <b>before</b> it leaves your device. We never see it, and <b>we cannot reset it.</b> If you both lose it, the cloud copy is gone forever - there is no recovery. Write it somewhere safe.</div>`;
+  if(v==='loading'){ box.innerHTML=`<div class="sync-head">☁️ Household Sync</div><p class="sub">Checking your sync…</p>`; return; }
+  if(v==='active'){
+    box.innerHTML=`<div class="sync-head">☁️ Household Sync <span class="sync-tag on">Vault active</span></div>
+      <p class="sub" style="margin-top:6px">${escapeHtml(syncNote||'Your encrypted vault is live. Changes sync in the background.')}</p>
+      <div class="sync-instr">📱 <b>To link your partner's phone:</b> have them open the app → Settings → turn on "We share this budget" → <b>Link to an existing vault</b>, and enter this account's <b>email, password, and Sync Passphrase</b>.</div>
+      <div class="sync-actions"><button class="btn sm" id="syncNow">Sync now</button><button class="btn sm ghost" id="syncOut">Sign out of sync</button></div>${err}`;
+    document.getElementById('syncNow').onclick=async()=>{ syncUI.err=''; try{ await pushToVault(); syncNote='Synced just now.'; renderSync(); }catch(e){ syncUI.err=e.message; renderSync(); } };
+    document.getElementById('syncOut').onclick=async()=>{ await sbSignOut(); syncUI={view:'menu',email:'',err:''}; renderSync(); };
+    return;
+  }
+  if(v==='unlock'){
+    box.innerHTML=`<div class="sync-head">☁️ Household Sync</div>
+      <p class="sub" style="margin-top:6px">You're signed in on this device. Enter your Sync Passphrase to unlock and resume syncing (we keep it in memory only, never stored).</p>
+      <div class="sync-form"><input type="password" id="syncPassIn" placeholder="Sync Passphrase"><button class="btn sm primary" id="syncUnlock">Unlock →</button></div>${err}
+      <button class="intake-skip" id="syncOut2">Sign out instead</button>`;
+    document.getElementById('syncUnlock').onclick=async()=>{ const p=document.getElementById('syncPassIn').value; if(!p) return; syncUI.err=''; try{ await pullFromVault(p); syncPass=p; syncActive=true; syncNote='Unlocked and synced.'; syncUI.view='active'; renderSync(); }catch(e){ syncUI.err=e.message; renderSync(); } };
+    document.getElementById('syncOut2').onclick=async()=>{ await sbSignOut(); syncUI={view:'menu',email:'',err:''}; renderSync(); };
+    return;
+  }
+  if(v==='host-auth'||v==='join'){
+    const isHost=v==='host-auth';
+    box.innerHTML=`<div class="sync-head">☁️ ${isHost?'Set up Household Sync':'Link to an existing vault'}</div>
+      <p class="sub" style="margin-top:6px">${isHost?'Create a private sync account. Only your email logs you in - your financial data is encrypted on your device first, so we can\'t read it.':'Enter the account and Sync Passphrase your partner set up.'}</p>
+      <div class="sync-form">
+        <input type="email" id="syncEmail" placeholder="you@email.com" autocomplete="email" value="${escapeHtml(syncUI.email||'')}">
+        <input type="password" id="syncPw" placeholder="Account password${isHost?' (min 6)':''}" autocomplete="${isHost?'new-password':'current-password'}">
+        ${isHost?'':'<input type="password" id="syncKey" placeholder="Sync Passphrase (from your partner)">'}
+        <button class="btn sm primary" id="syncGo">${isHost?'Create account →':'Unlock our vault →'}</button>
+      </div>${err}
+      <button class="intake-skip" id="syncCancel">← Back</button>`;
+    document.getElementById('syncGo').onclick=isHost?hostAuth:joinVault;
+    document.getElementById('syncCancel').onclick=()=>{ syncUI={view:'menu',email:'',err:''}; renderSync(); };
+    return;
+  }
+  if(v==='host-key'){
+    box.innerHTML=`<div class="sync-head">☁️ Create your Sync Passphrase</div>
+      <p class="sub" style="margin-top:6px">This is the key that encrypts your budget before it syncs. Pick something you'll both remember - and can share with your partner.</p>
+      ${warn}
+      <div class="sync-form"><input type="password" id="syncKey1" placeholder="Create a Sync Passphrase (min 8)"><input type="password" id="syncKey2" placeholder="Type it again"><button class="btn sm primary" id="syncActivate">Activate vault →</button></div>${err}`;
+    document.getElementById('syncActivate').onclick=hostActivate;
+    return;
+  }
+  box.innerHTML=`<div class="sync-head">☁️ Household Sync <span class="sync-tag">Sovereign tier</span></div>
+    <p class="sub" style="margin-top:6px">One shared budget across both phones, <b>end-to-end encrypted</b> so even we can't read it. One of you sets it up; the other links in.</p>
+    <div class="sync-actions"><button class="btn sm primary" id="syncSetup">Set up Household Sync</button><button class="btn sm ghost" id="syncJoin">Link to an existing vault</button></div>${err}`;
+  document.getElementById('syncSetup').onclick=()=>{ syncUI={view:'host-auth',email:'',err:''}; renderSync(); };
+  document.getElementById('syncJoin').onclick=()=>{ syncUI={view:'join',email:'',err:''}; renderSync(); };
+}
+async function hostAuth(){
+  const email=(document.getElementById('syncEmail').value||'').trim(), pw=document.getElementById('syncPw').value;
+  if(!email||!pw||pw.length<6){ syncUI.err='Enter an email and a password of at least 6 characters.'; renderSync(); return; }
+  syncUI.email=email; syncUI.err='';
+  try{ await sbSignUp(email,pw); syncUI.view='host-key'; renderSync(); }
+  catch(e){ syncUI.err=e.message; renderSync(); }
+}
+async function hostActivate(){
+  const k1=document.getElementById('syncKey1').value, k2=document.getElementById('syncKey2').value;
+  if(!k1||k1.length<8){ syncUI.err='Use at least 8 characters for the passphrase.'; renderSync(); return; }
+  if(k1!==k2){ syncUI.err="Those two passphrases don't match."; renderSync(); return; }
+  syncUI.err='';
+  try{ syncPass=k1; await pushToVault(k1); syncActive=true; syncNote='Vault created and live.'; syncUI.view='active'; renderSync(); }
+  catch(e){ syncPass=null; syncActive=false; syncUI.err=e.message; renderSync(); }
+}
+async function joinVault(){
+  const email=(document.getElementById('syncEmail').value||'').trim(), pw=document.getElementById('syncPw').value, key=document.getElementById('syncKey').value;
+  if(!email||!pw||!key){ syncUI.err='Enter the email, password, and Sync Passphrase.'; renderSync(); return; }
+  syncUI.err='';
+  try{
+    await sbSignIn(email,pw);
+    const ok=await pullFromVault(key);
+    if(!ok){ syncUI.err='Signed in, but that account has no vault yet. Have your partner set it up first.'; renderSync(); return; }
+    syncPass=key; syncActive=true; syncNote='Vault unlocked and synced.'; syncUI.view='active'; renderSync();
+  }catch(e){ try{ await sbSignOut(); }catch(_){} syncUI.err=e.message; renderSync(); }
+}
+/* on open: if a Supabase session already exists but the memory-only passphrase is gone, ask to unlock */
+async function refreshSyncState(){
+  if(!syncConfigured() || !state.householdOn){ renderSync(); return; }
+  if(syncActive && syncPass){ syncUI.view='active'; renderSync(); return; }
+  syncUI.view='loading'; renderSync();
+  const sess=await sbSession();
+  syncUI.view = sess ? 'unlock' : 'menu';
+  renderSync();
+}
+
 /* ---------- Household mode controls ---------- */
 (function(){
   const cb=document.getElementById('hhOn');
@@ -3967,8 +4130,8 @@ const INTAKE=[
       {label:'🚲 Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
       {label:'💸 Sick of the car payment', value:'payment', reply:"Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
-  {id:'expenses', input:'loop', loopKey:'expenses', showIf:a=>a.acct!=='spend',
-    bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - add as many as are real, then hit Done. This is what builds your budget.",
+  {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, showIf:a=>a.acct!=='spend',
+    bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
     chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Eating out',name:'Eating out'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
     done:"Done - that's my spending →"},
@@ -4154,11 +4317,34 @@ function renderLoop(s){
   const running = arr.length ? `<div class="loop-sum">Added: ${arr.map(x=>escapeHtml(x.name)+' '+usd(x.amount)).join(' · ')} <b>= ${usd(total)}</b></div>` : '';
   dock.innerHTML=running
     +`<div class="intake-chips">${chips.map((c,i)=>`<button data-ci="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>`
-    +`<div class="intake-chips" style="margin-top:8px"><button class="go" id="iaLoopDone">${escapeHtml(s.done||'Done →')}</button></div>`
+    +`<div class="intake-chips" style="margin-top:8px"><button class="go" id="iaLoopDone">${escapeHtml(s.done||'Done →')}</button>${s.bulk?'<button id="iaLoopBulk">⊞ Add several at once</button>':''}</div>`
     +(back?`<div class="intake-underrow">${back}</div>`:'');
   dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{ const c=chips[+b.dataset.ci]; c.custom?askLoopName(s):askLoopAmount(s,c.name); });
   document.getElementById('iaLoopDone').onclick=()=>{ if(arr.length) iaBub(arr.map(x=>x.name).join(', '),'me'); iaAdvance(); };
+  const bulk=document.getElementById('iaLoopBulk'); if(bulk) bulk.onclick=()=>bulkLoop(s);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
+/* Bulk fallback: fill amounts for all the common categories at once, plus a few
+   blank rows, and add them in one go - no one-at-a-time tapping. */
+function bulkLoop(s){
+  const dock=document.getElementById('intakeDock');
+  const arr=iaAns[s.loopKey]||(iaAns[s.loopKey]=[]);
+  const used=new Set(arr.map(x=>x.name.toLowerCase()));
+  const common=(s.chips||[]).filter(c=>!c.custom && !used.has(c.name.toLowerCase()));
+  const rows = common.map(c=>`<div class="bulk-row"><span class="bulk-name">${escapeHtml(c.name)}</span><span class="bulk-amt">$<input type="number" inputmode="decimal" min="0" step="any" data-bulkc="${escapeHtml(c.name)}" placeholder="0"></span></div>`).join('')
+    + [0,1,2].map(i=>`<div class="bulk-row"><input type="text" class="bulk-custom" data-bulkn="${i}" placeholder="Something else"><span class="bulk-amt">$<input type="number" inputmode="decimal" min="0" step="any" data-bulka="${i}" placeholder="0"></span></div>`).join('');
+  dock.innerHTML=`<div class="bulk-hint">Fill in the ones that apply, skip the rest, add them all at once.</div>
+    <div class="bulk-list">${rows}</div>
+    <div class="intake-chips" style="margin-top:10px"><button class="go" id="iaBulkAdd">Add all →</button><button id="iaBulkBack">← One at a time</button></div>`;
+  document.getElementById('iaBulkAdd').onclick=()=>{
+    const add=[];
+    dock.querySelectorAll('input[data-bulkc]').forEach(inp=>{ const v=parseFloat(inp.value); if(v>0) add.push({name:inp.dataset.bulkc, amount:v}); });
+    dock.querySelectorAll('input[data-bulkn]').forEach(inp=>{ const n=(inp.value||'').trim(); const amtInp=dock.querySelector('input[data-bulka="'+inp.dataset.bulkn+'"]'); const v=parseFloat(amtInp&&amtInp.value); if(n && v>0) add.push({name:n, amount:v}); });
+    add.forEach(x=>{ if(!arr.some(e=>e.name.toLowerCase()===x.name.toLowerCase())) arr.push(x); });
+    if(add.length) iaBub(add.map(x=>x.name+' '+usd(x.amount)).join(', '),'me');
+    renderLoop(s);
+  };
+  document.getElementById('iaBulkBack').onclick=()=>renderLoop(s);
 }
 function askLoopName(s){
   const dock=document.getElementById('intakeDock');
@@ -4243,6 +4429,7 @@ function boot(){
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
   applyHousehold(); applySpending();
+  if(state.householdOn && typeof refreshSyncState==='function') refreshSyncState();
   initPWA();
   if(history.replaceState) history.replaceState({t:'tab',name:'home'},'');
   activateTab('home',true);

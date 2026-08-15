@@ -23,6 +23,10 @@ remove. Three engine pieces do this (`input:'loop'` and `input:'zeroClose'`):
    Health, Childcare, Debt payment, Fun money, Personal care, Pets, Savings, + Something
    else). Tap → enter amount → it's added (chosen chips drop off, a running total shows).
    Each becomes a funded category. This is the "conversational list" that builds the budget.
+   For users with many expenses, a **"⊞ Add several at once"** fallback (`bulkLoop`, step
+   flag `bulk:true`) swaps the tap-loop for a scrollable grid of all the common categories
+   with amount fields + blank custom rows - fill the ones that apply, "Add all" in one go
+   (deduped against what's already added). Kills the one-at-a-time fatigue.
 3. **Zero-based close** (`zeroClose`) - totals income vs. everything assigned and routes the
    leftover: "you bring in $X, assigned $Y, $Z is loose - park it in Savings / toward your
    dream / leave as buffer." Picking savings/goal funds a Savings category with the
