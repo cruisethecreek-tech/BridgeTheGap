@@ -4091,6 +4091,13 @@ const INTAKE=[
     namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
     amountPrompt:n=>`Roughly how much from ${n.toLowerCase()==='partner'?'your partner':n.toLowerCase()} a month, take-home?`,
     done:"Done - that's all my income →"},
+  {id:'householdOffer', input:'reflect', key:'wantHousehold', optional:true,
+    showIf:a=>a.acct!=='spend' && (a.extraIncome||[]).some(x=>/partner/i.test(x.name)),
+    bot:"You've got a partner bringing money in too - want the full couples view? It tags who earns what, prices purchases in your partner's life-hours as well, and splits the essentials income-fairly (not just 50/50).",
+    options:[
+      {label:'👫 Yes, set up the couples view', value:'yes', reply:"Nice - I'll switch on Household mode and use your partner's income to estimate their wage. You can fine-tune the names and numbers in Settings anytime."},
+      {label:'💵 Just count it as income', value:'no', reply:"Cool - it's in your budget total either way. You can flip on the couples view later in Settings."}
+    ]},
   {id:'wage',
     bot:a=> a.income>0
       ? `One number powers the whole "hours of your life" feature - your take-home per hour. You said about ${usd(a.income)} lands in your account each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${intakeIncomeTotal(a)>a.income+1?` (This is just your own paycheck - your partner's pay and side gigs are still counted in the budget total, they just don't change your personal hourly.)`:''} ★`
@@ -4386,9 +4393,14 @@ function renderZeroClose(s){
 }
 function commitIntake(){
   const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
-  const addIncome=(amount,source)=>{ const rec={id:uid(),type:'income',amount,day:1,source}; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount,source,date:`${M}-01`,note:'Intake',recId:rec.id}); };
-  if(a.income>0) addIncome(a.income,'Paycheck');
-  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0) addIncome(+x.amount, x.name||'Income'); });
+  const addIncome=(amount,source,owner)=>{ const rec={id:uid(),type:'income',amount,day:1,source}; if(owner) rec.owner=owner; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}); };
+  if(a.income>0) addIncome(a.income,'Paycheck','a');
+  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0) addIncome(+x.amount, x.name||'Income', /partner/i.test(x.name||'')?'b':'a'); });
+  if(a.wantHousehold==='yes'){                   // "set up the couples view" from intake
+    state.householdOn=true;
+    const partner=(a.extraIncome||[]).find(x=>/partner/i.test(x.name||''));
+    if(partner){ state.nameB='Partner'; if(+partner.amount>0) state.wageB=estHourlyFromMonthly(partner.amount); }
+  }
   if(a.wage>0) state.hourlyWage=a.wage;
   [['roof','Roof'],['food','Food'],['util','Power & Wi-Fi'],['transport','Getting Around']].forEach(([k,name])=>{
     if(a[k]>0){ const c=findOrCreateEssential(name); budgetFor(M)[c.id]=a[k]; }
