@@ -364,18 +364,21 @@
   .dataguard .dg-s{color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:3px}
   .dataguard .dg-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
   .dataguard .dg-x{background:none;border:none;color:var(--muted);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
-  /* life-hours "show your work" key + inline dollar reference */
-  .lifekey{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;margin:0 0 16px;overflow:hidden}
-  .lifekey>summary{list-style:none;cursor:pointer;padding:12px 15px;font-weight:800;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:8px}
-  .lifekey>summary::-webkit-details-marker{display:none}
-  .lifekey>summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:transform .2s ease}
-  .lifekey[open]>summary::after{transform:rotate(180deg)}
-  .lifekey .lk-body{padding:2px 15px 15px;font-size:14px;line-height:1.55;color:var(--muted)}
-  .lifekey .lk-body p{margin:0 0 10px}
-  .lifekey .lk-body b{color:var(--text)}
-  .lifekey .lk-rows{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:700;color:var(--text)}
-  .lifekey .lk-eg{margin-top:11px;color:var(--muted);font-weight:600}
-  .conv{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;letter-spacing:0}
+  /* flip stat cards: tap to flip a figure between dollars and hours of your life */
+  .fstat{perspective:1000px}
+  .fstat .fi{position:relative;height:100%;min-height:84px;transition:transform .5s cubic-bezier(.4,.15,.2,1);transform-style:preserve-3d;cursor:pointer}
+  .fstat.flipped .fi{transform:rotateY(180deg)}
+  .fstat .ff,.fstat .fb{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:11px 14px;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .fstat .fb{transform:rotateY(180deg);cursor:pointer}
+  .fstat .ff .k,.fstat .fb .fbk-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+  .fstat .ff .v{font-weight:900;font-size:23px;letter-spacing:-.5px;margin-top:3px}
+  .fstat .ff .v.good{color:var(--good)} .fstat .ff .v.bad{color:var(--bad)} .fstat .ff .v.pos{color:var(--accent)}
+  .fstat .fb .fbk{font-weight:900;font-size:20px;letter-spacing:-.4px;color:var(--accent);margin-top:2px}
+  .fstat .fb .fbs{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:5px;line-height:1.4}
+  .fstat .fliptag{position:absolute;top:8px;right:9px;font-size:11px;color:var(--muted);opacity:.5}
+  .fstat.noflip .fi{cursor:default}
+  .flip-hint{font-size:12px;color:var(--muted);font-weight:600;margin:10px 0 2px;display:flex;align-items:center;gap:6px}
+  .stat-note{font-size:13.5px;font-weight:700;margin-top:12px;color:var(--muted)}
   .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
   .cal-cell.clk:hover{transform:translateY(-1px)}
@@ -1642,29 +1645,26 @@ function fmtLife(amount){
 }
 /* the app formats everything through money(): mode-aware */
 function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
-/* Show-your-work: a tap-to-open key that proves how a dollar price becomes
-   hours of your life, using the user's real wage. Only in Life-Hours mode. */
-function lifeKeyHTML(){
-  if(!state.freedomMode) return '';
-  const H=effectiveHourly(); if(!H||H<=0) return '';
-  const est = state.hourlyWage>0 ? '' : ' (estimated from your logged income - set your real take-home in Settings for the truth)';
-  return `<details class="lifekey">
-    <summary><span>⌛ How did we get these? Dollars → hours of your life</span></summary>
-    <div class="lk-body">
-      <p>Every price is divided by your real take-home wage of <b>${usd(H)}/hr</b>${est}. You see the time you'd actually work to afford something, not just a number.</p>
-      <div class="lk-rows"><span>1 hour worked</span><b>${usd(H)}</b></div>
-      <div class="lk-rows"><span>1 work-day (${WORKDAY_HRS} hrs)</span><b>${usd(H*WORKDAY_HRS)}</b></div>
-      <div class="lk-rows"><span>1 work-month (${WORKMONTH_HRS} hrs)</span><b>${usd(H*WORKMONTH_HRS)}</b></div>
-      <p class="lk-eg">So a <b>${usd(H*WORKDAY_HRS)}</b> bill costs you <b>1 day</b> of your life; a <b>${usd(H)}</b> coffee, <b>1 hr</b>. Same money, told in the only currency you can't earn back.</p>
-    </div>
-  </details>`;
+/* Flip stat card: front shows the figure in the current mode; tap to flip to the
+   back, which shows the same money in the OTHER currency plus the rate that
+   derived it - the "show your work", on demand, so the interface stays compact. */
+function flipBack(amt){
+  const H=effectiveHourly(); const a=Math.abs(amt);
+  if(state.freedomMode) return `<div class="fbk">= ${usd(a)}</div><div class="fbs">your ${usd(H)}/hr take-home · ${usd(H*WORKDAY_HRS)} a work-day</div>`;
+  return `<div class="fbk">= ${fmtLife(a)}</div><div class="fbs">of your life · at your ${usd(H)}/hr take-home</div>`;
 }
-/* Inline dollar reference for a life-hours figure, so each number is relatable.
-   Returns '' unless in Life-Hours mode with a wage set. */
-function convNote(n){
-  if(!state.freedomMode) return '';
-  const H=effectiveHourly(); if(!H||H<=0) return '';
-  return `<span class="conv">= ${usd(Math.abs(n))}</span>`;
+function flipStat(label, amt, cls){
+  const H=effectiveHourly();
+  const front=`<div class="ff"><div class="k">${label}</div><div class="v ${cls||''}">${money(amt)}</div></div>`;
+  if(!(H>0)) return `<div class="fstat noflip"><div class="fi">${front}</div></div>`;
+  return `<div class="fstat" data-flip tabindex="0" role="button" aria-label="${escapeHtml(label)}: tap to flip between dollars and hours of your life"><div class="fi">${front}<div class="fb"><span class="fliptag">↩</span>${flipBack(amt)}</div></div></div>`;
+}
+/* a non-money stat (e.g. a streak) - same card look, never flips */
+function plainStat(label, valHTML, cls){
+  return `<div class="fstat noflip"><div class="fi"><div class="ff"><div class="k">${label}</div><div class="v ${cls||''}">${valHTML}</div></div></div></div>`;
+}
+function flipHintHTML(){
+  return effectiveHourly()>0 ? `<div class="flip-hint">↩ Tap any card to flip between dollars and hours of your life.</div>` : '';
 }
 /* Copy matrix: time-framed labels by register x intensity (Freedom Mode only) */
 const LIFE_LABELS={
@@ -2284,6 +2284,9 @@ function renderUiMode(){
     state.uiMode=b.dataset.m; save(); applyStage({silent:true}); renderUiMode(); renderAll&&renderAll(); });
 })();
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) activateTab(g.dataset.goto); });
+/* flip stat cards: tap (or Enter/Space) flips $ <-> hours of your life */
+document.addEventListener('click',e=>{ const f=e.target.closest('[data-flip]'); if(f) f.classList.toggle('flipped'); });
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const f=e.target.closest&&e.target.closest('[data-flip]'); if(f){ e.preventDefault(); f.classList.toggle('flipped'); } } });
 document.getElementById('wallsSetup').addEventListener('click',()=>{
   WALLS.forEach(w=>{ if(!state.categories.some(c=>w.match.some(t=>c.name.toLowerCase().includes(t)))) state.categories.push({id:uid(),name:w.cat}); });
   save(); renderBudget(); renderRecurring(); renderWalls(); renderHome();
@@ -2348,13 +2351,14 @@ function renderBudget(){
   else if(ltb<0){ cls+=' over'; msg="You've assigned more than you earned. Cut something."; }
   else { msg='Keep going - assign this down to $0.'; vc='pos'; }
 
-  document.getElementById('summary').innerHTML=`
-    <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div>${convNote(ltb)}<div class="msg">${msg}</div></div>
-    <div class="stat"><div class="k">${lifeLabel('income','Income')}</div><div class="v good">${money(income)}</div>${convNote(income)}</div>
-    <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div>${convNote(assigned)}</div>
-    <div class="stat"><div class="k">${lifeLabel('spent','Spent')}</div><div class="v">${money(spent)}</div>${convNote(spent)}</div>
-    <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div>${convNote(assigned-spent)}</div>`;
-  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=lifeKeyHTML();
+  const lts=assigned-spent;
+  document.getElementById('summary').innerHTML=
+    flipStat('Left to budget', ltb, vc)+
+    flipStat(lifeLabel('income','Income'), income, 'good')+
+    flipStat('Assigned', assigned, '')+
+    flipStat(lifeLabel('spent','Spent'), spent, '')+
+    flipStat('Left to spend', lts, lts<0?'bad':'good');
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${flipHintHTML()}`;
 
   const dupEl=document.getElementById('dupBanner');
   if(dupEl){
@@ -4068,13 +4072,13 @@ function renderHome(){
   const ltb=income-assigned, spent=monthExpense(M);
   const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
-  const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=lifeKeyHTML();
   const snap=document.getElementById('homeSnap'); if(!snap) return;
-  snap.innerHTML=`
-    <div class="snap"><div class="k">Left to budget</div><div class="v ${ltbCls}">${money(ltb)}</div>${convNote(ltb)}</div>
-    <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div>${convNote(spent)}</div>
-    <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
-    <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div>${convNote(nw)}</div>`;
+  snap.innerHTML=
+    flipStat('Left to budget', ltb, ltbCls)+
+    flipStat('Spent this month', spent, '')+
+    plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
+    flipStat('Net worth', nw, nw<0?'bad':'good');
+  const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=flipHintHTML();
   renderEnough(income);
   renderOffenseDefense();
   renderNextSteps();
