@@ -380,6 +380,9 @@
   .flip-hint{font-size:12px;color:var(--muted);font-weight:600;margin:10px 0 2px;display:flex;align-items:center;gap:6px}
   .stat-note{font-size:13.5px;font-weight:700;margin-top:12px;color:var(--muted)}
   .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
+  .reflect-note{margin:12px 0 4px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-left:3px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:14px;line-height:1.55;color:var(--text)}
+  .cat.cat-flash{animation:catFlash 1.6s ease}
+  @keyframes catFlash{0%,100%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),0)}18%{box-shadow:0 0 0 2px var(--accent)}}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
   .cal-cell.clk:hover{transform:translateY(-1px)}
   .cal-cell.sel{outline:2px solid var(--accent);outline-offset:1px}
@@ -647,6 +650,8 @@
   .intake-skip{display:block;text-align:center;margin:10px auto 0;background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;cursor:pointer}
   .intake-underrow{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:10px}
   .intake-underrow .intake-skip{margin:0}
+  .loop-sum{max-width:640px;margin:0 auto 10px;font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+  .loop-sum b{color:var(--accent)}
   .intake-help{background:rgba(230,178,77,.12);border:1px solid rgba(230,178,77,.35);color:var(--accent);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;cursor:pointer}
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
@@ -1048,6 +1053,7 @@
       <div class="panel">
         <h2>💣 Debt Payoff Planner</h2>
         <p class="sub">List what you owe, set what you can throw at it each month, and see the fastest, cheapest way out - with the interest priced in hours of your life.</p>
+        <div id="debtReflectNote"></div>
         <div class="row">
           <label class="fld">Debt<input type="text" id="debtName" placeholder="Visa, car loan…" style="width:150px"></label>
           <label class="fld">Balance $<input type="number" id="debtBal" min="0" step="1" placeholder="0" style="width:110px"></label>
@@ -1910,6 +1916,13 @@ function simulateDebts(debts, monthly, strategy){
 }
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
 function renderDebt(){
+  const rn=document.getElementById('debtReflectNote');
+  if(rn){ const r=(state.intake&&state.intake.reflections)||{};
+    let note='';
+    if(r.commute==='payment') note=`🚗 You told me the car payment weighs on you. Add it here - watch how fast crushing it frees up your monthly cash flow (and your life-hours).`;
+    else if(r.debt==='treading') note=`💪 You said the debt feels like treading water. This is the tool that shows you the shore - a real date you're free, priced in hours of your life.`;
+    rn.innerHTML = note ? `<div class="reflect-note">${note}</div>` : '';
+  }
   const box=document.getElementById('debtList'); if(!box) return;
   box.innerHTML = state.debts.length ? state.debts.map(d=>`
     <div class="debtrow">
@@ -2284,6 +2297,24 @@ function renderUiMode(){
     state.uiMode=b.dataset.m; save(); applyStage({silent:true}); renderUiMode(); renderAll&&renderAll(); });
 })();
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) activateTab(g.dataset.goto); });
+/* Cover First cards deep-link to their own category on Plan: find/create it,
+   scroll to it, flash it, and focus its Assign field so funding is one tap. */
+document.addEventListener('click',e=>{ const w=e.target.closest('[data-wall]'); if(w) goToWall(w.dataset.wall); });
+function goToWall(catName){
+  const before=state.categories.length;
+  const c=findOrCreateEssential(catName);
+  const created=state.categories.length>before;
+  if(created) save();
+  activateTab('budget');
+  if(created) renderBudget();
+  setTimeout(()=>{
+    const inp=document.querySelector('#cats input[data-cat="'+c.id+'"]');
+    if(!inp) return;
+    const row=inp.closest('.cat');
+    if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('cat-flash'); setTimeout(()=>row.classList.remove('cat-flash'),1600); }
+    try{ inp.focus({preventScroll:true}); inp.select&&inp.select(); }catch(_){}
+  },140);
+}
 /* flip stat cards: tap (or Enter/Space) flips $ <-> hours of your life */
 document.addEventListener('click',e=>{ const f=e.target.closest('[data-flip]'); if(f) f.classList.toggle('flipped'); });
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const f=e.target.closest&&e.target.closest('[data-flip]'); if(f){ e.preventDefault(); f.classList.toggle('flipped'); } } });
@@ -3891,7 +3922,17 @@ const INTAKE=[
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
-  {id:'wage', bot:"Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★", input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
+  {id:'moreIncome', input:'loop', loopKey:'extraIncome', showIf:a=>a.acct!=='spend' && a.income>0,
+    bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the total. Tap Done if it's just the one.`,
+    chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig'},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
+    amountPrompt:n=>`Roughly how much from ${n.toLowerCase()} a month, take-home?`,
+    done:"Done - that's all my income →"},
+  {id:'wage',
+    bot:a=> a.income>0
+      ? `One number powers the whole "hours of your life" feature - your take-home per hour. You said about ${usd(a.income)} lands each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right? ★`
+      : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
+    input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
+    suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income) : null,
     help:{ cta:"🤔 Help me work it out",
       ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
       placeholder:"e.g. 52000",
@@ -3900,26 +3941,92 @@ const INTAKE=[
   },
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
   {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
+  {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
+    bot:"Before we move on - honestly, how's the place you live actually treating you?",
+    options:[
+      {label:'❤️ Love it, staying put', value:'love', reply:"Love that. A place that feels like home is worth protecting - that's the whole point of covering it first."},
+      {label:"🤷 It's fine for now", value:'fine', reply:"Fine works. We'll keep it funded so it never quietly turns into your biggest stress."},
+      {label:'😮‍💨 Outgrowing it', value:'outgrow', reply:"Heard you. When it's time to level up, these numbers will tell you exactly when it's doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
+      {label:'🏡 Dreaming of owning', value:'own', reply:"Owning is a big, real one. Hold that thought - the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
+    ]},
   {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'foodStyle', input:'reflect', key:'foodStyle', optional:true, showIf:a=>a.acct!=='spend' && a.food>0,
+    bot:"Quick one - what's your normal with food?",
+    options:[
+      {label:'👩‍🍳 Mostly cook at home', value:'cook', reply:"Cooking's a quiet superpower for your wallet and your health. Respect."},
+      {label:'🥡 Eat out / takeout a lot', value:'out', reply:"No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
+      {label:'⚖️ A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
+    ]},
   {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 300'},
   {id:'transport', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'commuteFeel', input:'reflect', key:'commuteFeel', optional:true, showIf:a=>a.acct!=='spend' && a.transport>0,
+    bot:"How do you feel about getting around day to day?",
+    options:[
+      {label:'😑 The commute drains me', value:'drain', reply:"That drain is real - and Freedom Mode will show you exactly how many hours of life it costs. Sometimes that number changes everything."},
+      {label:"🚗 It's fine", value:'fine', reply:"Good - one less thing weighing on you."},
+      {label:'🚲 Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
+      {label:'💸 Sick of the car payment', value:'payment', reply:"Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
+    ]},
+  {id:'expenses', input:'loop', loopKey:'expenses', showIf:a=>a.acct!=='spend',
+    bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - add as many as are real, then hit Done. This is what builds your budget.",
+    chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Eating out',name:'Eating out'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
+    amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
+    done:"Done - that's my spending →"},
   {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
   {id:'debtAmt', bot:"Roughly how much, all in?", input:'money', key:'debtAmt', showIf:a=>a.hasDebt==='yes', placeholder:'e.g. 8000'},
-  {id:'dream', bot:"Last big piece - what are you actually chasing? The dream this whole budget is for. ★", input:'text', key:'dream', showIf:a=>a.acct!=='spend', placeholder:'Debt-free · Emergency fund · A trip · A house'},
+  {id:'debtFeel', input:'reflect', key:'debtFeel', optional:true, showIf:a=>a.hasDebt==='yes' && a.debtAmt>0,
+    bot:"And the debt - honestly, how does carrying it feel right now?",
+    options:[
+      {label:'😮‍💨 Treading water', value:'treading', reply:"Treading water is exhausting - but you just named it, and that's the first real step. The Debt planner will show you the way out, priced in your life."},
+      {label:'📉 Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
+      {label:'🆕 Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
+    ]},
+  {id:'dream',
+    bot:a=>{
+      if(a.roofFeel==='own') return `Now the big one - what are you actually chasing? You said you're dreaming of owning${a.roofFeelNote?` ("${a.roofFeelNote}")`:' a place'} - want that to be the dream we build toward, or is there a bigger one? ★`;
+      if(a.roofFeel==='outgrow') return `Now the big one - what are you actually chasing? Could be leveling up where you live, could be something else entirely. ★`;
+      if(a.commuteFeel==='payment') return `Now the big one - what are you actually chasing? Killing that car payment counts, by the way - or aim bigger. ★`;
+      return "Last big piece - what are you actually chasing? The dream this whole budget is for. ★";
+    },
+    input:'text', key:'dream',
+    prefill:a=> a.roofFeel==='own' ? (a.roofFeelNote || 'Own a home') : (a.roofFeel==='outgrow' ? 'A better place to live' : (a.commuteFeel==='payment' ? 'Pay off the car' : '')),
+    showIf:a=>a.acct!=='spend', placeholder:'Debt-free · Emergency fund · A trip · A house'},
   {id:'dreamAmt', bot:a=>`Put a number on it - what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 5000'},
+  {id:'zeroClose', input:'zeroClose', showIf:a=>a.acct!=='spend' && a.income>0,
+    bot:a=>{ const inc=intakeIncomeTotal(a), asg=intakeAssignedTotal(a), left=Math.round(inc-asg);
+      if(left>1) return `Almost done - let's make it zero-based. About ${usd(inc)} comes in, and we've given ${usd(asg)} a job so far. That leaves ${usd(left)} with nothing assigned yet. Where should it go?`;
+      if(left<-1) return `One honest heads-up: we've assigned about ${usd(-left)} more than comes in. I'll flag it on your budget so you can trim - totally fixable.`;
+      return `And every dollar already has a job - that's zero-based budgeting, done right. 👏`; }},
   {id:'spendLimit', bot:"Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.", input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
   {id:'tone', bot:"When you're about to blow it, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
   {id:'done', bot:a=>a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`, input:'finish', cta:'Set me up →'}
 ];
 
-let iaStep=0, iaAns={};
-function openIntake(){ iaStep=0; iaAns={}; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
+let iaStep=0, iaAns={}, iaForceInput=false;
+/* estimate take-home hourly from monthly take-home: full-time year ≈ 2,080 hrs */
+function estHourlyFromMonthly(m){ return Math.max(1, Math.round((+m||0)*12/2080)); }
+function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
+/* Edit: step back to the previous answered question and re-open it. The prior
+   bot bubble stays; we drop the current question + the last answer and clear it. */
+function iaBack(){
+  let p=iaStep-1;
+  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'){ p--; continue; } break; }
+  if(p<0) return;
+  const log=document.getElementById('intakeLog');
+  if(log.lastChild && log.lastChild.classList && log.lastChild.classList.contains('bot')) log.removeChild(log.lastChild);
+  if(log.lastChild && log.lastChild.classList && log.lastChild.classList.contains('me')) log.removeChild(log.lastChild);
+  const s=INTAKE[p]; if(s.key) delete iaAns[s.key];
+  iaStep=p; iaForceInput=false;
+  document.getElementById('intakeBar').style.width=Math.round(p/(INTAKE.length-1)*100)+'%';
+  renderIntakeDock(s);
+}
 function closeIntake(){ document.getElementById('intake').classList.remove('on'); document.body.style.overflow=''; }
 function iaBub(text,who){ const log=document.getElementById('intakeLog'); const d=document.createElement('div'); d.className='bub '+who; d.textContent=text; log.appendChild(d); log.scrollTop=log.scrollHeight; setTimeout(()=>{log.scrollTop=log.scrollHeight;},40); }
 function iaStore(key,val){ if(key) iaAns[key]=val; }
 function nextIntakeIndex(from){ let i=from; while(i<INTAKE.length){ const s=INTAKE[i]; if(s.showIf && !s.showIf(iaAns)){ i++; continue; } return i; } return -1; }
 function runIntakeStep(){
+  iaForceInput=false;
   const idx=nextIntakeIndex(iaStep); if(idx<0) return;
   iaStep=idx; const s=INTAKE[idx];
   iaBub(typeof s.bot==='function'?s.bot(iaAns):s.bot,'bot');
@@ -3937,22 +4044,41 @@ function renderIntakeDock(s){
   }
   if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
+  if(s.input==='loop'){ renderLoop(s); return; }
+  if(s.input==='zeroClose'){ renderZeroClose(s); return; }
+  if(s.input==='reflect'){ renderReflect(s); return; }
   if(s.input==='gate'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
     document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
+  const canBack = iaStep>3;   // editable from the income step onward
+  const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
-    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`;
+    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; iaBub(o.label,'me'); iaStore(s.key,o.value); iaAdvance(); });
+    const bk0=document.getElementById('iaBack'); if(bk0) bk0.onclick=iaBack;
     return;
   }
   const isMoney=s.input==='money';
   const optNow=(typeof s.optional==='function')?!!s.optional(iaAns):!!s.optional;
-  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
-    +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}</div>`;
-  const inp=document.getElementById('iaInput'); setTimeout(()=>inp.focus(),60);
+  // Derived suggestion (e.g. hourly from monthly income): confirm with a pill, or set your own.
+  const sugg=(isMoney && !iaForceInput && typeof s.suggest==='function') ? s.suggest(iaAns) : null;
+  if(sugg!=null){
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓ Yep, about ${usd(sugg)}/hr</button><button id="iaSuggNo">✎ Set my own rate</button></div>`
+      +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${backBtn}</div>`;
+    document.getElementById('iaSuggYes').onclick=()=>{ iaStore(s.key,sugg); iaBub(usd(sugg)+'/hr','me'); iaAdvance(); };
+    document.getElementById('iaSuggNo').onclick=()=>{ iaForceInput=true; renderIntakeDock(s); };
+    const hb2=document.getElementById('iaHelp'); if(hb2) hb2.onclick=()=>runIntakeHelper(s);
+    const bk2=document.getElementById('iaBack'); if(bk2) bk2.onclick=iaBack;
+    return;
+  }
+  const pre=(typeof s.prefill==='function')?(s.prefill(iaAns)||''):'';
+  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
+    +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}${backBtn}</div>`;
+  const inp=document.getElementById('iaInput'); setTimeout(()=>{ inp.focus(); if(pre) try{inp.select();}catch(_){} },60);
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
   const hb=document.getElementById('iaHelp'); if(hb) hb.onclick=()=>runIntakeHelper(s);
   const submit=()=>{
     const raw=inp.value.trim();
@@ -3987,13 +4113,101 @@ function runIntakeHelper(s){
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaHelpBack').onclick=()=>renderIntakeDock(s);
 }
+/* Reflection: a quick pain-point / aspiration question between sections. Each
+   option gives a tailored reply (so the user feels heard = engagement); some
+   open an optional free-text follow-up. Answers are stored on iaAns and kept in
+   state.intake for later personalization. Fully skippable. */
+function renderReflect(s){
+  const dock=document.getElementById('intakeDock');
+  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-ri="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`
+    +`<div class="intake-underrow">${s.optional?'<button class="intake-skip" id="iaReflectSkip">Skip</button>':''}${back}</div>`;
+  dock.querySelectorAll('button[data-ri]').forEach(b=>b.onclick=()=>{
+    const o=s.options[+b.dataset.ri];
+    iaBub(o.label,'me');
+    if(s.key) iaAns[s.key]=o.value||o.label;
+    if(o.reply) iaBub(o.reply,'bot');
+    if(o.followup) setTimeout(()=>askReflectNote(s,o), o.reply?520:120);
+    else setTimeout(iaAdvance, o.reply?750:150);
+  });
+  const sk=document.getElementById('iaReflectSkip'); if(sk) sk.onclick=iaAdvance;
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
+function askReflectNote(s,o){
+  const dock=document.getElementById('intakeDock');
+  iaBub(o.followup,'bot');
+  dock.innerHTML=`<div class="inrow"><input id="iaReflectNote" type="text" placeholder="In your words… (optional)"><button class="intake-send" id="iaReflectGo">Send</button></div><div class="intake-underrow"><button class="intake-skip" id="iaReflectSkip2">Skip</button></div>`;
+  const inp=document.getElementById('iaReflectNote'); setTimeout(()=>inp.focus(),60);
+  const go=()=>{ const v=inp.value.trim(); if(v){ iaAns[(s.key||'reflect')+'Note']=v; iaBub(v,'me'); } iaAdvance(); };
+  document.getElementById('iaReflectGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaReflectSkip2').onclick=iaAdvance;
+}
+/* Conversational loop: tap a chip -> enter an amount -> it's added; repeat, then Done.
+   Builds iaAns[s.loopKey] = [{name, amount}] - used for income sources and expenses. */
+function renderLoop(s){
+  const dock=document.getElementById('intakeDock');
+  const arr=iaAns[s.loopKey]||(iaAns[s.loopKey]=[]);
+  const used=new Set(arr.map(x=>x.name.toLowerCase()));
+  const chips=s.chips.filter(c=>c.custom||!used.has(c.name.toLowerCase()));
+  const total=arr.reduce((sum,x)=>sum+(+x.amount||0),0);
+  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const running = arr.length ? `<div class="loop-sum">Added: ${arr.map(x=>escapeHtml(x.name)+' '+usd(x.amount)).join(' · ')} <b>= ${usd(total)}</b></div>` : '';
+  dock.innerHTML=running
+    +`<div class="intake-chips">${chips.map((c,i)=>`<button data-ci="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>`
+    +`<div class="intake-chips" style="margin-top:8px"><button class="go" id="iaLoopDone">${escapeHtml(s.done||'Done →')}</button></div>`
+    +(back?`<div class="intake-underrow">${back}</div>`:'');
+  dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{ const c=chips[+b.dataset.ci]; c.custom?askLoopName(s):askLoopAmount(s,c.name); });
+  document.getElementById('iaLoopDone').onclick=()=>{ if(arr.length) iaBub(arr.map(x=>x.name).join(', '),'me'); iaAdvance(); };
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
+function askLoopName(s){
+  const dock=document.getElementById('intakeDock');
+  dock.innerHTML=`<div class="inrow"><input id="iaLoopName" type="text" placeholder="Name it (e.g. Gym, Storage, Tithe)"><button class="intake-send" id="iaLoopNameGo">Next</button></div><div class="intake-underrow"><button class="intake-skip" id="iaLoopCancel">← Back</button></div>`;
+  const inp=document.getElementById('iaLoopName'); setTimeout(()=>inp.focus(),60);
+  const go=()=>{ const n=inp.value.trim(); if(!n){ inp.focus(); return; } askLoopAmount(s,n); };
+  document.getElementById('iaLoopNameGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaLoopCancel').onclick=()=>renderLoop(s);
+}
+function askLoopAmount(s,name){
+  const dock=document.getElementById('intakeDock');
+  iaBub(s.amountPrompt(name),'bot');
+  dock.innerHTML=`<div class="inrow"><input id="iaLoopAmt" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 40"><button class="intake-send" id="iaLoopAmtGo">Add</button></div><div class="intake-underrow"><button class="intake-skip" id="iaLoopAmtBack">← Back</button></div>`;
+  const inp=document.getElementById('iaLoopAmt'); setTimeout(()=>inp.focus(),60);
+  const go=()=>{ const v=parseFloat(inp.value); if(isNaN(v)||v<0){ inp.focus(); return; } (iaAns[s.loopKey]||(iaAns[s.loopKey]=[])).push({name,amount:v}); iaBub(name+' - '+usd(v),'me'); renderLoop(s); };
+  document.getElementById('iaLoopAmtGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaLoopAmtBack').onclick=()=>renderLoop(s);
+}
+/* Zero-based close: route any unassigned income to savings / a goal / buffer */
+function renderZeroClose(s){
+  const dock=document.getElementById('intakeDock');
+  const inc=intakeIncomeTotal(iaAns), asg=intakeAssignedTotal(iaAns), left=Math.round(inc-asg);
+  const back = '<button class="intake-skip" id="iaBack">← Back</button>';
+  if(inc>0 && left>1){
+    const opts=[{label:'💰 Park it in Savings',v:'savings'}];
+    if(iaAns.dream) opts.push({label:`🎯 Toward "${iaAns.dream}"`,v:'goal'});
+    opts.push({label:'🍃 Leave it as buffer',v:'buffer'});
+    dock.innerHTML=`<div class="intake-chips">${opts.map((o,i)=>`<button data-zi="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><div class="intake-underrow">${back}</div>`;
+    dock.querySelectorAll('button[data-zi]').forEach(b=>b.onclick=()=>{ const o=opts[+b.dataset.zi]; iaAns.zeroChoice=o.v; iaBub(o.label,'me'); iaAdvance(); });
+  } else {
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaZeroGo">Continue →</button></div><div class="intake-underrow">${back}</div>`;
+    document.getElementById('iaZeroGo').onclick=iaAdvance;
+  }
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
 function commitIntake(){
   const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
-  if(a.income>0){ const rec={id:uid(),type:'income',amount:a.income,day:1,source:'Paycheck'}; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount:a.income,source:'Paycheck',date:`${M}-01`,note:'Intake',recId:rec.id}); }
+  const addIncome=(amount,source)=>{ const rec={id:uid(),type:'income',amount,day:1,source}; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount,source,date:`${M}-01`,note:'Intake',recId:rec.id}); };
+  if(a.income>0) addIncome(a.income,'Paycheck');
+  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0) addIncome(+x.amount, x.name||'Income'); });
   if(a.wage>0) state.hourlyWage=a.wage;
   [['roof','Roof'],['food','Food'],['util','Power & Wi-Fi'],['transport','Getting Around']].forEach(([k,name])=>{
     if(a[k]>0){ const c=findOrCreateEssential(name); budgetFor(M)[c.id]=a[k]; }
   });
+  (a.expenses||[]).forEach(x=>{ if(+x.amount>0 && x.name){ const c=findOrCreateCat(x.name); budgetFor(M)[c.id]=(budgetFor(M)[c.id]||0)+(+x.amount); } });
+  if(!spend){                                    // zero-based close: park any leftover
+    const left=Math.round(intakeIncomeTotal(a)-intakeAssignedTotal(a));
+    if(left>1 && (a.zeroChoice==='savings'||a.zeroChoice==='goal')){ const c=findOrCreateCat(a.zeroChoice==='goal'&&a.dream?'Savings ('+a.dream+')':'Savings'); budgetFor(M)[c.id]=(budgetFor(M)[c.id]||0)+left; }
+  }
   if(a.hasDebt==='yes' && a.debtAmt>0) state.liabilities.push({id:uid(),name:'Debt',value:a.debtAmt});
   if(a.dream) state.goals.push({id:uid(),name:a.dream,target:a.dreamAmt>0?a.dreamAmt:1000,saved:0,date:''});
   if(a.tone) state.intensity=a.tone;
@@ -4003,7 +4217,8 @@ function commitIntake(){
     state.spendLimit=a.spendLimit>0?a.spendLimit:0;
     if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
   }
-  state.intake={name:a.name||'',why:a.why||''};
+  state.intake={name:a.name||'',why:a.why||'',
+    reflections:{ roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
@@ -4115,21 +4330,33 @@ function renderNextSteps(){
   const ltb=income-assigned;
   const wallsCovered=WALLS.filter(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)>0; }).length;
   const unlocked=state.vault.filter(v=>v.unlocksAt<=Date.now()).length;
+  const firstUncovered=WALLS.find(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)<=0; });
   const steps=[];
-  if(income<=0) steps.push(['tx','🧾','Log your income','Add this month\'s paycheck so every dollar has something to assign.']);
-  else if(Math.abs(ltb)>=1) steps.push(['budget','📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`,'Budget to zero: every dollar gets a job.']);
-  if(wallsCovered<4) steps.push(['budget','🏠',`Cover your essentials (${wallsCovered}/4)`,'Fund Roof, Food, Power & Wi-Fi, and Getting Around first.']);
-  if(!state.hourlyWage) steps.push(['settings','⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.']);
-  if(unlocked>0) steps.push(['impulse','🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.']);
-  if(!state.goals.length) steps.push(['goals','🎯','Name one dream','A budget with nothing behind it is just a spreadsheet.']);
+  if(income<=0) steps.push(['🧾','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
+  else if(Math.abs(ltb)>=1) steps.push(['📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`,'Budget to zero: every dollar gets a job.','assign']);
+  if(wallsCovered<4) steps.push(['🏠',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
+  if(!state.hourlyWage) steps.push(['⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.','wage']);
+  if(unlocked>0) steps.push(['🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.','tab:impulse']);
+  if(!state.goals.length) steps.push(['🎯','Name one dream','A budget with nothing behind it is just a spreadsheet.','dream']);
   const givenM=(state.giving||[]).filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0);
   const giveTarget=(state.givingPct>0&&income>0)?income*state.givingPct/100:0;
-  if(giveTarget>0 && givenM<giveTarget) steps.push(['goals','🌊',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.']);
-  else if(!state.giving.length && income>0) steps.push(['goals','🌊','Give something forward','Even a small amount, on purpose, changes your relationship with money.']);
-  if(!steps.length) steps.push(['tx','✅','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.']);
+  if(giveTarget>0 && givenM<giveTarget) steps.push(['🌊',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
+  else if(!state.giving.length && income>0) steps.push(['🌊','Give something forward','Even a small amount, on purpose, changes your relationship with money.','give']);
+  if(!steps.length) steps.push(['✅','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.','tab:tx']);
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
-    steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-goto="${s[0]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[1]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[2])}</span><span class="ns-s">${escapeHtml(s[3])}</span></span><span class="ns-arrow">→</span></button>`).join('');
+    steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`).join('');
 }
+/* deep-link a "Do this next" card to the exact spot + focus */
+function runNextStep(act){
+  if(!act) return;
+  if(act.indexOf('wall:')===0){ const c=act.slice(5); c?goToWall(c):activateTab('budget'); return; }
+  if(act.indexOf('tab:')===0){ activateTab(act.slice(4)); return; }
+  const map={ income:['tx','txAmt'], assign:['budget','catName'], wage:['settings','wage'], dream:['goals','goalName'], give:['goals','giveName'] };
+  const t=map[act]; if(!t){ return; }
+  activateTab(t[0]);
+  setTimeout(()=>{ const el=document.getElementById(t[1]); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },140);
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
 document.getElementById('intakeBtn2').addEventListener('click',()=>openIntake());
 document.getElementById('installBtn2').addEventListener('click',()=>document.getElementById('installBtn').click());
 document.getElementById('exportBtn2').addEventListener('click',()=>document.getElementById('exportBtn').click());
@@ -4165,6 +4392,11 @@ const WALLS=[
 ];
 /* which essential wall (if any) a category name belongs to */
 function categoryWall(name){ const n=(name||'').toLowerCase(); return WALLS.find(w=>w.match.some(t=>n.includes(t)))||null; }
+/* generic: reuse a top-level category by name, else create it */
+function findOrCreateCat(name){ let c=state.categories.find(k=>!k.parentId && k.name.toLowerCase()===String(name).toLowerCase()); if(!c){ c={id:uid(),name:String(name)}; state.categories.push(c); } return c; }
+/* intake budget math: total money in, and total given a job so far */
+function intakeIncomeTotal(a){ return (+a.income||0) + ((a.extraIncome||[]).reduce((s,x)=>s+(+x.amount||0),0)); }
+function intakeAssignedTotal(a){ const walls=(+a.roof||0)+(+a.food||0)+(+a.util||0)+(+a.transport||0); const exp=(a.expenses||[]).reduce((s,x)=>s+(+x.amount||0),0); return walls+exp; }
 /* reuse an existing category that already covers this essential, else create the canonical one */
 function findOrCreateEssential(canonical){
   const w=WALLS.find(x=>x.cat===canonical);
@@ -4205,7 +4437,7 @@ function renderWalls(){
     const assigned=matched.reduce((s,c)=>s+assignedFor(c.id,M),0);
     const isCovered=assigned>0; if(isCovered) covered++;
     const status = !matched.length ? 'Not set up' : (isCovered ? money(assigned)+' set aside' : 'Fund it first');
-    return `<button class="wall ${isCovered?'covered':''}" data-goto="budget">
+    return `<button class="wall ${isCovered?'covered':''}" data-wall="${escapeHtml(w.cat)}">
       <span class="wall-ic">${w.icon}</span>
       <span class="wall-name">${w.name}${isCovered?' <span class="wall-check">✓</span>':''}</span>
       <span class="wall-sub">${w.sub}</span>
