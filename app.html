@@ -532,7 +532,9 @@
   /* ---------- Categories ---------- */
   .cat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
   .cat-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px}
+  .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px;display:flex;align-items:center;gap:8px}
+  .cat-edit{width:24px;height:24px;font-size:12px;flex:none}
+  .cat-rename{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--accent);border-radius:8px;color:var(--fg);padding:6px 9px;font-size:15px;font-weight:700}
   .cat-assign{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
   .cat-assign input{width:110px;padding:8px 10px;font-size:14px}
   .bar{height:8px;background:var(--ink);border-radius:6px;margin-top:12px;overflow:hidden}
@@ -575,6 +577,12 @@
   .goal-dead{font-size:12px;color:var(--muted);margin-top:2px}
   .goal-pct{font-size:30px;font-weight:900;color:var(--accent)}
   .goal.done .goal-pct{color:var(--good)}
+  .goal-top-right{display:flex;align-items:center;gap:8px}
+  .mini-edit{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:13px;flex:none}
+  .mini-edit:hover{color:var(--accent);border-color:var(--accent)}
+  .goal-edit{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .goal-edit label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .goal-edit input{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:8px 10px;font-size:14px;font-weight:700}
   .goal .bar{height:12px}
   .goal-nums{display:flex;justify-content:space-between;margin-top:10px;font-size:14px}
   .goal-nums b{font-weight:800}
@@ -1831,6 +1839,7 @@ function spendRewardRec(bankedToday, ahead){
 function dayEntries(M,d){ const dd=M+'-'+String(d).padStart(2,'0'); return state.transactions.filter(t=>t.date===dd); }
 function renderCalDay(M, allowance){
   const el=document.getElementById('calDay'); if(!el||calSelDay==null) return;
+  if(calSelDay<1){ el.innerHTML='<div class="sub" style="margin-top:10px">This month hasn\'t started yet - come back and tap a day once it\'s underway.</div>'; return; }
   const [y,mo]=M.split('-').map(Number), d=calSelDay;
   const entries=dayEntries(M,d);
   const spent=entries.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
@@ -1921,14 +1930,14 @@ function renderRewardCalendar(){
   if(lim<=0){ box.innerHTML=`<div class="panel"><h2>🗓️ Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p></div>`; return; }
   const [y,mo]=M.split('-').map(Number);
   const dim=new Date(y,mo,0).getDate(), allowance=lim/dim, firstWd=new Date(y,mo-1,1).getDay();
-  const isCur=(M===thisMonth()), todayDay=isCur?new Date().getDate():dim;
+  const tm=thisMonth(), isCur=(M===tm), isFuture=(M>tm), todayDay=isCur?new Date().getDate():(isFuture?0:dim);
   const spentByDay={};
   txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spentByDay[d]=(spentByDay[d]||0)+t.amount; });
   if(calSelDay==null || calSelDay>todayDay) calSelDay=todayDay;
   let cells=''; for(let i=0;i<firstWd;i++) cells+=`<div class="cal-cell empty"></div>`;
   let ahead=0, bankedToday=0;
   for(let d=1;d<=dim;d++){
-    const spent=spentByDay[d]||0, isPast = isCur ? d<=todayDay : true;
+    const spent=spentByDay[d]||0, isPast = isCur ? d<=todayDay : !isFuture;   // a future month has nothing elapsed
     let cls='future', mark='';
     if(isPast){
       const surplus=allowance-spent; ahead+=surplus;
@@ -1995,7 +2004,8 @@ function simulateDebts(debts, monthly, strategy){
     ds.forEach(d=>{ if(d.bal<=0.005 && d.paidMonth===null){ d.paidMonth=month; d.bal=0; } });
     schedule.push({month, total: ds.reduce((s,d)=>s+Math.max(0,d.bal),0)});
   }
-  return { months:month, totalInterest, schedule,
+  const stalled = ds.some(d=>d.bal>0.005);   // hit the 720-month cap with balances left = never pays off at this payment
+  return { months:month, totalInterest, schedule, stalled,
            order: ds.slice().sort((a,b)=>(a.paidMonth||9e9)-(b.paidMonth||9e9)).map(d=>({name:d.name, paidMonth:d.paidMonth, interest:d.interest})) };
 }
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
@@ -2040,6 +2050,13 @@ function renderDebtResults(){
   const plan=simulateDebts(debts, budget, strat);
   const other=simulateDebts(debts, budget, strat==='avalanche'?'snowball':'avalanche');
   const H=effectiveHourly();
+  if(plan.stalled){   // budget covers minimums but not the interest - honest math, not a fake 60-year date
+    const monthlyInterest=debts.reduce((s,d)=>s+(+d.balance||0)*((+d.apr||0)/100/12),0);
+    const need=Math.ceil((monthlyInterest+1)/10)*10;
+    box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${money(budget)}</b>/mo you're not outrunning the interest - about <b>${money(monthlyInterest)}</b> piles on every month, so the balance never shrinks. You need at least roughly <b>${money(need)}</b>/mo to start winning. Even $20 more a month changes the picture - try nudging it up.</div>`;
+    renderInvestCompare(); return;
+  }
+  const noApr=debts.some(d=>(+d.apr||0)<=0);
   const freeMonth=shiftMonth(state.activeMonth, plan.months);
   const yrs=Math.floor(plan.months/12), mos=plan.months%12;
   const dur=(yrs?yrs+' yr'+(yrs>1?'s':''):'')+(yrs&&mos?' ':'')+(mos?mos+' mo':'')||'0 mo';
@@ -2063,6 +2080,7 @@ function renderDebtResults(){
       <div><div class="sp-k">Debt-free by</div><div class="debt-date">${fmtMonth(freeMonth)}</div><div class="sub" style="margin:2px 0 0">${dur} from now</div></div>
       <div style="text-align:right"><div class="sp-k">Total interest</div><div class="debt-int">${money(plan.totalInterest)}</div>${H>0?`<div class="sub" style="margin:2px 0 0">${fmtHours(plan.totalInterest/H)} of your life</div>`:''}</div>
     </div>
+    ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">⚠️ One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
     ${cmp?`<div class="debt-cmp">${cmp}</div>`:''}
     <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/></svg>
     <div class="po-head">Payoff order</div>
@@ -2441,6 +2459,7 @@ document.getElementById('copyBtn').addEventListener('click',()=>{
 /* ---------- category hierarchy (one level of subcategories) ---------- */
 let collapsedCats=new Set();
 let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
+let catEditId=null;        // top category currently being renamed (rename keeps transactions attached, unlike delete)
 /* top-level categories that map to the same essential (leftover duplicates) */
 function duplicateGroups(){
   const groups={};
@@ -2508,7 +2527,9 @@ function renderBudget(){
       return `<div class="cat ${over?'overspent':''}">
         <div class="cat-top">
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
-          <span class="cat-name">${escapeHtml(c.name)}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>
+          ${c.id===catEditId
+            ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
+            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>`}
           <span class="cat-assign">Assign $ <input type="number" min="0" step="1" enterkeyhint="next" value="${a||0}" data-cat="${c.id}"></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
@@ -2539,6 +2560,10 @@ function renderBudget(){
       budgetAdvancing=false;
     });
   });
+  box.querySelectorAll('button[data-editcat]').forEach(btn=>btn.addEventListener('click',()=>{ catEditId=btn.dataset.editcat; renderBudget(); const inp=box.querySelector('input[data-rename]'); if(inp){ inp.focus(); inp.select&&inp.select(); } }));
+  const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); renderBudget(); renderTx(); };
+  box.querySelectorAll('button[data-renamesave]').forEach(btn=>btn.addEventListener('click',()=>saveRename(btn.dataset.renamesave)));
+  box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; renderBudget(); } }));
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
     const toRemove=new Set([id,...childrenOf(id).map(k=>k.id)]);
@@ -2896,10 +2921,21 @@ document.getElementById('addGoal').addEventListener('click',()=>{
   document.getElementById('goalName').value=''; document.getElementById('goalTarget').value=''; document.getElementById('goalDate').value='';
   save(); renderGoals();
 });
+let goalEditId=null;
 function renderGoals(){
   const box=document.getElementById('goals');
   if(!state.goals.length){ box.innerHTML=`<div class="panel"><div class="empty">No dreams on the board yet. That's the first problem to fix. Add one above.</div></div>`; return; }
   box.innerHTML=state.goals.map((g,i)=>{
+    if(g.id===goalEditId){
+      return `<div class="goal editing">
+        <div class="goal-edit">
+          <label>Name<input type="text" data-ename="${g.id}" value="${escapeHtml(g.name)}" placeholder="Dream name"></label>
+          <label>Target $<input type="number" data-etarget="${g.id}" value="${g.target||0}" min="1" step="1" placeholder="Target"></label>
+          <label>Target date<input type="date" data-edate="${g.id}" value="${g.date||''}"></label>
+        </div>
+        <div class="goal-actions"><button class="btn sm primary" data-savegoal="${g.id}">Save</button><button class="btn sm ghost" data-cancelgoal="${g.id}">Cancel</button></div>
+      </div>`;
+    }
     const pct=Math.min(100,(g.saved/g.target)*100), done=g.saved>=g.target;
     const nudge=done?"Funded. You actually did it. Now set a bigger one.":GOAL_NUDGES[i%GOAL_NUDGES.length];
     const deadline=g.date?`Target date: ${g.date}`:'No deadline set';
@@ -2907,7 +2943,7 @@ function renderGoals(){
     const typeBadge = gt ? `<span class="goal-type">${gt.ic} ${gt.label}</span>` : '';
     const typeSel = `<select data-goaltype="${g.id}">${GOAL_TYPES.map(t=>`<option value="${t.k}"${g.goalType===t.k?' selected':''}>${t.ic} ${t.label}</option>`).join('')}</select>`;
     return `<div class="goal ${done?'done':''}">
-      <div class="goal-top"><div><div class="goal-name">${escapeHtml(g.name)}</div><div class="goal-dead">${deadline}</div>${typeBadge}</div><div class="goal-pct">${Math.round(pct)}%</div></div>
+      <div class="goal-top"><div><div class="goal-name">${escapeHtml(g.name)}</div><div class="goal-dead">${deadline}</div>${typeBadge}</div><div class="goal-top-right"><div class="goal-pct">${Math.round(pct)}%</div><button class="mini-edit" data-editgoal="${g.id}" title="Edit name, target, date">✎</button></div></div>
       <div class="bar"><span style="width:${pct}%"></span></div>
       <div class="goal-nums"><span><b>${money(g.saved)}</b> saved</span><span>of <b>${money(g.target)}</b> · ${money(Math.max(0,g.target-g.saved))} to go</span></div>
       <div class="goal-nudge">${nudge}</div>
@@ -2922,10 +2958,20 @@ function renderGoals(){
   box.querySelectorAll('button[data-addbtn]').forEach(btn=>btn.addEventListener('click',()=>{
     const inp=box.querySelector(`input[data-add="${btn.dataset.addbtn}"]`); const add=parseFloat(inp.value);
     if(!add||add<=0) return; const g=state.goals.find(x=>x.id===btn.dataset.addbtn);
-    if(g){ g.saved=Math.max(0,g.saved+add); save(); renderGoals(); }
+    if(g){ g.saved=Math.min(g.target, Math.max(0,g.saved+add)); save(); renderGoals(); renderNetWorth(); }   // cap at target
+  }));
+  box.querySelectorAll('button[data-editgoal]').forEach(btn=>btn.addEventListener('click',()=>{ goalEditId=btn.dataset.editgoal; renderGoals(); }));
+  box.querySelectorAll('button[data-cancelgoal]').forEach(btn=>btn.addEventListener('click',()=>{ goalEditId=null; renderGoals(); }));
+  box.querySelectorAll('button[data-savegoal]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.savegoal, g=state.goals.find(x=>x.id===id); if(!g){ goalEditId=null; renderGoals(); return; }
+    const nm=(box.querySelector(`input[data-ename="${id}"]`)||{}).value; const tg=parseFloat((box.querySelector(`input[data-etarget="${id}"]`)||{}).value); const dt=(box.querySelector(`input[data-edate="${id}"]`)||{}).value;
+    if(nm!=null && nm.trim()) g.name=nm.trim();
+    if(tg>0){ g.target=tg; if(g.saved>g.target) g.saved=g.target; }
+    g.date=dt||'';
+    goalEditId=null; save(); renderGoals(); renderNetWorth();
   }));
   box.querySelectorAll('button[data-delgoal]').forEach(btn=>btn.addEventListener('click',()=>{
-    state.goals=state.goals.filter(g=>g.id!==btn.dataset.delgoal); save(); renderGoals();
+    state.goals=state.goals.filter(g=>g.id!==btn.dataset.delgoal); if(goalEditId&&!state.goals.some(g=>g.id===goalEditId)) goalEditId=null; save(); renderGoals(); renderNetWorth();
   }));
 }
 /* 2B: Network Capital */
@@ -2977,9 +3023,14 @@ document.getElementById('addGive').addEventListener('click',()=>{
   const name=document.getElementById('giveName').value.trim()||'Giving';
   const amt=parseFloat(document.getElementById('giveAmt').value)||0;
   if(amt<=0){ return; }
-  state.giving.push({id:uid(),name,amount:amt,date:todayStr()});
+  // giving is real money leaving your account - log it as an expense so it flows
+  // through the budget, cash balance, and zero-based math (not just this list).
+  const c=findOrCreateCat('Giving');
+  const tx={id:uid(),type:'expense',amount:amt,catId:c.id,date:todayStr(),note:name};
+  state.transactions.push(tx);
+  state.giving.push({id:uid(),name,amount:amt,date:todayStr(),txId:tx.id});
   document.getElementById('giveName').value=''; document.getElementById('giveAmt').value='';
-  save(); renderGiving(); renderHome();
+  save(); renderGiving(); renderHome(); if(typeof renderBudget==='function') renderBudget(); if(typeof renderTx==='function') renderTx();
 });
 document.getElementById('givePct').addEventListener('input',()=>{ state.givingPct=Math.max(0,Math.min(100,parseFloat(document.getElementById('givePct').value)||0)); save(); renderGiving(); });
 function givenInMonth(M){ return state.giving.filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0); }
@@ -2996,7 +3047,7 @@ function renderGiving(){
   }
   if(!state.giving.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">Nothing given yet. Even a small amount, on purpose, changes your relationship with money.</div>`; return; }
   box.innerHTML=state.giving.slice().reverse().map(g=>`<div class="netitem"><span class="n">${escapeHtml(g.name)}<small>${g.date}</small></span><span class="amt" style="color:var(--good)">${money(g.amount)}</span><button class="del" data-delgive="${g.id}" title="Delete">✕</button></div>`).join('');
-  box.querySelectorAll('button[data-delgive]').forEach(b=>b.addEventListener('click',()=>{ state.giving=state.giving.filter(x=>x.id!==b.dataset.delgive); save(); renderGiving(); }));
+  box.querySelectorAll('button[data-delgive]').forEach(b=>b.addEventListener('click',()=>{ const g=state.giving.find(x=>x.id===b.dataset.delgive); if(g&&g.txId) state.transactions=state.transactions.filter(t=>t.id!==g.txId); state.giving=state.giving.filter(x=>x.id!==b.dataset.delgive); save(); renderGiving(); renderHome(); if(typeof renderBudget==='function') renderBudget(); if(typeof renderTx==='function') renderTx(); }));
 }
 
 /* ---------- learn ---------- */
@@ -3498,7 +3549,7 @@ function clearScan(){ const n=document.getElementById('impName'), a=document.get
 function logNeutralize(name,amount,trap,goalId){
   const H=effectiveHourly();
   const ev={id:uid(),type:'skip',name,amount,date:todayStr(),trap:trap||null,hours:H>0?amount/H:0};
-  if(goalId){ const gg=state.goals.find(x=>x.id===goalId); if(gg){ gg.saved+=amount; ev.goalId=goalId; } }
+  if(goalId){ const gg=state.goals.find(x=>x.id===goalId); if(gg){ gg.saved=Math.min(gg.target, gg.saved+amount); ev.goalId=goalId; } }
   state.impulse.push(ev); return ev;
 }
 /* log a paid ransom (buy) as an Impulse / Wants expense */
@@ -3583,7 +3634,7 @@ function recomputeBlendedWage(){
 function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
 /* Pillar 2: essential monthly burn = Cover First assignments (fallbacks below) */
 function essentialMonthly(){
-  const M=state.activeMonth;
+  const M=thisMonth();   // "current state" metrics (runway, sovereignty, stage) must not shift with the browsed month
   const tops=state.categories.filter(c=>!c.parentId);
   let sum=0;
   (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=assignedFor(c.id,M); }); });
@@ -3639,7 +3690,10 @@ function renderSovereignty(){
       <div class="sov-m"><div class="k">Pure Freedom Runway</div><div class="v" style="color:var(--good)">${runwayTxt}</div></div>
     </div>`;
 }
-function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip').reduce((s,i)=>s+i.amount,0); }
+/* War Chest = money you refused to spend and did NOT route to a dream. Goal-directed
+   skips live in that goal's `saved`, so excluding them here stops the same dollars
+   being counted twice (War Chest AND "Saved in dreams"). */
+function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip' && !i.goalId).reduce((s,i)=>s+i.amount,0); }
 function impulseSpent(){ return state.impulse.filter(i=>i.type==='buy').reduce((s,i)=>s+i.amount,0); }
 function skipStreak(){ let n=0; for(let i=state.impulse.length-1;i>=0;i--){ if(state.impulse[i].type==='skip') n++; else break; } return n; }
 function ensureImpulseCategory(){
@@ -3664,7 +3718,7 @@ function renderNetWorth(){
   document.getElementById('nwChips').innerHTML=
     `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
     `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
-    `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
+    `<span class="chip" style="border-style:dashed">Already fueling your Freedom Runway below - no need to re-add them</span>`;
   // Freedom Runway - how long you could survive without working
   const rwBox=document.getElementById('nwRunway');
   if(rwBox){
