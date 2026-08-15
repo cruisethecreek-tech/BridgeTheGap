@@ -4140,7 +4140,7 @@ const INTAKE=[
     ]},
   {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend',
     bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
-    chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Eating out',name:'Eating out'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
+    chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
     done:"Done - that's my spending →"},
   {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
