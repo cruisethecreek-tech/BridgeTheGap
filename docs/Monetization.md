@@ -57,32 +57,23 @@ affiliate/partnership content, YouTube/TikTok around the app's ideas (Life-Hour
 currency, Trap Radar, Sovereignty tiers make great content hooks). The app being
 free and private is a *feature* of this funnel, not a leak in it.
 
-### 5. Honest referral links (the reward calendar) - live
-The reward calendar already earns a natural place to point someone: the moment it
-tells a spender "you saved $X today, here's what to do with it." That prompt can
-carry **referral links** to investing apps (Acorns, Stash, SoFi, a HYSA, etc.).
-When a reader signs up through your link, the partner pays a referral bonus. This
-is implemented (`PARTNERS` + `partnerLinks()`), off until you paste real referral
-URLs, and it does **not** compromise the privacy promise, because it shares *zero
-user data* - it is just an outbound link the reader chooses to click. Rules that
-keep it clean:
+### 5. Honest referral links (the reward calendar) - *tried, then removed*
+This was built (disclosed Acorns/Stash links in the reward calendar's "what to do
+with the money you saved" prompt) and then **deliberately removed** after a
+StoryBrand review panel made the decisive argument:
 
-- **Disclose it, every time.** US law (FTC) requires an affiliate disclosure. The
-  block already carries one ("Accountability may earn a referral bonus... at no
-  extra cost to you"). Keep it visible; never bury it.
-- **Stay education, not advice.** Show *options* and say "do your own research",
-  never "you should invest in X." That line keeps you clear of giving regulated
-  financial advice.
-- **Only list partners you'd actually stand behind**, and only with a referral
-  relationship you truly have. Don't imply a partnership that doesn't exist.
-- **Never trade data for the payout.** The kickback is for the referral click,
-  not for anything about the user. The second it requires sending user data, it
-  becomes channel #-none (see below).
+> Your villain is *The Trap* - the algorithms and nudges designed to separate
+> people from their money. Putting affiliate links to investing apps right next to
+> a user's saved money makes *you* the Trap. Even disclosed, the placement is the
+> exact pattern the app trains people to distrust.
 
-Realistic economics: referral bonuses are lumpy and depend on the partner's
-current promo (often $5-$25 per funded signup, sometimes a share of a bonus).
-It won't replace a salary at small scale, but it's real money that rides on top
-of a free product without gating anyone - which is exactly the point.
+That's correct, and it's why this channel is gone from both `app.html` and
+`index.html`. The lesson generalizes: for *this* brand, any money that comes from
+nudging the user toward a financial product undercuts the trust that is the whole
+moat - no matter how clean the disclosure. The revenue was never going to be large
+(referral bonuses are lumpy, ~$5-$25 per funded signup), and it cost more in brand
+integrity than it could have earned. **Monetize the software directly instead
+(channel #1).**
 
 ## What NOT to do
 

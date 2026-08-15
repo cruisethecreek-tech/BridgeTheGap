@@ -356,6 +356,14 @@
   .cal-stat .v.good{color:var(--good)} .cal-stat .v.bad{color:var(--bad)}
   .cal-rec{margin-top:14px;background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accent-rgb),.25);border-radius:12px;padding:13px 15px;font-size:14px;line-height:1.55}
   .cal-rec b{color:var(--accent)}
+  /* data-fragility guard banner (Home) */
+  .dataguard{display:flex;align-items:flex-start;gap:12px;background:rgba(var(--bad-rgb),.09);border:1px solid rgba(var(--bad-rgb),.35);border-radius:14px;padding:14px 16px;margin-bottom:18px}
+  .dataguard .dg-ic{font-size:20px;line-height:1.2;flex-shrink:0}
+  .dataguard .dg-body{flex:1;min-width:0}
+  .dataguard .dg-t{font-weight:800;color:var(--text);font-size:15px}
+  .dataguard .dg-s{color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:3px}
+  .dataguard .dg-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  .dataguard .dg-x{background:none;border:none;color:var(--muted);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
   .cal-cell.clk:hover{transform:translateY(-1px)}
   .cal-cell.sel{outline:2px solid var(--accent);outline-offset:1px}
@@ -373,10 +381,6 @@
   .cal-entries .ce .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cal-entries .ce .am{font-weight:800;white-space:nowrap}
   .cal-entries .ce .am.in{color:var(--good)}
-  .cal-partners{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .cal-partners a{display:inline-flex;flex-direction:column;gap:1px;background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.35);border-radius:10px;padding:8px 12px;text-decoration:none;color:var(--text);font-weight:800;font-size:14px}
-  .cal-partners a small{font-weight:600;color:var(--muted);font-size:11px}
-  .cal-fine{margin-top:10px;font-size:11px;color:var(--muted);line-height:1.5}
   /* debt payoff planner */
   .debtrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
   .debtrow .dr-name{font-weight:800;flex:1;min-width:90px}
@@ -841,6 +845,7 @@
         <div class="hh-cta"><button class="btn primary" data-goto="budget" id="hhCta">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
       </div>
 
+      <div id="dataGuard"></div>
       <div id="spendingBox" class="show-in-spending"></div>
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
@@ -1394,17 +1399,13 @@ const GUIDE_URL           = 'YOUR_GUIDE_OR_WAITLIST_URL';
 const SUPPORT_URL         = 'YOUR_SUPPORT_URL';
 const isConfigured = v => !!v && v.indexOf('YOUR_') === -1;
 
-/* PARTNER / REFERRAL LINKS - affiliate, OFF until you paste real referral URLs.
-   These surface only in the reward calendar's "what to do with the money you
-   saved" prompt, each with a plain affiliate disclosure (FTC). This is how the
-   free app earns: a referral bonus when someone signs up. It stays education,
-   not advice - we show options and say "do your own research", never "you should".
-   Paste your own referral link into `url` for each; drop or add partners freely. */
-const PARTNERS = [
-  { name:'Acorns', url:'YOUR_ACORNS_REFERRAL_URL', blurb:'auto-invest spare change' },
-  { name:'Stash',  url:'YOUR_STASH_REFERRAL_URL',  blurb:'invest from a few dollars' }
-];
-const partnerLinks = () => PARTNERS.filter(p => isConfigured(p.url));
+/* HOW THE APP MAKES MONEY - the honest model.
+   It doesn't sell you or your data (it never sees your data). No subscription,
+   no ads, no affiliate nudges pointing you at where to put your money - that
+   would make us the very Trap the app is built to fight. If the app earns a
+   place in someone's life, they can pay once to support the build (SUPPORT_URL
+   above, e.g. Ko-fi / Buy Me a Coffee / a Stripe payment link). That's the whole
+   model: free, private, and paid for by the people it actually helps. */
 
 /* tone-matched subscribe feedback (register x intensity) */
 const SUBSCRIBE_WIN={
@@ -1770,13 +1771,9 @@ function renderCalDay(M, allowance){
   }
   let action='';
   if(saved>0){
-    const g=(typeof topGoal==='function')?topGoal():null, pl=partnerLinks();
-    const tail = pl.length ? ', or put it to work below' : (g?'' : ', or move it toward a goal');
-    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">What to do with the <b>${money(saved)}</b> you didn't spend: keep it in savings${g?`, send it to "${escapeHtml(g.name)}"`:''}${tail}.</div>`;
-    if(pl.length){
-      action+=`<div class="cal-partners">${pl.map(p=>`<a href="${p.url}" target="_blank" rel="noopener sponsored nofollow">${escapeHtml(p.name)}<small>${escapeHtml(p.blurb)}</small></a>`).join('')}</div>`;
-      action+=`<div class="cal-fine">Partner links - Accountability may earn a referral bonus, at no extra cost to you. Education, not financial advice; do your own research.</div>`;
-    }
+    const g=(typeof topGoal==='function')?topGoal():null;
+    const tail = g ? `, send it to "${escapeHtml(g.name)}", or leave it to compound` : `, move it toward a goal, or leave it to compound`;
+    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">What to do with the <b>${money(saved)}</b> you didn't spend: keep it in savings${tail}. It's money you chose to keep - your call where it goes.</div>`;
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
   }
@@ -1972,7 +1969,7 @@ function renderInvestCompare(){
     </div>
     <div class="iv-verdict">${diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years.` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years - your debt costs more than the market is likely to pay.` : `It's roughly a wash over ${yrs} years - the guaranteed route (crush the debt) is the safer call.`}</div>
     <div class="iv-flags">${flags.map(f=>`<div class="iv-flag ${f.invest?'inv':'crush'}"><b>${escapeHtml(f.name)} · ${f.apr}%</b> - ${f.invest?`below ${ret}%, so investing the extra likely beats rushing this one`:`beats ${ret}%; crushing it is a guaranteed ${f.apr}% return`}</div>`).join('')}</div>
-    <div class="iv-caveat"><b>Real talk:</b> paying off debt is a <b>guaranteed</b> return; investing is an <b>expected</b> one - the market can drop, and this ignores taxes. Build a small emergency fund and grab any 401(k) match before either. Educational, not personalized financial advice.</div>`;
+    <div class="iv-caveat"><b>Real talk:</b> paying off debt is a <b>guaranteed</b> return; investing is an <b>expected</b> one - the market can drop, and this is a simplified model that ignores <b>taxes and inflation</b> (a "7%" return is more like ~4% after inflation). Real returns are lumpy, never a straight line. Build a small emergency fund and grab any 401(k) match before either. Educational, not personalized financial advice.</div>`;
 }
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
@@ -3920,7 +3917,24 @@ const HOME_COPY={
   middle:{ eye:"Zero-based budgeting · no filter", title:"Tell every dollar where to go.", sub:"Budget to zero, gut-check every purchase, and watch your dreams get funded - in plain, unfiltered English.", cta:"Start budgeting →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving." },
   mature:{ eye:"Zero-based budgeting · straight talk", title:"Give every dollar a purpose.", sub:"Budget to zero, weigh every purchase, and fund what matters - clear, honest, no runaround.", cta:"Build my plan →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Cover these before anything else - they're the foundation the rest stands on." }
 };
+let dataGuardOff=false;
+function renderDataGuard(){
+  const el=document.getElementById('dataGuard'); if(!el) return;
+  const busy=(state.transactions?state.transactions.length:0)+(state.assets?state.assets.length:0)+(state.goals?state.goals.length:0)+(state.liabilities?state.liabilities.length:0);
+  if(dataGuardOff || state.lastBackup || busy<4){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="dataguard">
+    <span class="dg-ic">🛟</span>
+    <div class="dg-body">
+      <div class="dg-t">Your data lives only in this browser</div>
+      <div class="dg-s">No account means no company can lose it - but it also means a cleared cache or a new phone wipes your budget, goals and history. Save an encrypted backup so you can restore it anywhere.</div>
+      <div class="dg-actions"><button class="btn sm primary" data-goto="settings">Back it up →</button></div>
+    </div>
+    <button class="dg-x" id="dgX" title="Dismiss for now">✕</button>
+  </div>`;
+  const x=document.getElementById('dgX'); if(x) x.onclick=()=>{ dataGuardOff=true; renderDataGuard(); };
+}
 function renderHome(){
+  renderDataGuard();
   const hc=HOME_COPY[state.register]||HOME_COPY.middle;
   const setTxt=(id,t)=>{ const el=document.getElementById(id); if(el) el.textContent=t; };
   setTxt('hhEye',hc.eye); setTxt('hhTitle',hc.title); setTxt('hhSub',hc.sub); setTxt('hhCta',hc.cta); setTxt('wallsTag',hc.wallsTag);
