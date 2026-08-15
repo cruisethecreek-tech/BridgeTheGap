@@ -364,6 +364,19 @@
   .dataguard .dg-s{color:var(--muted);font-size:13.5px;line-height:1.5;margin-top:3px}
   .dataguard .dg-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
   .dataguard .dg-x{background:none;border:none;color:var(--muted);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
+  /* life-hours "show your work" key + inline dollar reference */
+  .lifekey{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;margin:0 0 16px;overflow:hidden}
+  .lifekey>summary{list-style:none;cursor:pointer;padding:12px 15px;font-weight:800;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:8px}
+  .lifekey>summary::-webkit-details-marker{display:none}
+  .lifekey>summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:transform .2s ease}
+  .lifekey[open]>summary::after{transform:rotate(180deg)}
+  .lifekey .lk-body{padding:2px 15px 15px;font-size:14px;line-height:1.55;color:var(--muted)}
+  .lifekey .lk-body p{margin:0 0 10px}
+  .lifekey .lk-body b{color:var(--text)}
+  .lifekey .lk-rows{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:700;color:var(--text)}
+  .lifekey .lk-eg{margin-top:11px;color:var(--muted);font-weight:600}
+  .conv{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-top:3px;letter-spacing:0}
+  .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
   .cal-cell.clk:hover{transform:translateY(-1px)}
   .cal-cell.sel{outline:2px solid var(--accent);outline-offset:1px}
@@ -850,6 +863,7 @@
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
       <div id="nextSteps" class="hide-in-spending"></div>
+      <div id="lifeKeyHome" class="hide-in-spending"></div>
       <div class="snapshot hide-in-spending" id="homeSnap"></div>
       <div id="householdBox"></div>
       <div id="retroBox" class="hide-in-spending"></div>
@@ -874,6 +888,7 @@
           <button id="mNext" title="Next month">›</button>
         </div>
         <div class="summary" id="summary"></div>
+        <div id="lifeKeyPlan"></div>
         <p class="sub" style="margin:-4px 0 16px">Zero-based budgeting: assign your income down to <b>$0</b>. Income comes from what you log in <b>Transactions</b> - log a paycheck first, then give every dollar a job here.</p>
 
         <div class="row" style="margin-bottom:6px">
@@ -1619,14 +1634,38 @@ function fmtLife(amount){
   if(!H||H<=0) return usd(amount);            // no rate yet - fall back to dollars
   const neg=amount<0, hrs=Math.abs(amount)/H;
   let out;
-  if(hrs*60 < 60)            out=Math.max(1,Math.round(hrs*60))+'m';
-  else if(hrs < WORKDAY_HRS) out=(Math.round(hrs*10)/10)+'h';
-  else if(hrs < WORKMONTH_HRS) out=(Math.round(hrs/WORKDAY_HRS*10)/10)+' days';
-  else                       out=(Math.round(hrs/WORKMONTH_HRS*10)/10)+' mo';
+  if(hrs*60 < 60){ const m=Math.max(1,Math.round(hrs*60)); out=m+' min'; }
+  else if(hrs < WORKDAY_HRS){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
+  else if(hrs < WORKMONTH_HRS){ const v=Math.round(hrs/WORKDAY_HRS*10)/10; out=v+(v===1?' day':' days'); }
+  else { const v=Math.round(hrs/WORKMONTH_HRS*10)/10; out=v+' mo'; }
   return (neg?'-':'')+out;
 }
 /* the app formats everything through money(): mode-aware */
 function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
+/* Show-your-work: a tap-to-open key that proves how a dollar price becomes
+   hours of your life, using the user's real wage. Only in Life-Hours mode. */
+function lifeKeyHTML(){
+  if(!state.freedomMode) return '';
+  const H=effectiveHourly(); if(!H||H<=0) return '';
+  const est = state.hourlyWage>0 ? '' : ' (estimated from your logged income - set your real take-home in Settings for the truth)';
+  return `<details class="lifekey">
+    <summary><span>⌛ How did we get these? Dollars → hours of your life</span></summary>
+    <div class="lk-body">
+      <p>Every price is divided by your real take-home wage of <b>${usd(H)}/hr</b>${est}. You see the time you'd actually work to afford something, not just a number.</p>
+      <div class="lk-rows"><span>1 hour worked</span><b>${usd(H)}</b></div>
+      <div class="lk-rows"><span>1 work-day (${WORKDAY_HRS} hrs)</span><b>${usd(H*WORKDAY_HRS)}</b></div>
+      <div class="lk-rows"><span>1 work-month (${WORKMONTH_HRS} hrs)</span><b>${usd(H*WORKMONTH_HRS)}</b></div>
+      <p class="lk-eg">So a <b>${usd(H*WORKDAY_HRS)}</b> bill costs you <b>1 day</b> of your life; a <b>${usd(H)}</b> coffee, <b>1 hr</b>. Same money, told in the only currency you can't earn back.</p>
+    </div>
+  </details>`;
+}
+/* Inline dollar reference for a life-hours figure, so each number is relatable.
+   Returns '' unless in Life-Hours mode with a wage set. */
+function convNote(n){
+  if(!state.freedomMode) return '';
+  const H=effectiveHourly(); if(!H||H<=0) return '';
+  return `<span class="conv">= ${usd(Math.abs(n))}</span>`;
+}
 /* Copy matrix: time-framed labels by register x intensity (Freedom Mode only) */
 const LIFE_LABELS={
   income:{ genz:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Hours Sold'}, middle:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Life Sold'}, mature:{clean:'Hours Earned',blunt:'Hours Traded',savage:'Life Traded'} },
@@ -2310,11 +2349,12 @@ function renderBudget(){
   else { msg='Keep going - assign this down to $0.'; vc='pos'; }
 
   document.getElementById('summary').innerHTML=`
-    <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div><div class="msg">${msg}</div></div>
-    <div class="stat"><div class="k">${lifeLabel('income','Income')}</div><div class="v good">${money(income)}</div></div>
-    <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div></div>
-    <div class="stat"><div class="k">${lifeLabel('spent','Spent')}</div><div class="v">${money(spent)}</div></div>
-    <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div></div>`;
+    <div class="stat ${cls}"><div class="k">Left to budget</div><div class="v ${vc}">${money(ltb)}</div>${convNote(ltb)}<div class="msg">${msg}</div></div>
+    <div class="stat"><div class="k">${lifeLabel('income','Income')}</div><div class="v good">${money(income)}</div>${convNote(income)}</div>
+    <div class="stat"><div class="k">Assigned</div><div class="v">${money(assigned)}</div>${convNote(assigned)}</div>
+    <div class="stat"><div class="k">${lifeLabel('spent','Spent')}</div><div class="v">${money(spent)}</div>${convNote(spent)}</div>
+    <div class="stat"><div class="k">Left to spend</div><div class="v ${(assigned-spent)<0?'bad':'good'}">${money(assigned-spent)}</div>${convNote(assigned-spent)}</div>`;
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=lifeKeyHTML();
 
   const dupEl=document.getElementById('dupBanner');
   if(dupEl){
@@ -2872,9 +2912,9 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
 const cryptoOK=()=>!!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
 function abToB64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
 function b64ToAb(b64){ const s=atob(b64); const b=new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b; }
-async function deriveKey(pass,salt){
+async function deriveKey(pass,salt,iter){
   const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter||150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
 async function encryptBackup(){
   if(!cryptoOK()){ alert('This browser cannot make an encrypted backup here. Use "Export data" for a plain backup instead, or open the installed app.'); return; }
@@ -2931,6 +2971,84 @@ function renderBackupNote(){
   const er=document.getElementById('encRestoreBtn'), erf=document.getElementById('encRestoreFile');
   if(er&&erf){ er.addEventListener('click',()=>erf.click()); erf.addEventListener('change',e=>{ if(e.target.files&&e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value=''; }); }
 })();
+
+/* ============================================================
+   SOVEREIGN TIER - Household Sync (opt-in, paid). BLIND VAULT design.
+   ------------------------------------------------------------
+   Brand rule: the free tier stays 100% local and offline - none of the code
+   below runs, and the Supabase SDK is NOT loaded, until a user explicitly opts
+   into Sync. What ever leaves the device is a single AES-256-GCM ciphertext
+   blob encrypted on-device with the user's Sync Passphrase (which we never see
+   and never transmit). Supabase stores only { user_id, encrypted_payload } -
+   "even we can't read your money."
+
+   STEP 1 config - fill these in with your Supabase project values to go live.
+   Until set, the Sync UI shows as "coming soon" and nothing touches the network.
+   ------------------------------------------------------------
+   REQUIRED Supabase setup (run once in the SQL editor):
+
+     create table public.user_vaults (
+       user_id uuid primary key references auth.users(id) on delete cascade,
+       encrypted_payload text,
+       updated_at timestamptz default now()
+     );
+     alter table public.user_vaults enable row level security;
+     create policy "own vault - read"   on public.user_vaults for select using (auth.uid() = user_id);
+     create policy "own vault - upsert" on public.user_vaults for insert with check (auth.uid() = user_id);
+     create policy "own vault - update" on public.user_vaults for update using (auth.uid() = user_id);
+
+   Entitlement (paid gate) is added later: a `paid` boolean set only by a
+   Stripe webhook (Supabase Edge Function), checked in the RLS policy - so a
+   client-side flag can never unlock sync. UI lock alone is cosmetic.
+   ============================================================ */
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SYNC_SDK_URL      = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+const syncConfigured    = () => isConfigured(SUPABASE_URL) && isConfigured(SUPABASE_ANON_KEY);
+
+/* Lazy Supabase client - the SDK loads on first use only, so the free tier
+   never fetches anything. Returns null (never throws) if sync isn't set up. */
+let _sbClient=null, _sbLoading=null;
+async function getSupabase(){
+  if(_sbClient) return _sbClient;
+  if(!syncConfigured()){ console.warn('[sync] Supabase not configured - free/local only.'); return null; }
+  if(!window.supabase){
+    _sbLoading = _sbLoading || new Promise((resolve,reject)=>{
+      const s=document.createElement('script'); s.src=SYNC_SDK_URL; s.async=true;
+      s.onload=resolve; s.onerror=()=>reject(new Error('Could not load the sync engine (are you offline?).'));
+      document.head.appendChild(s);
+    });
+    try{ await _sbLoading; }catch(e){ _sbLoading=null; throw e; }
+  }
+  _sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true } });
+  return _sbClient;
+}
+
+/* ---------- STEP 2: Blind Vault E2EE (AES-256-GCM + PBKDF2, on-device) ----------
+   Reuses the same primitives as the encrypted backup. The Sync Passphrase never
+   leaves the device; only the { salt, iv, data } ciphertext envelope does. Lose
+   the passphrase and the vault is unrecoverable by design - that is the point. */
+const VAULT_ITER = 210000; // stronger KDF for data that rests on a server
+async function encryptVault(obj, passphrase){
+  if(!cryptoOK()) throw new Error('This browser cannot encrypt here.');
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(passphrase, salt, VAULT_ITER);
+  const data=new TextEncoder().encode(JSON.stringify(obj));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, data);
+  // envelope is a compact JSON string ready to store in user_vaults.encrypted_payload
+  return JSON.stringify({ app:'accountability', kind:'vault', v:1, alg:'AES-GCM', kdf:'PBKDF2-SHA256', iter:VAULT_ITER, salt:abToB64(salt), iv:abToB64(iv), data:abToB64(ct) });
+}
+async function decryptVault(payloadStr, passphrase){
+  if(!cryptoOK()) throw new Error('This browser cannot decrypt here.');
+  let env; try{ env=JSON.parse(payloadStr); }catch(_){ throw new Error('Vault payload is unreadable.'); }
+  if(!env||!env.data||!env.salt||!env.iv) throw new Error('Not a valid vault payload.');
+  const key=await deriveKey(passphrase, b64ToAb(env.salt), env.iter||150000);
+  let plain;
+  try{ plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToAb(env.iv)}, key, b64ToAb(env.data)); }
+  catch(_){ throw new Error('Wrong passphrase, or the vault is damaged.'); }
+  return JSON.parse(new TextDecoder().decode(plain));
+}
 
 /* ---------- Household mode controls ---------- */
 (function(){
@@ -3517,7 +3635,7 @@ function renderCheckResult(){
     }
   }
   if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
-  metrics.push(['Traps to fund $500', Math.max(1,Math.round(500/amt))+'×']);
+  metrics.push(['Traps to fund '+money(500), Math.max(1,Math.round(500/amt))+'×']);
 
   const tline=pickTrapVoiceCtx(trap,name);
   const hook=H>0?` That's <b>${fmtHours(amt/H)}</b> of your life.`:'';
@@ -3527,7 +3645,7 @@ function renderCheckResult(){
 
   document.getElementById('impResult').innerHTML=`
     <div class="checkcard want">
-      <div class="verdict want">${trapObj.icon} ${escapeHtml(name)} - ${money(amt)}</div>
+      <div class="verdict want">${trapObj.icon} ${escapeHtml(name)} - ${money(amt)}${state.freedomMode&&H>0?` <span class="conv-inline">(${usd(amt)})</span>`:''}</div>
       <div class="trap-tag">${trapObj.label} detected</div>
       <div class="qline">${escapeHtml(tline)}${hook}</div>
       <div class="meter-lbl"><span class="cl">◄ Freedom</span><span>Trap pull</span><span class="fr">Trap ►</span></div>
@@ -3950,12 +4068,13 @@ function renderHome(){
   const ltb=income-assigned, spent=monthExpense(M);
   const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
+  const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=lifeKeyHTML();
   const snap=document.getElementById('homeSnap'); if(!snap) return;
   snap.innerHTML=`
-    <div class="snap"><div class="k">Left to budget</div><div class="v ${ltbCls}">${money(ltb)}</div></div>
-    <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div></div>
+    <div class="snap"><div class="k">Left to budget</div><div class="v ${ltbCls}">${money(ltb)}</div>${convNote(ltb)}</div>
+    <div class="snap"><div class="k">Spent this month</div><div class="v">${money(spent)}</div>${convNote(spent)}</div>
     <div class="snap"><div class="k">Skip streak</div><div class="v pos">${skipStreak()} 🔥</div></div>
-    <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div></div>`;
+    <div class="snap"><div class="k">Net worth</div><div class="v ${nw<0?'bad':'good'}">${money(nw)}</div>${convNote(nw)}</div>`;
   renderEnough(income);
   renderOffenseDefense();
   renderNextSteps();
