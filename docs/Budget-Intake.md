@@ -6,8 +6,8 @@ interrogate.** The difference is that here the *engine-critical* answers write
 straight into the app - income, essentials, dream, tone - so the moment the chat
 ends, the Home screen is already alive.
 
-## Account type - the first fork
-Right after the name, the chat asks **"do you run the household bills, or just track your own spending?"** (`acct`: full | spend). A **spender** path skips the Four Walls, income, debt, and dream entirely and instead offers an optional spending limit - then lands in "Just my spending" mode. The engine skips steps via each step's `showIf(answers)`. The star (★) set below applies to the **full** path.
+## Account type - the first fork (spender path recommended)
+Right after the name, the chat asks whether they run the whole household budget or just want to track their own spending (`acct`: full | spend). **The lighter "just my spending" path is presented first and gently recommended** - full zero-based means logging every dollar manually, which is the #1 churn risk for a manual app, so most people start light (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks). Full zero-based is one tap away for anyone who runs the household budget. A **spender** path skips the Four Walls, income, debt, and dream entirely and instead offers an optional spending limit - then lands in "Just my spending" mode. The engine skips steps via each step's `showIf(answers)`. The star (★) set below applies to the **full** path.
 
 ## The engine-critical set (★ - never skip these)
 These map to real app fields. If a consultation roams, make sure it still covers these.
