@@ -380,6 +380,8 @@
   .flip-hint{font-size:12px;color:var(--muted);font-weight:600;margin:10px 0 2px;display:flex;align-items:center;gap:6px}
   .stat-note{font-size:13.5px;font-weight:700;margin-top:12px;color:var(--muted)}
   .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
+  .cat.cat-flash{animation:catFlash 1.6s ease}
+  @keyframes catFlash{0%,100%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),0)}18%{box-shadow:0 0 0 2px var(--accent)}}
   .cal-cell.clk{cursor:pointer;transition:transform .08s}
   .cal-cell.clk:hover{transform:translateY(-1px)}
   .cal-cell.sel{outline:2px solid var(--accent);outline-offset:1px}
@@ -2284,6 +2286,24 @@ function renderUiMode(){
     state.uiMode=b.dataset.m; save(); applyStage({silent:true}); renderUiMode(); renderAll&&renderAll(); });
 })();
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) activateTab(g.dataset.goto); });
+/* Cover First cards deep-link to their own category on Plan: find/create it,
+   scroll to it, flash it, and focus its Assign field so funding is one tap. */
+document.addEventListener('click',e=>{ const w=e.target.closest('[data-wall]'); if(w) goToWall(w.dataset.wall); });
+function goToWall(catName){
+  const before=state.categories.length;
+  const c=findOrCreateEssential(catName);
+  const created=state.categories.length>before;
+  if(created) save();
+  activateTab('budget');
+  if(created) renderBudget();
+  setTimeout(()=>{
+    const inp=document.querySelector('#cats input[data-cat="'+c.id+'"]');
+    if(!inp) return;
+    const row=inp.closest('.cat');
+    if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('cat-flash'); setTimeout(()=>row.classList.remove('cat-flash'),1600); }
+    try{ inp.focus({preventScroll:true}); inp.select&&inp.select(); }catch(_){}
+  },140);
+}
 /* flip stat cards: tap (or Enter/Space) flips $ <-> hours of your life */
 document.addEventListener('click',e=>{ const f=e.target.closest('[data-flip]'); if(f) f.classList.toggle('flipped'); });
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const f=e.target.closest&&e.target.closest('[data-flip]'); if(f){ e.preventDefault(); f.classList.toggle('flipped'); } } });
@@ -4242,7 +4262,7 @@ function renderWalls(){
     const assigned=matched.reduce((s,c)=>s+assignedFor(c.id,M),0);
     const isCovered=assigned>0; if(isCovered) covered++;
     const status = !matched.length ? 'Not set up' : (isCovered ? money(assigned)+' set aside' : 'Fund it first');
-    return `<button class="wall ${isCovered?'covered':''}" data-goto="budget">
+    return `<button class="wall ${isCovered?'covered':''}" data-wall="${escapeHtml(w.cat)}">
       <span class="wall-ic">${w.icon}</span>
       <span class="wall-name">${w.name}${isCovered?' <span class="wall-check">✓</span>':''}</span>
       <span class="wall-sub">${w.sub}</span>
