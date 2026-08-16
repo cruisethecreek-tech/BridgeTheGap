@@ -314,6 +314,7 @@
   .hh-fair .k{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800}
   .hh-fairrow{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:15px;font-weight:600}
   .hh-fairrow b{color:var(--accent)}
+  .hh-life{display:inline-block;margin-left:4px;font-size:12px;font-weight:700;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
   .hh-wage{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--muted);font-weight:700}
   .hh-wage b{color:var(--text)}
   /* "Just my spending" mode */
@@ -413,6 +414,11 @@
   .cal-entries .ce .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cal-entries .ce .am{font-weight:800;white-space:nowrap}
   .cal-entries .ce .am.in{color:var(--good)}
+  .cal-bank{margin-top:12px;width:100%;padding:12px 14px;border:none;border-radius:11px;background:var(--accent);color:#0b1220;font-weight:800;font-size:14px;cursor:pointer}
+  .cal-bank:hover{filter:brightness(1.06)}
+  .cal-swept{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(var(--good-rgb,52,168,110),.12);border:1px solid rgba(var(--good-rgb,52,168,110),.35);border-radius:11px;padding:10px 13px;font-size:14px;line-height:1.4}
+  .cal-undo{flex:none;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:5px 11px;font-weight:700;font-size:13px;cursor:pointer}
+  .cal-undo:hover{color:var(--fg)}
   /* debt payoff planner */
   .debtrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
   .debtrow .dr-name{font-weight:800;flex:1;min-width:90px}
@@ -527,7 +533,9 @@
   /* ---------- Categories ---------- */
   .cat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
   .cat-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px}
+  .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px;display:flex;align-items:center;gap:8px}
+  .cat-edit{width:24px;height:24px;font-size:12px;flex:none}
+  .cat-rename{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--accent);border-radius:8px;color:var(--fg);padding:6px 9px;font-size:15px;font-weight:700}
   .cat-assign{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
   .cat-assign input{width:110px;padding:8px 10px;font-size:14px}
   .bar{height:8px;background:var(--ink);border-radius:6px;margin-top:12px;overflow:hidden}
@@ -570,6 +578,12 @@
   .goal-dead{font-size:12px;color:var(--muted);margin-top:2px}
   .goal-pct{font-size:30px;font-weight:900;color:var(--accent)}
   .goal.done .goal-pct{color:var(--good)}
+  .goal-top-right{display:flex;align-items:center;gap:8px}
+  .mini-edit{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:13px;flex:none}
+  .mini-edit:hover{color:var(--accent);border-color:var(--accent)}
+  .goal-edit{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .goal-edit label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .goal-edit input{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:8px 10px;font-size:14px;font-weight:700}
   .goal .bar{height:12px}
   .goal-nums{display:flex;justify-content:space-between;margin-top:10px;font-size:14px}
   .goal-nums b{font-weight:800}
@@ -704,6 +718,7 @@
   .lineitem{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
   .lineitem .nm{flex:1;font-weight:700;font-size:14px;min-width:0}
   .lineitem .vl{font-weight:800}
+  .lineitem .vl .vledit{width:78px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:inherit;font-weight:800;font-size:14px;padding:4px 6px;text-align:right}
   .lineitem.asset .vl{color:var(--good)}.lineitem.liab .vl{color:var(--bad)}
   .lineitem .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
   .lineitem .del:hover{color:var(--bad)}
@@ -1640,7 +1655,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0,
+           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false,
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -1658,10 +1673,13 @@ if(!state.activeMonth) state.activeMonth = thisMonth();
 const uid = () => Math.random().toString(36).slice(2,9);
 /* pure dollars */
 const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
-/* Pillar 2: dollars -> units of human effort. Magnitude-scaled. */
-const WORKDAY_HRS=8, WORKMONTH_HRS=160;
-function fmtLife(amount){
-  const H=effectiveHourly();
+/* Pillar 2: dollars -> units of human effort. Magnitude-scaled.
+   WORKMONTH_HRS = a full-time month = 2,080 hrs/yr (40 x 52) / 12 = 173.33. This
+   is the SAME basis estHourlyFromMonthly uses to derive an hourly from monthly
+   take-home, so one month of pay reads as exactly "1.0 mo" of life, not 1.08. */
+const WORKDAY_HRS=8, WORKMONTH_HRS=2080/12;
+function fmtLife(amount, rateOverride){
+  const H=(rateOverride!=null?rateOverride:effectiveHourly());
   if(!H||H<=0) return usd(amount);            // no rate yet - fall back to dollars
   const neg=amount<0, hrs=Math.abs(amount)/H;
   let out;
@@ -1673,6 +1691,11 @@ function fmtLife(amount){
 }
 /* the app formats everything through money(): mode-aware */
 function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
+/* Owner-aware pricing (household mode): a partner-owned dollar costs the PARTNER's
+   life at THEIR wage, not yours. Only diverges when household is on and the partner
+   has a wage set; otherwise everything prices at your own rate, exactly as before. */
+function hourlyFor(owner){ return (state.householdOn && owner==='b' && state.wageB>0) ? state.wageB : effectiveHourly(); }
+function moneyOwner(n, owner){ return state.freedomMode ? fmtLife(n, hourlyFor(owner)) : usd(n); }
 /* Flip stat card: front shows the figure in the current mode; tap to flip to the
    back, which shows the same money in the OTHER currency plus the rate that
    derived it - the "show your work", on demand, so the interface stays compact. */
@@ -1739,17 +1762,17 @@ function renderHousehold(){
   box.innerHTML=`<div class="panel household">
     <h2>🏠 Household</h2>
     <p class="sub">One budget, two earners. It all stays on this device - to share it with your partner's phone, export the encrypted backup in Settings and have them restore it.</p>
-    <div class="hh-tot">Combined income this month <b>${money(inc.total)}</b></div>
+    <div class="hh-tot">Combined income this month <b>${usd(inc.total)}</b></div>
     <div class="hh-split">
-      <div class="hh-p"><span class="nm">${nameA}</span><span class="v">${money(inc.a)}</span><span class="pc">${pct(rA)}%</span></div>
-      <div class="hh-p b"><span class="nm">${nameB}</span><span class="v">${money(inc.b)}</span><span class="pc">${pct(rB)}%</span></div>
-      ${inc.j>0?`<div class="hh-p j"><span class="nm">Joint</span><span class="v">${money(inc.j)}</span><span class="pc">shared</span></div>`:''}
+      <div class="hh-p"><span class="nm">${nameA}</span><span class="v">${moneyOwner(inc.a,'a')}</span><span class="pc">${pct(rA)}%</span></div>
+      <div class="hh-p b"><span class="nm">${nameB}</span><span class="v">${moneyOwner(inc.b,'b')}</span><span class="pc">${pct(rB)}%</span></div>
+      ${inc.j>0?`<div class="hh-p j"><span class="nm">Joint</span><span class="v">${usd(inc.j)}</span><span class="pc">shared</span></div>`:''}
     </div>
     <div class="hh-bar"><span class="a" style="width:${pct(rA)}%"></span><span class="b" style="width:${pct(rB)}%"></span></div>
     ${ess>0&&base>0?`<div class="hh-fair">
-      <div class="k">Fair split of the ${money(ess)} in shared essentials</div>
-      <div class="hh-fairrow"><span>${nameA} covers <b>${money(ess*rA)}</b> · ${pct(rA)}%</span><span>${nameB} covers <b>${money(ess*rB)}</b> · ${pct(rB)}%</span></div>
-      <p class="sub" style="margin:8px 0 0">Proportional to what each of you earns - not a 50/50 that squeezes the lower earner. A guideline, not a rule.</p>
+      <div class="k">Fair split of the ${usd(ess)} in shared essentials</div>
+      <div class="hh-fairrow"><span>${nameA} covers <b>${usd(ess*rA)}</b> · ${pct(rA)}%${wA>0?` <span class="hh-life">${fmtLife(ess*rA,wA)}</span>`:''}</span><span>${nameB} covers <b>${usd(ess*rB)}</b> · ${pct(rB)}%${wB>0?` <span class="hh-life">${fmtLife(ess*rB,wB)}</span>`:''}</span></div>
+      <p class="sub" style="margin:8px 0 0">Proportional to what each of you earns - not a 50/50 that squeezes the lower earner. A guideline, not a rule.${wA>0&&wB>0&&Math.abs(wA-wB)>0.5?` The hours show the real cost: the lower earner pays for their share with more of their life.`:''}</p>
     </div>`:''}
     ${(wA>0||wB>0)?`<div class="hh-wage"><span>${nameA}: <b>${wA>0?usd(wA)+'/hr':'set wage'}</b></span><span>${nameB}: <b>${wB>0?usd(wB)+'/hr':'add in Settings'}</b></span></div>`:''}
   </div>`;
@@ -1822,6 +1845,7 @@ function spendRewardRec(bankedToday, ahead){
 function dayEntries(M,d){ const dd=M+'-'+String(d).padStart(2,'0'); return state.transactions.filter(t=>t.date===dd); }
 function renderCalDay(M, allowance){
   const el=document.getElementById('calDay'); if(!el||calSelDay==null) return;
+  if(calSelDay<1){ el.innerHTML='<div class="sub" style="margin-top:10px">This month hasn\'t started yet - come back and tap a day once it\'s underway.</div>'; return; }
   const [y,mo]=M.split('-').map(Number), d=calSelDay;
   const entries=dayEntries(M,d);
   const spent=entries.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
@@ -1837,11 +1861,27 @@ function renderCalDay(M, allowance){
   } else {
     rows=`<div class="sub" style="margin-top:8px">Nothing logged this day - a clean ${money(allowance)} saved.</div>`;
   }
+  const dd=M+'-'+String(d).padStart(2,'0');
+  const swept=(state.sweptDays||{})[dd];
   let action='';
-  if(saved>0){
+  if(swept){
+    const gs=state.goals.find(x=>x.id===swept.goalId);
+    action=`<div class="cal-swept"><span>✓ You banked <b>${money(swept.amount)}</b>${gs?` toward "${escapeHtml(gs.name)}"`:''}.</span> <button class="cal-undo" data-calunsweep="${dd}">Undo</button></div>`;
+  } else if(saved>0){
     const g=(typeof topGoal==='function')?topGoal():null;
-    const tail = g ? `, send it to "${escapeHtml(g.name)}", or leave it to compound` : `, move it toward a goal, or leave it to compound`;
-    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">What to do with the <b>${money(saved)}</b> you didn't spend: keep it in savings${tail}. It's money you chose to keep - your call where it goes.</div>`;
+    if(g){
+      const bankable=calBankable(M, allowance);                       // real month surplus still unbanked
+      const canBank=Math.min(saved, bankable, Math.max(0, g.target-g.saved));
+      if(bankable<=0.005){
+        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">A clean day - but across the whole month your real surplus so far is <b>${money(Math.max(0,calRealSurplus(M,allowance)))}</b> (a heavier day ate the rest). Nothing left to bank without banking money you didn't actually keep.</div>`;
+      } else {
+        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(canBank)}</b> isn't a pot the app is holding - it's real money you kept this month. Give it a job: bank it toward your dream and watch it become progress, not just a good day.</div>
+          <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">➕ Bank ${money(canBank)} toward "${escapeHtml(g.name)}"</button>`;
+      }
+    } else {
+      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Give it one:</div>
+        <button class="cal-bank" data-calgoal="1">🎯 Start a goal to bank it toward</button>`;
+    }
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
   }
@@ -1852,6 +1892,42 @@ function renderCalDay(M, allowance){
     ${rows}
     ${action}
   </div>`;
+  const bank=el.querySelector('[data-calsweep]'); if(bank) bank.onclick=()=>calSweepDay(bank.dataset.calsweep, +bank.dataset.calamt);
+  const undo=el.querySelector('[data-calunsweep]'); if(undo) undo.onclick=()=>calUnsweepDay(undo.dataset.calunsweep);
+  const mkg=el.querySelector('[data-calgoal]'); if(mkg) mkg.onclick=()=>{ if(typeof runNextStep==='function') runNextStep('dream'); else if(typeof activateTab==='function') activateTab('goals'); };
+}
+/* Reward-calendar money math. A day's "saved" is notional (allowance - that day's
+   spend); banking must never credit a goal with more than the month's REAL net
+   surplus so far (allowance x elapsed days - actual spend), minus what's already
+   been banked. Keeps the sweep honest even with a big-spend day elsewhere. */
+function calElapsedDays(M){ const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate(); const tm=(typeof thisMonth==='function')?thisMonth():M; if(M<tm) return dim; if(M>tm) return 0; return Math.min(dim, new Date().getDate()); }
+function calMonthSpent(M){ return txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
+function calMonthSwept(M){ const sw=state.sweptDays||{}; return Object.keys(sw).filter(k=>k.slice(0,7)===M).reduce((s,k)=>s+(+sw[k].amount||0),0); }
+function calRealSurplus(M, allowance){ return allowance*calElapsedDays(M) - calMonthSpent(M); }
+function calBankable(M, allowance){ return Math.max(0, calRealSurplus(M,allowance) - calMonthSwept(M)); }
+function calCurrentAllowance(){ const M=state.activeMonth, lim=state.spendLimit||0; const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate(); return dim>0?lim/dim:0; }
+/* Bank a day's surplus into the top goal - turns real kept money into goal
+   progress. Capped to the month's actual unbanked surplus; recorded per-day and undoable. */
+function calSweepDay(dd, amount){
+  const g=(typeof topGoal==='function')?topGoal():null; if(!g||!(amount>0)) return;
+  const M=state.activeMonth, allowance=calCurrentAllowance();
+  const add=Math.min(amount, calBankable(M, allowance), Math.max(0, g.target-g.saved));
+  if(add<=0){ if(typeof toast==='function') toast(`Nothing to bank - your real surplus is already committed.`); renderRewardCalendar(); return; }
+  g.saved+=add;
+  if(!state.sweptDays) state.sweptDays={};
+  state.sweptDays[dd]={amount:add, goalId:g.id};
+  save();
+  if(typeof toast==='function') toast(`Banked ${money(add)} toward "${g.name}".`);
+  if(typeof renderGoals==='function') renderGoals();
+  renderRewardCalendar();
+}
+function calUnsweepDay(dd){
+  const s=(state.sweptDays||{})[dd]; if(!s) return;
+  const g=state.goals.find(x=>x.id===s.goalId); if(g) g.saved=Math.max(0, g.saved-s.amount);
+  delete state.sweptDays[dd];
+  save();
+  if(typeof renderGoals==='function') renderGoals();
+  renderRewardCalendar();
 }
 function renderRewardCalendar(){
   const box=document.getElementById('rewardCalBox'); if(!box) return;
@@ -1860,14 +1936,14 @@ function renderRewardCalendar(){
   if(lim<=0){ box.innerHTML=`<div class="panel"><h2>🗓️ Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p></div>`; return; }
   const [y,mo]=M.split('-').map(Number);
   const dim=new Date(y,mo,0).getDate(), allowance=lim/dim, firstWd=new Date(y,mo-1,1).getDay();
-  const isCur=(M===thisMonth()), todayDay=isCur?new Date().getDate():dim;
+  const tm=thisMonth(), isCur=(M===tm), isFuture=(M>tm), todayDay=isCur?new Date().getDate():(isFuture?0:dim);
   const spentByDay={};
   txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spentByDay[d]=(spentByDay[d]||0)+t.amount; });
   if(calSelDay==null || calSelDay>todayDay) calSelDay=todayDay;
   let cells=''; for(let i=0;i<firstWd;i++) cells+=`<div class="cal-cell empty"></div>`;
   let ahead=0, bankedToday=0;
   for(let d=1;d<=dim;d++){
-    const spent=spentByDay[d]||0, isPast = isCur ? d<=todayDay : true;
+    const spent=spentByDay[d]||0, isPast = isCur ? d<=todayDay : !isFuture;   // a future month has nothing elapsed
     let cls='future', mark='';
     if(isPast){
       const surplus=allowance-spent; ahead+=surplus;
@@ -1934,7 +2010,8 @@ function simulateDebts(debts, monthly, strategy){
     ds.forEach(d=>{ if(d.bal<=0.005 && d.paidMonth===null){ d.paidMonth=month; d.bal=0; } });
     schedule.push({month, total: ds.reduce((s,d)=>s+Math.max(0,d.bal),0)});
   }
-  return { months:month, totalInterest, schedule,
+  const stalled = ds.some(d=>d.bal>0.005);   // hit the 720-month cap with balances left = never pays off at this payment
+  return { months:month, totalInterest, schedule, stalled,
            order: ds.slice().sort((a,b)=>(a.paidMonth||9e9)-(b.paidMonth||9e9)).map(d=>({name:d.name, paidMonth:d.paidMonth, interest:d.interest})) };
 }
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
@@ -1979,6 +2056,13 @@ function renderDebtResults(){
   const plan=simulateDebts(debts, budget, strat);
   const other=simulateDebts(debts, budget, strat==='avalanche'?'snowball':'avalanche');
   const H=effectiveHourly();
+  if(plan.stalled){   // budget covers minimums but not the interest - honest math, not a fake 60-year date
+    const monthlyInterest=debts.reduce((s,d)=>s+(+d.balance||0)*((+d.apr||0)/100/12),0);
+    const need=Math.ceil((monthlyInterest+1)/10)*10;
+    box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${money(budget)}</b>/mo you're not outrunning the interest - about <b>${money(monthlyInterest)}</b> piles on every month, so the balance never shrinks. You need at least roughly <b>${money(need)}</b>/mo to start winning. Even $20 more a month changes the picture - try nudging it up.</div>`;
+    renderInvestCompare(); return;
+  }
+  const noApr=debts.some(d=>(+d.apr||0)<=0);
   const freeMonth=shiftMonth(state.activeMonth, plan.months);
   const yrs=Math.floor(plan.months/12), mos=plan.months%12;
   const dur=(yrs?yrs+' yr'+(yrs>1?'s':''):'')+(yrs&&mos?' ':'')+(mos?mos+' mo':'')||'0 mo';
@@ -2002,6 +2086,7 @@ function renderDebtResults(){
       <div><div class="sp-k">Debt-free by</div><div class="debt-date">${fmtMonth(freeMonth)}</div><div class="sub" style="margin:2px 0 0">${dur} from now</div></div>
       <div style="text-align:right"><div class="sp-k">Total interest</div><div class="debt-int">${money(plan.totalInterest)}</div>${H>0?`<div class="sub" style="margin:2px 0 0">${fmtHours(plan.totalInterest/H)} of your life</div>`:''}</div>
     </div>
+    ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">⚠️ One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
     ${cmp?`<div class="debt-cmp">${cmp}</div>`:''}
     <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/></svg>
     <div class="po-head">Payoff order</div>
@@ -2380,6 +2465,7 @@ document.getElementById('copyBtn').addEventListener('click',()=>{
 /* ---------- category hierarchy (one level of subcategories) ---------- */
 let collapsedCats=new Set();
 let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
+let catEditId=null;        // top category currently being renamed (rename keeps transactions attached, unlike delete)
 /* top-level categories that map to the same essential (leftover duplicates) */
 function duplicateGroups(){
   const groups={};
@@ -2447,7 +2533,9 @@ function renderBudget(){
       return `<div class="cat ${over?'overspent':''}">
         <div class="cat-top">
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
-          <span class="cat-name">${escapeHtml(c.name)}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>
+          ${c.id===catEditId
+            ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
+            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>`}
           <span class="cat-assign">Assign $ <input type="number" min="0" step="1" enterkeyhint="next" value="${a||0}" data-cat="${c.id}"></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
@@ -2478,6 +2566,10 @@ function renderBudget(){
       budgetAdvancing=false;
     });
   });
+  box.querySelectorAll('button[data-editcat]').forEach(btn=>btn.addEventListener('click',()=>{ catEditId=btn.dataset.editcat; renderBudget(); const inp=box.querySelector('input[data-rename]'); if(inp){ inp.focus(); inp.select&&inp.select(); } }));
+  const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); renderBudget(); renderTx(); };
+  box.querySelectorAll('button[data-renamesave]').forEach(btn=>btn.addEventListener('click',()=>saveRename(btn.dataset.renamesave)));
+  box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; renderBudget(); } }));
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
     const toRemove=new Set([id,...childrenOf(id).map(k=>k.id)]);
@@ -2807,14 +2899,14 @@ function renderTxList(){
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
     const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):'')):((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
-    const H=effectiveHourly();
+    const owner=t.owner||'a', Ho=hourlyFor(owner);
     let badge='';
     if(t.type==='income' && t.hours>0) badge=`<span class="tx-yield">${usd(t.amount/t.hours)}/hr</span>`;
-    else if(H>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount)})</span>`;
+    else if(Ho>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount,Ho)})</span>`;
     return `<div class="tx ${t.type}">
       <div class="tx-date">${mon}<b>${day}</b></div>
       <div class="tx-main"><div class="tx-title">${title}</div><div class="tx-sub">${sub}</div></div>
-      <div class="tx-amt">${t.type==='income'?'+':'−'}${money(t.amount)}${badge}</div>
+      <div class="tx-amt">${t.type==='income'?'+':'−'}${moneyOwner(t.amount,owner)}${badge}</div>
       <button class="del" data-deltx="${t.id}" title="Delete">✕</button>
     </div>`;
   }).join('');
@@ -2835,10 +2927,21 @@ document.getElementById('addGoal').addEventListener('click',()=>{
   document.getElementById('goalName').value=''; document.getElementById('goalTarget').value=''; document.getElementById('goalDate').value='';
   save(); renderGoals();
 });
+let goalEditId=null;
 function renderGoals(){
   const box=document.getElementById('goals');
   if(!state.goals.length){ box.innerHTML=`<div class="panel"><div class="empty">No dreams on the board yet. That's the first problem to fix. Add one above.</div></div>`; return; }
   box.innerHTML=state.goals.map((g,i)=>{
+    if(g.id===goalEditId){
+      return `<div class="goal editing">
+        <div class="goal-edit">
+          <label>Name<input type="text" data-ename="${g.id}" value="${escapeHtml(g.name)}" placeholder="Dream name"></label>
+          <label>Target $<input type="number" data-etarget="${g.id}" value="${g.target||0}" min="1" step="1" placeholder="Target"></label>
+          <label>Target date<input type="date" data-edate="${g.id}" value="${g.date||''}"></label>
+        </div>
+        <div class="goal-actions"><button class="btn sm primary" data-savegoal="${g.id}">Save</button><button class="btn sm ghost" data-cancelgoal="${g.id}">Cancel</button></div>
+      </div>`;
+    }
     const pct=Math.min(100,(g.saved/g.target)*100), done=g.saved>=g.target;
     const nudge=done?"Funded. You actually did it. Now set a bigger one.":GOAL_NUDGES[i%GOAL_NUDGES.length];
     const deadline=g.date?`Target date: ${g.date}`:'No deadline set';
@@ -2846,7 +2949,7 @@ function renderGoals(){
     const typeBadge = gt ? `<span class="goal-type">${gt.ic} ${gt.label}</span>` : '';
     const typeSel = `<select data-goaltype="${g.id}">${GOAL_TYPES.map(t=>`<option value="${t.k}"${g.goalType===t.k?' selected':''}>${t.ic} ${t.label}</option>`).join('')}</select>`;
     return `<div class="goal ${done?'done':''}">
-      <div class="goal-top"><div><div class="goal-name">${escapeHtml(g.name)}</div><div class="goal-dead">${deadline}</div>${typeBadge}</div><div class="goal-pct">${Math.round(pct)}%</div></div>
+      <div class="goal-top"><div><div class="goal-name">${escapeHtml(g.name)}</div><div class="goal-dead">${deadline}</div>${typeBadge}</div><div class="goal-top-right"><div class="goal-pct">${Math.round(pct)}%</div><button class="mini-edit" data-editgoal="${g.id}" title="Edit name, target, date">✎</button></div></div>
       <div class="bar"><span style="width:${pct}%"></span></div>
       <div class="goal-nums"><span><b>${money(g.saved)}</b> saved</span><span>of <b>${money(g.target)}</b> · ${money(Math.max(0,g.target-g.saved))} to go</span></div>
       <div class="goal-nudge">${nudge}</div>
@@ -2861,10 +2964,20 @@ function renderGoals(){
   box.querySelectorAll('button[data-addbtn]').forEach(btn=>btn.addEventListener('click',()=>{
     const inp=box.querySelector(`input[data-add="${btn.dataset.addbtn}"]`); const add=parseFloat(inp.value);
     if(!add||add<=0) return; const g=state.goals.find(x=>x.id===btn.dataset.addbtn);
-    if(g){ g.saved=Math.max(0,g.saved+add); save(); renderGoals(); }
+    if(g){ g.saved=Math.min(g.target, Math.max(0,g.saved+add)); save(); renderGoals(); renderNetWorth(); }   // cap at target
+  }));
+  box.querySelectorAll('button[data-editgoal]').forEach(btn=>btn.addEventListener('click',()=>{ goalEditId=btn.dataset.editgoal; renderGoals(); }));
+  box.querySelectorAll('button[data-cancelgoal]').forEach(btn=>btn.addEventListener('click',()=>{ goalEditId=null; renderGoals(); }));
+  box.querySelectorAll('button[data-savegoal]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.savegoal, g=state.goals.find(x=>x.id===id); if(!g){ goalEditId=null; renderGoals(); return; }
+    const nm=(box.querySelector(`input[data-ename="${id}"]`)||{}).value; const tg=parseFloat((box.querySelector(`input[data-etarget="${id}"]`)||{}).value); const dt=(box.querySelector(`input[data-edate="${id}"]`)||{}).value;
+    if(nm!=null && nm.trim()) g.name=nm.trim();
+    if(tg>0){ g.target=tg; if(g.saved>g.target) g.saved=g.target; }
+    g.date=dt||'';
+    goalEditId=null; save(); renderGoals(); renderNetWorth();
   }));
   box.querySelectorAll('button[data-delgoal]').forEach(btn=>btn.addEventListener('click',()=>{
-    state.goals=state.goals.filter(g=>g.id!==btn.dataset.delgoal); save(); renderGoals();
+    state.goals=state.goals.filter(g=>g.id!==btn.dataset.delgoal); if(goalEditId&&!state.goals.some(g=>g.id===goalEditId)) goalEditId=null; save(); renderGoals(); renderNetWorth();
   }));
 }
 /* 2B: Network Capital */
@@ -2916,9 +3029,14 @@ document.getElementById('addGive').addEventListener('click',()=>{
   const name=document.getElementById('giveName').value.trim()||'Giving';
   const amt=parseFloat(document.getElementById('giveAmt').value)||0;
   if(amt<=0){ return; }
-  state.giving.push({id:uid(),name,amount:amt,date:todayStr()});
+  // giving is real money leaving your account - log it as an expense so it flows
+  // through the budget, cash balance, and zero-based math (not just this list).
+  const c=findOrCreateCat('Giving');
+  const tx={id:uid(),type:'expense',amount:amt,catId:c.id,date:todayStr(),note:name};
+  state.transactions.push(tx);
+  state.giving.push({id:uid(),name,amount:amt,date:todayStr(),txId:tx.id});
   document.getElementById('giveName').value=''; document.getElementById('giveAmt').value='';
-  save(); renderGiving(); renderHome();
+  save(); renderGiving(); renderHome(); if(typeof renderBudget==='function') renderBudget(); if(typeof renderTx==='function') renderTx();
 });
 document.getElementById('givePct').addEventListener('input',()=>{ state.givingPct=Math.max(0,Math.min(100,parseFloat(document.getElementById('givePct').value)||0)); save(); renderGiving(); });
 function givenInMonth(M){ return state.giving.filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0); }
@@ -2935,7 +3053,7 @@ function renderGiving(){
   }
   if(!state.giving.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">Nothing given yet. Even a small amount, on purpose, changes your relationship with money.</div>`; return; }
   box.innerHTML=state.giving.slice().reverse().map(g=>`<div class="netitem"><span class="n">${escapeHtml(g.name)}<small>${g.date}</small></span><span class="amt" style="color:var(--good)">${money(g.amount)}</span><button class="del" data-delgive="${g.id}" title="Delete">✕</button></div>`).join('');
-  box.querySelectorAll('button[data-delgive]').forEach(b=>b.addEventListener('click',()=>{ state.giving=state.giving.filter(x=>x.id!==b.dataset.delgive); save(); renderGiving(); }));
+  box.querySelectorAll('button[data-delgive]').forEach(b=>b.addEventListener('click',()=>{ const g=state.giving.find(x=>x.id===b.dataset.delgive); if(g&&g.txId) state.transactions=state.transactions.filter(t=>t.id!==g.txId); state.giving=state.giving.filter(x=>x.id!==b.dataset.delgive); save(); renderGiving(); renderHome(); if(typeof renderBudget==='function') renderBudget(); if(typeof renderTx==='function') renderTx(); }));
 }
 
 /* ---------- learn ---------- */
@@ -3437,7 +3555,7 @@ function clearScan(){ const n=document.getElementById('impName'), a=document.get
 function logNeutralize(name,amount,trap,goalId){
   const H=effectiveHourly();
   const ev={id:uid(),type:'skip',name,amount,date:todayStr(),trap:trap||null,hours:H>0?amount/H:0};
-  if(goalId){ const gg=state.goals.find(x=>x.id===goalId); if(gg){ gg.saved+=amount; ev.goalId=goalId; } }
+  if(goalId){ const gg=state.goals.find(x=>x.id===goalId); if(gg){ gg.saved=Math.min(gg.target, gg.saved+amount); ev.goalId=goalId; } }
   state.impulse.push(ev); return ev;
 }
 /* log a paid ransom (buy) as an Impulse / Wants expense */
@@ -3502,11 +3620,27 @@ function avgMonthlyIncome(){
   const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
 }
 function topGoal(){ return state.goals.find(g=>g.saved<g.target)||null; }
-function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (avgMonthlyIncome()>0 ? avgMonthlyIncome()/160 : 0); }
+/* YOUR own take-home only (owner 'a'), averaged over months you earned - so the
+   personal hourly fallback isn't inflated by a partner's or passive income. */
+function personalMonthlyIncome(){
+  const byM={}; state.transactions.filter(t=>t.type==='income' && (t.owner||'a')==='a').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
+  const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
+}
+function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (personalMonthlyIncome()>0 ? personalMonthlyIncome()/WORKMONTH_HRS : 0); }
+/* Keep the auto-derived blended wage honest: if the user hasn't manually set a
+   wage, recompute it from current YOUR-labor income records (each carrying its
+   monthly hours). Dropping a low-paying side gig lifts the rate again, etc. */
+function recomputeBlendedWage(){
+  if(!state.wageAuto) return;
+  const work=state.recurring.filter(r=>r.type==='income' && (r.owner||'a')==='a' && +r.hours>0);
+  if(!work.length) return;
+  const amt=work.reduce((s,r)=>s+(+r.amount||0),0), hrs=work.reduce((s,r)=>s+(+r.hours||0),0);
+  if(hrs>0){ state.hourlyWage=Math.round(amt/hrs*100)/100; }
+}
 function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
 /* Pillar 2: essential monthly burn = Cover First assignments (fallbacks below) */
 function essentialMonthly(){
-  const M=state.activeMonth;
+  const M=thisMonth();   // "current state" metrics (runway, sovereignty, stage) must not shift with the browsed month
   const tops=state.categories.filter(c=>!c.parentId);
   let sum=0;
   (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=assignedFor(c.id,M); }); });
@@ -3562,7 +3696,10 @@ function renderSovereignty(){
       <div class="sov-m"><div class="k">Pure Freedom Runway</div><div class="v" style="color:var(--good)">${runwayTxt}</div></div>
     </div>`;
 }
-function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip').reduce((s,i)=>s+i.amount,0); }
+/* War Chest = money you refused to spend and did NOT route to a dream. Goal-directed
+   skips live in that goal's `saved`, so excluding them here stops the same dollars
+   being counted twice (War Chest AND "Saved in dreams"). */
+function impulseSaved(){ return state.impulse.filter(i=>i.type==='skip' && !i.goalId).reduce((s,i)=>s+i.amount,0); }
 function impulseSpent(){ return state.impulse.filter(i=>i.type==='buy').reduce((s,i)=>s+i.amount,0); }
 function skipStreak(){ let n=0; for(let i=state.impulse.length-1;i>=0;i--){ if(state.impulse[i].type==='skip') n++; else break; } return n; }
 function ensureImpulseCategory(){
@@ -3572,7 +3709,7 @@ function ensureImpulseCategory(){
 }
 
 /* --- net worth panel --- */
-function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}${money(o.value)}</span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
+function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" min="0" step="1" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
 function renderNetWorth(){
   const realA=sumAssetsKind('real'), stuffA=sumAssetsKind('stuff'), A=realA+stuffA, L=sumLiab(), NW=A-L, working=realA-L, total=A+L;
   const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
@@ -3587,7 +3724,7 @@ function renderNetWorth(){
   document.getElementById('nwChips').innerHTML=
     `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
     `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
-    `<span class="chip" style="border-style:dashed">Add these as assets to fold them in</span>`;
+    `<span class="chip" style="border-style:dashed">Already fueling your Freedom Runway below - no need to re-add them</span>`;
   // Freedom Runway - how long you could survive without working
   const rwBox=document.getElementById('nwRunway');
   if(rwBox){
@@ -3599,7 +3736,7 @@ function renderNetWorth(){
   document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
     const k=a.kind||'real', yr=(a.cost||0)*12;
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
-      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">${money(a.value)}</span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
+      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" min="0" step="1" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
       <div class="li-cost">Drains $<input type="number" min="0" step="1" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
@@ -3617,11 +3754,15 @@ function renderNetWorth(){
     a.kind=(a.kind||'real')==='real'?'stuff':'real'; save(); renderNetWorth();
     if(a.kind==='real'){ const w=watchHit(a.name); if(w) showAssetChallenge(a.id,w); }  // audit on edit
   }));
-  document.querySelectorAll('#view-impulse button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#assetList button[data-delitem], #liabList button[data-delitem]').forEach(b=>b.addEventListener('click',()=>{
     const [cls,id]=b.dataset.delitem.split(':');
     if(cls==='asset') state.assets=state.assets.filter(x=>x.id!==id); else state.liabilities=state.liabilities.filter(x=>x.id!==id);
     save(); renderNetWorth();
   }));
+  document.querySelectorAll('#assetList input[data-editval], #liabList input[data-editval]').forEach(inp=>{
+    inp.addEventListener('input',()=>{ const [cls,id]=inp.dataset.editval.split(':'); const arr=cls==='asset'?state.assets:state.liabilities; const o=arr.find(x=>x.id===id); if(!o) return; o.value=parseFloat(inp.value)||0; save(); });
+    inp.addEventListener('change',()=>renderNetWorth());
+  });
 }
 /* asset psychology: is it REALLY an asset? */
 const VEH=['car','truck','suv','vehicle','auto','jeep','tesla','motorcycle','boat','yacht','rv','camper','atv','jet ski'];
@@ -3744,7 +3885,7 @@ document.getElementById('addLiab').addEventListener('click',()=>{
 /* --- hourly wage --- */
 const wageEl=document.getElementById('wage');
 wageEl.addEventListener('input',()=>{
-  state.hourlyWage=parseFloat(wageEl.value)||0; save();
+  state.hourlyWage=parseFloat(wageEl.value)||0; state.wageAuto=false; save();   // manual override stops auto-reblending
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
 function updateWageNote(){
@@ -3784,15 +3925,15 @@ document.getElementById('trCompute').addEventListener('click',()=>{
   const commute=parseFloat(document.getElementById('trCommute').value)||0;
   const overhead=parseFloat(document.getElementById('trOverhead').value)||0;
   if(take<=0){ alert('Enter your take-home pay per month.'); return; }
-  const denom=160+(commute*4);
+  const denom=WORKMONTH_HRS+(commute*(52/12));   // full-time month + commute hrs/wk converted to hrs/mo
   const rate=Math.max(0,(take-overhead)/denom);
-  state.hourlyWage=Math.round(rate*100)/100;
+  state.hourlyWage=Math.round(rate*100)/100; state.wageAuto=false;   // an explicit true-rate calc is a manual set
   state.trueRate={take,commute,overhead};
   save();
   document.getElementById('wage').value=state.hourlyWage;
-  const naive=take/160;
+  const naive=take/WORKMONTH_HRS;
   document.getElementById('trResult').style.display='';
-  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive "paycheck ÷ 160" rate was ${usd(naive)}/hr. The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
+  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive paycheck-per-hour rate was ${usd(naive)}/hr (a full-time month is about ${Math.round(WORKMONTH_HRS)} hrs). The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
 function fillTrueRate(){
@@ -3995,7 +4136,7 @@ function renderRecurring(){
     const label=r.type==='income'?escapeHtml(r.source||'Income'):escapeHtml(catName(r.catId));
     return `<div class="rec ${r.type}"><span class="tag">${r.type==='income'?'Income':'Expense'}</span><span class="nm">${label} · day ${r.day}</span><span class="am">${r.type==='income'?'+':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
   }).join('');
-  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); save(); renderRecurring(); }));
+  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
 }
 function postRecurring(month){
   let added=0;
@@ -4078,16 +4219,16 @@ function initPWA(){
    ============================================================ */
 const INTAKE=[
   {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
-  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up in about two minutes - no judgment, no forms that make you feel dumb. Just a few straight questions, in your words.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
+  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up with a few straight questions - no judgment, no forms that make you feel dumb. Answer in your own words, and skip anything that doesn't fit. In a sec I'll ask how deep you want to go.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
   {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
-  {id:'acct', bot:a=>`Quick one so I build the right thing, ${a.name||'friend'}: most people start light - just keep your own spending honest against a daily allowance. It's the version people actually stick with. If you run the whole household budget, I'll set up full zero-based instead. Which fits?`, input:'choice', key:'acct', options:[{label:'Just track my spending',value:'spend'},{label:'I run the whole budget',value:'full'}]},
+  {id:'acct', bot:a=>`Quick one so I build the right thing, ${a.name||'friend'}: most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with. If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
-  {id:'moreIncome', input:'loop', loopKey:'extraIncome', showIf:a=>a.acct!=='spend' && a.income>0,
+  {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend' && a.income>0,
     bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
-    chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig'},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
+    chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig',hours:true},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
     namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
     amountPrompt:n=>`Roughly how much from ${n.toLowerCase()==='partner'?'your partner':n.toLowerCase()} a month, take-home?`,
     done:"Done - that's all my income →"},
@@ -4100,7 +4241,7 @@ const INTAKE=[
     ]},
   {id:'wage',
     bot:a=> a.income>0
-      ? `One number powers the whole "hours of your life" feature - your take-home per hour. You said about ${usd(a.income)} lands in your account each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${intakeIncomeTotal(a)>a.income+1?` (This is just your own paycheck - your partner's pay and side gigs are still counted in the budget total, they just don't change your personal hourly.)`:''} ★`
+      ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
     input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
     suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income) : null,
@@ -4110,6 +4251,14 @@ const INTAKE=[
       run:(annual)=>{ const hr=Math.max(1,Math.round(annual/2080)); return { value:hr,
         teach:`Here's the trick: a full-time year is about 2,080 work hours (40 hrs a week × 52 weeks). So ${money(annual)} ÷ 2,080 ≈ ${usd(hr)} an hour. That's your starting number - you can fine-tune it to exact take-home later in Settings.` }; } }
   },
+  {id:'trueRate', input:'continue', showIf:a=>a.acct!=='spend' && a.wage>0 && (a.extraIncome||[]).some(x=>+x.hours>0),
+    bot:a=>{ const mr=+a.wage||0, br=intakeBlendedHourly(a), sh=Math.round(intakeWorkHours(a));
+      const sideAmt=(a.extraIncome||[]).filter(x=>+x.hours>0).reduce((s,x)=>s+(+x.amount||0),0);
+      const down = br < mr - 0.005;
+      const swing = down
+        ? `Because that side work pays less per hour than your main job, it quietly drags your real rate DOWN - so from here every purchase costs a little more of your life, priced honestly.`
+        : `That side work actually lifts your real rate - nice. Either way, I now price everything against the whole truth, not just one paycheck.`;
+      return `Here's the honest math${a.name?', '+a.name:''}: your main job runs about ${usd(mr)}/hr. But that side work is hours of your life too - roughly ${sh} ${sh===1?'hour':'hours'} a month for ${usd(sideAmt)}. Blend every hour you sell and your true take-home rate is ${usd(br)}/hr. ${swing} That's the number behind every "hours of your life" figure from here on.`; }},
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
   {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
   {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
@@ -4177,6 +4326,19 @@ const INTAKE=[
 let iaStep=0, iaAns={}, iaForceInput=false;
 /* estimate take-home hourly from monthly take-home: full-time year ≈ 2,080 hrs */
 function estHourlyFromMonthly(m){ return Math.max(1, Math.round((+m||0)*12/2080)); }
+/* True blended take-home rate: every hour you sell counts. Main-job hours come
+   from the confirmed main rate (income ÷ rate); side-gig hours the user gave us
+   get added in. Passive income (partner, benefits, rental) stays out - it costs
+   no time. A low-paying side gig drags the blended rate down, so purchases cost
+   MORE hours of life, priced against the whole truth. */
+function intakeWorkHours(a){ return (a.extraIncome||[]).reduce((s,x)=>s+(+x.hours||0),0); }
+function intakeBlendedHourly(a){
+  const mr=+a.wage||0; if(mr<=0) return 0;
+  let amt=+a.income||0, hrs=amt/mr;
+  // only YOUR own labor counts toward YOUR rate - skip partner-owned sources
+  (a.extraIncome||[]).forEach(x=>{ if(+x.hours>0 && !/partner/i.test(x.name||'')){ amt+=+x.amount||0; hrs+=+x.hours; } });
+  return hrs>0 ? Math.round((amt/hrs)*100)/100 : mr;
+}
 function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
 /* Edit: step back to the previous answered question and re-open it. The prior
    bot bubble stays; we drop the current question + the last answer and clear it. */
@@ -4327,7 +4489,7 @@ function renderLoop(s){
     +`<div class="intake-chips">${chips.map((c,i)=>`<button data-ci="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>`
     +`<div class="intake-chips" style="margin-top:8px"><button class="go" id="iaLoopDone">${escapeHtml(s.done||'Done →')}</button>${s.bulk?'<button id="iaLoopBulk">⊞ Add several at once</button>':''}</div>`
     +(back?`<div class="intake-underrow">${back}</div>`:'');
-  dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{ const c=chips[+b.dataset.ci]; c.custom?askLoopName(s):askLoopAmount(s,c.name); });
+  dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{ const c=chips[+b.dataset.ci]; c.custom?askLoopName(s):askLoopAmount(s,c.name,!!c.hours); });
   document.getElementById('iaLoopDone').onclick=()=>{ if(arr.length) iaBub(arr.map(x=>x.name).join(', '),'me'); iaAdvance(); };
   const bulk=document.getElementById('iaLoopBulk'); if(bulk) bulk.onclick=()=>bulkLoop(s);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
@@ -4361,18 +4523,33 @@ function askLoopName(s){
   const inp=document.getElementById('iaLoopName'); setTimeout(()=>inp.focus(),60);
   const go=()=>{ const n=inp.value.trim(); if(!n){ inp.focus(); return; }
     if(/^\$?[\d,.]+$/.test(n)){ document.getElementById('iaLoopNameHint').style.display=''; inp.focus(); return; }  // it's a number, not a label
-    askLoopAmount(s,n); };
+    askLoopAmount(s,n,!!s.askHours); };  // custom source: offer the hours question (skippable if passive)
   document.getElementById('iaLoopNameGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaLoopCancel').onclick=()=>renderLoop(s);
 }
-function askLoopAmount(s,name){
+function askLoopAmount(s,name,wantHours){
   const dock=document.getElementById('intakeDock');
   iaBub(s.amountPrompt(name),'bot');
   dock.innerHTML=`<div class="inrow"><input id="iaLoopAmt" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 40"><button class="intake-send" id="iaLoopAmtGo">Add</button></div><div class="intake-underrow"><button class="intake-skip" id="iaLoopAmtBack">← Back</button></div>`;
   const inp=document.getElementById('iaLoopAmt'); setTimeout(()=>inp.focus(),60);
-  const go=()=>{ const v=parseFloat(inp.value); if(isNaN(v)||v<0){ inp.focus(); return; } (iaAns[s.loopKey]||(iaAns[s.loopKey]=[])).push({name,amount:v}); iaBub(name+' - '+usd(v),'me'); renderLoop(s); };
+  const go=()=>{ const v=parseFloat(inp.value); if(isNaN(v)||v<0){ inp.focus(); return; }
+    if(wantHours && s.askHours){ askLoopHours(s,name,v); return; }
+    (iaAns[s.loopKey]||(iaAns[s.loopKey]=[])).push({name,amount:v}); iaBub(name+' - '+usd(v),'me'); renderLoop(s); };
   document.getElementById('iaLoopAmtGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaLoopAmtBack').onclick=()=>renderLoop(s);
+}
+/* Side-gig hours: those hours are life too. Capture them (skippable if passive)
+   so the wage engine can blend them into the user's true take-home rate. */
+function askLoopHours(s,name,amount){
+  const dock=document.getElementById('intakeDock');
+  const label=/side gig/i.test(name)?'that side gig':name.toLowerCase();
+  iaBub(`Roughly how many hours a month does ${label} take? Those are hours of your life too - I'll blend them into your true rate. (Skip if it's passive, like rent or benefits.)`,'bot');
+  dock.innerHTML=`<div class="inrow"><input id="iaLoopHrs" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 20"><button class="intake-send" id="iaLoopHrsGo">Add</button></div><div class="intake-underrow"><button class="intake-skip" id="iaLoopHrsSkip">Skip - it's passive</button></div>`;
+  const inp=document.getElementById('iaLoopHrs'); setTimeout(()=>inp.focus(),60);
+  const push=(hrs)=>{ (iaAns[s.loopKey]||(iaAns[s.loopKey]=[])).push({name,amount,hours:hrs>0?hrs:0}); iaBub(name+' - '+usd(amount)+(hrs>0?` · ~${hrs} hr/mo`:''),'me'); renderLoop(s); };
+  const go=()=>{ const h=parseFloat(inp.value); if(isNaN(h)||h<0){ inp.focus(); return; } push(h); };
+  document.getElementById('iaLoopHrsGo').onclick=go; inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaLoopHrsSkip').onclick=()=>push(0);
 }
 /* Zero-based close: route any unassigned income to savings / a goal / buffer */
 function renderZeroClose(s){
@@ -4393,15 +4570,15 @@ function renderZeroClose(s){
 }
 function commitIntake(){
   const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
-  const addIncome=(amount,source,owner)=>{ const rec={id:uid(),type:'income',amount,day:1,source}; if(owner) rec.owner=owner; state.recurring.push(rec); state.transactions.push({id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}); };
-  if(a.income>0) addIncome(a.income,'Paycheck','a');
-  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0) addIncome(+x.amount, x.name||'Income', /partner/i.test(x.name||'')?'b':'a'); });
+  const addIncome=(amount,source,owner,hours)=>{ const rec={id:uid(),type:'income',amount,day:1,source}; if(owner) rec.owner=owner; if(hours>0) rec.hours=hours; state.recurring.push(rec); const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}; if(hours>0) tx.hours=hours; state.transactions.push(tx); };
+  if(a.income>0) addIncome(a.income,'Paycheck','a', a.wage>0 ? a.income/a.wage : 0);   // store main-job hours so the blend can be recomputed later
+  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
   if(a.wantHousehold==='yes'){                   // "set up the couples view" from intake
     state.householdOn=true;
     const partner=(a.extraIncome||[]).find(x=>/partner/i.test(x.name||''));
     if(partner){ state.nameB='Partner'; if(+partner.amount>0) state.wageB=estHourlyFromMonthly(partner.amount); }
   }
-  if(a.wage>0) state.hourlyWage=a.wage;
+  if(a.wage>0){ const blended=intakeBlendedHourly(a); state.hourlyWage = blended>0 ? blended : a.wage; state.wageAuto=true; }   // auto-derived: recompute if income/side gigs change
   [['roof','Roof'],['food','Food'],['util','Power & Wi-Fi'],['transport','Getting Around']].forEach(([k,name])=>{
     if(a[k]>0){ const c=findOrCreateEssential(name); budgetFor(M)[c.id]=a[k]; }
   });
