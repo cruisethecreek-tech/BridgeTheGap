@@ -1,6 +1,9 @@
 # Budget Intake - the setup conversation
 
-A warm, two-minute chat that replaces the blank-page cold start. Same philosophy as
+A warm chat that replaces the blank-page cold start - about two minutes on the light
+"just my spending" path, closer to ten on the full budget build (the intro no longer
+promises "two minutes" up front, and the account-type step states each path's real
+time so nobody feels baited). Same philosophy as
 the relationship intake: **warmth first, capture close to their words, never
 interrogate.** The difference is that here the *engine-critical* answers write
 straight into the app - income, essentials, dream, tone - so the moment the chat
