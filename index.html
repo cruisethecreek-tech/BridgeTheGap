@@ -12,8 +12,12 @@
 <meta property="og:title" content="Accountability - the budgeting app that fights back">
 <meta property="og:description" content="Zero-based budgeting with a spine. Prices every purchase in hours of your life. No account. Nothing leaves your device.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://cruisethecreek-tech.github.io/BridgeTheGap/shots/shot-shield.png">
+<link rel="canonical" href="https://cruisethecreek-tech.github.io/BridgeTheGap/">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  /* Inter is self-hosted (fonts/inter-var-latin.woff2, variable 400-900) so the
+     page makes ZERO external requests - "never phones home" stays literally true. */
+  @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('fonts/inter-var-latin.woff2') format('woff2')}
   :root{
     --bg:#0b1421; --panel:#131f30; --panel-2:#1a2840; --line:#2a3a52; --ink:#070d17;
     --on-accent:#070d17; --text:#eef2f8; --muted:#90a0b8; --accent:#e6b24d; --accent-2:#e0663c;
@@ -261,7 +265,7 @@
     <h2>Get going in three steps</h2>
     <p class="sec-sub">No blank spreadsheet, no bank connection, no learning curve. Start light in about two minutes, or build your whole zero-based budget in one short sitting - either way you're set up before you close the tab.</p>
     <div class="plan3">
-      <div class="p3"><div class="n">1</div><h3>Give every dollar a job</h3><p>Budget to zero - every dollar of income gets assigned until nothing's left wandering off. The app walks you through it.</p></div>
+      <div class="p3"><div class="n">1</div><h3>Pick your lane</h3><p>A guided conversation sets you up: start light - just track your spending against a daily allowance - or build the whole zero-based budget where every dollar gets a job. Your call, switch anytime.</p></div>
       <div class="p3"><div class="n">2</div><h3>Gut-check before you buy</h3><p>About to spend? Scan it first. See the real price in the hours of life it costs - and sleep on it in the 24-hour vault.</p></div>
       <div class="p3"><div class="n">3</div><h3>Watch your runway grow</h3><p>Every trap you dodge and dollar you keep pushes your freedom further out. Days become months become years.</p></div>
     </div>
@@ -274,14 +278,14 @@
     <div class="band">
       <div class="kicker">The privacy stance</div>
       <h2>No account. No bank login. Nothing leaves your device.</h2>
-      <p class="sec-sub">Mint, Rocket Money, Monarch, Copilot - they all run on connecting your bank and monetizing the data. Accountability structurally can't. Your money story stays in your browser, full stop.</p>
+      <p class="sec-sub">Mint, Rocket Money, Monarch, Copilot - they all run on connecting your bank and monetizing the data. Accountability structurally can't. Your money story stays in your browser, full stop. (An optional couples sync is in the works - end-to-end encrypted, meaning your numbers are scrambled before they leave your phone, so even we couldn't read them.)</p>
       <div class="pills">
         <span class="pill">🔒 <b>Local-only</b> storage</span>
         <span class="pill">🚫 <b>Zero</b> tracking</span>
         <span class="pill">📴 Works <b>offline</b></span>
         <span class="pill">🔑 <b>Encrypted</b> backups</span>
       </div>
-      <p class="freenote">So how does it stay free? Not by selling you or your data - it never sees your data. No subscription, no ads, no affiliate links pointing you at where to put your money (that would make us the exact thing this app fights). It's free and it stays free. If it earns a place in your life, you can pay once to support the build - that's the whole model, and it's the honest one for a tool that asks you to trust it.</p>
+      <p class="freenote">So how does it stay free? Not by selling you or your data - it never sees your data. No ads, no affiliate links pointing you at where to put your money (that would make us the exact thing this app fights). The app is free and stays free. Here's the whole honest model: if it earns a place in your life you can chip in once to support the build; there may be an optional plain-language guide to the method; and a paid, end-to-end-encrypted couples sync is in the works - encrypted so we couldn't read your numbers even if we wanted to. Whatever we ever charge for, your data is never the product.</p>
     </div>
   </div>
 </section>
@@ -293,7 +297,7 @@
       <h2>Why this exists</h2>
       <p>I didn't build this to start a tech company. I built it because I got tired of every budgeting app demanding my bank login - and then quietly making money off what it saw in there.</p>
       <p>I've lived the grind. Between raising three kids, running a small business, and working a shift job, I've listened to all the financial gurus and their debt-free screams. The theory is fine, but it's just not practical for an everyday person trying to stretch a paycheck while keeping a household afloat.</p>
-      <p>So I made the exact opposite. Accountability runs entirely on your device. No account, no bank connection, no analytics, nothing phoning home - you can read the whole source code. It's free. If it earns a place in your life, you can chip in once to support the build. That's the only way it makes money.</p>
+      <p>So I made the exact opposite. Accountability runs entirely on your device. No account, no bank connection, no analytics, nothing phoning home - you can read the whole source code. It's free. If it earns a place in your life, you can chip in once to support the build - and anything optional it ever charges for is built the same way: your data is never the product.</p>
       <p>It's blunt because polite apps didn't work for me. It prices things in hours of your life because that's the only metric that finally made me stop and think before checking out.</p>
       <p>I built it for myself, and I still use it every day.</p>
       <div class="sig">
@@ -370,7 +374,7 @@
   </div>
 </section>
 
-<section>
+<section id="newsletterSec">
   <div class="wrap" style="text-align:center;max-width:640px">
     <div class="kicker">Stay sharp</div>
     <h2>The Weekly Gut-Check</h2>
@@ -442,9 +446,13 @@
           res.className = 'subresult'; res.textContent = 'Sending...';
           fetch(NEWSLETTER_ENDPOINT, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'email=' + encodeURIComponent(email)})
             .then(win).catch(function(){ res.className = 'subresult err'; res.textContent = "Hmm, that did not go through. Try again in a sec."; });
-        } else { win(); }   // endpoint not set: preview success, nothing sent
+        } else { res.className = 'subresult err'; res.textContent = "The newsletter isn't live yet - check back soon."; }
       });
     }
+    // no endpoint = no signup exists: hide the section entirely rather than fake a success
+    if(!ok(NEWSLETTER_ENDPOINT)){ var ns=document.getElementById('newsletterSec'); if(ns) ns.style.display='none'; }
+    // offline shell for return visits starts here, not only after the app is opened
+    if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
   })();
 </script>
 
