@@ -692,6 +692,22 @@
   .bulk-row .bulk-amt{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-weight:700;flex-shrink:0}
   .bulk-row .bulk-amt input{width:82px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 10px;font-size:14px}
   .bulk-row input:focus{outline:none;border-color:var(--accent)}
+  .leak-hint{max-width:640px;margin:0 auto 6px;font-size:12.5px;color:var(--muted);text-align:center}
+  .leak-total{max-width:640px;margin:0 auto 8px;text-align:center;font-size:14px;color:var(--muted)}
+  .leak-total b{color:var(--accent);font-size:17px}
+  .leak-list{max-height:42vh;overflow-y:auto;max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:7px;padding-right:2px}
+  .leak-row{display:flex;align-items:center;gap:6px;font-size:13px}
+  .leak-row .leak-name{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .leak-row .leak-name-in{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 9px;font-size:13px}
+  .leak-row .leak-n{width:44px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 6px;font-size:13px;text-align:center;flex-shrink:0}
+  .leak-row .leak-f{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 4px;font-size:12px;flex-shrink:0}
+  .leak-row .leak-x{color:var(--muted);font-weight:700;flex-shrink:0}
+  .leak-row .leak-c{width:54px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 6px;font-size:13px;flex-shrink:0}
+  .leak-row .leak-mo{width:56px;text-align:right;font-weight:800;color:var(--good);flex-shrink:0}
+  .leak-row .leak-fxu{color:var(--muted);font-size:12px;flex-shrink:0}
+  .leak-sub{font-size:12px;font-weight:800;letter-spacing:.3px;color:var(--accent);margin:6px 0 2px;text-transform:uppercase}
+  .leak-sub:first-child{margin-top:0}
+  .leak-row input:focus,.leak-row select:focus{outline:none;border-color:var(--accent)}
   .intake-help{background:rgba(230,178,77,.12);border:1px solid rgba(230,178,77,.35);color:var(--accent);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;cursor:pointer}
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
@@ -4260,6 +4276,15 @@ const INTAKE=[
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
+  {id:'incomeAvoid', input:'reflect', key:'incomeAvoid', optional:true,
+    showIf:a=>a.acct==='spend' && !(a.income>0),
+    bot:"No pressure at all - but I noticed you'd rather not put the income in. Mind if I ask what's behind that? It's not nosy, it just helps me meet you where you are.",
+    options:[
+      {label:"🙈 I don't want to look", value:'avoid', reply:"That's the most honest answer there is - and it's exactly why watching where it GOES is a gentler place to start than staring at what comes in. No income needed. When you're ready to look, I'll be right here."},
+      {label:'🎲 It is irregular / hard to pin', value:'irregular', reply:"Irregular income is genuinely harder - not a personal failing. When what comes in bounces around, tracking what goes out is the steadier anchor. Smart place to start, honestly."},
+      {label:'😰 It stresses me out', value:'stress', reply:"Money stress is real and I'm not going to add to it. We'll keep this to just watching your spending - small, calm, no big scary number staring back. You set the pace."},
+      {label:'👀 I just want to watch spending', value:'watch', reply:"Totally fair - and it might be the highest-leverage move there is. What you spend is the part you actually control, minute to minute."}
+    ]},
   {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend' && a.income>0,
     bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
     chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig',hours:true},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
@@ -4274,7 +4299,9 @@ const INTAKE=[
       {label:'💵 Just count it as income', value:'no', reply:"Cool - it's in your budget total either way. You can flip on the couples view later in Settings."}
     ]},
   {id:'wage',
-    bot:a=> a.income>0
+    bot:a=> a.acct==='spend'
+      ? `Last setup question${a.name?', '+a.name:''} - and it's the one that gives the gut-check its teeth: what do you make per hour, take-home? In spend mode I price every purchase in HOURS OF YOUR LIFE, not just dollars - that's what makes you feel it before the card comes out. ${a.income>0?`Since about ${usd(a.income)} lands a month, that's roughly ${usd(estHourlyFromMonthly(a.income))}/hr full-time - sound right?`:`Not sure? Tap “Help me work it out” below.`} Skip if you'd rather just watch the numbers. ★`
+      : a.income>0
       ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
     input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
@@ -4351,7 +4378,26 @@ const INTAKE=[
       if(left>1) return `Almost done - let's make it zero-based. About ${usd(inc)} comes in, and we've given ${usd(asg)} a job so far. That leaves ${usd(left)} with nothing assigned yet. Where should it go?`;
       if(left<-1) return `One honest heads-up: we've assigned about ${usd(-left)} more than comes in. I'll flag it on your budget so you can trim - totally fixable.`;
       return `And every dollar already has a job - that's zero-based budgeting, done right. 👏`; }},
-  {id:'spendLimit', bot:"Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.", input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
+  {id:'deepOffer', input:'reflect', key:'deepDive', showIf:a=>a.acct==='spend',
+    bot:a=>`Here's where it gets real${a.name?', '+a.name:''}. I can just track what you spend from here - or we go deep right now and map where your money's ACTUALLY going. The coffees, the takeout, the pack-a-day, the little stuff that vanishes without a trace. Most people find hundreds a month they never knew was leaving. Which do you want?`,
+    options:[
+      {label:'🔦 Go deep - find the leaks', value:'deep', reply:"That's the real work, and you just chose it. Let's follow the money - ballpark's fine, the small stuff is where it hides."},
+      {label:'👀 Just track from here', value:'light', reply:"Fair - watching it in real time works too. The deep dive is here anytime you want it."}
+    ]},
+  {id:'deepDive', input:'leak', showIf:a=>a.acct==='spend' && a.deepDive==='deep',
+    bot:"Alright - let's follow it. Tap in the ones that are real for you: how often, and about how much each time. Be honest - this only works if it's the truth."},
+  {id:'blindSpend', input:'continue', showIf:a=>a.acct==='spend' && (a.leaks||[]).length,
+    bot:a=>{ const all=(a.leaks||[]); const known=all.reduce((s,x)=>s+(+x.monthly||0),0);
+      const habits=all.filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
+      const inc=+a.income||0;
+      const lifeTxt = (a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
+      if(inc>0){ const blind=Math.round(inc-known);
+        if(blind>50) return `Here's the part that hits${a.name?', '+a.name:''}: about ${usd(inc)} comes in, and we just accounted for ${usd(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched. That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
+        if(blind<-50) return `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd(known)}) is MORE than the ${usd(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
+        return `You mapped ${usd(known)} against about ${usd(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
+      return `That's ${usd(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
+  {id:'spendLimit', bot:a=>{ const known=(a.leaks||[]).reduce((s,x)=>s+(+x.monthly||0),0);
+      return known>0 ? `You mapped about ${usd(known)} a month going out. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
   {id:'tone', bot:"When you're about to blow it, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
   {id:'done', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
@@ -4416,6 +4462,7 @@ function renderIntakeDock(s){
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
   if(s.input==='loop'){ renderLoop(s); return; }
   if(s.input==='zeroClose'){ renderZeroClose(s); return; }
+  if(s.input==='leak'){ leakFinder(s); return; }
   if(s.input==='reflect'){ renderReflect(s); return; }
   if(s.input==='gate'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
@@ -4589,6 +4636,61 @@ function askLoopHours(s,name,amount){
   document.getElementById('iaLoopHrsSkip').onclick=()=>push(0);
 }
 /* Zero-based close: route any unassigned income to savings / a goal / buffer */
+/* The deep-dive finder (spend path). Two passes, the way you'd do it on paper:
+   FIXED bills as flat monthly amounts (rent, utilities...), then the VARIABLE
+   leaks as frequency x cost (coffee 4x/wk @ $6 = ~$104/mo; a pack a day @ $9 =
+   ~$274). Mapping BOTH is what makes the leftover an honest "spending blind"
+   number - income minus everything accounted for, not income minus a few habits. */
+const FIXED_BILLS=['Rent / mortgage','Utilities (power, water)','Phone / internet','Insurance','Car payment','Loan / debt payment'];
+const LEAKS=[
+  {name:'Coffee / drinks out', f:'week'},
+  {name:'Takeout / delivery', f:'week'},
+  {name:'Dining out', f:'week'},
+  {name:'Drinks / bars', f:'week'},
+  {name:'Fast food', f:'week'},
+  {name:'Cigarettes / vape', f:'day'},
+  {name:'Convenience store / snacks', f:'week'},
+  {name:'Rideshare / gas', f:'week'},
+  {name:'Online shopping', f:'month'},
+  {name:'Subscriptions / streaming', f:'month'},
+  {name:'Lottery / scratch-offs', f:'week'},
+  {name:'Groceries', f:'week'},
+  {name:'Personal care', f:'month'},
+  {name:'Pets', f:'month'}
+];
+function leakMonthly(count,f,cost){ const mult=f==='day'?30.4:(f==='week'?4.33:1); return (+count||0)*mult*(+cost||0); }
+function leakFinder(s){
+  const dock=document.getElementById('intakeDock');
+  const freqSel=(id,sel)=>`<select class="leak-f" data-lf="${id}"><option value="day"${sel==='day'?' selected':''}>/day</option><option value="week"${sel==='week'?' selected':''}>/wk</option><option value="month"${sel==='month'?' selected':''}>/mo</option></select>`;
+  const fixedRow=(id,nameHTML)=>`<div class="leak-row"><span class="leak-name">${nameHTML}</span><span class="leak-x">$</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-fx="${id}" placeholder="0"><span class="leak-fxu">/mo</span><span class="leak-mo" data-fm="${id}"></span></div>`;
+  const varRow=(id,nameHTML,f)=>`<div class="leak-row">${nameHTML}<input class="leak-n" type="number" inputmode="decimal" min="0" step="any" data-ln="${id}" placeholder="0">${freqSel(id,f)}<span class="leak-x">× $</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-lc="${id}" placeholder="0"><span class="leak-mo" data-lm="${id}"></span></div>`;
+  const fixedRows=FIXED_BILLS.map((n,i)=>fixedRow(i, escapeHtml(n))).join('');
+  const varRows=LEAKS.map((l,i)=>varRow(i, `<span class="leak-name">${escapeHtml(l.name)}</span>`, l.f)).join('')
+    + [0,1].map(i=>varRow('c'+i, `<input class="leak-name-in" type="text" data-lname="${i}" placeholder="Something else">`, 'week')).join('');
+  dock.innerHTML=`<div class="leak-hint">Two quick passes: the big fixed bills first, then the little stuff that slips away. Ballpark is fine.</div>
+    <div class="leak-total">Mapped so far: <b id="leakTotal">$0</b>/mo</div>
+    <div class="leak-list">
+      <div class="leak-sub">🧾 Fixed bills - flat per month</div>${fixedRows}
+      <div class="leak-sub">🩸 Where it slips away - how often × how much</div>${varRows}
+    </div>
+    <div class="intake-chips" style="margin-top:10px"><button class="go" id="leakGo">See where it's going →</button></div>`;
+  const varIds=LEAKS.map((_,i)=>i).concat(['c0','c1']);
+  const recalc=()=>{ let tot=0;
+    FIXED_BILLS.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="'+i+'"]').value||0; dock.querySelector('[data-fm="'+i+'"]').textContent=v>0?usd(v):''; tot+=v; });
+    varIds.forEach(id=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+id+'"]').value, dock.querySelector('[data-lf="'+id+'"]').value, dock.querySelector('[data-lc="'+id+'"]').value); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd(mo):''; tot+=mo; });
+    document.getElementById('leakTotal').textContent=usd(tot); };
+  dock.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',recalc));
+  document.getElementById('leakGo').onclick=()=>{
+    const leaks=[], fixed=[];
+    FIXED_BILLS.forEach((n,i)=>{ const v=Math.round(+dock.querySelector('[data-fx="'+i+'"]').value||0); if(v>0){ leaks.push({name:n, monthly:v, fixed:true}); fixed.push(v); } });
+    LEAKS.forEach((l,i)=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+i+'"]').value, dock.querySelector('[data-lf="'+i+'"]').value, dock.querySelector('[data-lc="'+i+'"]').value); if(mo>0) leaks.push({name:l.name, monthly:Math.round(mo)}); });
+    [0,1].forEach(i=>{ const nm=(dock.querySelector('[data-lname="'+i+'"]').value||'').trim(); const mo=leakMonthly(dock.querySelector('[data-ln="c'+i+'"]').value, dock.querySelector('[data-lf="c'+i+'"]').value, dock.querySelector('[data-lc="c'+i+'"]').value); if(nm && mo>0) leaks.push({name:nm, monthly:Math.round(mo)}); });
+    iaAns.leaks=leaks;
+    if(leaks.length) iaBub(leaks.map(x=>x.name+' '+usd(x.monthly)+'/mo').join(', '),'me');
+    else iaBub('Nothing to map right now','me');
+    iaAdvance();
+  };
+}
 function renderZeroClose(s){
   const dock=document.getElementById('intakeDock');
   const inc=intakeIncomeTotal(iaAns), asg=intakeAssignedTotal(iaAns), left=Math.round(inc-asg);
@@ -4631,10 +4733,12 @@ function commitIntake(){
   if(spend){                                   // "Just my spending" - no four walls, just tracking
     state.spendingMode=true;
     state.spendLimit=a.spendLimit>0?a.spendLimit:0;
+    // deep-dive leaks become real, budgeted categories so the spending picture is already mapped
+    (a.leaks||[]).forEach(x=>{ if(+x.monthly>0 && x.name){ const c=findOrCreateCat(x.name); budgetFor(M)[c.id]=(budgetFor(M)[c.id]||0)+(+x.monthly); } });
     if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
   }
   state.intake={name:a.name||'',why:a.why||'',
-    reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
+    reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', incomeAvoid:a.incomeAvoid||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();

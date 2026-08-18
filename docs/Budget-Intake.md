@@ -50,8 +50,27 @@ remove. Three engine pieces do this (`input:'loop'` and `input:'zeroClose'`):
    remainder, so the user walks out already at $0 left to budget.
 
 Engine: `intakeIncomeTotal`, `intakeAssignedTotal`, `findOrCreateCat`, `renderLoop`,
-`askLoopAmount`, `renderZeroClose`; `commitIntake` writes it all. The **spender** path is
-untouched and stays light - it skips all three.
+`askLoopAmount`, `renderZeroClose`; `commitIntake` writes it all.
+
+## Spender path: light by default, deep by choice
+The **spender** path skips the three full-path engines but is no longer a dead end:
+- **Income is optional, and skipping it gets a follow-up** (`incomeAvoid`, reflect): "what's
+  behind not wanting to put income in?" - I don't want to look / it's irregular / it stresses
+  me / I just want to watch spending. Avoidance is a tell; each answer gets a warm, no-push
+  reply. (The full-path income is required; this only fires for spenders who skip.)
+- **The wage question is reframed for spend mode** - it's the gut-check engine here (every
+  purchase priced in hours of your life), not a leftover from the budget path, and it says so.
+- **The "go deep" leak finder** (`deepOffer` -> `deepDive`, `input:'leak'`, `leakFinder`).
+  Opt-in: "just track from here, or map where it's ACTUALLY going?" If deep, one screen in two
+  passes - **fixed bills** as flat monthly amounts (rent, utilities, phone, insurance, car,
+  debt) then **variable leaks** as frequency x cost (`leakMonthly`: coffee 4x/wk @ $6 = ~$104;
+  a pack a day @ $9 = ~$274). Live running total.
+- **The blind-spend reveal** (`blindSpend`): income minus *everything mapped* (bills + habits)
+  = the money you couldn't name - "not gone, just invisible." Because fixed bills are included,
+  the leftover is an honest blind-spot figure, not income-minus-a-few-habits. If mapped spend
+  *exceeds* income, it flips to the "this gap is the debt/stress you've been feeling, now it's
+  on the table" reality check. The habits (not the rent) are also priced in hours of life.
+  Mapped items become real budgeted categories in spend mode via `commitIntake`.
 
 ## Reflection beats (engagement, not interrogation)
 Between the numbers, the full path interleaves short **pain-point / aspiration** questions
