@@ -77,6 +77,13 @@ foundational reflections set how the app shows up:
 - **Money story** (`moneyStory`): never enough / tight but managed / comfortable / feast or
   famine - "what did money feel like growing up?" Names the pattern (grip vs. blow it; the
   swing) so the user feels seen; the "never enough" answer opens an optional free-text note.
+  **It also lives on Home** (`moneyStoryNote`/`renderMoneyStoryNote`, the `#moneyStoryCard`
+  strip): one gentle, personalized line that reads the answer plus a couple of reliable
+  signals - a `fear` user on a 5+ gut-check streak with a War Chest gets *permission* ("one
+  small planned treat isn't slipping, it's how you keep this up"); a `chaos` user in a
+  bigger-than-average income month gets a *steadying* nudge ("give this surplus a job before
+  it evaporates"). It only speaks when it has something real to say and is dismissible for
+  the month (`state.msNoteDismissed`) so it never nags.
 
 The intro and close also carry the honest frame the whole thing rests on: **there is no
 secret sauce - just small wins that stack when you show up** (the "are you willing" beat).

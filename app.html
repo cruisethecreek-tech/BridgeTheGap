@@ -382,6 +382,11 @@
   .stat-note{font-size:13.5px;font-weight:700;margin-top:12px;color:var(--muted)}
   .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
   .reflect-note{margin:12px 0 4px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-left:3px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:14px;line-height:1.55;color:var(--text)}
+  .ms-note{display:flex;align-items:flex-start;gap:11px;margin:14px 0 2px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.26);border-left:3px solid var(--accent);border-radius:12px;padding:13px 14px}
+  .ms-note .ms-ic{font-size:19px;line-height:1.3;flex:none}
+  .ms-note .ms-t{flex:1;font-size:14px;line-height:1.55;color:var(--text);font-weight:500}
+  .ms-note .ms-x{flex:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px;line-height:1}
+  .ms-note .ms-x:hover{color:var(--fg)}
   /* Sovereign-tier sync UI */
   .syncbox{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
   .sync-head{font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -903,6 +908,7 @@
       </div>
 
       <div id="dataGuard"></div>
+      <div id="moneyStoryCard"></div>
       <div id="spendingBox" class="show-in-spending"></div>
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
@@ -1655,7 +1661,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false,
+           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'',
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -4705,6 +4711,7 @@ function renderHome(){
     plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=flipHintHTML();
+  renderMoneyStoryNote();
   renderEnough(income);
   renderOffenseDefense();
   renderNextSteps();
@@ -4732,6 +4739,40 @@ function renderOffenseDefense(){
       <div class="miles">${milesHTML}</div>
       ${prompt?`<div class="od-prompt">💡 ${escapeHtml(prompt)}</div>`:''}
     </div>`;
+}
+/* The money story, put to work. The upbringing answer + a couple of reliable
+   behavioral signals produce one gentle, personalized line - reassurance for the
+   scarcity-wired, a steadying word when a feast month lands for feast-or-famine
+   folks. It only speaks when it has something real to say, and it's dismissible
+   for the month so it never nags. */
+function moneyStoryNote(){
+  const ms=(state.intake&&state.intake.reflections&&state.intake.reflections.moneyStory)||'';
+  if(!ms) return null;
+  const M=state.activeMonth;
+  const inc=(typeof monthIncome==='function')?monthIncome(M):0;
+  const avg=(typeof avgMonthlyIncome==='function')?avgMonthlyIncome():0;
+  const streak=(typeof skipStreak==='function')?skipStreak():0;
+  const chest=(typeof impulseSaved==='function')?impulseSaved():0;
+  if(ms==='fear'){
+    if(streak>=5 && chest>0) return {ic:'🌤️', t:`You've held the line ${streak} gut-checks straight - that's real discipline. The old "never enough" voice says never let up. But one small, planned treat isn't slipping, it's how you keep this up without burning out.`};
+    return {ic:'🌤️', t:`A word from your own story: "never enough" is old wiring, not today's math. You're not behind - you're building. Trust the numbers over the fear.`};
+  }
+  if(ms==='chaos'){
+    if(avg>0 && inc>avg*1.2) return {ic:'⚓', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here - so let's give this surplus a job first, before it evaporates and future-you is the one scrambling.`};
+    return {ic:'⚓', t:`Your money's calmer with a plan than on the swing. Every dollar you assign now is one that won't vanish in the next "feast".`};
+  }
+  if(ms==='tight') return {ic:'💪', t:`You learned to stretch a dollar the hard way - that's a real edge most people never build. Point that resourcefulness at building now, not only surviving.`};
+  if(ms==='stable') return {ic:'🚀', t:`A steady start is a gift most don't get. The only trap is coasting on it - stability is the launchpad, not the finish line.`};
+  return null;
+}
+function renderMoneyStoryNote(){
+  const box=document.getElementById('moneyStoryCard'); if(!box) return;
+  const M=state.activeMonth;
+  if(state.msNoteDismissed===M){ box.innerHTML=''; return; }
+  const n=moneyStoryNote();
+  if(!n){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="ms-note"><span class="ms-ic">${n.ic}</span><span class="ms-t">${escapeHtml(n.t)}</span><button class="ms-x" id="msNoteX" title="Dismiss for this month">✕</button></div>`;
+  const x=document.getElementById('msNoteX'); if(x) x.onclick=()=>{ state.msNoteDismissed=M; save(); renderMoneyStoryNote(); };
 }
 /* guided "do this next" - computes the user's most useful next moves */
 function renderNextSteps(){
