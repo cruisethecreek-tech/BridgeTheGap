@@ -133,8 +133,13 @@ foundational reflections set how the app shows up:
   it evaporates"). It only speaks when it has something real to say and is dismissible for
   the month (`state.msNoteDismissed`) so it never nags.
 
-The intro and close also carry the honest frame the whole thing rests on: **there is no
-secret sauce - just small wins that stack when you show up** (the "are you willing" beat).
+**The intro defines the name, and the definition is the thesis:** *Accountability is the
+**ability** to hold yourself accountable.* The brand mark already says it (Account**ability**,
+with "ability" in gold) - the app can't hold anyone accountable and never claims to; it builds
+the ability in the user by showing them the truth and handing the decision back. An ability is
+a muscle, which is exactly *why* **there is no secret sauce - just small wins that stack when
+you show up** (the "are you willing" beat). The same definition anchors the landing page in its
+own band under the hero.
 
 **Situation also floors the tone (the "digital psychologist" move).** `baseInt()` softens the
 user's chosen intensity by who they told us they are: `survive` collapses blunt/savage to
