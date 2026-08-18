@@ -382,6 +382,11 @@
   .stat-note{font-size:13.5px;font-weight:700;margin-top:12px;color:var(--muted)}
   .conv-inline{font-size:.7em;font-weight:700;color:var(--muted);letter-spacing:0}
   .reflect-note{margin:12px 0 4px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-left:3px solid var(--accent);border-radius:10px;padding:11px 14px;font-size:14px;line-height:1.55;color:var(--text)}
+  .ms-note{display:flex;align-items:flex-start;gap:11px;margin:14px 0 2px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.26);border-left:3px solid var(--accent);border-radius:12px;padding:13px 14px}
+  .ms-note .ms-ic{font-size:19px;line-height:1.3;flex:none}
+  .ms-note .ms-t{flex:1;font-size:14px;line-height:1.55;color:var(--text);font-weight:500}
+  .ms-note .ms-x{flex:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px;line-height:1}
+  .ms-note .ms-x:hover{color:var(--fg)}
   /* Sovereign-tier sync UI */
   .syncbox{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
   .sync-head{font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -903,6 +908,7 @@
       </div>
 
       <div id="dataGuard"></div>
+      <div id="moneyStoryCard"></div>
       <div id="spendingBox" class="show-in-spending"></div>
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
@@ -1655,7 +1661,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false,
+           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'',
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -3476,7 +3482,18 @@ const SKIP_WINS={
   middle:["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."],
   mature:["That's money that stayed where it belongs - with you. 💪","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
 };
-function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[state.intensity]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
+/* Digital-psychologist tone floor: the intensity the user CHOSE, softened for who
+   they told us they are. Someone in survival needs wins, not a roast - so savage/blunt
+   collapse to clean; someone treading water gets savage eased to blunt. It only ever
+   softens (never hardens past their choice); the "reality check" for stable-but-stuck
+   users is simply that their chosen bluntness is left intact. */
+function baseInt(){
+  const sit=(state.intake&&state.intake.reflections&&state.intake.reflections.situation)||'';
+  if(sit==='survive') return 'clean';
+  if(sit==='treading' && state.intensity==='savage') return 'blunt';
+  return state.intensity;
+}
+function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[baseInt()]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
 function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.floor(Math.random()*a.length)]; }
 
 /* Tone safety lock: sensitive spending (rent, medical, utilities, groceries, emergencies)
@@ -3484,7 +3501,7 @@ function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.fl
    rent is how you lose their trust and get deleted. These contexts force Clean. */
 const SENSITIVE_RX=/\b(rent|mortgage|housing|landlord|medical|health|doctor|dentist|hospital|clinic|pharmac|prescription|meds|therap|counsel|insurance|copay|utilit|electric|power|heat|heating|water|sewer|internet|wi-?fi|grocer|groceries|childcare|daycare|tuition|funeral|emergency|urgent care)\b/i;
 function isSensitive(text){ if(!text) return false; const s=String(text); return SENSITIVE_RX.test(s) || (typeof isEssentialCat==='function' && isEssentialCat(s)); }
-function effInt(ctx){ return isSensitive(ctx) ? 'clean' : state.intensity; }
+function effInt(ctx){ return isSensitive(ctx) ? 'clean' : baseInt(); }   // topic lock AND the situation floor
 /* Context-aware pickers: pass the category or purchase name so sensitive spend stays gentle. */
 function pickVoiceCtx(obj,ctx){ const r=obj[state.register]||obj.middle; const a=r[effInt(ctx)]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
 function pickTrapVoiceCtx(trap,ctx){ const t=TRAP_RESPONSES[trap]||TRAP_RESPONSES.scroll; const r=t[state.register]||t.middle; return r[effInt(ctx)]||r.blunt; }
@@ -4219,9 +4236,26 @@ function initPWA(){
    ============================================================ */
 const INTAKE=[
   {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
-  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up with a few straight questions - no judgment, no forms that make you feel dumb. Answer in your own words, and skip anything that doesn't fit. In a sec I'll ask how deep you want to go.`, input:'start', cta:"Let's go →", skip:"I'll set it up myself"},
+  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up with a few straight questions - no judgment, no forms that make you feel dumb. And I'll be honest with you up front: there's no secret sauce here, no magic trick. Just small wins that stack when you actually show up. Answer in your own words, skip anything that doesn't fit. Ready?`, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
   {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
-  {id:'acct', bot:a=>`Quick one so I build the right thing, ${a.name||'friend'}: most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with. If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
+  {id:'situation', input:'reflect', key:'situation', optional:true,
+    bot:a=>`Before we touch a single number${a.name?', '+a.name:''} - where are you right now, honestly? No wrong answer, no judgment. It just tells me how to show up for you.`,
+    options:[
+      {label:'😮‍💨 Just trying to survive', value:'survive', reply:"Thank you for saying it straight - that takes guts. When you're in survival, we don't start with 'assign every dollar.' We start with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
+      {label:'🌊 Treading water', value:'treading', reply:"Treading water is exhausting - and you're still here, doing something about it. That counts for more than you think. We'll aim for a little breathing room first, before anything fancy."},
+      {label:'🧱 Stable but stuck', value:'stuck', reply:"Stable but stuck is a real place to be. You've got the footing - now it's about pointing it somewhere on purpose instead of letting it drift."},
+      {label:'🚀 Stable, ready to build', value:'build', reply:"Love it. You've got the base - now let's turn steady into momentum and actually put your money to work."}
+    ]},
+  {id:'moneyStory', input:'reflect', key:'moneyStory', optional:true,
+    bot:"One more that shapes more than most people admit: what did money feel like growing up?",
+    options:[
+      {label:'😟 Never enough, kind of scary', value:'fear', reply:"That leaves a mark. It can make you grip every dollar, or spend it before it disappears - two sides of the same fear. Naming it is how you stop it quietly running the show.", followup:"Say a bit more, if you want (optional)"},
+      {label:'😬 Tight, but we managed', value:'tight', reply:"Tight-but-managed teaches resourcefulness most people never build. We'll use that muscle - just aimed at building now, not only surviving."},
+      {label:'🙂 Comfortable and steady', value:'stable', reply:"A steady start is a real gift. The one trap is coasting on it - stability is the launchpad, not the destination."},
+      {label:'🎢 Feast or famine', value:'chaos', reply:"Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
+    ]},
+  {id:'acct', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
+    return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
@@ -4320,7 +4354,10 @@ const INTAKE=[
   {id:'spendLimit', bot:"Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.", input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
   {id:'tone', bot:"When you're about to blow it, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
-  {id:'done', bot:a=>a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`, input:'finish', cta:'Set me up →'}
+  {id:'done', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
+      const base = a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`;
+      const close = surv ? ` Remember - one small win this week. That's all I'm asking. The tool's ready when you are.` : ` The tool's ready. The rest is just you showing up - and I already think you will.`;
+      return base+close; }, input:'finish', cta:'Set me up →'}
 ];
 
 let iaStep=0, iaAns={}, iaForceInput=false;
@@ -4597,7 +4634,7 @@ function commitIntake(){
     if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
   }
   state.intake={name:a.name||'',why:a.why||'',
-    reflections:{ roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
+    reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
@@ -4674,6 +4711,7 @@ function renderHome(){
     plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=flipHintHTML();
+  renderMoneyStoryNote();
   renderEnough(income);
   renderOffenseDefense();
   renderNextSteps();
@@ -4702,6 +4740,40 @@ function renderOffenseDefense(){
       ${prompt?`<div class="od-prompt">💡 ${escapeHtml(prompt)}</div>`:''}
     </div>`;
 }
+/* The money story, put to work. The upbringing answer + a couple of reliable
+   behavioral signals produce one gentle, personalized line - reassurance for the
+   scarcity-wired, a steadying word when a feast month lands for feast-or-famine
+   folks. It only speaks when it has something real to say, and it's dismissible
+   for the month so it never nags. */
+function moneyStoryNote(){
+  const ms=(state.intake&&state.intake.reflections&&state.intake.reflections.moneyStory)||'';
+  if(!ms) return null;
+  const M=state.activeMonth;
+  const inc=(typeof monthIncome==='function')?monthIncome(M):0;
+  const avg=(typeof avgMonthlyIncome==='function')?avgMonthlyIncome():0;
+  const streak=(typeof skipStreak==='function')?skipStreak():0;
+  const chest=(typeof impulseSaved==='function')?impulseSaved():0;
+  if(ms==='fear'){
+    if(streak>=5 && chest>0) return {ic:'🌤️', t:`You've held the line ${streak} gut-checks straight - that's real discipline. The old "never enough" voice says never let up. But one small, planned treat isn't slipping, it's how you keep this up without burning out.`};
+    return {ic:'🌤️', t:`A word from your own story: "never enough" is old wiring, not today's math. You're not behind - you're building. Trust the numbers over the fear.`};
+  }
+  if(ms==='chaos'){
+    if(avg>0 && inc>avg*1.2) return {ic:'⚓', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here - so let's give this surplus a job first, before it evaporates and future-you is the one scrambling.`};
+    return {ic:'⚓', t:`Your money's calmer with a plan than on the swing. Every dollar you assign now is one that won't vanish in the next "feast".`};
+  }
+  if(ms==='tight') return {ic:'💪', t:`You learned to stretch a dollar the hard way - that's a real edge most people never build. Point that resourcefulness at building now, not only surviving.`};
+  if(ms==='stable') return {ic:'🚀', t:`A steady start is a gift most don't get. The only trap is coasting on it - stability is the launchpad, not the finish line.`};
+  return null;
+}
+function renderMoneyStoryNote(){
+  const box=document.getElementById('moneyStoryCard'); if(!box) return;
+  const M=state.activeMonth;
+  if(state.msNoteDismissed===M){ box.innerHTML=''; return; }
+  const n=moneyStoryNote();
+  if(!n){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="ms-note"><span class="ms-ic">${n.ic}</span><span class="ms-t">${escapeHtml(n.t)}</span><button class="ms-x" id="msNoteX" title="Dismiss for this month">✕</button></div>`;
+  const x=document.getElementById('msNoteX'); if(x) x.onclick=()=>{ state.msNoteDismissed=M; save(); renderMoneyStoryNote(); };
+}
 /* guided "do this next" - computes the user's most useful next moves */
 function renderNextSteps(){
   const box=document.getElementById('nextSteps'); if(!box) return;
@@ -4711,9 +4783,14 @@ function renderNextSteps(){
   const wallsCovered=WALLS.filter(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)>0; }).length;
   const unlocked=state.vault.filter(v=>v.unlocksAt<=Date.now()).length;
   const firstUncovered=WALLS.find(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)<=0; });
+  const sit=(state.intake&&state.intake.reflections&&state.intake.reflections.situation)||'';
+  const survival = sit==='survive'||sit==='treading';
+  const hasCushion = state.goals.some(g=>/cushion|emergency|buffer|rainy|safety/i.test(g.name));
   const steps=[];
   if(income<=0) steps.push(['🧾','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
-  else if(Math.abs(ltb)>=1) steps.push(['📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`,'Budget to zero: every dollar gets a job.','assign']);
+  else if(Math.abs(ltb)>=1) steps.push(['📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`, survival?'One small move at a time - assign what you can. No pressure to be perfect.':'Budget to zero: every dollar gets a job.','assign']);
+  // Situation-aware: survival mode leads with one small, real win, not a full-budget lecture
+  if(survival && !hasCushion) steps.unshift(['🛟','Start a $100 cushion','In survival mode this is the whole game - one small buffer so a flat tire is an annoyance, not a crisis.','dream']);
   if(wallsCovered<4) steps.push(['🏠',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
   if(!state.hourlyWage) steps.push(['⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.','wage']);
   if(unlocked>0) steps.push(['🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.','tab:impulse']);
