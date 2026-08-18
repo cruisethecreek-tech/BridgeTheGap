@@ -10,6 +10,14 @@ straight into the app - income, essentials, dream, tone - so the moment the chat
 ends, the Home screen is already alive.
 
 ## Account type - the first fork (spender path recommended)
+**Tone comes second, right after the age gate** - "how much mercy do you want from me?"
+(Clean / Blunt / Savage) - so the entire conversation speaks in the user's chosen voice,
+swears included: at Blunt the accountability intro says "I help you see through the
+bullshit"; Savage goes harder ("the same damn room", "don't bullshit the numbers",
+"that's YOUR damn money", "show the hell up"). Clean users never see a swear, and the
+intake applies the same floor as the live app (`iaTone`): survival collapses to Clean,
+treading water eases Savage to Blunt. Consent before cursing, always.
+
 After the name and the three soul-layer questions (situation, money story, budgeting
 history - see below), the chat asks whether they run the whole household budget or just
 want to track their own spending (`acct`: full | spend). **The lighter "just my spending"
