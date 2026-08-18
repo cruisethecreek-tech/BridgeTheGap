@@ -60,11 +60,19 @@ The **spender** path skips the three full-path engines but is no longer a dead e
   reply. (The full-path income is required; this only fires for spenders who skip.)
 - **The wage question is reframed for spend mode** - it's the gut-check engine here (every
   purchase priced in hours of your life), not a leftover from the budget path, and it says so.
-- **The "go deep" leak finder** (`deepOffer` -> `deepDive`, `input:'leak'`, `leakFinder`).
-  Opt-in: "just track from here, or map where it's ACTUALLY going?" If deep, one screen in two
-  passes - **fixed bills** as flat monthly amounts (rent, utilities, phone, insurance, car,
-  debt) then **variable leaks** as frequency x cost (`leakMonthly`: coffee 4x/wk @ $6 = ~$104;
-  a pack a day @ $9 = ~$274). Live running total.
+- **Three ways to see where it goes** (`deepOffer`, reflect): "map my averages now" (the
+  leak finder), "I'll track it for real (30 days)" - the notebook-friendly honest path - or
+  "just track as I go." The 30-day choice sets `state.trackChallenge` and lights a **Money Map**
+  on the spend Home (day X of 30, days logged, dismissible); the leak finder still recommends
+  the real track because estimates undercount.
+- **The "map my averages" leak finder** (`deepDive`, `input:'leak'`, `leakFinder`).
+  One screen in two passes - **fixed bills** as flat monthly amounts (rent, utilities, phone,
+  insurance, car, debt) then **variable leaks** as frequency x cost (`leakMonthly`: coffee
+  4x/wk @ $6 = ~$104; a pack a day @ $9 = ~$274). Live running total.
+- **The gateway to budgeting.** Spend tracking is the on-ramp, not the destination. Once
+  there's tracked spend, the spend Home shows a quiet bridge: "seeing it is sometimes enough
+  to change it; sometimes you want every dollar earmarked" -> a one-tap switch to full
+  budgeting (`spendingMode=false`, categories already built from the leaks carry over).
 - **The blind-spend reveal** (`blindSpend`): income minus *everything mapped* (bills + habits)
   = the money you couldn't name - "not gone, just invisible." Because fixed bills are included,
   the leftover is an honest blind-spot figure, not income-minus-a-few-habits. If mapped spend

@@ -338,6 +338,14 @@
   .sp-recent .r .am{font-weight:800;white-space:nowrap}
   .sp-recent .r .dt{color:var(--muted);font-size:12px;font-weight:600;margin-left:8px}
   .sp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .sp-track{position:relative;margin-top:16px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-radius:12px;padding:13px 14px}
+  .sp-track.done{background:rgba(var(--good-rgb),.12);border-color:rgba(var(--good-rgb),.34)}
+  .sp-track .sp-bar{margin-top:9px}
+  .sp-track-x{position:absolute;top:9px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px}
+  .sp-track-x:hover{color:var(--fg)}
+  .sp-startmap{margin-top:16px;width:100%;background:rgba(var(--accent-rgb),.08);border:1px dashed rgba(var(--accent-rgb),.4);color:var(--accent);font-weight:800;font-size:14px;padding:12px;border-radius:12px;cursor:pointer}
+  .sp-startmap:hover{background:rgba(var(--accent-rgb),.14)}
+  .sp-gateway{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
   /* reward calendar */
   .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:14px}
   .cal-dow{text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
@@ -1677,7 +1685,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'',
+           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null,
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -1842,6 +1850,29 @@ function renderSpending(){
   const recentHTML = recent.length
     ? `<div class="sp-recent">${recent.map(t=>`<div class="r"><span class="nm">${escapeHtml(t.note||catName(t.catId)||'Purchase')}</span><span class="am">-${money(t.amount)}<span class="dt">${(t.date||'').slice(5)}</span></span></div>`).join('')}</div>`
     : `<div class="sub" style="margin-top:14px">Nothing logged yet. Run a gut-check before your next buy.</div>`;
+  // The 30-day money map: track for real, then the truth is staring at you.
+  let tcHTML='', tcDone=false;
+  const tc=state.trackChallenge;
+  if(tc && tc.start){
+    const start=new Date(tc.start+'T00:00:00'), day=Math.min(tc.days, Math.floor((Date.now()-start)/86400000)+1);
+    tcDone = day>=tc.days;
+    const pct=Math.min(100,Math.round(day/tc.days*100));
+    const loggedDays=new Set(state.transactions.filter(t=>t.type==='expense' && (t.date||'')>=tc.start).map(t=>t.date)).size;
+    tcHTML=`<div class="sp-track${tcDone?' done':''}">
+      <div class="sp-k">📓 30-day money map${tcDone?' · complete':' · day '+Math.max(1,day)+' of '+tc.days}</div>
+      <div class="sp-bar"><span style="width:${pct}%"></span></div>
+      <div class="sp-limnote">${loggedDays} day${loggedDays===1?'':'s'} logged.${tcDone?" 30 days done - now it's staring you in the face. Scroll your log and see exactly where it went, then decide.":" Jot every buy your way, punch it in when you sit down. The truth shows up by day 30."}</div>
+      <button class="sp-track-x" data-tcstop="1" title="End the challenge">✕</button>
+    </div>`;
+  } else {
+    tcHTML=`<button class="sp-startmap" id="startMap">📓 Start a 30-day money map</button>`;
+  }
+  const showGateway = spent>0 || tcDone;
+  const gatewayHTML = showGateway ? `<div class="sp-gateway">
+    <div class="sp-k">When you're ready</div>
+    <p class="sub" style="margin:4px 0 10px">Tracking shows you the truth. Sometimes seeing it is enough to change it. Sometimes you want every dollar earmarked with a job. Your call - switch anytime, nothing's lost.</p>
+    <button class="btn ghost" id="toBudget">Give every dollar a job → full budgeting</button>
+  </div>` : '';
   box.innerHTML=`<div class="panel spending">
     <div class="sp-top">
       <div><div class="sp-k">Spent this month</div><div class="sp-spent">${money(spent)}</div></div>
@@ -1849,10 +1880,15 @@ function renderSpending(){
     </div>
     ${incHTML}
     ${limHTML}
+    ${tcHTML}
     <div class="sp-actions"><button class="btn primary" id="spendScan">🎯 Gut-check a purchase</button><button class="btn ghost" data-goto="tx">Log what I spent</button></div>
     ${recentHTML}
+    ${gatewayHTML}
   </div>`;
   const sc=document.getElementById('spendScan'); if(sc) sc.addEventListener('click',openModal);
+  const sm=document.getElementById('startMap'); if(sm) sm.onclick=()=>{ state.trackChallenge={start:todayStr(),days:30}; save(); renderSpending(); };
+  const tx=box.querySelector('[data-tcstop]'); if(tx) tx.onclick=()=>{ if(confirm('End the 30-day money map? Your logged spending stays.')){ state.trackChallenge=null; save(); renderSpending(); } };
+  const tb=document.getElementById('toBudget'); if(tb) tb.onclick=()=>{ state.spendingMode=false; save(); applySpending(); renderHome(); activateTab('budget'); };
 }
 /* Reward calendar: daily allowance from the monthly limit; beat it, day turns green.
    Smart: tap a day to see what you logged (income + expense entries), how much you
@@ -4252,7 +4288,7 @@ function initPWA(){
    ============================================================ */
 const INTAKE=[
   {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
-  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} I'll get your money set up with a few straight questions - no judgment, no forms that make you feel dumb. And I'll be honest with you up front: there's no secret sauce here, no magic trick. Just small wins that stack when you actually show up. Answer in your own words, skip anything that doesn't fit. Ready?`, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
+  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} Before anything, here's what this word actually means, because it's the whole point. Accountability isn't punishment, and it's not me grading you. It's just you and the truth in the same room - where your money really goes, and the choices behind it. You made the choices; I only help you SEE them clearly enough to decide what stays and what goes. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
   {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
   {id:'situation', input:'reflect', key:'situation', optional:true,
     bot:a=>`Before we touch a single number${a.name?', '+a.name:''} - where are you right now, honestly? No wrong answer, no judgment. It just tells me how to show up for you.`,
@@ -4269,6 +4305,14 @@ const INTAKE=[
       {label:'😬 Tight, but we managed', value:'tight', reply:"Tight-but-managed teaches resourcefulness most people never build. We'll use that muscle - just aimed at building now, not only surviving."},
       {label:'🙂 Comfortable and steady', value:'stable', reply:"A steady start is a real gift. The one trap is coasting on it - stability is the launchpad, not the destination."},
       {label:'🎢 Feast or famine', value:'chaos', reply:"Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
+    ]},
+  {id:'budgetPast', input:'reflect', key:'budgetPast', optional:true,
+    bot:"And have you ever tried to budget before? Straight up - no wrong answer, it just tells me where to start.",
+    options:[
+      {label:'🆕 Never really tried', value:'never', reply:"Perfect - no bad habits to unlearn, then. We start clean and simple, and build from there."},
+      {label:'😞 Tried, fell off', value:'fell', reply:"You and almost everyone who's ever budgeted. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out last time.", followup:"What made it not stick, if you know? (optional)"},
+      {label:'📉 Did it a while, life happened', value:'lapsed', reply:"So you already know it works when you work it. Life happens - the fix is a system light enough to survive a bad week, not another one that needs you to be perfect."},
+      {label:'✅ I budget now', value:'current', reply:"Then you're ahead of most - let's sharpen what you've got, not make you start over."}
     ]},
   {id:'acct', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
     return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
@@ -4379,10 +4423,11 @@ const INTAKE=[
       if(left<-1) return `One honest heads-up: we've assigned about ${usd(-left)} more than comes in. I'll flag it on your budget so you can trim - totally fixable.`;
       return `And every dollar already has a job - that's zero-based budgeting, done right. 👏`; }},
   {id:'deepOffer', input:'reflect', key:'deepDive', showIf:a=>a.acct==='spend',
-    bot:a=>`Here's where it gets real${a.name?', '+a.name:''}. I can just track what you spend from here - or we go deep right now and map where your money's ACTUALLY going. The coffees, the takeout, the pack-a-day, the little stuff that vanishes without a trace. Most people find hundreds a month they never knew was leaving. Which do you want?`,
+    bot:a=>`Here's where it gets real${a.name?', '+a.name:''}. To see where your money actually goes, you've got a few ways in - pick the one you'd genuinely do, not the one that sounds impressive:`,
     options:[
-      {label:'🔦 Go deep - find the leaks', value:'deep', reply:"That's the real work, and you just chose it. Let's follow the money - ballpark's fine, the small stuff is where it hides."},
-      {label:'👀 Just track from here', value:'light', reply:"Fair - watching it in real time works too. The deep dive is here anytime you want it."}
+      {label:'🔦 Map my averages now', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
+      {label:"📓 I'll track it for real (30 days)", value:'track', reply:"That's the one that doesn't lie. Jot every discretionary buy however's fastest for you - a notebook, the notes app, a receipt in your pocket - and punch it in when you sit down. 30 days and you'll see the truth in your own handwriting. I'll count the days with you."},
+      {label:'👀 Just track as I go', value:'light', reply:"Fair - watching it in real time works too. The quick map and the 30-day challenge are both here whenever you want them."}
     ]},
   {id:'deepDive', input:'leak', showIf:a=>a.acct==='spend' && a.deepDive==='deep',
     bot:"Alright - let's follow it. Tap in the ones that are real for you: how often, and about how much each time. Be honest - this only works if it's the truth."},
@@ -4735,10 +4780,11 @@ function commitIntake(){
     state.spendLimit=a.spendLimit>0?a.spendLimit:0;
     // deep-dive leaks become real, budgeted categories so the spending picture is already mapped
     (a.leaks||[]).forEach(x=>{ if(+x.monthly>0 && x.name){ const c=findOrCreateCat(x.name); budgetFor(M)[c.id]=(budgetFor(M)[c.id]||0)+(+x.monthly); } });
+    if(a.deepDive==='track') state.trackChallenge={start:todayStr(), days:30};   // the honest 30-day money map
     if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
   }
   state.intake={name:a.name||'',why:a.why||'',
-    reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', incomeAvoid:a.incomeAvoid||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
+    reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', incomeAvoid:a.incomeAvoid||'', budgetPast:a.budgetPast||'', budgetPastNote:a.budgetPastNote||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
