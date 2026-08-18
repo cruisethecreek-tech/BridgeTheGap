@@ -346,6 +346,11 @@
   .sp-startmap{margin-top:16px;width:100%;background:rgba(var(--accent-rgb),.08);border:1px dashed rgba(var(--accent-rgb),.4);color:var(--accent);font-weight:800;font-size:14px;padding:12px;border-radius:12px;cursor:pointer}
   .sp-startmap:hover{background:rgba(var(--accent-rgb),.14)}
   .sp-gateway{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  .sp-remind{margin-top:10px;background:rgba(var(--accent-rgb),.12);border:1px solid rgba(var(--accent-rgb),.32);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5}
+  .sp-remind-go{margin-top:6px;display:inline-block;background:var(--accent);color:#0b1220;border:none;border-radius:8px;padding:6px 12px;font-weight:800;font-size:13px;cursor:pointer}
+  .sp-tend{margin-top:18px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .sp-tend-l{font-size:14px;line-height:1.55;margin-top:8px}
+  .sp-tend-l b{color:var(--accent)}
   /* reward calendar */
   .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:14px}
   .cal-dow{text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
@@ -716,6 +721,21 @@
   .leak-sub{font-size:12px;font-weight:800;letter-spacing:.3px;color:var(--accent);margin:6px 0 2px;text-transform:uppercase}
   .leak-sub:first-child{margin-top:0}
   .leak-row input:focus,.leak-row select:focus{outline:none;border-color:var(--accent)}
+  .ql-panel{background:var(--panel-2);border:1px solid rgba(var(--accent-rgb),.3);border-radius:14px;padding:14px;margin-bottom:16px}
+  .ql-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:10px}
+  .ql-datel{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  .ql-datel input{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:13px}
+  .ql-list{display:flex;flex-direction:column;gap:8px}
+  .ql-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .ql-row .ql-what{flex:2;min-width:120px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 10px;font-size:14px}
+  .ql-row .ql-dol{display:inline-flex;align-items:center;gap:3px;color:var(--muted);font-weight:700}
+  .ql-row .ql-amt{width:78px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 8px;font-size:14px}
+  .ql-row .ql-cat{flex:1;min-width:110px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 8px;font-size:13px}
+  .ql-row .ql-new{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--accent);color:var(--text);border-radius:9px;padding:9px 10px;font-size:13px}
+  .ql-row .ql-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex:none}
+  .ql-row .ql-del:hover{color:var(--bad)}
+  .ql-row input:focus,.ql-row select:focus{outline:none;border-color:var(--accent)}
+  .ql-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
   .intake-help{background:rgba(230,178,77,.12);border:1px solid rgba(230,178,77,.35);color:var(--accent);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;cursor:pointer}
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
@@ -1002,6 +1022,9 @@
       <div class="panel">
         <h2>Log money in &amp; money out</h2>
         <p class="sub">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
+
+        <button class="btn ghost" id="quickLogBtn" style="margin-bottom:12px">📓 Enter my notes - log several at once</button>
+        <div id="quickLog"></div>
 
         <div class="typetoggle" id="typeToggle">
           <button data-t="expense" class="on">− Expense</button>
@@ -1825,6 +1848,28 @@ function applyHousehold(){
   if(typeof renderSync==='function') renderSync();
 }
 
+/* Find tendencies: once there's enough logged spend, surface the patterns the
+   raw numbers hide - the top leak, the priciest day, the repeat purchase. This
+   is the payoff of tracking: you stop guessing and start seeing. */
+function spendTendencies(){
+  const exp=state.transactions.filter(t=>t.type==='expense' && t.amount>0);
+  if(exp.length<6) return null;
+  const total=exp.reduce((s,t)=>s+t.amount,0); if(total<=0) return null;
+  const lines=[];
+  const byCat={}; exp.forEach(t=>{ const n=catName(t.catId)||'Uncategorized'; byCat[n]=(byCat[n]||0)+t.amount; });
+  const topCat=Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  if(topCat) lines.push(`Your biggest leak is <b>${escapeHtml(topCat[0])}</b> - ${money(topCat[1])}, about <b>${Math.round(topCat[1]/total*100)}%</b> of everything you've logged.`);
+  const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const byDow={}; let wk=0,wd=0;
+  exp.forEach(t=>{ const d=new Date((t.date||'')+'T00:00:00'); if(!isNaN(d)){ const dw=d.getDay(); byDow[dw]=(byDow[dw]||0)+t.amount; if(dw===0||dw===6) wk+=t.amount; else wd+=t.amount; } });
+  const topDow=Object.entries(byDow).sort((a,b)=>b[1]-a[1])[0];
+  if(topDow) lines.push(`<b>${DOW[topDow[0]]}s</b> are your priciest day - that's when the card comes out most.`);
+  if(wk+wd>0){ const wkPct=Math.round(wk/(wk+wd)*100); if(wkPct>=45) lines.push(`Weekends carry <b>${wkPct}%</b> of your spend - the fun money adds up fast.`); }
+  const byNote={}; exp.forEach(t=>{ const n=(t.note||'').trim().toLowerCase(); if(n && n.length>1) byNote[n]=(byNote[n]||0)+1; });
+  const topNote=Object.entries(byNote).sort((a,b)=>b[1]-a[1])[0];
+  if(topNote && topNote[1]>=3) lines.push(`"<b>${escapeHtml(topNote[0])}</b>" shows up <b>${topNote[1]} times</b> - a habit worth a hard look.`);
+  return lines.slice(0,3);
+}
 /* ---------- "Just my spending" mode: drop the Four Walls, track purchases ---------- */
 function renderSpending(){
   renderRewardCalendar();
@@ -1858,15 +1903,21 @@ function renderSpending(){
     tcDone = day>=tc.days;
     const pct=Math.min(100,Math.round(day/tc.days*100));
     const loggedDays=new Set(state.transactions.filter(t=>t.type==='expense' && (t.date||'')>=tc.start).map(t=>t.date)).size;
+    const loggedToday=state.transactions.some(t=>t.type==='expense' && t.date===todayStr());
+    const evening = new Date().getHours()>=18;
+    const remind = !tcDone && evening && !loggedToday;   // in-app evening nudge to enter the day's notes
     tcHTML=`<div class="sp-track${tcDone?' done':''}">
       <div class="sp-k">📓 30-day money map${tcDone?' · complete':' · day '+Math.max(1,day)+' of '+tc.days}</div>
       <div class="sp-bar"><span style="width:${pct}%"></span></div>
       <div class="sp-limnote">${loggedDays} day${loggedDays===1?'':'s'} logged.${tcDone?" 30 days done - now it's staring you in the face. Scroll your log and see exactly where it went, then decide.":" Jot every buy your way, punch it in when you sit down. The truth shows up by day 30."}</div>
+      ${remind?`<div class="sp-remind">🌙 End of the day - got notes to enter? Punch in today's spending while it's fresh. <button class="sp-remind-go" id="remindLog">Log today →</button></div>`:''}
       <button class="sp-track-x" data-tcstop="1" title="End the challenge">✕</button>
     </div>`;
   } else {
     tcHTML=`<button class="sp-startmap" id="startMap">📓 Start a 30-day money map</button>`;
   }
+  const tend = spendTendencies();
+  const tendHTML = tend && tend.length ? `<div class="sp-tend"><div class="sp-k">🔍 Your tendencies</div>${tend.map(l=>`<div class="sp-tend-l">${l}</div>`).join('')}</div>` : '';
   const showGateway = spent>0 || tcDone;
   const gatewayHTML = showGateway ? `<div class="sp-gateway">
     <div class="sp-k">When you're ready</div>
@@ -1881,11 +1932,15 @@ function renderSpending(){
     ${incHTML}
     ${limHTML}
     ${tcHTML}
-    <div class="sp-actions"><button class="btn primary" id="spendScan">🎯 Gut-check a purchase</button><button class="btn ghost" data-goto="tx">Log what I spent</button></div>
+    <div class="sp-actions"><button class="btn primary" id="spendScan">🎯 Gut-check a purchase</button><button class="btn ghost" id="spendQuickLog">📓 Log my day</button></div>
+    ${tendHTML}
     ${recentHTML}
     ${gatewayHTML}
   </div>`;
   const sc=document.getElementById('spendScan'); if(sc) sc.addEventListener('click',openModal);
+  const openQL=()=>{ quickLogOpen=true; activateTab('tx'); setTimeout(()=>{ renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },60); };
+  const sql=document.getElementById('spendQuickLog'); if(sql) sql.onclick=openQL;
+  const rl=document.getElementById('remindLog'); if(rl) rl.onclick=openQL;
   const sm=document.getElementById('startMap'); if(sm) sm.onclick=()=>{ state.trackChallenge={start:todayStr(),days:30}; save(); renderSpending(); };
   const tx=box.querySelector('[data-tcstop]'); if(tx) tx.onclick=()=>{ if(confirm('End the 30-day money map? Your logged spending stays.')){ state.trackChallenge=null; save(); renderSpending(); } };
   const tb=document.getElementById('toBudget'); if(tb) tb.onclick=()=>{ state.spendingMode=false; save(); applySpending(); renderHome(); activateTab('budget'); };
@@ -2909,6 +2964,7 @@ document.querySelectorAll('.filters .pill').forEach(p=>p.addEventListener('click
   document.querySelectorAll('.filters .pill').forEach(x=>x.classList.toggle('on',x===p));
   renderTxList();
 }));
+(function(){ const b=document.getElementById('quickLogBtn'); if(b) b.addEventListener('click',()=>{ quickLogOpen=!quickLogOpen; renderQuickLog(); if(quickLogOpen){ const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); } }); })();
 document.getElementById('txSearch').addEventListener('input',renderTxList);
 document.getElementById('allMonthsBtn').addEventListener('click',()=>{
   txAllMonths=!txAllMonths;
@@ -2920,6 +2976,49 @@ function renderTxForm(){
   const sel=document.getElementById('txCat');
   sel.innerHTML = state.categories.length ? categoryOptions() : `<option value="">Add a category first</option>`;
   if(!document.getElementById('txDate').value) document.getElementById('txDate').value=todayStr();
+}
+/* Fast batch log - the notebook workflow: jot on paper, then punch a whole day
+   in at once. One line each (what + $ + category), a shared date, create a new
+   category inline. Built for people who won't open the app at the register. */
+let quickLogOpen=false;
+function qlCatOptions(){ return topCats().map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')+`<option value="__new">＋ New category…</option>`; }
+function qlRow(i){ return `<div class="ql-row" data-qr="${i}">
+    <input class="ql-what" type="text" placeholder="What was it? (e.g. Coffee, Amazon)" data-qw="${i}">
+    <span class="ql-dol">$<input class="ql-amt" type="number" inputmode="decimal" min="0" step="any" placeholder="0" data-qa="${i}"></span>
+    <select class="ql-cat" data-qc="${i}">${qlCatOptions()}</select>
+    <input class="ql-new hide" type="text" placeholder="Name it" data-qn="${i}">
+    <button class="ql-del" data-qd="${i}" title="Remove">✕</button>
+  </div>`; }
+function renderQuickLog(){
+  const box=document.getElementById('quickLog'); if(!box) return;
+  if(!quickLogOpen){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="ql-panel">
+    <div class="ql-head"><span>One line per purchase, then log them all. The little stuff is where it hides.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
+    <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
+    <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn primary" id="qlSave">Log them all →</button></div>
+  </div>`;
+  document.getElementById('qlDate').value=todayStr();
+  let n=3;
+  const wireRow=(el)=>{
+    const c=el.querySelector('.ql-cat'), nw=el.querySelector('.ql-new');
+    c.onchange=()=>{ nw.classList.toggle('hide', c.value!=='__new'); if(c.value==='__new') nw.focus(); };
+    el.querySelector('.ql-del').onclick=()=>{ if(box.querySelectorAll('.ql-row').length>1) el.remove(); };
+  };
+  box.querySelectorAll('.ql-row').forEach(wireRow);
+  document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(n++); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
+  document.getElementById('qlSave').onclick=()=>{
+    const date=document.getElementById('qlDate').value||todayStr(); let added=0;
+    box.querySelectorAll('.ql-row').forEach(el=>{
+      const what=(el.querySelector('.ql-what').value||'').trim();
+      const amt=parseFloat(el.querySelector('.ql-amt').value); if(!(amt>0)) return;
+      const catSel=el.querySelector('.ql-cat'); let catId=catSel.value;
+      if(catId==='__new'){ const nm=(el.querySelector('.ql-new').value||'').trim()||what||'Spending'; catId=findOrCreateCat(nm).id; }
+      else if(!catId){ catId=findOrCreateCat(what||'Spending').id; }
+      state.transactions.push({id:uid(),type:'expense',amount:amt,catId,date,note:what}); added++;
+    });
+    if(added){ save(); quickLogOpen=false; renderQuickLog(); renderTxForm(); renderTx(); renderBudget(); renderHome();
+      if(typeof toast==='function') toast('Logged '+added+' purchase'+(added>1?'s':'')+'.'); }
+  };
 }
 function renderTx(){
   renderTxForm();
@@ -4291,6 +4390,7 @@ const INTAKE=[
   {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} Before anything, here's what this word actually means, because it's the whole point. Accountability isn't punishment, and it's not me grading you. It's just you and the truth in the same room - where your money really goes, and the choices behind it. You made the choices; I only help you SEE them clearly enough to decide what stays and what goes. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
   {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
   {id:'situation', input:'reflect', key:'situation', optional:true,
+    why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
     bot:a=>`Before we touch a single number${a.name?', '+a.name:''} - where are you right now, honestly? No wrong answer, no judgment. It just tells me how to show up for you.`,
     options:[
       {label:'😮‍💨 Just trying to survive', value:'survive', reply:"Thank you for saying it straight - that takes guts. When you're in survival, we don't start with 'assign every dollar.' We start with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
@@ -4299,6 +4399,7 @@ const INTAKE=[
       {label:'🚀 Stable, ready to build', value:'build', reply:"Love it. You've got the base - now let's turn steady into momentum and actually put your money to work."}
     ]},
   {id:'moneyStory', input:'reflect', key:'moneyStory', optional:true,
+    why:"Because the way money felt when you were a kid still drives how you spend today - grip it tight, or blow it before it's gone. If I know the pattern, I can catch it for you instead of letting it run quietly in the background.",
     bot:"One more that shapes more than most people admit: what did money feel like growing up?",
     options:[
       {label:'😟 Never enough, kind of scary', value:'fear', reply:"That leaves a mark. It can make you grip every dollar, or spend it before it disappears - two sides of the same fear. Naming it is how you stop it quietly running the show.", followup:"Say a bit more, if you want (optional)"},
@@ -4307,6 +4408,7 @@ const INTAKE=[
       {label:'🎢 Feast or famine', value:'chaos', reply:"Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
     ]},
   {id:'budgetPast', input:'reflect', key:'budgetPast', optional:true,
+    why:"Because if a budget burned you out before, I don't want to hand you the same thing that failed. Knowing what happened last time tells me how small and light to start so this one actually sticks.",
     bot:"And have you ever tried to budget before? Straight up - no wrong answer, it just tells me where to start.",
     options:[
       {label:'🆕 Never really tried', value:'never', reply:"Perfect - no bad habits to unlearn, then. We start clean and simple, and build from there."},
@@ -4582,8 +4684,10 @@ function runIntakeHelper(s){
 function renderReflect(s){
   const dock=document.getElementById('intakeDock');
   const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const whyBtn = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
   dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-ri="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`
-    +`<div class="intake-underrow">${s.optional?'<button class="intake-skip" id="iaReflectSkip">Skip</button>':''}${back}</div>`;
+    +`<div class="intake-underrow">${whyBtn}${s.optional?'<button class="intake-skip" id="iaReflectSkip">Skip</button>':''}${back}</div>`;
+  const wb=document.getElementById('iaWhy'); if(wb) wb.onclick=()=>{ iaBub(s.why,'bot'); wb.remove(); };
   dock.querySelectorAll('button[data-ri]').forEach(b=>b.onclick=()=>{
     const o=s.options[+b.dataset.ri];
     iaBub(o.label,'me');

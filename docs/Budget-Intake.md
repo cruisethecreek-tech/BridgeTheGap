@@ -127,6 +127,11 @@ All are stored under `state.intake.reflections` (`{situation, moneyStory, moneyS
 roof, roofIdeal, food, commute, debt}`) for later personalization. Utilities is intentionally
 skipped - it's not emotionally rich, and every extra question risks fatigue.
 
+**Every reflection can explain itself.** Reflect steps with a `why` field show a quiet
+"Why are you asking?" control; tapping it drops a plain-language reason into the chat (and
+removes the button). The soul-layer questions (situation, money story, budgeting history) all
+carry one, so a wary user can see the intent before answering instead of feeling interrogated.
+
 **Reflections drive action (the payoff).** The captured feelings aren't just stored - they
 change what the app does, so the user sees it *listened*:
 - **Dream step remembers the roof aspiration.** If `roofFeel` is `own`/`outgrow`, the dream
