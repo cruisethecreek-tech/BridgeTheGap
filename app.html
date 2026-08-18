@@ -365,6 +365,7 @@
   .cal-cell.over{background:rgba(var(--bad-rgb),.13);border-color:rgba(var(--bad-rgb),.35)}
   .cal-cell.over .cd{color:var(--bad)}
   .cal-cell.today{outline:2px solid var(--accent);outline-offset:1px}
+  .cal-cell.pre{opacity:.32;background:var(--panel-2);border-style:dashed}   /* before the user started - never scored */
   .cal-cell .cm{font-size:11px;line-height:1;color:var(--good)}
   .cal-stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
   .cal-stat{flex:1;min-width:130px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
@@ -1711,7 +1712,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null,
+           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'',
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -1730,6 +1731,10 @@ function normalizeState(s){
   (s.impulse||[]).forEach(i=>{ if(i.goalId && !goalIds.has(i.goalId)) delete i.goalId; });   // orphaned dream-skips return to the War Chest
   const txIds=new Set((s.transactions||[]).map(t=>t.id));
   if(Array.isArray(s.giving)) s.giving=s.giving.filter(g=>!g.txId || txIds.has(g.txId));
+  // tracking origin: the day this budget actually began. Backfill from the earliest
+  // transaction (imported history included) so days before it never score as wins.
+  const dates=(s.transactions||[]).map(t=>t.date).filter(Boolean).sort();
+  if(dates[0] && (!s.trackStart || dates[0]<s.trackStart)) s.trackStart=dates[0];
   return s;
 }
 function load(){
@@ -2038,7 +2043,22 @@ function renderCalDay(M, allowance){
    spend); banking must never credit a goal with more than the month's REAL net
    surplus so far (allowance x elapsed days - actual spend), minus what's already
    been banked. Keeps the sweep honest even with a big-spend day elsewhere. */
-function calElapsedDays(M){ const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate(); const tm=(typeof thisMonth==='function')?thisMonth():M; if(M<tm) return dim; if(M>tm) return 0; return Math.min(dim, new Date().getDate()); }
+/* A budget started on the 18th originates on the 18th. trackStart is the origin;
+   days before it (with nothing logged) are "pre" - never green, never a streak
+   day, never surplus. Imported history still scores: a pre-origin day WITH real
+   spending is treated as a normal scored day. */
+function ensureTrackStart(){ if(!state.trackStart){ const dates=(state.transactions||[]).map(t=>t.date).filter(Boolean).sort(); state.trackStart=dates[0]||todayStr(); } }
+function calIsPre(dateStr, hasSpend){ return !!state.trackStart && dateStr<state.trackStart && !hasSpend; }
+function calElapsedDays(M){
+  const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate();
+  const tm=(typeof thisMonth==='function')?thisMonth():M;
+  if(M>tm) return 0;
+  const last = M===tm ? Math.min(dim, new Date().getDate()) : dim;
+  const spent={}; txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spent[d]=1; });
+  let n=0;
+  for(let d=1; d<=last; d++){ if(!calIsPre(M+'-'+String(d).padStart(2,'0'), spent[d])) n++; }
+  return n;
+}
 function calMonthSpent(M){ return txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
 function calMonthSwept(M){ const sw=state.sweptDays||{}; return Object.keys(sw).filter(k=>k.slice(0,7)===M).reduce((s,k)=>s+(+sw[k].amount||0),0); }
 function calRealSurplus(M, allowance){ return allowance*calElapsedDays(M) - calMonthSpent(M); }
@@ -2079,26 +2099,30 @@ function renderRewardCalendar(){
   const spentByDay={};
   txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spentByDay[d]=(spentByDay[d]||0)+t.amount; });
   if(calSelDay==null || calSelDay>todayDay) calSelDay=todayDay;
+  const dayStr=d=>M+'-'+String(d).padStart(2,'0');
   let cells=''; for(let i=0;i<firstWd;i++) cells+=`<div class="cal-cell empty"></div>`;
   let ahead=0, bankedToday=0;
   for(let d=1;d<=dim;d++){
     const spent=spentByDay[d]||0, isPast = isCur ? d<=todayDay : !isFuture;   // a future month has nothing elapsed
+    const pre = isPast && calIsPre(dayStr(d), spentByDay[d]);   // before the budget began - never scored
     let cls='future', mark='';
-    if(isPast){
+    if(pre){ cls='pre'; }
+    else if(isPast){
       const surplus=allowance-spent; ahead+=surplus;
       if(spent===0){ cls='perfect'; mark='★'; }
       else if(spent<=allowance){ cls='win'; mark='✓'; }
       else cls='over';
       if(isCur && d===todayDay) bankedToday=Math.max(0,surplus);
     }
-    const extra = isPast ? ` clk${d===calSelDay?' sel':''}` : '';
-    const dd = isPast ? ` data-day="${d}"` : '';
-    cells+=`<div class="cal-cell ${cls}${(isCur&&d===todayDay)?' today':''}${extra}"${dd}><span class="cd">${d}</span>${mark?`<span class="cm">${mark}</span>`:''}</div>`;
+    const scored = isPast && !pre;
+    const extra = scored ? ` clk${d===calSelDay?' sel':''}` : '';
+    const dd = scored ? ` data-day="${d}"` : '';
+    cells+=`<div class="cal-cell ${cls}${(isCur&&d===todayDay)?' today':''}${extra}"${dd}${pre?' title="Before your budget began"':''}><span class="cd">${d}</span>${mark?`<span class="cm">${mark}</span>`:''}</div>`;
   }
-  let streak=0; for(let d=Math.min(dim,todayDay); d>=1; d--){ if((spentByDay[d]||0)<=allowance) streak++; else break; }
-  // weekly pacing: the calendar week (Sun..today) that contains today, within this month
+  let streak=0; for(let d=Math.min(dim,todayDay); d>=1; d--){ if(calIsPre(dayStr(d), spentByDay[d])) break; if((spentByDay[d]||0)<=allowance) streak++; else break; }
+  // weekly pacing: the calendar week (Sun..today) that contains today, within this month - scored days only
   const dow=new Date(y,mo-1,todayDay).getDay(), wkStart=Math.max(1,todayDay-dow);
-  let wkSpent=0, wkDays=0; for(let d=wkStart; d<=todayDay; d++){ wkSpent+=(spentByDay[d]||0); wkDays++; }
+  let wkSpent=0, wkDays=0; for(let d=wkStart; d<=todayDay; d++){ if(calIsPre(dayStr(d), spentByDay[d])) continue; wkSpent+=(spentByDay[d]||0); wkDays++; }
   const wkAllow=allowance*wkDays, wkDiff=wkAllow-wkSpent, wkOver=wkSpent>wkAllow;
   const wkPct=wkAllow>0?Math.min(100,Math.round(wkSpent/wkAllow*100)):0;
   const swept=calMonthSwept(M), aheadNet=ahead-swept;   // what's still unbanked - the honest headline
@@ -2109,9 +2133,15 @@ function renderRewardCalendar(){
       <div class="wk-bar ${wkOver?'over':''}"><span style="width:${wkPct}%"></span></div>
       <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays===1?'':'s'} so far this week.</div>
     </div>` : '';
+  const org=state.trackStart||'';
+  let orgNote='';
+  if(org && org.slice(0,7)===M && +org.slice(8,10)>1){
+    const od=new Date(org+'T00:00:00');
+    orgNote=` You started on <b>${od.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</b> - earlier days are greyed out, not counted. No fake green here.`;
+  }
   box.innerHTML=`<div class="panel">
     <h2>🗓️ Reward calendar</h2>
-    <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${money(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★. <b>Tap any day</b> for what you logged and saved.</p>
+    <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${money(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★. <b>Tap any day</b> for what you logged and saved.${orgNote}</p>
     <div class="cal-grid">${['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}${cells}</div>
     ${weekHTML}
     <div class="cal-stats">
@@ -3597,6 +3627,7 @@ async function refreshSyncState(){
     state.spendingMode=sp.checked;
     // a pure spender needs at least one category to log against - seed one so there's zero friction
     if(sp.checked && !state.categories.length){ state.categories.push({id:uid(),name:'Spending'}); }
+    if(sp.checked) ensureTrackStart();   // the calendar originates the day tracking begins
     save(); applySpending(); renderBudget(); renderTx(); renderHome();
   });
   const sl=document.getElementById('spendLimit');
@@ -5024,6 +5055,7 @@ function commitIntake(){
   }
   if(a.tone) state.intensity=a.tone;
   if(a.register) state.register=a.register;
+  ensureTrackStart();                          // the calendar and streaks originate today, not Jan 1
   if(spend){                                   // "Just my spending" - no four walls, just tracking
     state.spendingMode=true;
     state.spendLimit=a.spendLimit>0?a.spendLimit:0;
@@ -5048,6 +5080,7 @@ document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarde
 /* ---------- boot ---------- */
 function boot(){
   applyTheme();
+  ensureTrackStart();   // existing installs: origin = earliest transaction, else today
   renderIntensity(); renderRegister(); newQuote();
   if(postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
