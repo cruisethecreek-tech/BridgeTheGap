@@ -210,6 +210,16 @@ Pull from these to deepen a live consultation; the chatbot ships a tight subset.
 **The highest-leverage question**
 - Why does getting this right matter to you, *right now*? - capture this close to their words; it's the "why" that everything else hangs on.
 
+## The "why" is the ultimate reminder
+The final free-text question ("why does getting this right matter to you, right now?") is
+stored verbatim and then WORKED: it sits at the top of Home every session ("Why you're
+here, in your words: ...") and is quoted back inside the gut-check verdict at the exact
+moment of temptation - "In your own words, why this matters: '...' This buy moves you away
+from that. Did we switch goalposts - or is that still the goal?" (tone-matched; savage asks
+if they're about to bullshit themselves). A "My why changed - update it" control lets the
+goalposts move honestly instead of silently. Engine: `renderWhyCard`, `whyReminderHTML`,
+`wireWhyEdit`.
+
 ## Editing answers
 Every question from the income step onward shows a **← Back** control (`iaBack`) that
 drops the current question and the last answer, clears it, and re-opens the prior
