@@ -1732,7 +1732,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'',
+           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -4284,7 +4284,7 @@ document.getElementById('trCompute').addEventListener('click',()=>{
   const commute=parseFloat(document.getElementById('trCommute').value)||0;
   const overhead=parseFloat(document.getElementById('trOverhead').value)||0;
   if(take<=0){ alert('Enter your take-home pay per month.'); return; }
-  const denom=WORKMONTH_HRS+(commute*(52/12));   // full-time month + commute hrs/wk converted to hrs/mo
+  const denom=(state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS)+(commute*(52/12));   // YOUR month + commute hrs/wk converted to hrs/mo
   const rate=Math.max(0,(take-overhead)/denom);
   state.hourlyWage=Math.round(rate*100)/100; state.wageAuto=false;   // an explicit true-rate calc is a manual set
   state.trueRate={take,commute,overhead};
@@ -4689,17 +4689,23 @@ const INTAKE=[
     ]},
   {id:'wage',
     bot:a=> a.acct==='spend'
-      ? `Last setup question${a.name?', '+a.name:''} - and it's the one that gives the gut-check its teeth: what do you make per hour, take-home? In spend mode I price every purchase in HOURS OF YOUR LIFE, not just dollars - that's what makes you feel it before the card comes out. ${a.income>0?`Since about ${usd(a.income)} lands a month, that's roughly ${usd(estHourlyFromMonthly(a.income))}/hr full-time - sound right?`:`Not sure? Tap “Help me work it out” below.`} Skip if you'd rather just watch the numbers. ★`
+      ? `Last setup question${a.name?', '+a.name:''} - and it's the one that gives the gut-check its teeth: what do you make per hour, take-home? In spend mode I price every purchase in HOURS OF YOUR LIFE, not just dollars - that's what makes you feel it before the card comes out. ${a.income>0?`Since about ${usd(a.income)} lands a month, that's roughly ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr ${a.hoursPerWeek>0?`on a ${a.hoursPerWeek}-hour week`:`if you work a standard 40-hour week`} - sound right?`:`Not sure? Tap “Help me work it out” below.`} Skip if you'd rather just watch the numbers. ★`
       : a.income>0
-      ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; if that's roughly full-time, that works out to about ${usd(estHourlyFromMonthly(a.income))}/hr. Sound right?${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
+      ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; ${a.hoursPerWeek>0?`at the ${a.hoursPerWeek} hours a week you actually work, that's`:`assuming a standard 40-hour week, that works out to`} about ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr. Sound right?${a.hoursPerWeek>0?'':` (If your week isn't 40 hours, tell me - guessing your hours is the one thing this app shouldn't do.)`}${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
     input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
-    suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income) : null,
+    suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income, a.hoursPerWeek) : null,
     help:{ cta:"🤔 Help me work it out",
       ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
       placeholder:"e.g. 52000",
-      run:(annual)=>{ const hr=Math.max(1,Math.round(annual/2080)); return { value:hr,
-        teach:`Here's the trick: a full-time year is about 2,080 work hours (40 hrs a week × 52 weeks). So ${usd(annual)} ÷ 2,080 ≈ ${usd(hr)} an hour. That's your starting number - you can fine-tune it to exact take-home later in Settings.` }; } }
+      ask2:"And how many hours a week do you actually work? Count the real ones - the early starts, the late nights, the weekend that wasn't. Most people work more than they'd say.",
+      placeholder2:"e.g. 40",
+      run:(annual,hpw)=>{ const yh=yearHours(hpw), hr=Math.max(1,Math.round(annual/yh)); const h=Math.max(1,+hpw||40);
+        const std=Math.max(1,Math.round(annual/2080));
+        const extra = h>40 ? ` If you'd just assumed a standard 40, you'd think you were on ${usd(std)}/hr. Those extra hours are costing you ${usd(std-hr)} an hour of your real rate - and that gap is exactly what this app exists to show you.`
+                   : h<40 ? ` Fewer hours than a standard week, so your rate per hour is actually higher than the 40-hour math would suggest (${usd(std)}/hr).` : '';
+        return { value:hr,
+        teach:`Here's the honest math: ${h} hrs a week × 52 weeks = ${yh.toLocaleString()} hours of your life a year. So ${usd(annual)} ÷ ${yh.toLocaleString()} ≈ ${usd(hr)} an hour.${extra} You can fine-tune it to exact take-home later in Settings.` }; } }
   },
   {id:'trueRate', input:'continue', showIf:a=>a.acct!=='spend' && a.wage>0 && (a.extraIncome||[]).some(x=>+x.hours>0),
     bot:a=>{ const mr=+a.wage||0, br=intakeBlendedHourly(a), sh=Math.round(intakeWorkHours(a));
@@ -4825,7 +4831,13 @@ function iaTone(a){
   return t;
 }
 /* estimate take-home hourly from monthly take-home: full-time year ≈ 2,080 hrs */
-function estHourlyFromMonthly(m){ return Math.max(1, Math.round((+m||0)*12/2080)); }
+/* Hours/week is an INPUT, never an assumption - this app is about hours of your
+   life, so guessing them is the one thing it can't do. Defaults to 40 only until
+   the user says otherwise. 52 weeks/yr, so hpw*52 = hours actually worked. */
+const WEEKS_PER_YEAR=52;
+function yearHours(hpw){ return Math.max(1,(+hpw||40))*WEEKS_PER_YEAR; }
+function estHourlyFromMonthly(m,hpw){ return Math.max(1, Math.round((+m||0)*12/yearHours(hpw))); }
+function monthHours(hpw){ return Math.max(1,(+hpw||40))*WEEKS_PER_YEAR/12; }
 /* True blended take-home rate: every hour you sell counts. Main-job hours come
    from the confirmed main rate (income ÷ rate); side-gig hours the user gave us
    get added in. Passive income (partner, benefits, rental) stays out - it costs
@@ -4834,7 +4846,7 @@ function estHourlyFromMonthly(m){ return Math.max(1, Math.round((+m||0)*12/2080)
 function intakeWorkHours(a){ return (a.extraIncome||[]).reduce((s,x)=>s+(+x.hours||0),0); }
 function intakeBlendedHourly(a){
   const mr=+a.wage||0; if(mr<=0) return 0;
-  let amt=+a.income||0, hrs=amt/mr;
+  let amt=+a.income||0, hrs=(a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : amt/mr);   // real hours beat derived ones
   // only YOUR own labor counts toward YOUR rate - skip partner-owned sources
   (a.extraIncome||[]).forEach(x=>{ if(+x.hours>0 && !/partner/i.test(x.name||'')){ amt+=+x.amount||0; hrs+=+x.hours; } });
   return hrs>0 ? Math.round((amt/hrs)*100)/100 : mr;
@@ -4925,9 +4937,29 @@ function renderIntakeDock(s){
   // Derived suggestion (e.g. hourly from monthly income): confirm with a pill, or set your own.
   const sugg=(isMoney && !iaForceInput && typeof s.suggest==='function') ? s.suggest(iaAns) : null;
   if(sugg!=null){
-    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓ Yep, about ${usd(sugg)}/hr</button><button id="iaSuggNo">✎ Set my own rate</button></div>`
+    const hpwNow=+iaAns.hoursPerWeek||40;
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓ Yep, about ${usd(sugg)}/hr</button><button id="iaSuggHours">⏱ I work ${hpwNow===40?'different':hpwNow+''} hours</button><button id="iaSuggNo">✎ Set my own rate</button></div>`
       +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSuggSkip">Skip this</button>':''}${backBtn}</div>`;
     document.getElementById('iaSuggYes').onclick=()=>{ iaStore(s.key,sugg); iaBub(usd(sugg)+'/hr','me'); iaAdvance(); };
+    // the estimate assumes a 40-hour week; let them correct the hours, not just the rate
+    document.getElementById('iaSuggHours').onclick=()=>{
+      iaBub("How many hours a week do you actually work? The real ones - early starts, late nights, the weekend that wasn't.",'bot');
+      dock.innerHTML=`<div class="inrow"><input id="iaHpw" type="number" inputmode="decimal" min="1" max="120" step="any" value="${hpwNow}"><button class="intake-send" id="iaHpwGo">That's my week</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHpwBack">← Back</button></div>`;
+      const hi=document.getElementById('iaHpw'); setTimeout(()=>{ hi.focus(); try{hi.select();}catch(_){} },60);
+      let sent=false;
+      const goH=()=>{
+        if(sent) return; const v=parseFloat(hi.value); if(!(v>0)||v>120){ hi.focus(); return; } sent=true;
+        iaAns.hoursPerWeek=v; iaBub(v+' hrs/week','me');
+        const nr=estHourlyFromMonthly(iaAns.income, v), std=estHourlyFromMonthly(iaAns.income);
+        const note = v>40 ? ` A standard 40-hour week would have said ${usd(std)}/hr - those extra hours are ${usd(std-nr)}/hr of your real rate, and now the app prices your life honestly.`
+                  : v<40 ? ` Fewer hours than a standard week, so your real rate is higher than the 40-hour math (${usd(std)}/hr) suggests.` : '';
+        iaBub(`${v} hrs a week × 52 weeks = ${yearHours(v).toLocaleString()} hours of your life a year. Against ${usd((+iaAns.income||0)*12)} a year, that's about ${usd(nr)} an hour.${note}`,'bot');
+        setTimeout(()=>renderIntakeDock(s),700);
+      };
+      document.getElementById('iaHpwGo').onclick=goH;
+      hi.addEventListener('keydown',e=>{ if(e.key==='Enter') goH(); });
+      document.getElementById('iaHpwBack').onclick=()=>renderIntakeDock(s);
+    };
     document.getElementById('iaSuggNo').onclick=()=>{ iaForceInput=true; renderIntakeDock(s); };
     const ssk=document.getElementById('iaSuggSkip'); if(ssk) ssk.onclick=()=>{ iaStore(s.key,0); iaBub('Skip','me'); iaAdvance(); };   // the bot copy promises Skip - honor it
     const hb2=document.getElementById('iaHelp'); if(hb2) hb2.onclick=()=>runIntakeHelper(s);
@@ -4958,24 +4990,35 @@ function renderIntakeDock(s){
 /* Teach-me helper: instead of just skipping, walk them to the answer (e.g. hourly from salary) */
 function runIntakeHelper(s){
   const h=s.help, dock=document.getElementById('intakeDock');
-  iaBub(h.ask,'bot');
-  dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(h.placeholder||'')}"><button class="intake-send" id="iaHelpGo">Work it out</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
-  const inp=document.getElementById('iaHelpInput'); setTimeout(()=>inp.focus(),60);
-  let helped=false;   // latch: a double-tap on "Work it out" must not double-advance
-  const go=()=>{
-    if(helped) return;
-    const n=parseFloat(inp.value); if(isNaN(n)||n<=0){ inp.focus(); return; }
-    helped=true;
-    iaBub(usd(n),'me');
-    const res=h.run(n);
+  // Step 1: the salary. Step 2 (when the helper defines ask2): the hours actually
+  // worked - because dividing by an assumed 2,080 is how people end up believing
+  // a rate they never earned.
+  const prompt=(ask,ph,label,onOK,backFn)=>{
+    iaBub(ask,'bot');
+    dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(ph||'')}"><button class="intake-send" id="iaHelpGo">${escapeHtml(label)}</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
+    const inp=document.getElementById('iaHelpInput'); setTimeout(()=>inp.focus(),60);
+    let done=false;
+    const go=()=>{ if(done) return; const n=parseFloat(inp.value); if(isNaN(n)||n<=0){ inp.focus(); return; } done=true; onOK(n); };
+    document.getElementById('iaHelpGo').onclick=go;
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+    document.getElementById('iaHelpBack').onclick=backFn;
+  };
+  const finish=(annual,hpw)=>{
+    const res=h.run(annual,hpw);
     iaBub(res.teach,'bot');
     iaStore(s.key,res.value);
+    if(hpw>0) iaAns.hoursPerWeek=hpw;
     dock.querySelectorAll('button,input').forEach(el=>el.disabled=true);
     setTimeout(iaAdvance,600);
   };
-  document.getElementById('iaHelpGo').onclick=go;
-  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
-  document.getElementById('iaHelpBack').onclick=()=>renderIntakeDock(s);
+  prompt(h.ask, h.placeholder, 'Next', annual=>{
+    iaBub(usd(annual),'me');
+    if(!h.ask2) return finish(annual);
+    prompt(h.ask2, h.placeholder2, 'Work it out', hpw=>{
+      iaBub(hpw+' hrs/week','me');
+      finish(annual,hpw);
+    }, ()=>runIntakeHelper(s));
+  }, ()=>renderIntakeDock(s));
 }
 /* Reflection: a quick pain-point / aspiration question between sections. Each
    option gives a tailored reply (so the user feels heard = engagement); some
@@ -5183,7 +5226,8 @@ function commitIntake(){
   state.goals=state.goals.filter(g=>!(g.src==='intake' && !(g.saved>0)));   // keep any intake goal with real progress
   state.liabilities=state.liabilities.filter(l=>l.src!=='intake');
   const addIncome=(amount,source,owner,hours)=>{ const rec={id:uid(),type:'income',amount,day:1,source,src:'intake'}; if(owner) rec.owner=owner; if(hours>0) rec.hours=hours; state.recurring.push(rec); const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}; if(hours>0) tx.hours=hours; state.transactions.push(tx); };
-  if(!spend && a.income>0) addIncome(a.income,'Paycheck','a', a.wage>0 ? Math.min(a.income/a.wage,400) : 0);   // main-job hours, clamped to something physically possible
+  // main-job hours: the hours they TOLD us beat any figure derived from a rounded rate
+  if(!spend && a.income>0) addIncome(a.income,'Paycheck','a', a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0));
   if(spend && a.income>0) addIncome(a.income,'Paycheck','a', 0);
   if(!spend) (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
   if(!spend && a.wantHousehold==='yes'){         // "set up the couples view" from intake
@@ -5212,6 +5256,7 @@ function commitIntake(){
   }
   if(a.tone) state.intensity=a.tone;
   if(a.register) state.register=a.register;
+  if(a.hoursPerWeek>0) state.hoursPerWeek=a.hoursPerWeek;   // real week length powers the true-rate math
   ensureTrackStart();                          // the calendar and streaks originate today, not Jan 1
   if(spend){                                   // "Just my spending" - no four walls, just tracking
     state.spendingMode=true;

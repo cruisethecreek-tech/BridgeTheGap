@@ -178,7 +178,7 @@ These map to real app fields. If a consultation roams, make sure it still covers
 | ★ Field | Question in the chat | Writes to |
 |---|---|---|
 | ★ Monthly take-home | "What actually lands in your account after taxes?" | Recurring income + this month's income |
-| ★ Pay per hour | Derived, not re-asked: if monthly take-home is known, the chat proposes an estimate (income × 12 ÷ 2,080) as a **confirm pill** - "that's about $20/hr, sound right?" [✓ Yep] / [✎ Set my own] / [🤔 Help me work it out]. Only asks cold if income was skipped. | `hourlyWage` (→ hours-to-break-even). `estHourlyFromMonthly`, step `suggest` |
+| ★ Pay per hour | Derived, not re-asked: if monthly take-home is known, the chat proposes an estimate as a **confirm pill** - "that's about $29/hr, sound right?" [✓ Yep] / [⏱ I work different hours] / [✎ Set my own] / [🤔 Help me work it out]. **Hours per week is an input, never an assumption** - the estimate starts from a 40-hour week and says so, and one tap corrects it: $60k at 55 hrs/wk is $21/hr, not $29, and the app names the gap ("those extra hours are $8/hr of your real rate"). The "Help me work it out" path is two steps for the same reason: salary, then real hours worked. Only asks cold if income was skipped. | `hourlyWage`, `hoursPerWeek` (→ hours-to-break-even, true-rate denominator, and the main-job hours behind the side-gig blend). `estHourlyFromMonthly(m,hpw)`, `yearHours`, `monthHours`, step `suggest` |
 | ★ Roof | "Rent or mortgage a month?" | Cover First → **Roof** category + assignment |
 | ★ Food | "Groceries and eating, monthly?" | Cover First → **Food** |
 | ★ Power & Wi-Fi | "Electric, water, phone, internet - monthly?" | Cover First → **Power & Wi-Fi** |
