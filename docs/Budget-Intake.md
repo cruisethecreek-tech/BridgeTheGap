@@ -81,6 +81,14 @@ foundational reflections set how the app shows up:
 The intro and close also carry the honest frame the whole thing rests on: **there is no
 secret sauce - just small wins that stack when you show up** (the "are you willing" beat).
 
+**Situation also floors the tone (the "digital psychologist" move).** `baseInt()` softens the
+user's chosen intensity by who they told us they are: `survive` collapses blunt/savage to
+**clean** (someone barely holding on needs wins, not a roast), `treading` eases savage down to
+blunt. It only ever softens - never hardens past their choice - so the blunt "reality check"
+is simply left intact for the stable-but-stuck users who can take it and need the push. This
+composes with the existing topic safety-lock (`effInt` = sensitive-topic clean OR situation
+floor), so rent/medical/groceries stay gentle for everyone regardless of situation.
+
 All are stored under `state.intake.reflections` (`{situation, moneyStory, moneyStoryNote,
 roof, roofIdeal, food, commute, debt}`) for later personalization. Utilities is intentionally
 skipped - it's not emotionally rich, and every extra question risks fatigue.

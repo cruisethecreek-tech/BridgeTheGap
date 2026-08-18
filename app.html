@@ -3476,7 +3476,18 @@ const SKIP_WINS={
   middle:["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."],
   mature:["That's money that stayed where it belongs - with you. 💪","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
 };
-function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[state.intensity]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
+/* Digital-psychologist tone floor: the intensity the user CHOSE, softened for who
+   they told us they are. Someone in survival needs wins, not a roast - so savage/blunt
+   collapse to clean; someone treading water gets savage eased to blunt. It only ever
+   softens (never hardens past their choice); the "reality check" for stable-but-stuck
+   users is simply that their chosen bluntness is left intact. */
+function baseInt(){
+  const sit=(state.intake&&state.intake.reflections&&state.intake.reflections.situation)||'';
+  if(sit==='survive') return 'clean';
+  if(sit==='treading' && state.intensity==='savage') return 'blunt';
+  return state.intensity;
+}
+function pickVoice(obj){ const r=obj[state.register]||obj.middle; const a=r[baseInt()]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
 function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.floor(Math.random()*a.length)]; }
 
 /* Tone safety lock: sensitive spending (rent, medical, utilities, groceries, emergencies)
@@ -3484,7 +3495,7 @@ function pickReg(obj){ const a=obj[state.register]||obj.middle; return a[Math.fl
    rent is how you lose their trust and get deleted. These contexts force Clean. */
 const SENSITIVE_RX=/\b(rent|mortgage|housing|landlord|medical|health|doctor|dentist|hospital|clinic|pharmac|prescription|meds|therap|counsel|insurance|copay|utilit|electric|power|heat|heating|water|sewer|internet|wi-?fi|grocer|groceries|childcare|daycare|tuition|funeral|emergency|urgent care)\b/i;
 function isSensitive(text){ if(!text) return false; const s=String(text); return SENSITIVE_RX.test(s) || (typeof isEssentialCat==='function' && isEssentialCat(s)); }
-function effInt(ctx){ return isSensitive(ctx) ? 'clean' : state.intensity; }
+function effInt(ctx){ return isSensitive(ctx) ? 'clean' : baseInt(); }   // topic lock AND the situation floor
 /* Context-aware pickers: pass the category or purchase name so sensitive spend stays gentle. */
 function pickVoiceCtx(obj,ctx){ const r=obj[state.register]||obj.middle; const a=r[effInt(ctx)]||r.blunt; return a[Math.floor(Math.random()*a.length)]; }
 function pickTrapVoiceCtx(trap,ctx){ const t=TRAP_RESPONSES[trap]||TRAP_RESPONSES.scroll; const r=t[state.register]||t.middle; return r[effInt(ctx)]||r.blunt; }
