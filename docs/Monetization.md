@@ -75,6 +75,23 @@ moat - no matter how clean the disclosure. The revenue was never going to be lar
 integrity than it could have earned. **Monetize the software directly instead
 (channel #1).**
 
+### 6. Paid, end-to-end-encrypted household sync (the "blind vault" tier)
+The one paid feature that genuinely needs a backend: two-phone couples sync.
+Foundation is built in `app.html` (Web Crypto AES-256-GCM, PBKDF2, a single
+Supabase `user_vaults` table with own-row RLS; config-gated and inert until keys
+are set). The privacy stance survives because the server only ever holds
+ciphertext - the passphrase never leaves the devices, so we structurally cannot
+read a user's numbers. Honesty requirements before launch:
+- Because Supabase costs are recurring, this tier is priced recurring (or
+  generously prepaid) - it must NOT be sold under the "pay once" framing, and the
+  landing copy already separates the two.
+- Every "nothing leaves your device" claim is scoped ("unless you turn on sync -
+  and even then it's encrypted before it goes"). Done on both pages.
+- The entitlement (Stripe -> Supabase) must be server-side; a client-only lock is
+  cosmetic and gets called out (see "What NOT to do").
+- Naming: do not ship it as "Sovereign tier" while the free Stage-3 UI is called
+  the "Sovereignty Console" - one of the two needs a different name.
+
 ## What NOT to do
 
 - **No in-app license-key gate** presented as secure. It is not, and a savvy
@@ -82,11 +99,12 @@ integrity than it could have earned. **Monetize the software directly instead
 - **No "Pro unlocks the Vault / Freedom Mode"** style feature-gating in the
   client. Same reason. If a feature is the hook, gating it client-side just
   teaches people to bypass it.
-- **No data-for-money affiliate deals.** A *disclosed referral link that shares
-  no user data* (channel #5) is fine and is live. What stays off the table is any
-  deal where the payout depends on sending user data, linking a bank/account, or
-  lead-selling - that contradicts the privacy promise and re-introduces the
-  compliance burden the local model avoids. Outbound links: yes. Data pipes: no.
+- **No affiliate links, period.** Channel #5 (disclosed referral links) was tried
+  and deliberately removed - see its section above. Even a link that shares no user
+  data makes the app the Trap when it points users at where to put their money.
+  Also off the table forever: any deal where the payout depends on sending user
+  data, linking a bank/account, or lead-selling - that contradicts the privacy
+  promise and re-introduces the compliance burden the local model avoids.
 
 ## The moat (be realistic)
 

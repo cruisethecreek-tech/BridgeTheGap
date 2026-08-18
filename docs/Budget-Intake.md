@@ -10,7 +10,19 @@ straight into the app - income, essentials, dream, tone - so the moment the chat
 ends, the Home screen is already alive.
 
 ## Account type - the first fork (spender path recommended)
-Right after the name, the chat asks whether they run the whole household budget or just want to track their own spending (`acct`: full | spend). **The lighter "just my spending" path is presented first and gently recommended** - full zero-based means logging every dollar manually, which is the #1 churn risk for a manual app, so most people start light (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks). Full zero-based is one tap away for anyone who runs the household budget. A **spender** path skips the Four Walls, income, debt, and dream entirely and instead offers an optional spending limit - then lands in "Just my spending" mode. The engine skips steps via each step's `showIf(answers)`. The star (★) set below applies to the **full** path.
+After the name and the three soul-layer questions (situation, money story, budgeting
+history - see below), the chat asks whether they run the whole household budget or just
+want to track their own spending (`acct`: full | spend). **The lighter "just my spending"
+path is presented first and gently recommended** - full zero-based means logging every
+dollar manually, which is the #1 churn risk for a manual app, so most people start light
+(spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
+Full zero-based is one tap away for anyone who runs the household budget. The **spender**
+path skips the Four Walls, debt, and dream; income is asked but optional (skipping it
+triggers the `incomeAvoid` follow-up), and the path ends with the deep-dive offer and an
+optional spending limit before landing in "Just my spending" mode. The engine skips steps
+via each step's `showIf(answers)`, and `pruneStaleAnswers()` clears any answer whose gate
+no longer passes (so switching paths mid-chat can never commit leftovers from the other
+path). The star (★) set below applies to the **full** path.
 
 ## Full path = a conversational budget builder
 For the **full** path, the intake doesn't just capture the essentials - it builds the
@@ -36,9 +48,10 @@ remove. Three engine pieces do this (`input:'loop'` and `input:'zeroClose'`):
    couples view: opting in flips on Household mode, sets the partner's name, derives their
    wage from their income, and tags that income `owner:'b'` so the fair split works.
 2. **Expense-building loop** (`expenses`) - after the Four Walls: "the rest of where your
-   money goes." A wrap of common-category chips (Subscriptions, Eating out, Insurance,
-   Health, Childcare, Debt payment, Fun money, Personal care, Pets, Savings, + Something
-   else). Tap → enter amount → it's added (chosen chips drop off, a running total shows).
+   money goes." A wrap of common-category chips (Subscriptions, Insurance, Health,
+   Childcare, Debt payment, Fun money, Personal care, Pets, Savings, + Something else -
+   no "Eating out" chip: food is already a Four Walls answer, a second chip double-counted
+   it). Tap → enter amount → it's added (chosen chips drop off, a running total shows).
    Each becomes a funded category. This is the "conversational list" that builds the budget.
    For users with many expenses, a **"⊞ Add several at once"** fallback (`bulkLoop`, step
    flag `bulk:true`) swaps the tap-loop for a scrollable grid of all the common categories
@@ -60,11 +73,19 @@ The **spender** path skips the three full-path engines but is no longer a dead e
   reply. (The full-path income is required; this only fires for spenders who skip.)
 - **The wage question is reframed for spend mode** - it's the gut-check engine here (every
   purchase priced in hours of your life), not a leftover from the budget path, and it says so.
-- **The "go deep" leak finder** (`deepOffer` -> `deepDive`, `input:'leak'`, `leakFinder`).
-  Opt-in: "just track from here, or map where it's ACTUALLY going?" If deep, one screen in two
-  passes - **fixed bills** as flat monthly amounts (rent, utilities, phone, insurance, car,
-  debt) then **variable leaks** as frequency x cost (`leakMonthly`: coffee 4x/wk @ $6 = ~$104;
-  a pack a day @ $9 = ~$274). Live running total.
+- **Three ways to see where it goes** (`deepOffer`, reflect): "map my averages now" (the
+  leak finder), "I'll track it for real (30 days)" - the notebook-friendly honest path - or
+  "just track as I go." The 30-day choice sets `state.trackChallenge` and lights a **Money Map**
+  on the spend Home (day X of 30, days logged, dismissible); the leak finder still recommends
+  the real track because estimates undercount.
+- **The "map my averages" leak finder** (`deepDive`, `input:'leak'`, `leakFinder`).
+  One screen in two passes - **fixed bills** as flat monthly amounts (rent, utilities, phone,
+  insurance, car, debt) then **variable leaks** as frequency x cost (`leakMonthly`: coffee
+  4x/wk @ $6 = ~$104; a pack a day @ $9 = ~$274). Live running total.
+- **The gateway to budgeting.** Spend tracking is the on-ramp, not the destination. Once
+  there's tracked spend, the spend Home shows a quiet bridge: "seeing it is sometimes enough
+  to change it; sometimes you want every dollar earmarked" -> a one-tap switch to full
+  budgeting (`spendingMode=false`, categories already built from the leaks carry over).
 - **The blind-spend reveal** (`blindSpend`): income minus *everything mapped* (bills + habits)
   = the money you couldn't name - "not gone, just invisible." Because fixed bills are included,
   the leftover is an honest blind-spot figure, not income-minus-a-few-habits. If mapped spend
@@ -118,6 +139,11 @@ floor), so rent/medical/groceries stay gentle for everyone regardless of situati
 All are stored under `state.intake.reflections` (`{situation, moneyStory, moneyStoryNote,
 roof, roofIdeal, food, commute, debt}`) for later personalization. Utilities is intentionally
 skipped - it's not emotionally rich, and every extra question risks fatigue.
+
+**Every reflection can explain itself.** Reflect steps with a `why` field show a quiet
+"Why are you asking?" control; tapping it drops a plain-language reason into the chat (and
+removes the button). The soul-layer questions (situation, money story, budgeting history) all
+carry one, so a wary user can see the intent before answering instead of feeling interrogated.
 
 **Reflections drive action (the payoff).** The captured feelings aren't just stored - they
 change what the app does, so the user sees it *listened*:

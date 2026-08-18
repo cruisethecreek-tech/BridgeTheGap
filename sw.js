@@ -1,18 +1,28 @@
-/* ACCOUNTABILITY service worker — offline shell + fresh updates */
-const CACHE = 'accountability-v2';
+/* ACCOUNTABILITY service worker - offline shell + fresh updates */
+const CACHE = 'accountability-v3';
 const ASSETS = [
   './',
   './index.html',
   './app.html',
+  './budget.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
-  './icon-180.png'
+  './icon-180.png',
+  './fonts/inter-var-latin.woff2',
+  './shots/shot-shield.png',
+  './shots/shot-home.png',
+  './shots/shot-calendar.png'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE).then(c =>
+      // tolerate individual misses (e.g. a renamed screenshot) instead of failing the whole install
+      Promise.all(ASSETS.map(a => c.add(a).catch(() => null)))
+    ).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {

@@ -1,9 +1,12 @@
 # Accountability - Feature Map
 
-A one-page "what's in here" for the whole app. Everything lives in a single file:
-**`index.html`** (HTML + CSS + vanilla JS, ~2,300 lines, zero dependencies).
-Data is stored in the browser under the localStorage key **`unfiltered_budget_v2`**.
-Nothing leaves the device.
+A one-page "what's in here" for the whole app. The app lives in a single file:
+**`app.html`** (HTML + CSS + vanilla JS, ~5,000 lines; `index.html` is the landing
+page). One config-gated dependency: the Supabase SDK, lazy-loaded ONLY if the
+opt-in encrypted sync is configured and used - otherwise zero external requests
+(fonts are self-hosted). Data is stored in the browser under the localStorage key
+**`unfiltered_budget_v2`**. Nothing leaves the device unless sync is turned on,
+and sync sends only ciphertext.
 
 ---
 
@@ -13,7 +16,7 @@ The bottom nav leads with the three core jobs and tucks the support surfaces beh
 a **More** toggle, so a new user sees a sharp, low-clutter front door instead of seven
 competing tabs. **Shield** (the anti-impulse differentiator) carries a gold accent.
 
-**Primary:** Home · Plan · **Shield** · Build   **More ▾:** Track · Learn · Settings.
+**Primary:** Home · Plan · **Shield** · Build   **More ▾:** Track · Debt · Learn · Settings.
 
 The underlying money journey is unchanged: **Plan → Track → Shield → Build → Learn**
 (shown as the numbered flow on Home). Internal view ids in parentheses are unchanged
@@ -107,14 +110,25 @@ uiMode, stageReached, day1                 // progressive interface (auto|all, r
 householdOn, nameA, nameB, wageB           // couples mode (income tagged by owner: a|b|joint)
 spendingMode, spendLimit                   // "just my spending" mode + optional personal limit
 lastBackup                                 // encrypted-backup timestamp
-lesson, onboarded, intake                 // misc
+lesson, onboarded, intake                 // misc (intake.reflections: situation, moneyStory,
+                                          //   budgetPast, incomeAvoid, roof, food, commute, debt...)
+debts, debtBudget, debtStrategy           // debt payoff planner
+investReturn, investYears                 // invest-vs-payoff comparison assumptions
+snapshots, retroView                      // monthly metric snapshots + retro view prefs
+trackChallenge                            // 30-day money map {start, days}
+sweptDays                                 // reward-calendar sweeps {YYYY-MM-DD: {amount, goalId}}
+wageAuto                                  // hourlyWage is auto-derived (re-blends on income change)
+msNoteDismissed                           // money-story home note dismissed for month
 ```
 
-Backward compatibility: `defaultState()` supplies every key, so older saves upgrade cleanly (`Object.assign(defaultState(), parsed)`).
+Backward compatibility: `defaultState()` supplies every key, so older saves upgrade
+cleanly (`Object.assign(defaultState(), parsed)`), and `normalizeState()` runs on
+every wholesale load (boot, import, restore, sync pull) to clamp invariants (goal
+saved ≤ target) and drop records pointing at things that no longer exist.
 
 ---
 
 ## Other files
-- `budget.html` - redirect stub → `index.html` (keeps old links / saved gut-check URLs working).
+- `budget.html` - redirect stub → `app.html` (keeps old links / saved gut-check URLs working).
 - `docs/Budget-Intake.md` - the intake question bank + engine-critical mapping.
 - `README.md` - project summary.
