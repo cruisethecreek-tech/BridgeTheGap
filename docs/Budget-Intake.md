@@ -64,9 +64,26 @@ one-line reply** so the user feels heard; the richest opens an optional free-tex
 - **Food** (`foodStyle`): cook / eat out / both.
 - **Getting Around** (`commuteFeel`): drains me / fine / love it / sick of the car payment.
 - **Debt** (`debtFeel`, only if carrying debt): treading water / slowly winning / just starting.
-All are stored under `state.intake.reflections` (`{roof, roofIdeal, food, commute, debt}`) for
-later personalization. Utilities is intentionally skipped - it's not emotionally rich, and
-every extra question risks fatigue.
+**The soul layer (situation + money story).** Before any numbers, right after the name, two
+foundational reflections set how the app shows up:
+- **Situation** (`situation`): surviving / treading water / stable but stuck / stable and
+  ready to build - "where are you right now, honestly?" No judgment; each answer gets a
+  tailored, human reply. This one **drives the plan**: the `acct` step reframes its
+  recommendation for survival ("start light, no full-budget homework"), the close softens
+  ("one small win this week - that's all I'm asking"), and on Home the "Do this next" cards
+  lead survival users with **"🛟 Start a $100 cushion"** and soften the assign prompt to
+  "one small move at a time, no pressure to be perfect." Building users get the normal
+  zero-based flow.
+- **Money story** (`moneyStory`): never enough / tight but managed / comfortable / feast or
+  famine - "what did money feel like growing up?" Names the pattern (grip vs. blow it; the
+  swing) so the user feels seen; the "never enough" answer opens an optional free-text note.
+
+The intro and close also carry the honest frame the whole thing rests on: **there is no
+secret sauce - just small wins that stack when you show up** (the "are you willing" beat).
+
+All are stored under `state.intake.reflections` (`{situation, moneyStory, moneyStoryNote,
+roof, roofIdeal, food, commute, debt}`) for later personalization. Utilities is intentionally
+skipped - it's not emotionally rich, and every extra question risks fatigue.
 
 **Reflections drive action (the payoff).** The captured feelings aren't just stored - they
 change what the app does, so the user sees it *listened*:
