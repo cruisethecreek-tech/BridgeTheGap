@@ -4501,7 +4501,14 @@ function initPWA(){
    ============================================================ */
 const INTAKE=[
   {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
-  {id:'intro', bot:a=>`${a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great."} Before anything, here's what this word actually means, because it's the whole point. Accountability isn't punishment, and it's not me grading you. It's just you and the truth in the same room - where your money really goes, and the choices behind it. You made the choices; I only help you SEE them clearly enough to decide what stays and what goes. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
+  {id:'tone', bot:"And how much mercy do you want from me? This sets the voice for everything - you can change it anytime in Settings. ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
+  {id:'intro', bot:a=>{
+      const hi=a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great.";
+      const t=iaTone(a);
+      if(t==='savage') return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability isn't punishment, and it's not me grading you. It's you and the truth in the same damn room - where your money really goes, and the choices behind it. You made the choices; I help you see through your own bullshit so you can decide what stays and what dies. No shame, no lecture, no secret sauce - just small wins that stack when you actually show up. That's it. Ready?`;
+      if(t==='blunt') return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability isn't punishment, and it's not me grading you. It's just you and the truth in the same room - where your money really goes, and the choices behind it. You made the choices; I help you see through the bullshit so you can decide what stays and what goes. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`;
+      return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability isn't punishment, and it's not me grading you. It's just you and the truth in the same room - where your money really goes, and the choices behind it. You made the choices; I only help you SEE them clearly enough to decide what stays and what goes. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`;
+    }, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
   {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
   {id:'situation', input:'reflect', key:'situation', optional:true,
     why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
@@ -4639,35 +4646,54 @@ const INTAKE=[
       if(left<-1) return `One honest heads-up: we've assigned about ${usd(-left)} more than comes in. I'll flag it on your budget so you can trim - totally fixable.`;
       return `And every dollar already has a job - that's zero-based budgeting, done right. 👏`; }},
   {id:'deepOffer', input:'reflect', key:'deepDive', showIf:a=>a.acct==='spend',
-    bot:a=>`Here's where it gets real${a.name?', '+a.name:''}. To see where your money actually goes, you've got a few ways in - pick the one you'd genuinely do, not the one that sounds impressive:`,
+    bot:a=>{ const t=iaTone(a);
+      if(t==='savage') return `Here's where it gets real${a.name?', '+a.name:''}. You want to know where your money ACTUALLY goes - not where you tell yourself it goes. Pick the one you'd genuinely do, not the one that sounds impressive:`;
+      return `Here's where it gets real${a.name?', '+a.name:''}. To see where your money actually goes, you've got a few ways in - pick the one you'd genuinely do, not the one that sounds impressive:`; },
     options:[
       {label:'🔦 Map my averages now', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
       {label:"📓 I'll track it for real (30 days)", value:'track', reply:"That's the one that doesn't lie. Jot every discretionary buy however's fastest for you - a notebook, the notes app, a receipt in your pocket - and punch it in when you sit down. 30 days and you'll see the truth in your own handwriting. I'll count the days with you."},
       {label:'👀 Just track as I go', value:'light', reply:"Fair - watching it in real time works too. The quick map and the 30-day challenge are both here whenever you want them."}
     ]},
   {id:'deepDive', input:'leak', showIf:a=>a.acct==='spend' && a.deepDive==='deep',
-    bot:"Alright - let's follow it. Tap in the ones that are real for you: how often, and about how much each time. Be honest - this only works if it's the truth."},
+    bot:a=> iaTone(a)==='savage'
+      ? "Alright - let's follow the money. Tap in the ones that are real for you: how often, and about how much each time. Don't bullshit the numbers - this only works if it's the truth."
+      : "Alright - let's follow it. Tap in the ones that are real for you: how often, and about how much each time. Be honest - this only works if it's the truth."},
   {id:'blindSpend', input:'continue', showIf:a=>a.acct==='spend' && a.deepDive==='deep' && (a.leaks||[]).length,
     bot:a=>{ const all=(a.leaks||[]); const known=all.reduce((s,x)=>s+(+x.monthly||0),0);
       const habits=all.filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       const inc=+a.income||0;
       const lifeTxt = (a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
+      const sav=iaTone(a)==='savage';
       if(inc>0){ const blind=Math.round(inc-known);
-        if(blind>50) return `Here's the part that hits${a.name?', '+a.name:''}: about ${usd(inc)} comes in, and we just accounted for ${usd(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched. That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
-        if(blind<-50) return `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd(known)}) is MORE than the ${usd(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
+        if(blind>50) return sav
+          ? `Here's the part that hits${a.name?', '+a.name:''}: about ${usd(inc)} comes in, and we just accounted for ${usd(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd(blind)} a month you couldn't name. Not gone - invisible. Bleeding out while nobody watched. That's YOUR damn money. From now on you see every dollar of it leave. That's the whole game.`
+          : `Here's the part that hits${a.name?', '+a.name:''}: about ${usd(inc)} comes in, and we just accounted for ${usd(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched. That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
+        if(blind<-50) return sav
+          ? `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd(known)}) is MORE than the ${usd(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step, and you just took it.`
+          : `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd(known)}) is MORE than the ${usd(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
         return `You mapped ${usd(known)} against about ${usd(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
       return `That's ${usd(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
-  {id:'tone', bot:"When you're about to blow it, how much mercy do you want from me? ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
   {id:'done', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
       const base = a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`;
-      const close = surv ? ` Remember - one small win this week. That's all I'm asking. The tool's ready when you are.` : ` The tool's ready. The rest is just you showing up - and I already think you will.`;
+      const close = surv ? ` Remember - one small win this week. That's all I'm asking. The tool's ready when you are.`
+        : (iaTone(a)==='savage' ? ` The tool's ready. Now show the hell up - that's the only part I can't do for you.` : ` The tool's ready. The rest is just you showing up - and I already think you will.`);
       return base+close; }, input:'finish', cta:'Set me up →'}
 ];
 
 let iaStep=0, iaAns={}, iaForceInput=false;
+/* The intake's own tone dial: the user picks mercy level right after the age gate,
+   so the whole conversation can speak in their chosen voice - swears included at
+   Blunt/Savage. Same floor as the live app: survival collapses to clean, treading
+   eases savage to blunt. Clean users never see a swear. */
+function iaTone(a){
+  const t=a.tone||'clean';
+  if(a.situation==='survive') return 'clean';
+  if(a.situation==='treading' && t==='savage') return 'blunt';
+  return t;
+}
 /* estimate take-home hourly from monthly take-home: full-time year ≈ 2,080 hrs */
 function estHourlyFromMonthly(m){ return Math.max(1, Math.round((+m||0)*12/2080)); }
 /* True blended take-home rate: every hour you sell counts. Main-job hours come
@@ -4756,7 +4782,7 @@ function renderIntakeDock(s){
     document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
-  const canBack = iaStep>3;   // Back appears from the moneyStory step onward (index 4+)
+  const canBack = iaStep>3;   // Back appears from the situation step onward (index 4+, after gate/tone/intro/name)
   const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
