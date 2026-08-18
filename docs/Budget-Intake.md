@@ -10,7 +10,19 @@ straight into the app - income, essentials, dream, tone - so the moment the chat
 ends, the Home screen is already alive.
 
 ## Account type - the first fork (spender path recommended)
-Right after the name, the chat asks whether they run the whole household budget or just want to track their own spending (`acct`: full | spend). **The lighter "just my spending" path is presented first and gently recommended** - full zero-based means logging every dollar manually, which is the #1 churn risk for a manual app, so most people start light (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks). Full zero-based is one tap away for anyone who runs the household budget. A **spender** path skips the Four Walls, income, debt, and dream entirely and instead offers an optional spending limit - then lands in "Just my spending" mode. The engine skips steps via each step's `showIf(answers)`. The star (★) set below applies to the **full** path.
+After the name and the three soul-layer questions (situation, money story, budgeting
+history - see below), the chat asks whether they run the whole household budget or just
+want to track their own spending (`acct`: full | spend). **The lighter "just my spending"
+path is presented first and gently recommended** - full zero-based means logging every
+dollar manually, which is the #1 churn risk for a manual app, so most people start light
+(spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
+Full zero-based is one tap away for anyone who runs the household budget. The **spender**
+path skips the Four Walls, debt, and dream; income is asked but optional (skipping it
+triggers the `incomeAvoid` follow-up), and the path ends with the deep-dive offer and an
+optional spending limit before landing in "Just my spending" mode. The engine skips steps
+via each step's `showIf(answers)`, and `pruneStaleAnswers()` clears any answer whose gate
+no longer passes (so switching paths mid-chat can never commit leftovers from the other
+path). The star (★) set below applies to the **full** path.
 
 ## Full path = a conversational budget builder
 For the **full** path, the intake doesn't just capture the essentials - it builds the
@@ -36,9 +48,10 @@ remove. Three engine pieces do this (`input:'loop'` and `input:'zeroClose'`):
    couples view: opting in flips on Household mode, sets the partner's name, derives their
    wage from their income, and tags that income `owner:'b'` so the fair split works.
 2. **Expense-building loop** (`expenses`) - after the Four Walls: "the rest of where your
-   money goes." A wrap of common-category chips (Subscriptions, Eating out, Insurance,
-   Health, Childcare, Debt payment, Fun money, Personal care, Pets, Savings, + Something
-   else). Tap → enter amount → it's added (chosen chips drop off, a running total shows).
+   money goes." A wrap of common-category chips (Subscriptions, Insurance, Health,
+   Childcare, Debt payment, Fun money, Personal care, Pets, Savings, + Something else -
+   no "Eating out" chip: food is already a Four Walls answer, a second chip double-counted
+   it). Tap → enter amount → it's added (chosen chips drop off, a running total shows).
    Each becomes a funded category. This is the "conversational list" that builds the budget.
    For users with many expenses, a **"⊞ Add several at once"** fallback (`bulkLoop`, step
    flag `bulk:true`) swaps the tap-loop for a scrollable grid of all the common categories
