@@ -403,6 +403,16 @@
   .ms-note .ms-t{flex:1;font-size:14px;line-height:1.55;color:var(--text);font-weight:500}
   .ms-note .ms-x{flex:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px;line-height:1}
   .ms-note .ms-x:hover{color:var(--fg)}
+  .why-line{display:flex;align-items:center;gap:10px;margin:14px 0 2px;background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;padding:11px 14px}
+  .why-line .wl-ic{font-size:17px;flex:none}
+  .why-line .wl-t{flex:1;font-size:13.5px;line-height:1.5;color:var(--muted)}
+  .why-line .wl-t b{color:var(--text);font-style:italic}
+  .wr-edit{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:3px 9px;font-size:12px;font-weight:700;cursor:pointer;flex:none}
+  .wr-edit:hover{color:var(--accent);border-color:var(--accent)}
+  .why-remind{margin:14px 0 4px;background:rgba(var(--accent-rgb),.09);border:1px solid rgba(var(--accent-rgb),.3);border-left:3px solid var(--accent);border-radius:12px;padding:13px 15px}
+  .why-remind .wr-k{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent)}
+  .why-remind .wr-q{margin:6px 0;font-size:15px;font-weight:700;font-style:italic;line-height:1.5}
+  .why-remind .wr-ask{font-size:13.5px;line-height:1.55;color:var(--muted)}
   /* Sovereign-tier sync UI */
   .syncbox{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
   .sync-head{font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -739,6 +749,8 @@
   .ql-row .ql-del:hover{color:var(--bad)}
   .ql-row input:focus,.ql-row select:focus{outline:none;border-color:var(--accent)}
   .ql-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .ql-photo-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .ql-photo-img{display:block;max-width:100%;max-height:260px;border-radius:12px;border:1px solid var(--line);margin:4px 0 6px;object-fit:contain}
   .intake-help{background:rgba(230,178,77,.12);border:1px solid rgba(230,178,77,.35);color:var(--accent);font-weight:800;font-size:13px;padding:8px 14px;border-radius:20px;cursor:pointer}
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
@@ -955,6 +967,7 @@
       </div>
 
       <div id="dataGuard"></div>
+      <div id="whyCard"></div>
       <div id="moneyStoryCard"></div>
       <div id="spendingBox" class="show-in-spending"></div>
       <div id="rewardCalBox" class="show-in-spending"></div>
@@ -1566,6 +1579,7 @@ const QUOTES = {
       "That subscription you forgot about is funding someone else's retirement, not yours.",
       "You're not bad with money. You just never told it where to go.",
       "The gap between you and the goal is a spreadsheet you keep avoiding.",
+      "Half your 'needs' are wants with a good story. Call the bullshit.",
       "Comfort is expensive. Freedom is cheaper than you think."
     ],
     savage:[
@@ -1574,7 +1588,9 @@ const QUOTES = {
       "You didn't lose the money. You gave it away one 'small' thing at a time.",
       "Being broke and comfortable is still broke. Pick discomfort with a purpose.",
       "You keep waiting to feel ready. Ready is a decision. Decide.",
-      "Nobody remembers what you almost built. Fund the real one."
+      "Nobody remembers what you almost built. Fund the real one.",
+      "The bullshit you tell yourself about where it goes is the most expensive thing you own.",
+      "You work too damn hard to be this careless with what it buys."
     ]
   },
   genz:{
@@ -1592,7 +1608,7 @@ const QUOTES = {
       "You're not bad with money. You just never told it where to go.",
       "The gap between you and the goal is a budget you keep leaving on read.",
       "You checked your phone 80 times today. Check your budget once, bestie.",
-      "'Treating yourself' into debt isn't self-care. It's a trap."
+      "'Treating yourself' into debt isn't self-care. It's bullshit with a bow on it."
     ],
     savage:[
       "You're not broke, you're delulu about that cart. Close it.",
@@ -1600,7 +1616,9 @@ const QUOTES = {
       "That impulse buy? It's giving 'still broke next month.'",
       "You want the bag but you're negotiating with the work. You're cooked.",
       "Nobody remembers what you almost built. Fund the real one. On god.",
-      "The vibe check is your bank account, and right now it's failing."
+      "The vibe check is your bank account, and right now it's failing.",
+      "The math ain't mathing because you keep bullshitting the math.",
+      "You're not manifesting the bag, you're pissing it away $12 at a time."
     ]
   },
   mature:{
@@ -1618,7 +1636,8 @@ const QUOTES = {
       "You're not careless with money. You simply never gave it instructions.",
       "Comfort has a price. Security costs less than most people assume.",
       "The distance to your goal is a plan you've been putting off.",
-      "Hoping the numbers work out has never once made them work out."
+      "Hoping the numbers work out has never once made them work out.",
+      "Most budgets die of polite lies. Name the damn numbers."
     ],
     savage:[
       "Decades of good intentions. Intentions have never funded anything.",
@@ -1626,7 +1645,8 @@ const QUOTES = {
       "Comfortable and unprepared is still unprepared. Fix it.",
       "Every dollar you waved off added up. It always adds up.",
       "Waiting for the right time is how the years got spent. Start today.",
-      "You know better by now. Knowing better means nothing until you do better."
+      "You know better by now. Knowing better means nothing until you do better.",
+      "Enough 'we'll see.' Give the money a damn job and let it work."
     ]
   }
 };
@@ -1668,7 +1688,7 @@ function offenseDefense(M){
 }
 /* Anti-scarcity copy (register x intensity) */
 const SCARCITY_COPY={
-  genz:{clean:["Cutting stops at zero, bestie. Earning has no ceiling - what can you sell this week?","Coupon energy is capped. Income isn't. Go make a hundred bucks."],blunt:["You can't frugality your way to the bag. Solve someone's problem for $100.","Pinching pennies is a treadmill. Start a second stream."],savage:["Clipping coupons won't free you. Go create money on demand.","You're optimizing crumbs. Go bake a bigger loaf."]},
+  genz:{clean:["Cutting stops at zero, bestie. Earning has no ceiling - what can you sell this week?","Coupon energy is capped. Income isn't. Go make a hundred bucks."],blunt:["You can't frugality your way to the bag. Solve someone's problem for $100.","Pinching pennies is a treadmill. Start a second stream."],savage:["Clipping coupons won't free you. Go create money on demand.","You're optimizing crumbs. Go bake a bigger loaf.","Coupons won't rescue a broke-ass income. Go earn."]},
   middle:{clean:["Cutting expenses has a floor of $0. Income has no ceiling. Aim some energy at earning.","You've trimmed a lot. The bigger lever now is making more."],blunt:["You can't frugality your way to freedom. What problem can you solve for someone this week for $100?","Squeezing pennies is a ceiling. Build a second stream or stay stuck."],savage:["Frugality alone is a slow trap. Go create value and get paid for it.","The floor is nearly zero. Stop scraping it and raise the roof."]},
   mature:{clean:["Thrift matters, but it bottoms out at zero. Earning is where the real room is.","You've mastered the cutting. Income is the half with no limit."],blunt:["You've optimized the cutting. Now build income - that's the uncapped side.","Frugality is defense. You need offense to actually get ahead."],savage:["Penny-pinching alone is a slow ceiling. Create something people pay for.","The savings well is nearly dry. Go dig an income well."]}
 };
@@ -3062,15 +3082,81 @@ function qlRow(){ return `<div class="ql-row">
     <input class="ql-new hide" type="text" placeholder="Name it">
     <button class="ql-del" title="Remove">✕</button>
   </div>`; }
+/* Notepad photo -> quick log. The photo NEVER leaves the device: it renders as a
+   reference image beside the rows, and the optional "read it" pass runs Tesseract
+   OCR in the browser (the ~2MB reader downloads once from a CDN; the image itself
+   is processed locally). Honest expectations: printed text reads well, handwriting
+   is hit-or-miss - every parsed line lands in an editable row for review, nothing
+   logs without the user's eyes on it. */
+let qlPhotoURL=null, tessLoading=null;
+function loadTesseract(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  if(tessLoading) return tessLoading;
+  tessLoading=new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    sc.onload=()=>res(window.Tesseract); sc.onerror=()=>{ tessLoading=null; rej(new Error('load failed')); };
+    document.head.appendChild(sc);
+  });
+  return tessLoading;
+}
+function qlParseOcr(text){
+  const out=[];
+  (text||'').split(/\n+/).forEach(line=>{
+    const l=line.trim(); if(!l) return;
+    const m=l.match(/^(.*?)[\s.·•:\-]*\$?\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*$/);
+    if(!m) return;
+    const what=m[1].replace(/[^\w\s'&\/+-]/g,' ').replace(/\s+/g,' ').trim();
+    const amt=parseFloat(m[2].replace(',','.'));
+    if(what.length>1 && amt>0 && amt<100000) out.push({what,amt});
+  });
+  return out;
+}
 function renderQuickLog(){
   const box=document.getElementById('quickLog'); if(!box) return;
-  if(!quickLogOpen){ box.innerHTML=''; return; }
+  if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } return; }
   box.innerHTML=`<div class="ql-panel">
     <div class="ql-head"><span>One line per purchase, then log them all. The little stuff is where it hides.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
+    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">📷 Snap my notepad</button><input type="file" id="qlPhoto" accept="image/*" capture="environment" class="hide"><button class="btn ghost hide" id="qlRead">🔎 Read it for me</button></div>
+    <div id="qlPhotoPrev"></div>
+    <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
     <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
     <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn primary" id="qlSave">Log them all →</button></div>
   </div>`;
   document.getElementById('qlDate').value=todayStr();
+  // --- photo capture + on-device read ---
+  const snap=document.getElementById('qlSnap'), photo=document.getElementById('qlPhoto'), readBtn=document.getElementById('qlRead'), prev=document.getElementById('qlPhotoPrev'), note=document.getElementById('qlOcrNote');
+  snap.onclick=()=>photo.click();
+  photo.onchange=()=>{
+    const f=photo.files&&photo.files[0]; if(!f) return;
+    if(qlPhotoURL) URL.revokeObjectURL(qlPhotoURL);
+    qlPhotoURL=URL.createObjectURL(f);
+    prev.innerHTML=`<img class="ql-photo-img" src="${qlPhotoURL}" alt="Your notepad">`;
+    readBtn.classList.remove('hide');
+    note.textContent='Your photo stays on this phone. Use it as a reference while you type - or tap "Read it for me" and I\'ll take a first pass. You review every line before anything logs.';
+  };
+  readBtn.onclick=async()=>{
+    if(!qlPhotoURL) return;
+    readBtn.disabled=true;
+    note.textContent='Fetching the on-device reader (~2 MB, one time)... your photo never leaves this phone.';
+    try{
+      const T=await loadTesseract();
+      note.textContent='Reading your notepad right here on the device...';
+      const r=await T.recognize(qlPhotoURL,'eng',{logger:m=>{ if(m.status==='recognizing text') note.textContent='Reading... '+Math.round((m.progress||0)*100)+'%'; }});
+      const items=qlParseOcr(r&&r.data&&r.data.text);
+      if(!items.length){ note.textContent="Couldn't make out clear lines (handwriting is genuinely hard). The photo's right there - punch the lines in yourself, it takes seconds."; }
+      else{
+        let filled=0;
+        items.forEach(it=>{
+          let row=[...box.querySelectorAll('.ql-row')].find(el=>!el.querySelector('.ql-what').value && !el.querySelector('.ql-amt').value);
+          if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; document.getElementById('qlList').appendChild(row); wireRow(row); }
+          row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt; filled++;
+        });
+        note.textContent='Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
+      }
+    }catch(e){ note.textContent="Couldn't fetch the reader (offline, maybe). The photo still works as your reference - type the lines in yourself."; }
+    readBtn.disabled=false;
+  };
   const wireRow=(el)=>{
     const c=el.querySelector('.ql-cat'), nw=el.querySelector('.ql-new');
     const syncNew=()=>{ nw.classList.toggle('hide', c.value!=='__new'); };
@@ -3706,8 +3792,8 @@ const IMP_QUESTIONS={
   mature:["Will this still matter to you a month from now?","Is this a want, or a habit dressed up as a need?","Would you spend it again, knowing what you know?","Does this move you toward the life you're building, or just fill an afternoon?","If you paid in cash, in hand, would it still feel worth it?"]
 };
 const IMP_WANT={
-  genz:{clean:["This one's a want, bestie. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real - you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the bag."],savage:["You're about to trade the dream for a 10-minute dopamine hit. Delulu.","Future you is begging you to close the tab. Listen."]},
-  middle:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be honest - you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen."]},
+  genz:{clean:["This one's a want, bestie. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be so real - you didn't want this an hour ago.","This is comfort spending, and comfort doesn't fund the bag."],savage:["You're about to trade the dream for a 10-minute dopamine hit. Delulu.","Future you is begging you to close the tab. Listen.","You don't want the thing, you want the damn feeling. Cheaper ways to feel."]},
+  middle:{clean:["This one's a want. Sleep on it.","Nice-to-have, not need-to-have. Your call."],blunt:["Be honest - you didn't want this an hour ago.","This is comfort spending. Comfort doesn't fund dreams."],savage:["You're about to trade a piece of your dream for a dopamine hit.","Future you is begging you to close the tab. Listen.","It's a dopamine hit with a price tag. Call bullshit and close the tab."]},
   mature:{clean:["This is a want - give it a night before you decide.","A nice-to-have, not a need. Your call to make."],blunt:["Be honest - this wasn't on your mind an hour ago.","This is comfort spending, and comfort has never built security."],savage:["You're trading a piece of your future for a passing mood.","The person you'll be next year is asking you not to."]}
 };
 const IMP_ASSET={
@@ -3753,8 +3839,8 @@ function pickTrapVoiceCtx(trap,ctx){ const t=TRAP_RESPONSES[trap]||TRAP_RESPONSE
    PILLAR 4: anti-shame copy - slips are data points, never failures
    ============================================================ */
 const REBALANCE_COPY={
-  genz:{clean:["Small overshoot here - no biggie, let's fix it.","Data point: this one ran a little hot."],blunt:["This one went over. It's just numbers - adjust and keep moving.","Overshot. Just a signal to rebalance, nothing more."],savage:["You went over. Own the number, rebalance, next play.","Over budget here. It's data, not a verdict - fix it and roll."]},
-  middle:{clean:["A little over here - an easy adjustment, not a problem.","Data point: this category ran hot this month."],blunt:["This one went over. That's information to act on - let's rebalance.","Overshot the plan here. Adjust the numbers and move on."],savage:["Over budget. No shame - just move the money and keep control.","You ran hot here. Numbers don't judge. Rebalance and press on."]},
+  genz:{clean:["Small overshoot here - no biggie, let's fix it.","Data point: this one ran a little hot."],blunt:["This one went over. It's just numbers - adjust and keep moving.","Overshot. Just a signal to rebalance, nothing more."],savage:["You went over. Own the number, rebalance, next play.","Over budget here. It's data, not a verdict - fix it and roll.","Went over. Move the damn money and take the wheel back."]},
+  middle:{clean:["A little over here - an easy adjustment, not a problem.","Data point: this category ran hot this month."],blunt:["This one went over. That's information to act on - let's rebalance.","Overshot the plan here. Adjust the numbers and move on."],savage:["Over budget. No shame - just move the money and keep control.","You ran hot here. Numbers don't judge. Rebalance and press on.","Over. Fine. Move the damn money and get back in control."]},
   mature:{clean:["Slightly over here - a simple adjustment to make.","This category ran a bit hot. Easily corrected."],blunt:["This one exceeded the plan. It's data - let's rebalance it.","Over here. Nothing lost; just reallocate and continue."],savage:["Over the mark. No lecture - reallocate and stay the course.","You overshot. It's a number to fix, not a mistake to carry."]}
 };
 const BLINDSPOT_COPY={
@@ -3774,7 +3860,7 @@ function blindspotShield(){
   }
   return {count,streak};
 }
-function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+delta); return d.toISOString().slice(0,10); }
+function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+delta); return localYMD(d); }
 
 /* ============================================================
    ANTI-TRAP ENGINE - traps, tactical copy, cooling vault
@@ -3787,23 +3873,23 @@ const TRAPS=[
 ];
 const TRAP_RESPONSES={
   scroll:{
-    genz:{clean:"That ad found you on purpose - the algorithm clocked your weak spot.",blunt:"Meta ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log off, bestie."},
-    middle:{clean:"That ad was engineered to catch you at a weak moment.",blunt:"A company paid real money to put that in front of you. It's working.",savage:"You're the product being sold to. Don't fund your own trap."},
+    genz:{clean:"That ad found you on purpose - the algorithm clocked your weak spot.",blunt:"Meta ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log the hell off, bestie."},
+    middle:{clean:"That ad was engineered to catch you at a weak moment.",blunt:"A company paid real money to put that in front of you. It's working.",savage:"You're the product being sold to. Don't fund your own damn trap."},
     mature:{clean:"That ad was placed to catch you off guard - by design.",blunt:"Marketers studied people like you to trigger this exact urge.",savage:"This isn't your idea. It's theirs - and right now they're winning."}
   },
   friction:{
-    genz:{clean:"You're paying extra just to skip the walk. Worth it?",blunt:"That's a lazy tax and you're about to tip it 25%.",savage:"You're paying a premium to not stand up. Come on."},
-    middle:{clean:"Convenience has a markup - you're paying it right now.",blunt:"You're paying a tax because you don't feel like it. That adds up fast.",savage:"That's a $25 surcharge on being tired. Cook the food."},
+    genz:{clean:"You're paying extra just to skip the walk. Worth it?",blunt:"That's a lazy tax and you're about to tip it 25%.",savage:"You're paying a premium to not stand up. Get your ass up."},
+    middle:{clean:"Convenience has a markup - you're paying it right now.",blunt:"You're paying a tax because you don't feel like it. That adds up fast.",savage:"That's a $25 surcharge on being tired. Cook the damn food."},
     mature:{clean:"Convenience carries a quiet premium. This is it.",blunt:"You're paying handsomely to avoid a small effort.",savage:"That markup is pure waste dressed up as ease."}
   },
   status:{
-    genz:{clean:"Your current one still slaps. This is for the 'gram.",blunt:"Nobody's checking for that upgrade but you. Save the bag.",savage:"You're buying clout for strangers who won't remember. Nah."},
-    middle:{clean:"What you have works fine. This is about image.",blunt:"You're buying status for people who aren't paying your bills.",savage:"Don't torch real money on a signal nobody asked for."},
+    genz:{clean:"Your current one still slaps. This is for the 'gram.",blunt:"Nobody's checking for that upgrade but you. Save the bag.",savage:"You're buying clout for strangers who won't remember you Tuesday. Hell nah."},
+    middle:{clean:"What you have works fine. This is about image.",blunt:"You're buying status for people who aren't paying your bills.",savage:"Don't torch real money on a signal nobody gives a damn about."},
     mature:{clean:"Your current one serves you well. This is vanity.",blunt:"You'd be buying an impression, not an improvement.",savage:"Status bought for strangers is money set on fire."}
   },
   leak:{
-    genz:{clean:"Small charge, sneaky habit. These leaks add up quiet.",blunt:"That 'free trial' auto-bills. It's built to be forgotten.",savage:"Death by a thousand $9.99s. Cancel it now."},
-    middle:{clean:"Little recurring charges are the quietest budget killers.",blunt:"Auto-renew counts on you forgetting. Don't.",savage:"This leak drains you every month while you sleep. Plug it."},
+    genz:{clean:"Small charge, sneaky habit. These leaks add up quiet.",blunt:"That 'free trial' auto-bills. It's built to be forgotten.",savage:"Death by a thousand $9.99s. Cancel that shit now."},
+    middle:{clean:"Little recurring charges are the quietest budget killers.",blunt:"Auto-renew counts on you forgetting. Don't.",savage:"This leak drains you every month while you sleep. Plug the damn thing."},
     mature:{clean:"Recurring charges are small but relentless. Watch them.",blunt:"That renewal is built to slip past your attention.",savage:"A slow leak sinks the ship as surely as a hole. Seal it."}
   }
 };
@@ -4050,17 +4136,17 @@ const CHALLENGE_CORE={
 };
 const CHALLENGE_STING={
   veh:{
-    genz:{clean:"By the real definition that's a liability, not an asset.",blunt:"That's a liability in an asset's fit. Call it what it is.",savage:"You didn't buy it to build wealth, you bought it for the clout. Own it."},
-    middle:{clean:"By the honest definition, that's a liability - not an asset.",blunt:"That's a liability wearing an asset's badge. Call it what it is.",savage:"You didn't buy it to build wealth. You bought it to feel something. Own that."},
+    genz:{clean:"By the real definition that's a liability, not an asset.",blunt:"That's a liability in an asset's fit. Call it what it is.",savage:"You didn't buy it to build wealth, you bought it for the clout. Own that shit."},
+    middle:{clean:"By the honest definition, that's a liability - not an asset.",blunt:"That's a liability wearing an asset's badge. Call it what it is.",savage:"You didn't buy it to build wealth. You bought it to feel something. Own that, and stop calling it a damn asset."},
     mature:{clean:"By the honest measure, that's a liability - not an asset.",blunt:"That's a liability dressed as an asset. Name it honestly.",savage:"You bought it for the feeling, not the future. Be honest about that."}
   },
   house:{
-    genz:{clean:"Till it pays you, it's a roof - not a wealth glow-up.",blunt:"That house isn't making you rich, it's making you comfy and calling it a flex.",savage:"Equity you can't touch isn't freedom. Stop counting the cage as a W."},
+    genz:{clean:"Till it pays you, it's a roof - not a wealth glow-up.",blunt:"That house isn't making you rich, it's making you comfy and calling it a flex.",savage:"Equity you can't touch isn't freedom. Stop counting the damn cage as a W."},
     middle:{clean:"Until it pays you, it's a roof - not a wealth engine.",blunt:"Your house isn't making you rich. It's making you comfortable and calling it wealth.",savage:"Equity you can't eat isn't freedom. Stop counting the cage as treasure."},
     mature:{clean:"Until it pays you, it's shelter - not a wealth engine.",blunt:"The home you live in keeps you comfortable; it isn't making you wealthy.",savage:"Equity you can't spend isn't security. Don't mistake the house for the freedom."}
   },
   gen:{
-    genz:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't gas it up.",savage:"Stuff doesn't love you back, bestie. And it for sure doesn't pay you."},
+    genz:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't gas it up.",savage:"Stuff doesn't love you back, bestie. And it damn sure doesn't pay you."},
     middle:{clean:"Keep it if you love it - just don't call it an asset.",blunt:"Owning it isn't investing. Don't confuse the two.",savage:"Stuff doesn't love you back, and it definitely doesn't pay you."},
     mature:{clean:"Keep it if it brings you joy - just don't call it an asset.",blunt:"Owning a thing isn't investing. They aren't the same.",savage:"Possessions don't pay you back. Only real assets do."}
   }
@@ -4228,6 +4314,36 @@ document.getElementById('impRun').addEventListener('click',()=>{
 });
 document.getElementById('impAmt').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('impRun').click(); });
 
+/* The why, always in view: their own words at the top of Home, every session.
+   Not a dismissible tip - it's the north star the whole journey answers to. */
+function renderWhyCard(){
+  const box=document.getElementById('whyCard'); if(!box) return;
+  const why=(state.intake&&state.intake.why||'').trim();
+  if(!why){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="why-line"><span class="wl-ic">🧭</span><span class="wl-t">Why you're here, in your words: <b>“${escapeHtml(why)}”</b></span><button class="wr-edit" title="Goalposts genuinely moved? Update it.">✎</button></div>`;
+  wireWhyEdit();
+}
+/* The user's own "why" - captured verbatim at intake - is the ultimate reminder.
+   Quoted back at the exact moment of temptation: you said THIS matters; this buy
+   moves you away from it. Did the goalposts move, or did you just blink? */
+function whyReminderHTML(){
+  const why=(state.intake&&state.intake.why||'').trim();
+  if(!why) return '';
+  const t=baseInt();
+  const ask = t==='savage' ? "This buy moves you AWAY from that. Did we switch goalposts, or are you about to bullshit yourself?"
+            : t==='blunt' ? "This buy moves you away from that. Did we switch goalposts - or is that still the goal?"
+            : "Does this bring you closer to that, or further away? Your call - it always is.";
+  return `<div class="why-remind"><div class="wr-k">In your own words, why this matters:</div><div class="wr-q">“${escapeHtml(why)}”</div><div class="wr-ask">${ask} <button class="wr-edit">My why changed - update it</button></div></div>`;
+}
+function wireWhyEdit(){
+  document.querySelectorAll('.wr-edit').forEach(b=>{ b.onclick=()=>{
+    const cur=(state.intake&&state.intake.why)||'';
+    const nw=prompt("What really matters to you now? (This is what I'll remind you of.)", cur);
+    if(nw===null) return;
+    state.intake=state.intake||{}; state.intake.why=nw.trim(); save();
+    if(pendingCheck) renderCheckResult(); renderHome();
+  }; });
+}
 function renderCheckResult(){
   const {name,amt,trap}=pendingCheck;
   const avg=personalMonthlyIncome()||avgMonthlyIncome(), g=topGoal(), NW=netWorth(), H=effectiveHourly();   // YOUR income sizes the pull, not the household's
@@ -4264,6 +4380,7 @@ function renderCheckResult(){
       <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:var(--accent-2)"></div></div>
       <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
       <div class="qline">${escapeHtml(q)}</div>
+      ${whyReminderHTML()}
       ${altHTML(name)}
       <div class="check-actions">
         <button class="btn income" id="impNeutralize">🛡️ Neutralize</button>
@@ -4272,6 +4389,7 @@ function renderCheckResult(){
         <button class="btn ghost" id="impRansom">🏳️ Pay ransom</button>
       </div>
     </div>`;
+  wireWhyEdit();
 
   document.getElementById('impNeutralize').addEventListener('click',()=>{
     const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';
@@ -4526,14 +4644,18 @@ const INTAKE=[
       {label:'😟 Never enough, kind of scary', value:'fear', reply:"That leaves a mark. It can make you grip every dollar, or spend it before it disappears - two sides of the same fear. Naming it is how you stop it quietly running the show.", followup:"Say a bit more, if you want (optional)"},
       {label:'😬 Tight, but we managed', value:'tight', reply:"Tight-but-managed teaches resourcefulness most people never build. We'll use that muscle - just aimed at building now, not only surviving."},
       {label:'🙂 Comfortable and steady', value:'stable', reply:"A steady start is a real gift. The one trap is coasting on it - stability is the launchpad, not the destination."},
-      {label:'🎢 Feast or famine', value:'chaos', reply:"Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
+      {label:'🎢 Feast or famine', value:'chaos', reply:a=> iaTone(a)==='savage'
+        ? "Feast or famine wires you for the swing - balling when it's up, scrambling when it's down. We're breaking that damn cycle."
+        : "Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
     ]},
   {id:'budgetPast', input:'reflect', key:'budgetPast', optional:true,
     why:"Because if a budget burned you out before, I don't want to hand you the same thing that failed. Knowing what happened last time tells me how small and light to start so this one actually sticks.",
     bot:"And have you ever tried to budget before? Straight up - no wrong answer, it just tells me where to start.",
     options:[
       {label:'🆕 Never really tried', value:'never', reply:"Perfect - no bad habits to unlearn, then. We start clean and simple, and build from there."},
-      {label:'😞 Tried, fell off', value:'fell', reply:"You and almost everyone who's ever budgeted. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out last time.", followup:"What made it not stick, if you know? (optional)"},
+      {label:'😞 Tried, fell off', value:'fell', reply:a=> iaTone(a)==='savage'
+        ? "You and every other damn human who's tried. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out."
+        : "You and almost everyone who's ever budgeted. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out last time.", followup:"What made it not stick, if you know? (optional)"},
       {label:'📉 Did it a while, life happened', value:'lapsed', reply:"So you already know it works when you work it. Life happens - the fix is a system light enough to survive a bad week, not another one that needs you to be perfect."},
       {label:'✅ I budget now', value:'current', reply:"Then you're ahead of most - let's sharpen what you've got, not make you start over."}
     ]},
@@ -4602,7 +4724,9 @@ const INTAKE=[
     bot:"Quick one - what's your normal with food?",
     options:[
       {label:'👩‍🍳 Mostly cook at home', value:'cook', reply:"Cooking's a quiet superpower for your wallet and your health. Respect."},
-      {label:'🥡 Eat out / takeout a lot', value:'out', reply:"No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
+      {label:'🥡 Eat out / takeout a lot', value:'out', reply:a=> iaTone(a)==='savage'
+        ? "No judgment - but eating out is where money loves to fucking evaporate. We'll watch it together."
+        : "No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
       {label:'⚖️ A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
     ]},
   {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 300'},
@@ -4613,7 +4737,9 @@ const INTAKE=[
       {label:'😑 The commute drains me', value:'drain', reply:"That drain is real - and Freedom Mode will show you exactly how many hours of life it costs. Sometimes that number changes everything."},
       {label:"🚗 It's fine", value:'fine', reply:"Good - one less thing weighing on you."},
       {label:'🚲 Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
-      {label:'💸 Sick of the car payment', value:'payment', reply:"Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
+      {label:'💸 Sick of the car payment', value:'payment', reply:a=> iaTone(a)==='savage'
+        ? "Car payments are the biggest silent freedom-killer there is. We're going to make that shit impossible to ignore."
+        : "Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
   {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend',
     bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
@@ -4642,7 +4768,9 @@ const INTAKE=[
   {id:'dreamAmt', bot:a=>`Put a number on it - what does "${a.dream||'that dream'}" cost? ★`, input:'money', key:'dreamAmt', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 5000'},
   {id:'zeroClose', input:'zeroClose', showIf:a=>a.acct!=='spend' && intakeIncomeTotal(a)>0,
     bot:a=>{ const inc=intakeIncomeTotal(a), asg=intakeAssignedTotal(a), left=Math.round(inc-asg);
-      if(left>1) return `Almost done - let's make it zero-based. About ${usd(inc)} comes in, and we've given ${usd(asg)} a job so far. That leaves ${usd(left)} with nothing assigned yet. Where should it go?`;
+      if(left>1) return iaTone(a)==='savage'
+        ? `Almost done - let's make it zero-based. About ${usd(inc)} comes in, and ${usd(asg)} has a job. That leaves ${usd(left)} sitting there with no damn job - and money without a job wanders off. Where's it going?`
+        : `Almost done - let's make it zero-based. About ${usd(inc)} comes in, and we've given ${usd(asg)} a job so far. That leaves ${usd(left)} with nothing assigned yet. Where should it go?`;
       if(left<-1) return `One honest heads-up: we've assigned about ${usd(-left)} more than comes in. I'll flag it on your budget so you can trim - totally fixable.`;
       return `And every dollar already has a job - that's zero-based budgeting, done right. 👏`; }},
   {id:'deepOffer', input:'reflect', key:'deepDive', showIf:a=>a.acct==='spend',
@@ -4675,7 +4803,9 @@ const INTAKE=[
       return `That's ${usd(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
-  {id:'why', bot:"Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
+  {id:'why', bot:a=> iaTone(a)==='savage'
+      ? "Last thing, and it's the one that matters most: why does getting this right matter to you, RIGHT NOW? Don't give me the polite answer - give me the real one. Swear if you need to, I can take it. I'm going to hold onto this and read it back to you at the exact moment you're about to blow it."
+      : "Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out. I'll hold onto it - and remind you at the moments it matters.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
   {id:'done', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
       const base = a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`;
       const close = surv ? ` Remember - one small win this week. That's all I'm asking. The tool's ready when you are.`
@@ -4865,9 +4995,10 @@ function renderReflect(s){
     const o=s.options[+b.dataset.ri];
     iaBub(o.label,'me');
     if(s.key) iaAns[s.key]=o.value||o.label;
-    if(o.reply) iaBub(o.reply,'bot');
-    if(o.followup) setTimeout(()=>askReflectNote(s,o), o.reply?520:120);
-    else setTimeout(iaAdvance, o.reply?750:150);
+    const reply = (typeof o.reply==='function') ? o.reply(iaAns) : o.reply;   // tone-aware replies
+    if(reply) iaBub(reply,'bot');
+    if(o.followup) setTimeout(()=>askReflectNote(s,o), reply?520:120);
+    else setTimeout(iaAdvance, reply?750:150);
   });
   const sk=document.getElementById('iaReflectSkip'); if(sk) sk.onclick=()=>{ if(picked) return; picked=true; iaAdvance(); };
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
@@ -5170,6 +5301,7 @@ function renderHome(){
     plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=flipHintHTML();
+  renderWhyCard();
   renderMoneyStoryNote();
   renderEnough(income);
   renderOffenseDefense();
