@@ -132,6 +132,7 @@
   .deepen .dp-lead{font-size:13px;line-height:1.55;color:var(--text);margin-top:7px}
   .deepen .dp-next{display:flex;gap:12px;margin-top:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
   .deepen .dp-ic{font-size:22px;flex:none}
+  .deepen .dp-body{flex:1;min-width:0}
   .deepen .dp-t{font-weight:800;font-size:15px}
   .deepen .dp-why{font-size:13px;color:var(--muted);line-height:1.5;margin-top:4px}
   .deepen .dp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -1915,7 +1916,7 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
-           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[],
+           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'',
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -2975,9 +2976,15 @@ function emergencyDone(){
   return (state.goals||[]).some(g=>EMERG_RX.test(g.name))
       || state.categories.some(c=>!c.parentId && EMERG_RX.test(c.name) && catAssigned(c.id,state.activeMonth)>0);
 }
+/* "Not now" is a this-month decision, not a permanent one - a step set aside in
+   August should be offered again in September. */
+function deepenSkips(){
+  if(state.deepenSkipMonth!==state.activeMonth) return [];
+  return state.deepenSkipped||[];
+}
 function deepenSteps(){
   const M=state.activeMonth, income=monthIncome(M);
-  const skipped=state.deepenSkipped||[];
+  const skipped=deepenSkips();
   const steps=[
     {k:'payfirst', ic:'💰', t:'Pay yourself first',
      why:income>0?`Before the bills, not after. Even ${money(Math.max(25,Math.round(income*0.1)))} a month - 10% of what you make - is the only bill that buys you freedom instead of renting it.`
@@ -2999,7 +3006,12 @@ function deepenHTML(){
   const steps=deepenSteps();
   const next=steps.find(s=>!s.done&&!s.skipped);
   const doneN=steps.filter(s=>s.done).length;
-  if(!next) return `<div class="wall-next all"><span class="wn-t">🎉 Walls covered, and you have gone past them - paid yourself first, swept the memberships, built the cushion, dated the debt. That is the whole foundation.</span><span class="wn-b"><button class="btn sm primary" data-walldone data-goto="home">Back to Home →</button><button class="btn sm ghost" data-walldone>Keep budgeting</button></span></div>`;
+  const setAside=steps.filter(s=>s.skipped&&!s.done);
+  if(!next){
+    // never claim they did something they only dismissed - that is the one lie this app cannot tell
+    if(setAside.length) return `<div class="wall-next all"><span class="wn-t">Walls covered${doneN?`, and ${doneN} deeper move${doneN>1?'s':''} done`:''}. You set ${setAside.length===1?'one thing':`${setAside.length} things`} aside for now: ${setAside.map(s=>escapeHtml(s.t)).join(', ')}. No pressure - they'll come back around next month.</span><span class="wn-b"><button class="btn sm primary" data-deepreset>Pick one back up</button><button class="btn sm ghost" data-walldone>Not yet</button></span></div>`;
+    return `<div class="wall-next all"><span class="wn-t">🎉 Walls covered, and you have gone past them - paid yourself first, swept the memberships, built the cushion, dated the debt. That is the whole foundation.</span><span class="wn-b"><button class="btn sm primary" data-walldone data-goto="home">Back to Home →</button><button class="btn sm ghost" data-walldone>Keep budgeting</button></span></div>`;
+  }
   const ladder=steps.map(s=>`<span class="dp-chip ${s.done?'done':''} ${s.skipped?'skip':''}">${s.done?'✓':s.ic} ${escapeHtml(s.t)}</span>`).join('');
   return `<div class="deepen">
     <div class="dp-k">🎉 All four walls covered${doneN?` · ${doneN} of 4 deeper moves done`:''}</div>
@@ -3020,7 +3032,7 @@ function deepenHTML(){
 const SUB_SEEDS=['Streaming video','Music','Gym / fitness','Cloud storage','Gaming','Food delivery','News / magazine','Apps & software','Shipping / delivery club','Subscription box','Phone extras','Kids / pet apps'];
 let subSweepRows=[];
 function subRowHTML(r,i){
-  return `<div class="sw-row"><input class="sw-name" data-swi="${i}" type="text" value="${escapeHtml(r.name||'')}" placeholder="What is it?"><span class="sw-dol">$<input class="sw-amt" data-swi="${i}" type="number" min="0" step="any" inputmode="decimal" value="${r.amt||''}" placeholder="0"></span><span class="sw-yr">${r.amt>0?money(r.amt*12)+'/yr':''}</span><button class="sw-x" data-swdel="${i}" title="Remove">✕</button></div>`;
+  return `<div class="sw-row"><input class="sw-name" data-swi="${i}" type="text" value="${escapeHtml(r.name||'')}" placeholder="What is it?"><span class="sw-dol">$<input class="sw-amt" data-swi="${i}" type="number" min="0" step="any" inputmode="decimal" value="${r.amt||''}" placeholder="0"></span><span class="sw-yr">${r.amt>0?usd(r.amt*12)+'/yr':''}</span><button class="sw-x" data-swdel="${i}" title="Remove">✕</button></div>`;   // dollars beside a dollar input - the life-hours translation gets its own line`
 }
 function renderSubSweep(){
   const box=document.getElementById('subSweep'); if(!box) return;
@@ -3030,7 +3042,7 @@ function renderSubSweep(){
   const H=effectiveHourly();
   const yr=total*12;
   const summary = total>0
-    ? `<div class="sw-sum"><div class="sw-big">${money(total)}/mo · <b>${money(yr)} a year</b></div><div class="sw-note">${H>0?`That is <b>${fmtHours(yr/H)}</b> of your life every year, on autopilot. `:''}Keep what you genuinely use. Cancel one you had forgotten and that money is a raise you gave yourself.</div><div class="sw-acts"><button class="btn sm primary" id="swAdd">Add these to my budget →</button><button class="btn sm ghost" id="swDone">Done sweeping</button></div></div>`
+    ? `<div class="sw-sum"><div class="sw-big">${usd(total)}/mo · <b>${usd(yr)} a year</b></div><div class="sw-note">${H>0?`That is <b>${fmtHours(yr/H)}</b> of your life every year, on autopilot. `:''}Keep what you genuinely use. Cancel one you had forgotten and that money is a raise you gave yourself.</div><div class="sw-acts"><button class="btn sm primary" id="swAdd">Add these to my budget →</button><button class="btn sm ghost" id="swDone">Done sweeping</button></div></div>`
     : `<div class="sw-note" style="margin-top:10px">Tap the ones you pay for. Add anything missing by hand.</div>`;
   box.innerHTML=`<div class="cm-chips">${seeds.map(s=>`<button class="cm-seed" data-swadd="${escapeHtml(s)}">+ ${escapeHtml(s)}</button>`).join('')}</div>`
     + (subSweepRows.length?`<div class="sw-list">${subSweepRows.map(subRowHTML).join('')}</div>`:'')
@@ -3080,8 +3092,15 @@ function openSubSweep(){
 function wireDeepen(scope){
   (scope||document).querySelectorAll('[data-deepen]').forEach(b=>b.onclick=()=>runDeepen(b.dataset.deepen));
   (scope||document).querySelectorAll('[data-deepskip]').forEach(b=>b.onclick=()=>{
-    state.deepenSkipped=[...new Set([...(state.deepenSkipped||[]), b.dataset.deepskip])];
+    const cur=deepenSkips();                       // stale skips from a past month don't carry
+    state.deepenSkipped=[...new Set([...cur, b.dataset.deepskip])];
+    state.deepenSkipMonth=state.activeMonth;
     save(); renderBudget(); renderHome();
+  });
+  (scope||document).querySelectorAll('[data-deepreset]').forEach(b=>b.onclick=()=>{
+    state.deepenSkipped=[]; state.deepenSkipMonth='';
+    save(); renderBudget(); renderHome();
+    if(typeof toast==='function') toast('Back on the table - no judgment either way.');
   });
 }
 function runDeepen(k){
@@ -3697,6 +3716,11 @@ function timeWeekFrom(){ return localYMD(new Date(Date.parse(todayStr()+'T00:00:
 function timeWeekTotals(){ const from=timeWeekFrom(); const tot={}; (state.timeLog||[]).forEach(e=>{ if(e.date>=from) tot[e.kind]=(tot[e.kind]||0)+(+e.hours||0); }); return tot; }
 function logTime(kind,hours){
   state.timeLog=state.timeLog||[];
+  // a week only has 168 hours; sold hours are already spoken for. Refuse a total
+  // that couldn't be true rather than quietly accepting nonsense.
+  const tot=timeWeekTotals();
+  const used=Object.values(tot).reduce((s,v)=>s+v,0)+(state.hoursPerWeek||0);
+  if(used+hours>168){ if(typeof toast==='function') toast("That's past 168 hours - a week doesn't hold any more than that."); return; }
   state.timeLog.push({id:uid(),date:todayStr(),kind,hours});
   const cutoff=localYMD(new Date(Date.parse(todayStr()+'T00:00:00')-90*86400000));
   state.timeLog=state.timeLog.filter(e=>e.date>=cutoff);   // bound storage; the ledger is about this season, not forever
@@ -5232,12 +5256,17 @@ document.getElementById('addRec').addEventListener('click',()=>{
 document.getElementById('postRec').addEventListener('click',()=>{
   const n=postRecurring(state.activeMonth);
   if(n){ save(); renderBudget(); renderTx(); renderNetWorth(); alert('Posted '+n+' recurring item'+(n>1?'s':'')+' to '+fmtMonth(state.activeMonth)+'.'); }
-  else alert('Recurring items are already posted for '+fmtMonth(state.activeMonth)+'.');
+  else alert(state.activeMonth===thisMonth()
+    ? 'Everything due so far this month is already posted. The rest will post as each date arrives.'
+    : 'Recurring items are already posted for '+fmtMonth(state.activeMonth)+'.');
 });
 function renderRecurring(){
   const sel=document.getElementById('recCat');
   if(sel) sel.innerHTML=state.categories.length?categoryOptions():'<option value="">Add a category first</option>';
-  const pr=document.getElementById('postRec'); if(pr) pr.textContent='Post recurring to '+fmtMonth(state.activeMonth);
+  const pr=document.getElementById('postRec');
+  if(pr) pr.textContent = state.activeMonth===thisMonth()
+    ? 'Post recurring due so far this month'
+    : 'Post recurring to '+fmtMonth(state.activeMonth);
   const rd=document.getElementById('recDate'); if(rd&&!rd.value) rd.value=todayStr();
   const box=document.getElementById('recList'); if(!box) return;
   if(!state.recurring.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No recurring items yet. Add your paycheck and fixed bills.</div>`; return; }
@@ -5312,10 +5341,18 @@ function recNextDue(r){
   for(let i=0;i<13;i++){ const hit=recOccurrences(r,m).find(d=>d>=t); if(hit) return hit; m=shiftMonth(m,1); }
   return null;
 }
+/* "Spent" has to be a fact, not a forecast. For the CURRENT month we only post
+   occurrences that have actually come due - a weekly bill shouldn't book the
+   whole month on the 3rd and report four times what has really left. Past and
+   future months post in full (browsing back is history; browsing forward is a
+   deliberate planning act). Boot also sweeps last month so nothing is ever
+   missed by not opening the app for a while. */
 function postRecurring(month){
   let added=0;
+  const cap = (month===thisMonth()) ? todayStr() : null;
   state.recurring.forEach(r=>{
     recOccurrences(r,month).forEach(date=>{
+      if(cap && date>cap) return;
       // dedupe per OCCURRENCE, not per month - a weekly bill lands four times
       if(state.transactions.some(t=>t.recId===r.id&&t.date===date)) return;
       if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
@@ -6068,7 +6105,8 @@ function boot(){
   applyTheme();
   ensureTrackStart();   // existing installs: origin = earliest transaction, else today
   renderIntensity(); renderRegister(); newQuote();
-  if(postRecurring(thisMonth())>0) save();
+  // last month first (in full), then this month up to today - nothing slips through
+  if(postRecurring(shiftMonth(thisMonth(),-1))+postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
