@@ -896,6 +896,20 @@
 
   /* ---------- solutions / try this instead ---------- */
   .solve{margin-top:16px;background:#0c1310;border:1px solid #24401f;border-radius:14px;padding:16px 18px}
+  .solve.trig{background:rgba(var(--accent-rgb),.07);border-color:rgba(var(--accent-rgb),.28)}
+  .comfort{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--good);border-radius:12px;padding:13px 15px}
+  .comfort.empty{border-left-color:var(--muted)}
+  .comfort .cm-k{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--good)}
+  .comfort.empty .cm-k{color:var(--muted)}
+  .comfort .cm-s{font-size:13px;line-height:1.5;color:var(--muted);margin-top:6px}
+  .cm-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+  .cm-c{display:inline-flex;align-items:center;gap:6px;background:rgba(var(--good-rgb),.13);border:1px solid rgba(var(--good-rgb),.35);color:var(--text);border-radius:20px;padding:5px 12px;font-size:13px;font-weight:700}
+  .cm-c.edit{background:var(--panel);border-color:var(--line)}
+  .cm-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 2px}
+  .cm-x:hover{color:var(--bad)}
+  .cm-seed{background:var(--panel);border:1px dashed var(--line);color:var(--muted);border-radius:20px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer}
+  .cm-seed:hover{border-color:var(--accent);color:var(--accent)}
+  .comfort .btn.sm{margin-top:10px}
   .solve-h{font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--accent)}
   .solve-t{font-weight:800;font-size:15px;margin:6px 0 12px;line-height:1.35}
   .swap{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px}
@@ -1381,6 +1395,16 @@
       </div>
 
       <div class="panel">
+        <h2>🫱 Free comfort list</h2>
+        <p class="sub">A lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button. Write down what actually helps you when money isn't the answer. Do it now, while you're calm; the app shows the list back to you inside every gut-check, exactly when the urge is loudest.</p>
+        <div class="row" style="margin-top:12px">
+          <label class="fld" style="flex:1">What helps<input type="text" id="comfortInput" placeholder="e.g. Walk outside, call my brother, hot shower"></label>
+          <button class="btn primary" id="comfortAdd">Add</button>
+        </div>
+        <div id="comfortList" style="margin-top:12px"></div>
+      </div>
+
+      <div class="panel">
         <h2>🛍️ Just my spending</h2>
         <p class="sub">Not the one who pays the bills? Turn this on to drop the Four Walls and zero-based budgeting entirely. The home screen becomes your spending, your streak, and the gut-check - built for tracking your own purchases (Amazon, coffee, the random stuff), not running the household.</p>
         <label class="hh-toggle"><input type="checkbox" id="spendOn"> Focus on just my spending</label>
@@ -1718,7 +1742,18 @@ const LESSONS=[
   {t:"Debt Snowball vs. Avalanche",p:"Two ways to kill debt. The Avalanche attacks the highest interest rate first - mathematically cheapest. The Snowball attacks the smallest balance first - emotionally strongest, because early wins keep you in the fight. The best method is the one you'll actually finish. Money is math, but paying it off is behavior.",try:"List your debts. Pick Avalanche if you're driven by numbers, Snowball if you need momentum. Attack one, pay minimums on the rest."},
   {t:"The 24-Hour Rule",p:"Impulse spending isn't a math problem, it's a timing problem. For any non-essential 'want,' put it in a 24-hour holding pen before you buy. Most wants are just a mood wearing a price tag - give it a day and the urge evaporates. The ones that survive the wait are usually the ones actually worth your dollars.",try:"Next time you're about to check out on something you didn't plan for - close the tab. Revisit tomorrow."},
   {t:"Value Per Dollar, Not Price",p:"Cheap and expensive are lazy words. The real question is what each dollar buys you in life, not just in stuff. A $6 coffee that anchors your morning might be worth it; a $60 gadget you'll forget by Friday isn't. Spend ruthlessly on what you actually value and cut ruthlessly on what you don't. That's not deprivation - that's aim.",try:"Circle the three things you spent on last week that you'd happily buy again. Question everything else."},
-  {t:"What's Actually an Asset?",p:"Here's the line nobody drew for you: an asset puts money IN your pocket, a liability takes money OUT. That's the whole test. By that rule, the car in your driveway isn't an asset - it loses value every mile and costs you gas, insurance, and repairs. The house you live in? It takes mortgage, taxes, and upkeep out every month; it only flips to an asset when it pays you rent or you sell for more. This isn't to shame your stuff - it's to stop you feeling rich while you're surrounded by things quietly draining you. Real wealth is the pile that feeds you while you sleep.",try:"Look at everything you call an 'asset.' Cross out anything that doesn't put cash in your pocket. What's left is your real wealth - now grow that number."}
+  {t:"What's Actually an Asset?",p:"Here's the line nobody drew for you: an asset puts money IN your pocket, a liability takes money OUT. That's the whole test. By that rule, the car in your driveway isn't an asset - it loses value every mile and costs you gas, insurance, and repairs. The house you live in? It takes mortgage, taxes, and upkeep out every month; it only flips to an asset when it pays you rent or you sell for more. This isn't to shame your stuff - it's to stop you feeling rich while you're surrounded by things quietly draining you. Real wealth is the pile that feeds you while you sleep.",try:"Look at everything you call an 'asset.' Cross out anything that doesn't put cash in your pocket. What's left is your real wealth - now grow that number."},
+  /* ---- Money psychology: why the numbers alone never fix it ---- */
+  {t:"Your Money Script",p:"Before you ever ran a budget, you inherited a script: money is scarce, money is dirty, money is freedom, we don't talk about money. You picked it up from the house you grew up in - from what was said, and just as loudly from what wasn't. It runs before you think, which is exactly why willpower keeps losing to it. Scripts aren't character flaws and they aren't permanent. They're old code, and old code can be rewritten once you can actually read it.",try:"Write the money sentence you heard most as a kid. Whose voice is it in? Then ask the only question that matters: is it still serving you?"},
+  {t:"Notice, Name, Slow, Redesign, Automate",p:"Behavior change with money runs in five steps, and skipping to the end is why most attempts fail. NOTICE the moment you reach for the card. NAME what's actually happening - bored, tired, celebrating, hiding. SLOW it down with a delay, because the strongest urges are the shortest. REDESIGN the setup so the next one is harder to make (delete the saved card, leave the app). Then AUTOMATE the good move so it stops needing you to be strong. Willpower is a terrible plan. Design is a great one.",try:"Take the trap you fall for most and run all five steps on it, on paper. The redesign step is where the money actually is."},
+  {t:"Name the Feeling First",p:"Comfort spending is trying to solve a feeling with a checkout button. The purchase does work - it just doesn't last, and the feeling comes back with a receipt attached. The fix isn't shame, it's precision: say which feeling it is before you act. Tired? Lonely? Owed something after a brutal week? Naming it out loud drops the charge, and it gives you the chance to answer the real need with something that isn't money.",try:"Build your free comfort list in Settings - the things that genuinely help you for $0. It shows up inside every gut-check, right when you need it."},
+  {t:"Look at the Number",p:"Not opening the app, not opening the statement, letting the envelope sit - that's avoidance, and it's the most expensive habit on this list. It works in the short term, which is the trap: every time you look away you feel better for an hour, so the habit gets stronger while the problem grows in the dark. Shame drives the looking away, and the looking away feeds the shame. The way out is small and boring: look for five minutes.",try:"Set a timer for five minutes and open one account. You don't have to fix anything today. Looking IS the win."},
+  /* ---- Growth: how money starts working instead of just surviving ---- */
+  {t:"The Growth Ladder",p:"Budgeting keeps you from drowning; it doesn't make you swim. There's an order out, and skipping rungs is why people bounce. 1) See it - know where every dollar goes. 2) Buffer - a small cushion so a flat tire stops becoming a crisis. 3) Kill the interest - debt is a negative return you're guaranteed to pay. 4) Capture the raise - every income bump gets assigned before it evaporates. 5) Buy skills - the fastest return most people can get is a bigger earning ceiling. 6) Own things that pay you. You climb one rung at a time, and one buffer at a time.",try:"Find your rung - the lowest one that isn't solid yet. That's your whole job right now. Ignore the rest."},
+  {t:"Catch the Raise",p:"Here's why more money so often changes nothing: the raise arrives, the lifestyle rises to meet it within about two months, and the new normal feels exactly as tight as the old one. That's not weakness, it's adaptation - humans normalize upgrades fast. The people who get ahead aren't earning wildly more, they're just catching the increase before it's absorbed. Decide where a raise goes BEFORE it lands, or your spending will decide for you.",try:"Pick your split now for the next raise, bonus, or tax refund - say half to the goal, half to life. Write it down before the money exists."},
+  {t:"Cutting Has a Floor",p:"You can only cut to zero, and the bottom rung of frugality still leaves you trading hours for dollars forever. Earning has no ceiling - that's the asymmetry nobody frames properly. Defense (spending less) is where you start because it's fast and fully in your control. But offense - a skill worth more, a side income, a raise you actually asked for with a number in hand - is where the math stops being a grind. Scarcity narrows your attention to crumbs; the loaf is somewhere in your peripheral vision.",try:"Spend one hour this week on offense instead of a coupon: research what your role pays elsewhere, or list one skill someone would pay you for."},
+  {t:"Make Money That Isn't Yours Work",p:"Every dollar you keep can either sit still or go to work. Money that works comes back with friends - and the returns start earning returns, which is the quiet engine behind most real wealth. The catch is that it's slow at the start and dull in the middle, which is precisely why most people quit and go buy something exciting instead. Time in beats timing, and boring beats clever. This app isn't going to tell you what to buy - that's yours, and worth a licensed professional's time. It'll just make sure you have something left over to invest.",try:"Find your surplus in the budget - the amount that has no job yet. That number, showing up every month, is where growth starts."},
+  {t:"Resilience Is Recovering",p:"Nobody runs a clean streak forever. The month goes sideways, the car dies, you blow the budget on a Saturday you needed. Resilience was never about never struggling - it's about how fast you come back, and whether you come back at all. The people who make it aren't the ones who never fell off; they're the ones who treated falling off as information instead of a verdict. One bad week is a data point. Quitting is the only thing that actually ends it.",try:"After your next slip, do the review instead of the shame spiral: what happened, what triggered it, what's one smaller step for next time."}
 ];
 
 /* ---------- state ---------- */
@@ -1733,6 +1768,7 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
+           comfortMenu:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -3053,6 +3089,13 @@ document.querySelectorAll('.filters .pill').forEach(p=>p.addEventListener('click
   renderTxList();
 }));
 (function(){ const b=document.getElementById('quickLogBtn'); if(b) b.addEventListener('click',()=>{ quickLogOpen=!quickLogOpen; renderQuickLog(); if(quickLogOpen){ const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); } }); })();
+(function(){
+  const inp=document.getElementById('comfortInput'), btn=document.getElementById('comfortAdd');
+  if(!inp||!btn) return;
+  const add=()=>{ const v=(inp.value||'').trim(); if(!v) return; state.comfortMenu=state.comfortMenu||[]; if(!state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); inp.value=''; save(); renderComfortMenu(); inp.focus(); };
+  btn.addEventListener('click',add);
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') add(); });
+})();
 document.getElementById('txSearch').addEventListener('input',renderTxList);
 document.getElementById('allMonthsBtn').addEventListener('click',()=>{
   txAllMonths=!txAllMonths;
@@ -4200,6 +4243,70 @@ function altHTML(name){
   const title=typeof s.title==='object'?(s.title[state.register]||s.title.middle):s.title;
   return `<div class="solve"><div class="solve-h">💡 Try this instead</div><div class="solve-t">${escapeHtml(title)}</div>${s.swaps.map(sw=>`<div class="swap"><span class="swap-n">${escapeHtml(sw.n)}</span><span class="swap-c">${escapeHtml(sw.c)}</span><div class="swap-d">${escapeHtml(sw.d)}</div></div>`).join('')}${hint?`<div class="solve-hint">${hint}</div>`:''}</div>`;
 }
+/* ============================================================
+   TRIGGER SWAPS - the other half of "try this instead"
+   The object swaps above answer "you want a costly THING, here's a cheaper thing."
+   But most impulse money isn't about the thing - it's the feeling underneath and
+   the environment that made buying easy. These swaps are keyed to the TRAP the
+   user already picked, so the alternative addresses the actual driver: redesign
+   the environment, add a delay, or meet the feeling without a checkout.
+   (Behavioral grounding: money-psychology change loop - notice, name, slow down,
+   redesign the environment, then automate. Framed as options to try, never as a
+   diagnosis of the user.)
+   ============================================================ */
+const TRIGGER_SWAPS={
+  scroll:{ title:"You didn't go looking for this - it was served to you. So change what gets served.",
+    moves:[
+      {n:'Park it on a 48-hour list', d:"Not a no, a not-yet. Write it down and revisit Friday. Most of these never get asked about again."},
+      {n:'Delete the saved card', d:"One-tap checkout is designed to beat your second thought. Make yourself type the digits and you'll skip half of these."},
+      {n:'Unfollow the source', d:"You can't out-willpower a feed you keep feeding. Mute the accounts that keep selling you this."}
+    ]},
+  friction:{ title:"That's tiredness with a checkout button. The cost is real; so is the tired.",
+    moves:[
+      {n:'Name the feeling first', d:"Tired? Fried? Touched out? Say which one. Naming it out loud takes a surprising amount of the charge out of the urge."},
+      {n:'Pull from your free comfort list', d:"The comfort is the point - it doesn't have to be the purchase. Something off your own list scratches the same itch for $0."},
+      {n:'Set a floor, not a ban', d:"Decide the nights it's allowed (say, one a week). A rule you'll keep beats a ban you'll break by Thursday."}
+    ]},
+  status:{ title:"You're paying for how it reads to other people. Check the price of that.",
+    moves:[
+      {n:'Measure against your own last year', d:"Comparing yourself to strangers is a race with no finish line. Compare to where YOU were 12 months ago - that's the only honest scoreboard."},
+      {n:'Remember what the photo hides', d:"Plenty of visible wealth is financed. You're comparing your bank balance to someone's highlight reel and their credit limit."},
+      {n:'Write down what winning means to you', d:"If you don't define it, the algorithm and the neighbours will define it for you - and their version always costs more."}
+    ]},
+  leak:{ title:"Small and recurring is how the real money leaves - quietly, forever.",
+    moves:[
+      {n:'Price the year, not the month', d:"\"Only $12 a month\" is $144 a year. Monthly pricing exists precisely so you don't do that multiplication."},
+      {n:'Audit every renewal today', d:"Go down the list. Cancel anything you'd have to think twice about re-buying at full price right now."},
+      {n:'Set the cancel reminder now', d:"Free trials profit from you forgetting. Put the end date in your calendar the day you start it."}
+    ]}
+};
+function triggerSwapHTML(trap){
+  const t=TRIGGER_SWAPS[trap]; if(!t) return '';
+  return `<div class="solve trig"><div class="solve-h">🔁 Try this instead</div><div class="solve-t">${escapeHtml(t.title)}</div>${t.moves.map(m=>`<div class="swap"><span class="swap-n">${escapeHtml(m.n)}</span><div class="swap-d">${escapeHtml(m.d)}</div></div>`).join('')}</div>`;
+}
+/* The free comfort menu: the user's OWN list of no-cost things that actually help,
+   written while calm and surfaced at the moment of temptation. Comfort spending is
+   trying to solve a feeling - this offers a different answer to the same feeling. */
+const COMFORT_SEEDS=['Walk outside','Call someone','Shower / bath','Nap','Music, loud','Cook something','Stretch','Play with the pet','Sit outside','Game / show, one episode'];
+function comfortHTML(){
+  const list=(state.comfortMenu||[]).filter(Boolean);
+  if(!list.length) return `<div class="comfort empty"><div class="cm-k">🫱 Your free comfort list is empty</div><div class="cm-s">Write down what actually helps when money isn't the answer - a walk, a call, a nap. It'll be waiting here next time the urge hits.</div><button class="btn sm" id="cmSetup">Set up my list</button></div>`;
+  return `<div class="comfort"><div class="cm-k">🫱 Free instead - your own list</div><div class="cm-chips">${list.map(c=>`<span class="cm-c">${escapeHtml(c)}</span>`).join('')}</div><div class="cm-s">You wrote these when you were calm. Pick one before you pick the card.</div></div>`;
+}
+function wireComfortLinks(){
+  const b=document.getElementById('cmSetup'); if(b) b.onclick=()=>{ activateTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } },140); };
+}
+function renderComfortMenu(){
+  const box=document.getElementById('comfortList'); if(!box) return;
+  const list=(state.comfortMenu||[]);
+  box.innerHTML = list.length
+    ? list.map((c,i)=>`<span class="cm-c edit">${escapeHtml(c)}<button class="cm-x" data-cmdel="${i}" title="Remove">✕</button></span>`).join('')
+      +`<div class="sub" style="margin-top:10px">These show up inside a gut-check, right when the urge does.</div>`
+    : `<div class="sub">Nothing yet. Add a few things that genuinely help you - they'll appear inside every gut-check.</div>
+       <div class="cm-chips" style="margin-top:10px">${COMFORT_SEEDS.map((s,i)=>`<button class="cm-seed" data-cmadd="${escapeHtml(s)}">+ ${escapeHtml(s)}</button>`).join('')}</div>`;
+  box.querySelectorAll('button[data-cmdel]').forEach(b=>b.onclick=()=>{ state.comfortMenu.splice(+b.dataset.cmdel,1); save(); renderComfortMenu(); });
+  box.querySelectorAll('button[data-cmadd]').forEach(b=>b.onclick=()=>{ state.comfortMenu.push(b.dataset.cmadd); save(); renderComfortMenu(); });
+}
 let assetKind='real';
 document.getElementById('assetKind').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return; assetKind=b.dataset.k;
@@ -4382,6 +4489,8 @@ function renderCheckResult(){
       <div class="qline">${escapeHtml(q)}</div>
       ${whyReminderHTML()}
       ${altHTML(name)}
+      ${triggerSwapHTML(trap)}
+      ${comfortHTML()}
       <div class="check-actions">
         <button class="btn income" id="impNeutralize">🛡️ Neutralize</button>
         ${goalSelect}
@@ -4389,7 +4498,7 @@ function renderCheckResult(){
         <button class="btn ghost" id="impRansom">🏳️ Pay ransom</button>
       </div>
     </div>`;
-  wireWhyEdit();
+  wireWhyEdit(); wireComfortLinks();
 
   document.getElementById('impNeutralize').addEventListener('click',()=>{
     const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';
@@ -5286,7 +5395,7 @@ function boot(){
   renderIntensity(); renderRegister(); newQuote();
   if(postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
-  renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt();
+  renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   renderFreedomToggle(); fillTrueRate();
   renderBackupNote();

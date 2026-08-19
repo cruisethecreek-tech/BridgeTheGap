@@ -132,3 +132,46 @@ saved ≤ target) and drop records pointing at things that no longer exist.
 - `budget.html` - redirect stub → `app.html` (keeps old links / saved gut-check URLs working).
 - `docs/Budget-Intake.md` - the intake question bank + engine-critical mapping.
 - `README.md` - project summary.
+
+---
+
+## Money-psychology layer (Learn, Try-this-instead, Free comfort list)
+
+Behavioral-science grounding applied in the app's own voice (concepts applied, no
+source text reproduced). Three surfaces:
+
+**1. Lessons (Learn tab, `LESSONS`) - now 17, split into three arcs.**
+- *Mechanics* (original 8): zero-based, pay yourself first, emergency fund, sinking
+  funds, snowball vs avalanche, the 24-hour rule, value per dollar, assets vs stuff.
+- *Psychology* (new): **Your Money Script** (inherited beliefs; write / trace / test a
+  replacement), **Notice, Name, Slow, Redesign, Automate** (the five-step change loop -
+  design beats willpower), **Name the Feeling First** (comfort spending answers a feeling,
+  not a need), **Look at the Number** (avoidance is negatively reinforced; the five-minute
+  exposure fix).
+- *Growth* (new - the deficit-to-growth arc): **The Growth Ladder** (see -> buffer -> kill
+  interest -> capture the raise -> buy skills -> own things that pay you; one rung, one
+  buffer at a time), **Catch the Raise** (lifestyle adapts to income within ~2 months; decide
+  the split before it lands), **Cutting Has a Floor** (defense caps at zero, offense has no
+  ceiling), **Make Money That Isn't Yours Work** (compounding, honestly framed - the app
+  refuses to name investments and points at a licensed professional), **Resilience Is
+  Recovering** (a slip is a data point; the review replaces the shame spiral).
+
+**2. Trigger swaps (`TRIGGER_SWAPS`, `triggerSwapHTML`).** The object-keyed `SOLUTIONS`
+engine could only answer "want a costly thing -> here's a cheaper thing." Trigger swaps
+answer the actual driver, keyed to the trap the user already picked in the gut-check:
+*scroll* -> 48-hour list / delete saved cards / unfollow the source; *friction* -> name the
+feeling / free comfort list / set a floor not a ban; *status* -> compare to your own last
+year / remember what the photo hides / define winning yourself; *leak* -> price the year not
+the month / audit renewals / set the cancel reminder now. Both engines can render together.
+
+**3. Free comfort list (`state.comfortMenu`, Settings panel + `comfortHTML`).** The user
+writes, while calm, the no-cost things that actually help them; the list is surfaced inside
+every gut-check at the moment of temptation, with seed suggestions when empty. Comfort
+spending is an attempt to change a feeling - this offers a different answer to the same
+feeling instead of only shaming the purchase.
+
+**Tone constraint carried through:** patterns are framed as things to notice and try, never
+as labels or diagnosis (labelling breeds shame and defensiveness, which is what drives
+avoidance in the first place). This composes with the existing situation floor - a user in
+survival mode still never gets roasted - and the app continues to route serious distress to
+a qualified professional rather than treating it in-app.
