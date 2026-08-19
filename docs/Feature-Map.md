@@ -42,14 +42,14 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 **Voice engine** - two axes drive all copy:
 - **Register** (Gen Z / Middle / Mature) - set at the intake age-gate; 2026-appropriate vocabulary.
 - **Intensity** (Clean / Blunt / Savage) - the **Settings > Voice & tone** dial (moved out of the header so it no longer rides above every screen); how much mercy. The rotating truth-quote hero (`.quote-wrap`) now shows on **Home only** (`body.on-home`), keeping the other tabs' headers lean.
-- Pickers: `pickVoice` (register×intensity), `pickReg` (register), `pickTrapVoice`. Quote bank `QUOTES`, plus per-feature matrices (`IMP_*`, `TRAP_RESPONSES`, `CHALLENGE_STING`, `REBALANCE_COPY`, `BLINDSPOT_COPY`, `LIFE_LABELS`).
+- Pickers: `pickVoice` (register x intensity, floored by situation), `pickReg` (register), `pickTrapVoiceCtx`. Quote bank `QUOTES`, plus per-feature matrices (`IMP_*`, `TRAP_RESPONSES`, `CHALLENGE_STING`, `REBALANCE_COPY`, `BLINDSPOT_COPY`, `LIFE_LABELS`).
 - **Tone safety lock** - sensitive/essential spend (rent, medical, utilities, groceries, emergencies, and any Cover First essential) forces the **Clean** register regardless of the dial, so the app never roasts someone over a hospital bill or their rent. `SENSITIVE_RX`, `isSensitive`, `effInt`; context-aware pickers `pickVoiceCtx` / `pickTrapVoiceCtx` power the rebalance banner and the impulse gut-check.
 
 **Freedom Mode** (`$` / ⌛ header toggle) - converts every figure into **hours of your life** via `fmtLife` (minutes → hours → work-days → work-months). `money()` is mode-aware; `usd()` is always dollars. Needs an hourly wage. `renderFreedomToggle`, `renderAll`.
 
-**True Net Hourly Wage** (Impulse tab) - `(take-home − overhead) / (160 + commute×4)`. Feeds every hours-of-life figure. Stored in `state.hourlyWage`.
+**True Net Hourly Wage** (Settings) - `(take-home - overhead) / (your work month + commute hrs)`. The work month comes from `state.hoursPerWeek` when the user gave it (hours/week x 52 / 12), else the full-time default `WORKMONTH_HRS` (2,080/12 = 173.33) - the app asks for real hours rather than assuming 40. Feeds every hours-of-life figure. Stored in `state.hourlyWage`.
 
-**Intake chat** - conversational onboarding; opens on first run or "Setup chat". Age-gate first, then writes real data (income → recurring, essentials → Cover First, dream → goal, tone/register). `openIntake`, `INTAKE`, `commitIntake`.
+**Intake chat** - conversational onboarding; opens on first run or "Setup chat". Age-gate, then the tone dial (so the whole conversation speaks in the chosen voice), then the soul layer (situation / money story / budgeting history), then real data (income -> recurring, essentials -> Cover First, dream -> goal). See `docs/Budget-Intake.md`. `openIntake`, `INTAKE`, `commitIntake`.
 
 **Cover First** (the Four Walls) - Roof / Food / Power & Wi-Fi / Getting Around, matched to categories by keyword (`WALLS`). Drives the Home grid, essential-runway, and sovereignty. `renderWalls`, `findOrCreateEssential`.
 
@@ -132,3 +132,46 @@ saved ≤ target) and drop records pointing at things that no longer exist.
 - `budget.html` - redirect stub → `app.html` (keeps old links / saved gut-check URLs working).
 - `docs/Budget-Intake.md` - the intake question bank + engine-critical mapping.
 - `README.md` - project summary.
+
+---
+
+## Money-psychology layer (Learn, Try-this-instead, Free comfort list)
+
+Behavioral-science grounding applied in the app's own voice (concepts applied, no
+source text reproduced). Three surfaces:
+
+**1. Lessons (Learn tab, `LESSONS`) - now 17, split into three arcs.**
+- *Mechanics* (original 8): zero-based, pay yourself first, emergency fund, sinking
+  funds, snowball vs avalanche, the 24-hour rule, value per dollar, assets vs stuff.
+- *Psychology* (new): **Your Money Script** (inherited beliefs; write / trace / test a
+  replacement), **Notice, Name, Slow, Redesign, Automate** (the five-step change loop -
+  design beats willpower), **Name the Feeling First** (comfort spending answers a feeling,
+  not a need), **Look at the Number** (avoidance is negatively reinforced; the five-minute
+  exposure fix).
+- *Growth* (new - the deficit-to-growth arc): **The Growth Ladder** (see -> buffer -> kill
+  interest -> capture the raise -> buy skills -> own things that pay you; one rung, one
+  buffer at a time), **Catch the Raise** (lifestyle adapts to income within ~2 months; decide
+  the split before it lands), **Cutting Has a Floor** (defense caps at zero, offense has no
+  ceiling), **Make Money That Isn't Yours Work** (compounding, honestly framed - the app
+  refuses to name investments and points at a licensed professional), **Resilience Is
+  Recovering** (a slip is a data point; the review replaces the shame spiral).
+
+**2. Trigger swaps (`TRIGGER_SWAPS`, `triggerSwapHTML`).** The object-keyed `SOLUTIONS`
+engine could only answer "want a costly thing -> here's a cheaper thing." Trigger swaps
+answer the actual driver, keyed to the trap the user already picked in the gut-check:
+*scroll* -> 48-hour list / delete saved cards / unfollow the source; *friction* -> name the
+feeling / free comfort list / set a floor not a ban; *status* -> compare to your own last
+year / remember what the photo hides / define winning yourself; *leak* -> price the year not
+the month / audit renewals / set the cancel reminder now. Both engines can render together.
+
+**3. Free comfort list (`state.comfortMenu`, Settings panel + `comfortHTML`).** The user
+writes, while calm, the no-cost things that actually help them; the list is surfaced inside
+every gut-check at the moment of temptation, with seed suggestions when empty. Comfort
+spending is an attempt to change a feeling - this offers a different answer to the same
+feeling instead of only shaming the purchase.
+
+**Tone constraint carried through:** patterns are framed as things to notice and try, never
+as labels or diagnosis (labelling breeds shame and defensiveness, which is what drives
+avoidance in the first place). This composes with the existing situation floor - a user in
+survival mode still never gets roasted - and the app continues to route serious distress to
+a qualified professional rather than treating it in-app.
