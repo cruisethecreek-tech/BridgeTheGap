@@ -125,6 +125,8 @@
   .cat-count{font-size:11px;font-weight:800;color:var(--muted);background:var(--ink);border:1px solid var(--line);border-radius:20px;padding:1px 7px;margin-left:4px}
   .cat-split{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px}
   .cat-split.neg{color:var(--accent-2)}
+  .cat-split.rolled{color:var(--good)}
+  .roll-tag{font-size:11px;font-weight:800;color:var(--good);background:rgba(var(--good-rgb),.12);border:1px solid rgba(var(--good-rgb),.3);border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap}
   .subrow{display:flex;align-items:center;gap:8px;padding:9px 10px;margin-top:8px;background:var(--ink);border:1px solid var(--line);border-radius:10px}
   .subrow .sub-name{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .subrow .sub-assign{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
@@ -134,6 +136,11 @@
   .addsub-row input{flex:1;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 11px;font-size:14px;min-width:0}
   .addsub-row input:focus{outline:none;border-color:var(--accent)}
   .addsub-first{background:none;border:none;color:var(--accent);font-weight:700;font-size:12px;cursor:pointer;margin-top:8px;padding:0;text-align:left}
+  /* third level: Gas → Car 1 / Car 2 - indented under their sub */
+  .subrow.subsub{margin-left:26px;background:var(--panel-2)}
+  .addsub-row.subsub{margin-left:26px}
+  .cat-split.subsplit{margin-left:26px;font-size:11px}
+  .sub-split-btn{background:none;border:none;color:var(--accent);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;padding:2px 4px}
   .dupwarn{background:#1d1a10;border:1px solid #4a3d14;border-radius:14px;padding:14px 16px;margin-bottom:14px}
   .dupwarn .dw-msg{font-size:13px;color:var(--text);line-height:1.5}
   .dupwarn .dw-msg b{color:var(--accent)}
@@ -1965,15 +1972,27 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<'
 function shiftMonth(key,delta){ let [y,m]=key.split('-').map(Number); m+=delta; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return `${y}-${String(m).padStart(2,'0')}`; }
 function fmtMonth(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleString(undefined,{month:'long',year:'numeric'}); }
 function monthOf(dateStr){ return (dateStr||'').slice(0,7); }
-function catName(id){ const c=state.categories.find(x=>x.id===id); if(!c) return 'Uncategorized'; if(c.parentId){ const p=state.categories.find(x=>x.id===c.parentId); if(p) return p.name+' › '+c.name; } return c.name; }
-/* option list for tx/recurring dropdowns, grouped by parent */
+/* full breadcrumb name, walking every level: Food › Groceries › Walmart */
+function catName(id){
+  let c=state.categories.find(x=>x.id===id); if(!c) return 'Uncategorized';
+  const parts=[c.name]; let hops=0;
+  while(c.parentId&&hops++<6){ c=state.categories.find(x=>x.id===c.parentId); if(!c) break; parts.unshift(c.name); }
+  return parts.join(' › ');
+}
+/* option list for tx/recurring dropdowns, grouped by parent; third-level
+   categories render indented inside their group (optgroups can't nest) */
 function categoryOptions(){
   const tops=state.categories.filter(x=>!x.parentId);
   if(!tops.length) return '';
   return tops.map(c=>{
     const kids=state.categories.filter(k=>k.parentId===c.id);
     if(!kids.length) return `<option value="${c.id}">${escapeHtml(c.name)}</option>`;
-    return `<optgroup label="${escapeHtml(c.name)}"><option value="${c.id}">${escapeHtml(c.name)} (whole group)</option>${kids.map(k=>`<option value="${k.id}">${escapeHtml(k.name)}</option>`).join('')}</optgroup>`;
+    const kidOpts=kids.map(k=>{
+      const gkids=state.categories.filter(g=>g.parentId===k.id);
+      return `<option value="${k.id}">${escapeHtml(k.name)}${gkids.length?' (whole group)':''}</option>`
+        + gkids.map(g=>`<option value="${g.id}">&nbsp;&nbsp;› ${escapeHtml(g.name)}</option>`).join('');
+    }).join('');
+    return `<optgroup label="${escapeHtml(c.name)}"><option value="${c.id}">${escapeHtml(c.name)} (whole group)</option>${kidOpts}</optgroup>`;
   }).join('');
 }
 function todayStr(){ return localYMD(new Date()); }
@@ -2856,7 +2875,37 @@ function duplicateGroups(){
 }
 function childrenOf(id){ return state.categories.filter(c=>c.parentId===id); }
 function topCats(){ return state.categories.filter(c=>!c.parentId); }
-function catSpent(id,M){ return spentFor(id,M)+childrenOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
+/* the whole subtree under a category - categories nest to three levels
+   (e.g. Getting Around → Gas → Car 1 / Car 2) */
+function descendantsOf(id){
+  const out=[]; const walk=pid=>{ state.categories.forEach(c=>{ if(c.parentId===pid){ out.push(c); walk(c.id); } }); };
+  walk(id); return out;
+}
+function catDepth(id){ let d=1,c=state.categories.find(x=>x.id===id),hops=0; while(c&&c.parentId&&hops++<6){ d++; c=state.categories.find(x=>x.id===c.parentId); } return d; }
+function catSpent(id,M){ return spentFor(id,M)+descendantsOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
+/* Budgeting works in BOTH directions, because people know their numbers at
+   different levels. Top-down: assign $300 to Power & Wi-Fi and split it into
+   Electric/Water/Internet. Bottom-up: you know water is $70 and electric is $120
+   but have no idea what the total is - fill in the subs and the parent adds them
+   up for you. So a parent's real budget = its own figure OR the sum of its
+   children, whichever is larger. Filling in subs is never an error. */
+function catAssigned(id,M){
+  const kids=childrenOf(id);
+  const own=assignedFor(id,M);
+  if(!kids.length) return own;
+  return Math.max(own, kids.reduce((s,k)=>s+catAssigned(k.id,M),0));
+}
+function kidsAssigned(id,M){ return childrenOf(id).reduce((s,k)=>s+catAssigned(k.id,M),0); }
+/* the line under a group: how much of the pool is still unsplit, or that the
+   parent total came from adding the subs up */
+function splitNoteHTML(id,M,label){
+  const kids=childrenOf(id); if(!kids.length) return '';
+  const own=assignedFor(id,M), sum=kidsAssigned(id,M), extra=id&&label?'subsplit':'';
+  if(sum>own) return `<div class="cat-split rolled ${extra}">↑ ${money(sum)} total, added up from your ${kids.length} sub${kids.length>1?'s':''}${own>0?` (you'd typed ${money(own)})`:''}.</div>`;
+  const left=own-sum;
+  if(left<=0.005) return `<div class="cat-split ${extra}">Fully split - every dollar of this pool has a home.</div>`;
+  return `<div class="cat-split ${extra}">${money(left)}${label?' of '+escapeHtml(label):''} left to split into subs.</div>`;
+}
 
 /* ---------- budget render ---------- */
 /* inline hand-off under the wall the user just funded: next uncovered wall, or the
@@ -2877,7 +2926,7 @@ function renderBudget(){
   document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth) + (state.activeMonth===thisMonth()?'<small>This month</small>':'<small>&nbsp;</small>');
   const M=state.activeMonth;
   const income=monthIncome(M);
-  const assigned=topCats().reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const spent=monthExpense(M);
   const ltb=income-assigned;
 
@@ -2908,19 +2957,27 @@ function renderBudget(){
     box.innerHTML=`<div class="empty">No categories yet. Add one above, or hit “Starter set” to skip the blank page.</div>`;
   } else {
     box.innerHTML=topCats().map(c=>{
-      const a=assignedFor(c.id,M), sp=catSpent(c.id,M), rem=a-sp;
+      const a=catAssigned(c.id,M), sp=catSpent(c.id,M), rem=a-sp;   // rolled up: subs you filled in count even if the parent is blank
       const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
       const over=sp>a&&sp>0;
       const rc=rem<0?'over':(rem>0?'good':'');
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
-      const split = isGroup ? a - kids.reduce((s,k)=>s+assignedFor(k.id,M),0) : 0;
       const rebalance = over ? `<div class="rebalance">
           <div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
           <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">⚡ Auto-Rebalance</button></div>
         </div>` : '';
       const subsHTML = (isGroup && !collapsed) ? kids.map(k=>{
-        const ka=assignedFor(k.id,M), ks=spentFor(k.id,M);
-        return `<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span><button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        // a sub can be a group itself: Gas → Car 1 / Car 2, Groceries → Walmart / Meijer (three levels max)
+        const gkids=childrenOf(k.id), kGroup=gkids.length>0;
+        const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
+        const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
+        let h=`<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" min="0" step="1" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        if(kGroup){
+          h+=gkids.map(g=>`<div class="subrow subsub"><span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span><span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
+          h+=splitNoteHTML(k.id,M,k.name);
+        }
+        if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
+        return h;
       }).join('') : '';
       const showAddRow = (isGroup || splitting.has(c.id)) && !collapsed;
       const addSub = showAddRow
@@ -2931,13 +2988,13 @@ function renderBudget(){
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
           ${c.id===catEditId
             ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
-            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>`}
-          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" enterkeyhint="next" value="${a||0}" data-cat="${c.id}"></span>
+            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${isGroup&&a>assignedFor(c.id,M)?`<span class="roll-tag" title="Added up from your subs">= ${money(a)}</span>`:''}</span>`}
+          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" enterkeyhint="next" value="${assignedFor(c.id,M)||0}" data-cat="${c.id}" ${isGroup?`placeholder="or fill the subs"`:''}></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
         <div class="cat-meta"><span>Spent ${money(sp)} of ${money(a)}</span><span class="rem ${rc}">${rem<0?money(-rem)+' over':money(rem)+' left'}</span></div>
-        ${isGroup?`<div class="cat-split ${split<0?'neg':''}">${split>=0?money(split)+' left to split into subs':money(-split)+' over-split the pool'}</div>`:''}
+        ${splitNoteHTML(c.id,M,'')}
         ${rebalance}
         ${subsHTML}
         ${addSub}
@@ -2971,7 +3028,7 @@ function renderBudget(){
   box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; renderBudget(); } }));
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
-    const toRemove=new Set([id,...childrenOf(id).map(k=>k.id)]);
+    const toRemove=new Set([id,...descendantsOf(id).map(k=>k.id)]);   // the whole subtree goes, all three levels
     state.categories=state.categories.filter(c=>!toRemove.has(c.id));
     Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
     // keep transactions for history; they become "Uncategorized"
@@ -2986,6 +3043,7 @@ function renderBudget(){
   }));
   const addSubcat=(parentId,name)=>{
     name=(name||'').trim(); if(!name) return;
+    if(catDepth(parentId)>=3){ if(typeof toast==='function') toast('Three levels is the limit - deeper than this stops being a plan and starts being filing.'); return; }
     state.categories.push({id:uid(),name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
     const inp=box.querySelector('input[data-addsub-input="'+parentId+'"]'); if(inp) inp.focus();   // ready for the next sub
   };
@@ -2999,19 +3057,22 @@ function isEssentialCat(name){ const n=(name||'').toLowerCase(); return (typeof 
 /* Pillar 4A: pull unused funds from flexible categories into the overspent one */
 function autoRebalance(catId){
   const M=state.activeMonth, target=state.categories.find(c=>c.id===catId); if(!target) return;
-  let need=catSpent(catId,M)-assignedFor(catId,M); if(need<=0){ renderBudget(); return; }
-  // donors: top-level non-essential pools with surplus, "Fun Money" style first
-  const donors=topCats().filter(c=>c.id!==catId && !isEssentialCat(c.name) && (assignedFor(c.id,M)-catSpent(c.id,M))>0)
-    .sort((x,y)=>{ const fx=/fun|misc|extra|blow|guilt|play/.test(x.name.toLowerCase())?0:1, fy=/fun|misc|extra|blow|guilt|play/.test(y.name.toLowerCase())?0:1; if(fx!==fy) return fx-fy; return (assignedFor(y.id,M)-catSpent(y.id,M))-(assignedFor(x.id,M)-catSpent(x.id,M)); });
+  let need=catSpent(catId,M)-catAssigned(catId,M); if(need<=0){ renderBudget(); return; }
+  // donors: top-level non-essential pools with surplus, "Fun Money" style first.
+  // Only genuinely FREE money can move - a pool's dollars already committed to its
+  // own subcategories aren't spare, so the movable amount is capped by both.
+  const freeOf=c=>Math.min(catAssigned(c.id,M)-catSpent(c.id,M), assignedFor(c.id,M)-kidsAssigned(c.id,M));
+  const donors=topCats().filter(c=>c.id!==catId && !isEssentialCat(c.name) && freeOf(c)>0)
+    .sort((x,y)=>{ const fx=/fun|misc|extra|blow|guilt|play/.test(x.name.toLowerCase())?0:1, fy=/fun|misc|extra|blow|guilt|play/.test(y.name.toLowerCase())?0:1; if(fx!==fy) return fx-fy; return freeOf(y)-freeOf(x); });
   let moved=0;
-  for(const d of donors){ if(need<=0) break; const surplus=assignedFor(d.id,M)-catSpent(d.id,M); const take=Math.min(surplus,need); budgetFor(M)[d.id]=assignedFor(d.id,M)-take; budgetFor(M)[catId]=assignedFor(catId,M)+take; need-=take; moved+=take; }
+  for(const d of donors){ if(need<=0) break; const take=Math.min(freeOf(d),need); if(take<=0) continue; budgetFor(M)[d.id]=assignedFor(d.id,M)-take; budgetFor(M)[catId]=catAssigned(catId,M)+take; need-=take; moved+=take; }
   save(); renderBudget();
   if(moved<=0) alert('No flexible funds to pull right now. Add or free up a non-essential category (like "Fun Money") and try again.');
   else if(need>0.005) alert('Rebalanced '+money(moved)+' - pulled everything flexible. Still '+money(need)+' short; trim an essential or add income to finish the job.');
 }
 function refreshBudgetSummary(){
   const M=state.activeMonth, income=monthIncome(M);
-  const assigned=topCats().reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const spent=monthExpense(M), ltb=income-assigned;
   const stat=document.querySelector('#summary .stat.ltb'); if(!stat) return;
   stat.className='stat ltb'+(income===0?'':(Math.abs(ltb)<0.005?' zero':(ltb<0?' over':'')));
@@ -4991,7 +5052,7 @@ function renderCharts(){
   const M=state.activeMonth;
   const ml=document.getElementById('chartMonth'); if(ml) ml.textContent=fmtMonth(M);
   // category spend this month
-  const rows=state.categories.map(c=>({name:c.name,val:spentFor(c.id,M)})).filter(r=>r.val>0).sort((a,b)=>b.val-a.val);
+  const rows=state.categories.map(c=>({name:(c.parentId?((state.categories.find(p=>p.id===c.parentId)||{}).name+' › '):'')+c.name,val:spentFor(c.id,M)})).filter(r=>r.val>0).sort((a,b)=>b.val-a.val);   // qualify nested names so "Car 1" reads as "Gas › Car 1"
   const uncat=txnsInMonth(M).filter(t=>t.type==='expense'&&!state.categories.some(c=>c.id===t.catId)).reduce((s,t)=>s+t.amount,0);
   if(uncat>0) rows.push({name:'Uncategorized',val:uncat});
   const total=rows.reduce((s,r)=>s+r.val,0), maxV=Math.max(1,...rows.map(r=>r.val));
@@ -5861,7 +5922,7 @@ function renderMoneyStoryNote(){
 function renderNextSteps(){
   const box=document.getElementById('nextSteps'); if(!box) return;
   const M=state.activeMonth, income=monthIncome(M);
-  const assigned=topCats().reduce((s,c)=>s+assignedFor(c.id,M),0);
+  const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const ltb=income-assigned;
   const wallsCovered=WALLS.filter(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)>0; }).length;
   const unlocked=state.vault.filter(v=>v.unlocksAt<=Date.now()).length;
