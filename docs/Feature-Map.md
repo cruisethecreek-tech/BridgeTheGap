@@ -37,7 +37,7 @@ for code stability; only the labels and grouping changed (`Defend` label → **S
 | **Plan** (`budget`) | primary | Zero-based budgeting per month: categories + **subcategories** (pool split), **Recurring** engine, **duplicate-tidy** banner, **Auto-Rebalance**. | `renderBudget`, `autoRebalance`, `renderRecurring`, `mergeDuplicates` |
 | **Shield** (`impulse`) | primary | The **Anti-Trap** system: Trap Radar scan, 24-Hour Cooling Vault, War Chest scoreboard. | `renderCheckResult`, `renderVault`, `renderImpulse` |
 | **Build** (`goals`) | primary | Wealth, as **collapsible sections** (`<details class="acc">`) so the tab opens calm instead of stacking six panels: **Assets/Liabilities + Net Worth** (open by default), **Dreams & goals**, **Skill & Capacity**, **Giving & Circulation**, then the stage-3 **Network Capital** and **Sovereignty Audit**. | `renderNetWorth`, `renderSovereignty`, `renderGoals`, `renderNetwork` |
-| **Track** (`tx`) | more | Ledger of income + expenses, **energy tags**, filters/search, **Zero-Blindspot Shield**. | `renderTx`, `renderTxList`, `blindspotShield` |
+| **Track** (`tx`) | more | Ledger of income + expenses **+ the 🌱 Invest lane** (neither income nor expense: cash drops, the money lands in an auto-managed "Invested capital" asset, so net worth holds and the runway counts it; monthly "Invested" tile, recurring auto-invest supported). Also the **⏳ time ledger** ("Your week in hours"): hours invested in health/learning/building/people vs. hours leaked to the screen, with leaked hours priced in dollars at the user's own rate. Energy tags, filters/search, **Zero-Blindspot Shield**. | `renderTx`, `renderTxList`, `investAssetAdd`, `renderTimeLog`, `blindspotShield` |
 | **Learn** (`learn`) | more | Money School lessons **+** Insights charts (spending, income-vs-spend, trend, **Abundance & Circulation**). | `renderLesson`, `renderCharts`, `renderCirculation` |
 | **Settings** (`settings`) | more | True Net Hourly Wage engine, plus setup chat / install / export / import / reset. | `updateWageNote`, `trCompute` |
 
@@ -56,11 +56,11 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Freedom Mode** (`$` / ⌛ header toggle) - converts every figure into **hours of your life** via `fmtLife` (minutes → hours → work-days → work-months). `money()` is mode-aware; `usd()` is always dollars. Needs an hourly wage. `renderFreedomToggle`, `renderAll`.
 
-**True Net Hourly Wage** (Settings) - `(take-home - overhead) / (your work month + commute hrs)`. The work month comes from `state.hoursPerWeek` when the user gave it (hours/week x 52 / 12), else the full-time default `WORKMONTH_HRS` (2,080/12 = 173.33) - the app asks for real hours rather than assuming 40. Feeds every hours-of-life figure. Stored in `state.hourlyWage`.
+**True Net Hourly Wage** (Settings) - `(take-home - overhead) / (your work month + commute hrs)`. The work month comes from `state.hoursPerWeek` when the user gave it (hours/week x 52 / 12), else the full-time default `WORKMONTH_HRS` (2,080/12 = 173.33) - the app asks for real hours rather than assuming 40, and hours/week is editable in Settings next to the wage. The same real month scales `fmtLife`'s day/month buckets and the no-wage income fallback (`effectiveHourly`), so a 60-hour-week person's month of pay reads as "1.0 mo" of THEIR life. Feeds every hours-of-life figure. Stored in `state.hourlyWage`.
 
 **Intake chat** - conversational onboarding; opens on first run or "Setup chat". Age-gate, then the tone dial (so the whole conversation speaks in the chosen voice), then the soul layer (situation / money story / budgeting history), then real data (income -> recurring, essentials -> Cover First, dream -> goal). See `docs/Budget-Intake.md`. `openIntake`, `INTAKE`, `commitIntake`.
 
-**Cover First** (the Four Walls) - Roof / Food / Power & Wi-Fi / Getting Around, matched to categories by keyword (`WALLS`). Drives the Home grid, essential-runway, and sovereignty. `renderWalls`, `findOrCreateEssential`.
+**Cover First** (the Four Walls) - Roof / Food / Power & Wi-Fi / Getting Around, matched to categories by keyword (`WALLS`). Drives the Home grid, essential-runway, and sovereignty. Tapping a wall deep-links to its category on Plan and starts the **wall-to-wall guide** (`wallGuideCat`, `wallGuideHTML`): fund it and an inline banner hands you the next uncovered wall, ending in an all-covered close - no bouncing back to Home between essentials. On the Home grid, covered walls collapse to compact ✓ chips (still tappable to adjust) and the whole grid folds to one line when all four are covered; walls are per-month, so they return asking when the month turns. `renderWalls`, `goToWall`, `findOrCreateEssential`.
 
 **Silent Sovereignty Audit** - Sovereign Capital Ratio, Overhead Drag, Pure Freedom Runway, and a 4-tier classification (Encumbered → Tethered → Sovereign → Untouchable). `sovereignty`, `renderSovereignty`.
 
@@ -128,7 +128,16 @@ trackChallenge                            // 30-day money map {start, days}
 sweptDays                                 // reward-calendar sweeps {YYYY-MM-DD: {amount, goalId}}
 wageAuto                                  // hourlyWage is auto-derived (re-blends on income change)
 msNoteDismissed                           // money-story home note dismissed for month
+hoursPerWeek                              // real hours worked/week (0 = unknown, 40-hr default applies)
+trackStart                                // tracking origin (YYYY-MM-DD); calendar days before it are "pre"
+comfortMenu                               // the free comfort list (strings, shown inside every gut-check)
+timeLog                                   // time ledger entries [{id, date, kind, hours}], kinds: health|learn|build|people|leak (90-day window)
+theme                                     // dark|light override ('' = follow system)
 ```
+Transaction `type` is `income | expense | invest`. Invest reduces the cash balance but
+credits the auto-managed `Invested capital` asset (`asset.auto==='invest'`); deleting the
+transaction unwinds the asset. Spend streaks, budgets, and the reward calendar all filter
+on `type==='expense'`, so investing is never counted as spending.
 
 Backward compatibility: `defaultState()` supplies every key, so older saves upgrade
 cleanly (`Object.assign(defaultState(), parsed)`), and `normalizeState()` runs on

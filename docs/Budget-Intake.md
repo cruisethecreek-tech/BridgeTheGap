@@ -16,9 +16,12 @@ swears included: at Blunt the accountability intro says "I help you see through 
 bullshit"; Savage goes harder ("the same damn room", "don't bullshit the numbers",
 "that's YOUR damn money", "show the hell up"). Clean users never see a swear, and the
 intake applies the same floor as the live app (`iaTone`): survival collapses to Clean,
-treading water eases Savage to Blunt. Consent before cursing, always.
+treading water eases Savage to Blunt. Consent before cursing, always. **The situation
+question comes third - right after tone and BEFORE the intro** - so the floor is already
+known when the intro speaks: someone in survival mode never gets the savage intro first
+and the softening after.
 
-After the name and the three soul-layer questions (situation, money story, budgeting
+After the situation, intro, name and the remaining soul-layer questions (money story, budgeting
 history - see below), the chat asks whether they run the whole household budget or just
 want to track their own spending (`acct`: full | spend). **The lighter "just my spending"
 path is presented first and gently recommended** - full zero-based means logging every
@@ -112,10 +115,11 @@ one-line reply** so the user feels heard; the richest opens an optional free-tex
 - **Food** (`foodStyle`): cook / eat out / both.
 - **Getting Around** (`commuteFeel`): drains me / fine / love it / sick of the car payment.
 - **Debt** (`debtFeel`, only if carrying debt): treading water / slowly winning / just starting.
-**The soul layer (situation + money story).** Before any numbers, right after the name, two
-foundational reflections set how the app shows up:
+**The soul layer (situation + money story).** Before any numbers, two foundational
+reflections set how the app shows up:
 - **Situation** (`situation`): surviving / treading water / stable but stuck / stable and
-  ready to build - "where are you right now, honestly?" No judgment; each answer gets a
+  ready to build - "where are you right now, honestly?" Asked right after tone, BEFORE the
+  intro, so the tone floor is live before the app's longest speech. No judgment; each answer gets a
   tailored, human reply. This one **drives the plan**: the `acct` step reframes its
   recommendation for survival ("start light, no full-budget homework"), the close softens
   ("one small win this week - that's all I'm asking"), and on Home the "Do this next" cards
