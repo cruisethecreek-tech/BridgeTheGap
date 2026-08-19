@@ -56,7 +56,7 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Freedom Mode** (`$` / ⌛ header toggle) - converts every figure into **hours of your life** via `fmtLife` (minutes → hours → work-days → work-months). `money()` is mode-aware; `usd()` is always dollars. Needs an hourly wage. `renderFreedomToggle`, `renderAll`.
 
-**True Net Hourly Wage** (Settings) - `(take-home - overhead) / (your work month + commute hrs)`. The work month comes from `state.hoursPerWeek` when the user gave it (hours/week x 52 / 12), else the full-time default `WORKMONTH_HRS` (2,080/12 = 173.33) - the app asks for real hours rather than assuming 40. Feeds every hours-of-life figure. Stored in `state.hourlyWage`.
+**True Net Hourly Wage** (Settings) - `(take-home - overhead) / (your work month + commute hrs)`. The work month comes from `state.hoursPerWeek` when the user gave it (hours/week x 52 / 12), else the full-time default `WORKMONTH_HRS` (2,080/12 = 173.33) - the app asks for real hours rather than assuming 40, and hours/week is editable in Settings next to the wage. The same real month scales `fmtLife`'s day/month buckets and the no-wage income fallback (`effectiveHourly`), so a 60-hour-week person's month of pay reads as "1.0 mo" of THEIR life. Feeds every hours-of-life figure. Stored in `state.hourlyWage`.
 
 **Intake chat** - conversational onboarding; opens on first run or "Setup chat". Age-gate, then the tone dial (so the whole conversation speaks in the chosen voice), then the soul layer (situation / money story / budgeting history), then real data (income -> recurring, essentials -> Cover First, dream -> goal). See `docs/Budget-Intake.md`. `openIntake`, `INTAKE`, `commitIntake`.
 
@@ -128,6 +128,10 @@ trackChallenge                            // 30-day money map {start, days}
 sweptDays                                 // reward-calendar sweeps {YYYY-MM-DD: {amount, goalId}}
 wageAuto                                  // hourlyWage is auto-derived (re-blends on income change)
 msNoteDismissed                           // money-story home note dismissed for month
+hoursPerWeek                              // real hours worked/week (0 = unknown, 40-hr default applies)
+trackStart                                // tracking origin (YYYY-MM-DD); calendar days before it are "pre"
+comfortMenu                               // the free comfort list (strings, shown inside every gut-check)
+theme                                     // dark|light override ('' = follow system)
 ```
 
 Backward compatibility: `defaultState()` supplies every key, so older saves upgrade

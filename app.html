@@ -64,7 +64,7 @@
 
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-  body{min-height:100vh;padding-bottom:60px}
+  body{min-height:100vh}   /* bottom padding lives with the fixed-bar rules below */
   button{font-family:inherit;cursor:pointer;color:inherit}
   input,select{font-family:inherit}
   ::selection{background:var(--accent);color:var(--on-accent)}
@@ -249,13 +249,18 @@
   /* ---------- Layout ---------- */
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
   /* ---- Bottom nav bar with a centre "I want to..." notch (thumb-reach) ---- */
-  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--bg);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 24px rgba(0,0,0,.35)}
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 24px rgba(0,0,0,.35)}
   .tabrow{display:flex;align-items:stretch;max-width:560px;margin:0 auto}
   /* the notch the FAB sits in - carries the hub's label at the bar's baseline */
   .tabrow .tab-gap{flex:1;min-width:64px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px;font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap}
   .tabs.hub-open .tab-gap{color:var(--accent)}
   body.more-open .fab{bottom:calc(124px + env(safe-area-inset-bottom))}   /* clear the 114px expanded bar */
   body.more-open{padding-bottom:196px}
+  /* Hub open: lift the FAB above the sheet's scrim so the ✕ is visible and tappable,
+     and pin it back to its notch (the more-open lift is pointless behind a scrim). */
+  body.hub-open .fab{z-index:62;bottom:calc(28px + env(safe-area-inset-bottom))}
+  #intentSheet .modal.sheet{margin-bottom:calc(96px + env(safe-area-inset-bottom))}   /* the card floats above the notch + FAB */
+  @media(min-width:560px){ #intentSheet .modal.sheet{margin-bottom:0} }
   .tab{flex:1;background:none;border:none;color:var(--muted);font-weight:700;font-size:11px;padding:9px 2px 7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-width:0}
   .tab .t-ic{font-size:19px;line-height:1;filter:grayscale(.55) opacity(.75);transition:filter .15s ease}
   .tab .t-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -829,10 +834,9 @@
 
   /* ---------- FAB + modal ---------- */
   /* Centre notch button - the intent hub, sitting in the bar's gap */
-  .fab{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:58;background:var(--accent);color:var(--on-accent);border:none;border-radius:50px;width:60px;height:60px;padding:0;font-weight:900;font-size:10px;box-shadow:0 8px 24px rgba(230,178,77,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease;border:4px solid var(--bg)}
+  .fab{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:58;background:var(--accent);color:var(--on-accent);border-radius:50px;width:60px;height:60px;padding:0;font-weight:900;font-size:10px;box-shadow:0 8px 24px rgba(230,178,77,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease;border:4px solid var(--bg)}
   .fab:hover{transform:translateX(-50%) translateY(-3px);box-shadow:0 12px 30px rgba(230,178,77,.55)}
   .fab:active{transform:translateX(-50%) scale(.95)}
-  .fab.hide{display:none}
   .fab .fab-ic{font-size:20px;line-height:1}
   .fab #fabLbl{font-size:0}   /* the visible label lives in the bar under the notch */
   /* "I want to..." intent sheet - one tap from anywhere to any job the app does */
@@ -853,6 +857,9 @@
   @keyframes slideup{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
   .modal h3{font-size:20px;font-weight:900;margin-bottom:4px}
   .modal .x{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
+  /* one small toast layer - above the bar (55), the sheet/modal (60) and intake (70) */
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(120px + env(safe-area-inset-bottom));z-index:130;background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:12px;padding:11px 16px;font-size:14px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:min(92vw,420px);text-align:center;opacity:0;pointer-events:none;transition:opacity .18s ease}
+  .toast.on{opacity:1}
 
   /* ---------- badges + celebration ---------- */
   .badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(94px,1fr));gap:10px;margin:6px 0 4px}
@@ -920,7 +927,7 @@
   .challenge .cx{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
   /* ---------- solutions / try this instead ---------- */
-  .solve{margin-top:16px;background:#0c1310;border:1px solid #24401f;border-radius:14px;padding:16px 18px}
+  .solve{margin-top:16px;background:rgba(var(--good-rgb),.07);border:1px solid rgba(var(--good-rgb),.3);border-radius:14px;padding:16px 18px}
   .solve.trig{background:rgba(var(--accent-rgb),.07);border-color:rgba(var(--accent-rgb),.28)}
   .comfort{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--good);border-radius:12px;padding:13px 15px}
   .comfort.empty{border-left-color:var(--muted)}
@@ -939,7 +946,7 @@
   .solve-t{font-weight:800;font-size:15px;margin:6px 0 12px;line-height:1.35}
   .swap{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:8px}
   .swap-n{font-weight:800;font-size:14px}
-  .swap-c{margin-left:8px;font-size:12px;font-weight:800;color:var(--accent);background:#152012;border:1px solid #24401f;border-radius:6px;padding:2px 8px;white-space:nowrap}
+  .swap-c{margin-left:8px;font-size:12px;font-weight:800;color:var(--accent);background:rgba(var(--good-rgb),.12);border:1px solid rgba(var(--good-rgb),.3);border-radius:6px;padding:2px 8px;white-space:nowrap}
   .swap-d{color:var(--text);font-size:13px;margin-top:6px;line-height:1.5}
   .solve-hint{margin-top:12px;font-size:13px;color:var(--text);line-height:1.55}
   .solve-hint b{color:var(--accent)}
@@ -1405,6 +1412,9 @@
           <label class="fld">Take-home pay per hour
             <input type="number" id="wage" min="0" step="0.5" placeholder="e.g. 22" style="width:150px">
           </label>
+          <label class="fld">Hours you actually work / week
+            <input type="number" id="hpw" min="1" max="120" step="any" placeholder="40" style="width:120px">
+          </label>
           <div id="wageNote" class="sub" style="margin:0;align-self:flex-end;max-width:340px"></div>
         </div>
         <details class="truerate" id="trueRate">
@@ -1506,11 +1516,16 @@
         </div>
         <div class="databox">
           <div class="db-head">🎚️ Voice &amp; tone</div>
-          <p class="sub" style="margin:6px 0 10px">How much mercy the app gives you. Clean is gentle, Savage pulls no punches. Your generation is set during the setup chat.</p>
+          <p class="sub" style="margin:6px 0 10px">How much mercy the app gives you. Clean is gentle, Savage pulls no punches - and the generation dial below sets the slang.</p>
           <div class="intensity" id="intensity">
             <button data-lvl="clean">Clean</button>
             <button data-lvl="blunt">Blunt</button>
             <button data-lvl="savage">Savage</button>
+          </div>
+          <div class="intensity" id="register" style="margin-top:8px">
+            <button data-reg="genz">Gen Z</button>
+            <button data-reg="middle">Middle</button>
+            <button data-reg="mature">Mature</button>
           </div>
         </div>
       </div>
@@ -1824,8 +1839,10 @@ function normalizeState(s){
   const txIds=new Set((s.transactions||[]).map(t=>t.id));
   if(Array.isArray(s.giving)) s.giving=s.giving.filter(g=>!g.txId || txIds.has(g.txId));
   // tracking origin: the day this budget actually began. Backfill from the earliest
-  // transaction (imported history included) so days before it never score as wins.
-  const dates=(s.transactions||[]).map(t=>t.date).filter(Boolean).sort();
+  // REAL transaction (imported history included) so days before it never score as
+  // wins. Intake-seeded transactions are dated the 1st for month math - they're a
+  // setup artifact, not evidence of tracking, so they must not drag the origin back.
+  const dates=(s.transactions||[]).filter(t=>t.note!=='Intake').map(t=>t.date).filter(Boolean).sort();
   if(dates[0] && (!s.trackStart || dates[0]<s.trackStart)) s.trackStart=dates[0];
   return s;
 }
@@ -1843,19 +1860,21 @@ const uid = () => Math.random().toString(36).slice(2,9);
 /* pure dollars */
 const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
 /* Pillar 2: dollars -> units of human effort. Magnitude-scaled.
-   WORKMONTH_HRS = a full-time month = 2,080 hrs/yr (40 x 52) / 12 = 173.33. This
-   is the SAME basis estHourlyFromMonthly uses to derive an hourly from monthly
-   take-home, so one month of pay reads as exactly "1.0 mo" of life, not 1.08. */
+   WORKMONTH_HRS (2,080 hrs/yr / 12 = 173.33) is only the 40-hour DEFAULT: when the
+   user told us their real week, the day/month buckets scale to it - so one month of
+   a 60-hour-week person's pay still reads as "1.0 mo" of THEIR life, not 1.5. */
 const WORKDAY_HRS=8, WORKMONTH_HRS=2080/12;
 function fmtLife(amount, rateOverride){
   const H=(rateOverride!=null?rateOverride:effectiveHourly());
   if(!H||H<=0) return usd(amount);            // no rate yet - fall back to dollars
+  const moHrs=(state.hoursPerWeek>0 ? monthHours(state.hoursPerWeek) : WORKMONTH_HRS);
+  const dayHrs=moHrs/21.7;                    // ~21.7 workdays a month, whatever the week length
   const neg=amount<0, hrs=Math.abs(amount)/H;
   let out;
   if(hrs*60 < 60){ const m=Math.max(1,Math.round(hrs*60)); out=m+' min'; }
-  else if(hrs < WORKDAY_HRS){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
-  else if(hrs < WORKMONTH_HRS){ const v=Math.round(hrs/WORKDAY_HRS*10)/10; out=v+(v===1?' day':' days'); }
-  else { const v=Math.round(hrs/WORKMONTH_HRS*10)/10; out=v+' mo'; }
+  else if(hrs < dayHrs){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
+  else if(hrs < moHrs){ const v=Math.round(hrs/dayHrs*10)/10; out=v+(v===1?' day':' days'); }
+  else { const v=Math.round(hrs/moHrs*10)/10; out=v+' mo'; }
   return (neg?'-':'')+out;
 }
 /* the app formats everything through money(): mode-aware */
@@ -2139,7 +2158,7 @@ function renderCalDay(M, allowance){
    days before it (with nothing logged) are "pre" - never green, never a streak
    day, never surplus. Imported history still scores: a pre-origin day WITH real
    spending is treated as a normal scored day. */
-function ensureTrackStart(){ if(!state.trackStart){ const dates=(state.transactions||[]).map(t=>t.date).filter(Boolean).sort(); state.trackStart=dates[0]||todayStr(); } }
+function ensureTrackStart(){ if(!state.trackStart){ const dates=(state.transactions||[]).filter(t=>t.note!=='Intake').map(t=>t.date).filter(Boolean).sort(); state.trackStart=dates[0]||todayStr(); } }   // intake-seeded txs are dated the 1st - never the origin
 function calIsPre(dateStr, hasSpend){ return !!state.trackStart && dateStr<state.trackStart && !hasSpend; }
 function calElapsedDays(M){
   const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate();
@@ -2421,6 +2440,10 @@ document.getElementById('intensity').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   state.intensity=b.dataset.lvl; save(); renderIntensity(); newQuote();
 });
+document.getElementById('register').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  state.register=b.dataset.reg; save(); renderRegister(); newQuote(); renderHome();
+});
 function renderIntensity(){
   document.querySelectorAll('#intensity button').forEach(b=>b.classList.toggle('on',b.dataset.lvl===state.intensity));
   // be honest when the situation floor is overriding the chosen level
@@ -2432,7 +2455,7 @@ function renderIntensity(){
     if(note) note.textContent='Eased to '+(eff==='clean'?'Clean':'Blunt')+' while you told me you\'re '+(state.intake&&state.intake.reflections&&state.intake.reflections.situation==='survive'?'in survival':'treading water')+' - wins first, roasts later. Re-run the setup chat when that changes.';
   } else if(note){ note.remove(); }
 }
-/* register is chosen at the intake age-gate; no always-on header dial */
+/* register is chosen at the intake age-gate; adjustable later under Voice & tone */
 function renderRegister(){ document.querySelectorAll('#register button').forEach(b=>b.classList.toggle('on',b.dataset.reg===(state.register||'middle'))); }
 
 /* ---------- tabs ---------- */
@@ -2447,9 +2470,9 @@ function activateTab(name,fromHistory){
   const v=document.getElementById('view-'+name); if(v) v.classList.add('on');
   const tabsEl=document.getElementById('tabs');
   if(tabsEl){ const inMore=MORE_VIEWS.includes(name); tabsEl.classList.toggle('more-open',inMore);
-    const mb=document.getElementById('moreBtn'); if(mb) mb.setAttribute('aria-expanded',inMore?'true':'false'); document.body.classList.toggle('more-open',inMore); }
-  // the gut-check FAB is redundant where an inline gut-check button already exists (Home, Shield)
-  const fab=document.getElementById('fab'); if(fab) fab.classList.remove('hide');   // intent hub: reachable from every tab
+    const mb=document.getElementById('moreBtn'); if(mb){ mb.setAttribute('aria-expanded',inMore?'true':'false'); mb.classList.toggle('on',inMore); }   // More stays lit while a drawer view is current - even collapsed, the bar shows where you are
+    document.body.classList.toggle('more-open',inMore); }
+  positionFab();
   if(name==='learn') renderCharts();
   if(name==='home') renderHome();
   if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
@@ -2459,6 +2482,16 @@ function activateTab(name,fromHistory){
 }
 document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
 (function(){ const mb=document.getElementById('moreBtn'); if(mb) mb.addEventListener('click',()=>{ const t=document.getElementById('tabs'); const open=t.classList.toggle('more-open'); mb.setAttribute('aria-expanded',open?'true':'false'); document.body.classList.toggle('more-open',open); }); })();
+/* The FAB is fixed-positioned, but the notch it sits in is placed by flexbox - and
+   the flex math shifts when a tab is hidden (Build at stage 1 / spending mode).
+   So the FAB follows the notch's real position instead of assuming viewport centre. */
+function positionFab(){
+  const gap=document.querySelector('.tab-gap'), fab=document.getElementById('fab');
+  if(!gap||!fab) return;
+  const r=gap.getBoundingClientRect();
+  if(r.width>0) fab.style.left=(r.left+r.width/2)+'px';
+}
+window.addEventListener('resize',positionFab);
 
 /* ============================================================
    Back-button navigation (Android hardware/gesture back + browser back).
@@ -2468,13 +2501,22 @@ document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('clic
 function pushOverlay(){ if(history.pushState) history.pushState({t:'overlay'},''); }
 function closeTopOverlay(){
   const cel=document.querySelector('.stagecelebrate'); if(cel){ cel.remove(); return true; }
-  const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
+  // check order = paint order: the modal is later in the DOM, so it paints on top
+  // of the sheet - Back must dismiss the overlay the user can actually see
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
+  const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
   const ik=document.getElementById('intake'); if(ik&&ik.classList.contains('on')){ ik.classList.remove('on'); document.body.style.overflow=''; return true; }
   return false;
 }
-/* dismiss an open overlay via UI: pop its history entry so Back stays in sync */
-function dismissOverlay(){ if(history.state&&history.state.t==='overlay'){ history.back(); } else { closeTopOverlay(); } }
+/* dismiss an open overlay via UI: pop its history entry so Back stays in sync.
+   history.back() is async - the latch stops a double-tap firing two pops against
+   one pushed entry (which would kick the user back a tab, or out of the app). */
+let overlayPopping=false;
+function dismissOverlay(){
+  if(overlayPopping) return;
+  if(history.state&&history.state.t==='overlay'){ overlayPopping=true; history.back(); }
+  else { closeTopOverlay(); }
+}
 /* close overlay AND move to a tab (used when an in-modal action navigates) */
 function closeOverlayThenTab(name){
   if(history.state&&history.state.t==='overlay') history.replaceState({t:'tab',name},'');
@@ -2483,6 +2525,7 @@ function closeOverlayThenTab(name){
   activateTab(name,true);
 }
 window.addEventListener('popstate',e=>{
+  overlayPopping=false;                      // the queued back() landed - dismissOverlay may fire again
   if(closeTopOverlay()) return;              // Back closed an open overlay
   const name=(e.state&&e.state.name)||'home';
   activateTab(name,true);
@@ -2519,6 +2562,7 @@ function applyStage(opts){
   if(state.spendingMode){
     document.querySelectorAll('[data-stage]').forEach(el=>el.classList.add('stage-locked'));
     renderStageBar(); renderRetro();
+    if(typeof positionFab==='function') positionFab();   // hiding Build reshapes the bar - re-seat the FAB in the notch
     return;
   }
   const rs=runwayStage();
@@ -2527,6 +2571,7 @@ function applyStage(opts){
   const stage=activeStage();
   document.querySelectorAll('[data-stage]').forEach(el=>{ el.classList.toggle('stage-locked',(+el.dataset.stage)>stage); });
   renderStageBar(); renderRetro();
+  if(typeof positionFab==='function') positionFab();     // showing/hiding Build reshapes the bar - re-seat the FAB
   if(leveledUp && !opts.silent) celebrateStage(leveledUp);
 }
 function renderStageBar(){
@@ -3129,7 +3174,7 @@ document.querySelectorAll('.filters .pill').forEach(p=>p.addEventListener('click
 (function(){
   const inp=document.getElementById('comfortInput'), btn=document.getElementById('comfortAdd');
   if(!inp||!btn) return;
-  const add=()=>{ const v=(inp.value||'').trim(); if(!v) return; state.comfortMenu=state.comfortMenu||[]; if(!state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); inp.value=''; save(); renderComfortMenu(); inp.focus(); };
+  const add=()=>{ const v=(inp.value||'').trim(); if(!v) return; state.comfortMenu=state.comfortMenu||[]; if(!state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); inp.value=''; comfortChanged(); inp.focus(); };
   btn.addEventListener('click',add);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') add(); });
 })();
@@ -3164,11 +3209,13 @@ function qlRow(){ return `<div class="ql-row">
   </div>`; }
 /* Notepad photo -> quick log. The photo NEVER leaves the device: it renders as a
    reference image beside the rows, and the optional "read it" pass runs Tesseract
-   OCR in the browser (the ~2MB reader downloads once from a CDN; the image itself
-   is processed locally). Honest expectations: printed text reads well, handwriting
-   is hit-or-miss - every parsed line lands in an editable row for review, nothing
-   logs without the user's eyes on it. */
-let qlPhotoURL=null, tessLoading=null;
+   OCR in the browser (a few MB of reader plus a ~15MB language pack fetched from a
+   CDN; the image itself is processed locally). Honest expectations: printed text
+   reads well, handwriting is hit-or-miss - every parsed line lands in an editable
+   row for review, nothing logs without the user's eyes on it.
+   qlGen is a render epoch: an OCR pass that outlives its panel must not write into
+   a rebuilt (or closed) DOM. */
+let qlPhotoURL=null, qlPhotoFile=null, tessLoading=null, qlGen=0;
 function loadTesseract(){
   if(window.Tesseract) return Promise.resolve(window.Tesseract);
   if(tessLoading) return tessLoading;
@@ -3194,10 +3241,11 @@ function qlParseOcr(text){
 }
 function renderQuickLog(){
   const box=document.getElementById('quickLog'); if(!box) return;
-  if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } return; }
+  qlGen++;   // invalidate any OCR pass still running against the previous panel
+  if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPhotoFile=null; return; }
   box.innerHTML=`<div class="ql-panel">
     <div class="ql-head"><span>One line per purchase, then log them all. The little stuff is where it hides.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
-    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">📷 Snap my notepad</button><input type="file" id="qlPhoto" accept="image/*" capture="environment" class="hide"><button class="btn ghost hide" id="qlRead">🔎 Read it for me</button></div>
+    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">📷 Snap my notepad</button><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">🔎 Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
     <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
@@ -3210,31 +3258,37 @@ function renderQuickLog(){
   photo.onchange=()=>{
     const f=photo.files&&photo.files[0]; if(!f) return;
     if(qlPhotoURL) URL.revokeObjectURL(qlPhotoURL);
+    qlPhotoFile=f;   // hand the File itself to the OCR pass - a blob: URL dies if the panel closes mid-read
     qlPhotoURL=URL.createObjectURL(f);
+    photo.value='';  // so re-picking the SAME photo (retry after a bad read) still fires change
     prev.innerHTML=`<img class="ql-photo-img" src="${qlPhotoURL}" alt="Your notepad">`;
     readBtn.classList.remove('hide');
     note.textContent='Your photo stays on this phone. Use it as a reference while you type - or tap "Read it for me" and I\'ll take a first pass. You review every line before anything logs.';
   };
   readBtn.onclick=async()=>{
-    if(!qlPhotoURL) return;
+    if(!qlPhotoFile&&!qlPhotoURL) return;
+    const gen=qlGen;   // if the panel closes or rebuilds mid-read, drop the result on the floor
     readBtn.disabled=true;
-    note.textContent='Fetching the on-device reader (~2 MB, one time)... your photo never leaves this phone.';
+    note.textContent='Fetching the on-device reader (a few MB now, plus a ~15 MB language pack the first time you read)... your photo never leaves this phone.';
     try{
       const T=await loadTesseract();
+      if(gen!==qlGen) return;
       note.textContent='Reading your notepad right here on the device...';
-      const r=await T.recognize(qlPhotoURL,'eng',{logger:m=>{ if(m.status==='recognizing text') note.textContent='Reading... '+Math.round((m.progress||0)*100)+'%'; }});
+      const r=await T.recognize(qlPhotoFile||qlPhotoURL,'eng',{logger:m=>{ if(gen===qlGen && m.status==='recognizing text') note.textContent='Reading... '+Math.round((m.progress||0)*100)+'%'; }});
+      if(gen!==qlGen) return;
       const items=qlParseOcr(r&&r.data&&r.data.text);
       if(!items.length){ note.textContent="Couldn't make out clear lines (handwriting is genuinely hard). The photo's right there - punch the lines in yourself, it takes seconds."; }
       else{
         let filled=0;
+        const listEl=document.getElementById('qlList'); if(!listEl) return;
         items.forEach(it=>{
           let row=[...box.querySelectorAll('.ql-row')].find(el=>!el.querySelector('.ql-what').value && !el.querySelector('.ql-amt').value);
-          if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; document.getElementById('qlList').appendChild(row); wireRow(row); }
+          if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; listEl.appendChild(row); wireRow(row); }
           row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt; filled++;
         });
         note.textContent='Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
       }
-    }catch(e){ note.textContent="Couldn't fetch the reader (offline, maybe). The photo still works as your reference - type the lines in yourself."; }
+    }catch(e){ if(gen===qlGen) note.textContent="Couldn't fetch the reader (offline, maybe). The photo still works as your reference - type the lines in yourself."; }
     readBtn.disabled=false;
   };
   const wireRow=(el)=>{
@@ -3472,7 +3526,8 @@ function renderGiving(){
 /* ---------- learn ---------- */
 function renderLesson(){
   const i=((state.lesson%LESSONS.length)+LESSONS.length)%LESSONS.length; const L=LESSONS[i];
-  document.getElementById('lesson').innerHTML=`<div class="num">Lesson ${i+1} of ${LESSONS.length}</div><h3>${L.t}</h3><p>${L.p}</p><div class="try"><b>Try this →</b> ${L.try}</div>`;
+  state.lesson=i;   // keep the stored index in-range (the next save persists it)
+  document.getElementById('lesson').innerHTML=`<div class="num">Lesson ${i+1} of ${LESSONS.length}</div><h3>${escapeHtml(L.t)}</h3><p>${escapeHtml(L.p)}</p><div class="try"><b>Try this →</b> ${escapeHtml(L.try)}</div>`;
   document.getElementById('dots').innerHTML=LESSONS.map((_,d)=>`<span class="${d===i?'on':''}"></span>`).join('');
 }
 document.getElementById('nextLesson').addEventListener('click',()=>{ state.lesson++; save(); renderLesson(); });
@@ -4064,7 +4119,7 @@ function personalMonthlyIncome(){
   const byM={}; state.transactions.filter(t=>t.type==='income' && (t.owner||'a')==='a').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
   const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
 }
-function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (personalMonthlyIncome()>0 ? personalMonthlyIncome()/WORKMONTH_HRS : 0); }
+function effectiveHourly(){ const mh=state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS; return state.hourlyWage>0 ? state.hourlyWage : (personalMonthlyIncome()>0 ? personalMonthlyIncome()/mh : 0); }   // the fallback estimate honors the hours they actually work, same as intake
 /* Keep the auto-derived blended wage honest: if the user hasn't manually set a
    wage, recompute it from current YOUR-labor income records (each carrying its
    monthly hours). Dropping a low-paying side gig lifts the rate again; dropping
@@ -4072,7 +4127,7 @@ function effectiveHourly(){ return state.hourlyWage>0 ? state.hourlyWage : (pers
 function recomputeBlendedWage(){
   if(!state.wageAuto) return;
   const work=state.recurring.filter(r=>r.type==='income' && (r.owner||'a')==='a' && +r.hours>0);
-  if(!work.length){ state.hourlyWage=0; return; }   // effectiveHourly() falls back to personal income / WORKMONTH_HRS
+  if(!work.length){ state.hourlyWage=0; return; }   // effectiveHourly() falls back to personal income / their real month-hours
   const amt=work.reduce((s,r)=>s+(+r.amount||0),0), hrs=work.reduce((s,r)=>s+(+r.hours||0),0);
   if(hrs>0){ state.hourlyWage=Math.round(amt/hrs*100)/100; }
 }
@@ -4319,7 +4374,7 @@ const TRIGGER_SWAPS={
 };
 function triggerSwapHTML(trap){
   const t=TRIGGER_SWAPS[trap]; if(!t) return '';
-  return `<div class="solve trig"><div class="solve-h">🔁 Try this instead</div><div class="solve-t">${escapeHtml(t.title)}</div>${t.moves.map(m=>`<div class="swap"><span class="swap-n">${escapeHtml(m.n)}</span><div class="swap-d">${escapeHtml(m.d)}</div></div>`).join('')}</div>`;
+  return `<div class="solve trig"><div class="solve-h">🔁 Or deal with what's driving it</div><div class="solve-t">${escapeHtml(t.title)}</div>${t.moves.map(m=>`<div class="swap"><span class="swap-n">${escapeHtml(m.n)}</span><div class="swap-d">${escapeHtml(m.d)}</div></div>`).join('')}</div>`;
 }
 /* The free comfort menu: the user's OWN list of no-cost things that actually help,
    written while calm and surfaced at the moment of temptation. Comfort spending is
@@ -4327,22 +4382,31 @@ function triggerSwapHTML(trap){
 const COMFORT_SEEDS=['Walk outside','Call someone','Shower / bath','Nap','Music, loud','Cook something','Stretch','Play with the pet','Sit outside','Game / show, one episode'];
 function comfortHTML(){
   const list=(state.comfortMenu||[]).filter(Boolean);
-  if(!list.length) return `<div class="comfort empty"><div class="cm-k">🫱 Your free comfort list is empty</div><div class="cm-s">Write down what actually helps when money isn't the answer - a walk, a call, a nap. It'll be waiting here next time the urge hits.</div><button class="btn sm" id="cmSetup">Set up my list</button></div>`;
+  if(!list.length) return `<div class="comfort empty"><div class="cm-k">🫱 Your free comfort list is empty</div><div class="cm-s">Write down what actually helps when money isn't the answer - a walk, a call, a nap. It'll be waiting here next time the urge hits.</div><button class="btn sm cm-setup">Set up my list</button></div>`;
   return `<div class="comfort"><div class="cm-k">🫱 Free instead - your own list</div><div class="cm-chips">${list.map(c=>`<span class="cm-c">${escapeHtml(c)}</span>`).join('')}</div><div class="cm-s">You wrote these when you were calm. Pick one before you pick the card.</div></div>`;
 }
 function wireComfortLinks(){
-  const b=document.getElementById('cmSetup'); if(b) b.onclick=()=>{ activateTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } },140); };
+  document.querySelectorAll('.cm-setup').forEach(b=>{ b.onclick=()=>{ activateTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },140); }; });
+}
+/* every comfort mutation funnels here: persist, redraw Settings, and refresh any
+   open gut-check card so the round trip (empty card -> Settings -> back) pays off */
+function comfortChanged(){
+  save(); renderComfortMenu();
+  if(typeof pendingCheck!=='undefined' && pendingCheck && typeof renderCheckResult==='function') renderCheckResult();
 }
 function renderComfortMenu(){
   const box=document.getElementById('comfortList'); if(!box) return;
   const list=(state.comfortMenu||[]);
-  box.innerHTML = list.length
-    ? list.map((c,i)=>`<span class="cm-c edit">${escapeHtml(c)}<button class="cm-x" data-cmdel="${i}" title="Remove">✕</button></span>`).join('')
-      +`<div class="sub" style="margin-top:10px">These show up inside a gut-check, right when the urge does.</div>`
-    : `<div class="sub">Nothing yet. Add a few things that genuinely help you - they'll appear inside every gut-check.</div>
-       <div class="cm-chips" style="margin-top:10px">${COMFORT_SEEDS.map((s,i)=>`<button class="cm-seed" data-cmadd="${escapeHtml(s)}">+ ${escapeHtml(s)}</button>`).join('')}</div>`;
-  box.querySelectorAll('button[data-cmdel]').forEach(b=>b.onclick=()=>{ state.comfortMenu.splice(+b.dataset.cmdel,1); save(); renderComfortMenu(); });
-  box.querySelectorAll('button[data-cmadd]').forEach(b=>b.onclick=()=>{ state.comfortMenu.push(b.dataset.cmadd); save(); renderComfortMenu(); });
+  // seeds stay on screen (minus ones already picked) so the second tap is as easy as the first
+  const seeds=COMFORT_SEEDS.filter(s=>!list.some(x=>x.toLowerCase()===s.toLowerCase()));
+  box.innerHTML = (list.length
+    ? `<div class="cm-chips">${list.map(c=>`<span class="cm-c edit">${escapeHtml(c)}<button class="cm-x" data-cmdel="${escapeHtml(c)}" title="Remove">✕</button></span>`).join('')}</div>
+       <div class="sub" style="margin-top:10px">These show up inside a gut-check, right when the urge does.</div>`
+    : `<div class="sub">Nothing yet. Add a few things that genuinely help you - they'll appear inside every gut-check.</div>`)
+    +(seeds.length?`<div class="cm-chips" style="margin-top:10px">${seeds.map(s=>`<button class="cm-seed" data-cmadd="${escapeHtml(s)}">+ ${escapeHtml(s)}</button>`).join('')}</div>`:'');
+  // delete by VALUE, not index - a sync pull can replace the array under a stale render
+  box.querySelectorAll('button[data-cmdel]').forEach(b=>b.onclick=()=>{ const i=(state.comfortMenu||[]).indexOf(b.dataset.cmdel); if(i>-1){ state.comfortMenu.splice(i,1); comfortChanged(); } });
+  box.querySelectorAll('button[data-cmadd]').forEach(b=>b.onclick=()=>{ const v=b.dataset.cmadd; state.comfortMenu=state.comfortMenu||[]; if(!state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); comfortChanged(); });
 }
 let assetKind='real';
 document.getElementById('assetKind').addEventListener('click',e=>{
@@ -4391,6 +4455,15 @@ wageEl.addEventListener('input',()=>{
   state.hourlyWage=parseFloat(wageEl.value)||0; state.wageAuto=false; save();   // manual override stops auto-reblending
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
+/* hours/week is an input, never an assumption - editable here, not just at intake */
+(function(){
+  const el=document.getElementById('hpw'); if(!el) return;
+  el.addEventListener('input',()=>{
+    const v=parseFloat(el.value);
+    state.hoursPerWeek=(v>0&&v<=120)?v:0; save();
+    updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
+  });
+})();
 function updateWageNote(){
   const note=document.getElementById('wageNote'); const h=effectiveHourly();
   if(state.hourlyWage>0) note.textContent='Locked in. Every '+usd(state.hourlyWage)+' you spend = 1 hour of your life at work.';
@@ -4406,6 +4479,9 @@ function renderFreedomToggle(){
 function renderAll(){
   renderFreedomToggle();
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
+  // a sync pull replaces state wholesale and calls only renderAll - so everything
+  // boot() paints must repaint here too, or device B keeps showing device A's past
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 function applyTheme(){
@@ -4621,7 +4697,16 @@ const BADGES=[
 
 /* --- gut-check modal + shareable link --- */
 const modal=document.getElementById('modal');
-function openModal(){ document.getElementById('mName').value=''; document.getElementById('mAmt').value=''; document.getElementById('mTrap').value='scroll'; modal.classList.add('on'); pushOverlay(); setTimeout(()=>document.getElementById('mName').focus(),60); }
+/* reuseEntry: opened FROM the intent sheet - the sheet's history entry transfers to
+   the modal instead of pushing a second one, so one Back closes it cleanly */
+function openModal(reuseEntry){ document.getElementById('mName').value=''; document.getElementById('mAmt').value=''; document.getElementById('mTrap').value='scroll'; modal.classList.add('on'); if(reuseEntry!==true) pushOverlay(); setTimeout(()=>document.getElementById('mName').focus(),60); }
+/* small toast layer - the quick log and friends promise feedback; give them one */
+function toast(msg){
+  let t=document.getElementById('toastEl');
+  if(!t){ t=document.createElement('div'); t.id='toastEl'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),2600);
+}
 /* ============================================================
    "I WANT TO..." - the intent hub
    The app grew a lot of surface (gut-check, quick log, money map, comfort list,
@@ -4635,14 +4720,14 @@ function openModal(){ document.getElementById('mName').value=''; document.getEle
 function intentItems(){
   const spend=!!state.spendingMode, stage=(typeof activeStage==='function')?activeStage():1;
   const list=[
-    {ic:'🎯', t:'Gut-check something before I buy it', s:'Price it in hours of your life first', hero:true, go:()=>{ dismissOverlay(); setTimeout(openModal,180); }},
-    {ic:'📓', t:'Log what I spent', s:'One line each - or snap your notepad', go:()=>{ quickLogOpen=true; closeOverlayThenTab('tx'); setTimeout(()=>{ renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },160); }},
-    {ic:'💵', t:'Log money coming in', s:'Paycheck, side gig, anything that landed', go:()=>{ closeOverlayThenTab('tx'); setTimeout(()=>{ const tt=document.querySelector('#typeToggle button[data-t="income"]'); if(tt) tt.click(); const el=document.getElementById('txAmt'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } },160); }},
+    {ic:'🎯', t:'Gut-check something before I buy it', s:'Price it in hours of your life first', hero:true, go:()=>{ const sh=document.getElementById('intentSheet'); if(sh) sh.classList.remove('on'); setFabOpen(false); openModal(true); }},   // synchronous swap: the sheet's history entry becomes the modal's - no async back() to race
+    {ic:'📓', t:'Log what I spent', s:'One line each - or snap your notepad', go:()=>{ quickLogOpen=true; closeOverlayThenTab('tx'); setTimeout(()=>{ if(!document.querySelector('#quickLog .ql-row')) renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },160); }},   // never wipe rows (or a photo) already in progress
+    {ic:'💵', t:'Log money coming in', s:'Paycheck, side gig, anything that landed', go:()=>{ closeOverlayThenTab('tx'); setTimeout(()=>{ const tt=document.querySelector('#typeToggle button[data-t="income"]'); if(tt) tt.click(); const el=document.getElementById('txAmt'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },160); }},
     {ic:'📋', t:'Give my dollars a job', s:'Assign this month down to zero', hide:spend, go:()=>{ closeOverlayThenTab('budget'); }},
     {ic:'🔦', t:"See where my money's actually going", s:'Your patterns, not your guesses', go:()=>{ closeOverlayThenTab(spend?'home':'learn'); }},
-    {ic:'⭐', t:'Work on a dream', s:'Name it, fund it, watch it close', hide:stage<2&&!spend, go:()=>{ dismissOverlay(); setTimeout(()=>runNextStep('dream'),180); }},
+    {ic:'⭐', t:'Work on a dream', s:'Name it, fund it, watch it close', hide:spend||stage<2, go:()=>{ closeOverlayThenTab('goals'); setTimeout(()=>{ const el=document.getElementById('goalName'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },160); }},   // spend mode hides every wealth-stage panel - never route there
     {ic:'💳', t:'Plan my way out of debt', s:'A real payoff date, priced in life', hide:!(state.debts||[]).length && !(state.liabilities||[]).length, go:()=>{ closeOverlayThenTab('debt'); }},
-    {ic:'🫱', t:(state.comfortMenu||[]).length?'Update my free comfort list':'Set up my free comfort list', s:"What helps when money isn't the answer", go:()=>{ closeOverlayThenTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.focus(); } },170); }},
+    {ic:'🫱', t:(state.comfortMenu||[]).length?'Update my free comfort list':'Set up my free comfort list', s:"What helps when money isn't the answer", go:()=>{ closeOverlayThenTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },170); }},
     {ic:'📖', t:'Learn something in 2 minutes', s:'One lesson, one thing to try', go:()=>{ closeOverlayThenTab('learn'); }}
   ];
   return list.filter(x=>!x.hide);
@@ -4659,6 +4744,7 @@ function setFabOpen(on){
   if(ic) ic.textContent=on?'✕':'✦';
   if(l) l.textContent=on?'Close':'I want to…';
   if(tabs) tabs.classList.toggle('hub-open',!!on);
+  document.body.classList.toggle('hub-open',!!on);   // lifts the FAB above the sheet's scrim so ✕ is visible + tappable
   const gap=document.querySelector('.tab-gap'); if(gap) gap.textContent=on?'Close':'I want to…';
 }
 document.getElementById('fab').addEventListener('click',()=>{
@@ -4810,6 +4896,18 @@ function initPWA(){
 const INTAKE=[
   {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
   {id:'tone', bot:"And how much mercy do you want from me? This sets the voice for everything - you can change it anytime in Settings. ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
+  /* situation comes BEFORE the intro so the tone floor (survival -> clean) is
+     already known when the intro speaks - the person the floor protects must
+     never get the savage version first and the softening after. */
+  {id:'situation', input:'reflect', key:'situation', optional:true,
+    why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
+    bot:"Before anything else - where are you right now with money, honestly? No wrong answer, no judgment. It just tells me how to show up for you.",
+    options:[
+      {label:'😮‍💨 Just trying to survive', value:'survive', reply:"Thank you for saying it straight - that takes guts. When you're in survival, we don't start with 'assign every dollar.' We start with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
+      {label:'🌊 Treading water', value:'treading', reply:"Treading water is exhausting - and you're still here, doing something about it. That counts for more than you think. We'll aim for a little breathing room first, before anything fancy."},
+      {label:'🧱 Stable but stuck', value:'stuck', reply:"Stable but stuck is a real place to be. You've got the footing - now it's about pointing it somewhere on purpose instead of letting it drift."},
+      {label:'🚀 Stable, ready to build', value:'build', reply:"Love it. You've got the base - now let's turn steady into momentum and actually put your money to work."}
+    ]},
   {id:'intro', bot:a=>{
       const hi=a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great.";
       const t=iaTone(a);
@@ -4817,16 +4915,7 @@ const INTAKE=[
       if(t==='blunt') return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. Look at the name - the ability is the part that matters. It's not punishment, and it's not me grading you. I can't hold you accountable; nobody can. What I can do is help you see through the bullshit clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No secret sauce, just small wins that stack when you show up. That's it. Ready?`;
       return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ability to hold yourself accountable. Look at the name - the ability is the part that matters. It isn't punishment, and it isn't me grading you. I can't hold you accountable; nobody can do that for you. What I can do is help you SEE clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`;
     }, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
-  {id:'name', bot:"First - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
-  {id:'situation', input:'reflect', key:'situation', optional:true,
-    why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
-    bot:a=>`Before we touch a single number${a.name?', '+a.name:''} - where are you right now, honestly? No wrong answer, no judgment. It just tells me how to show up for you.`,
-    options:[
-      {label:'😮‍💨 Just trying to survive', value:'survive', reply:"Thank you for saying it straight - that takes guts. When you're in survival, we don't start with 'assign every dollar.' We start with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
-      {label:'🌊 Treading water', value:'treading', reply:"Treading water is exhausting - and you're still here, doing something about it. That counts for more than you think. We'll aim for a little breathing room first, before anything fancy."},
-      {label:'🧱 Stable but stuck', value:'stuck', reply:"Stable but stuck is a real place to be. You've got the footing - now it's about pointing it somewhere on purpose instead of letting it drift."},
-      {label:'🚀 Stable, ready to build', value:'build', reply:"Love it. You've got the base - now let's turn steady into momentum and actually put your money to work."}
-    ]},
+  {id:'name', bot:"First things first - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
   {id:'moneyStory', input:'reflect', key:'moneyStory', optional:true,
     why:"Because the way money felt when you were a kid still drives how you spend today - grip it tight, or blow it before it's gone. If I know the pattern, I can catch it for you instead of letting it run quietly in the background.",
     bot:"One more that shapes more than most people admit: what did money feel like growing up?",
@@ -5036,13 +5125,15 @@ function monthHours(hpw){ return Math.max(1,(+hpw||40))*WEEKS_PER_YEAR/12; }
 function intakeWorkHours(a){ return (a.extraIncome||[]).reduce((s,x)=>s+(+x.hours||0),0); }
 function intakeBlendedHourly(a){
   const mr=+a.wage||0; if(mr<=0) return 0;
-  let amt=+a.income||0, hrs=(a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : amt/mr);   // real hours beat derived ones
   // only YOUR own labor counts toward YOUR rate - skip partner-owned sources
-  (a.extraIncome||[]).forEach(x=>{ if(+x.hours>0 && !/partner/i.test(x.name||'')){ amt+=+x.amount||0; hrs+=+x.hours; } });
+  const side=(a.extraIncome||[]).filter(x=>+x.hours>0 && !/partner/i.test(x.name||''));
+  if(!side.length) return mr;   // nothing to blend - NEVER second-guess the rate the user just confirmed or typed
+  let amt=+a.income||0, hrs=(a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : amt/mr);   // real hours beat derived ones
+  side.forEach(x=>{ amt+=+x.amount||0; hrs+=+x.hours; });
   return hrs>0 ? Math.round((amt/hrs)*100)/100 : mr;
 }
 let iaCommitted=false;
-function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }
+function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }   // a re-run starts from the hours already on record, so the pill shows the live value
 /* Answers whose gate no longer passes are lies waiting to be committed - e.g.
    full-path walls after switching to spend mode, or "dreaming of owning" after
    the roof amount was zeroed. Sweep them whenever the flow moves. */
@@ -5055,7 +5146,7 @@ function pruneStaleAnswers(){
       if(s.key && ((s.key+'Note') in iaAns)){ delete iaAns[s.key+'Note']; changed=true; }
       if(s.loopKey && (s.loopKey in iaAns)){ delete iaAns[s.loopKey]; changed=true; }
     });
-    if(iaAns.leaks && iaAns.deepDive && iaAns.deepDive!=='deep'){ delete iaAns.leaks; changed=true; }
+    if(iaAns.leaks && iaAns.deepDive!=='deep'){ delete iaAns.leaks; changed=true; }   // covers the acct switch too, where deepDive itself was just pruned
     if(!changed) break;
   }
 }
@@ -5065,7 +5156,7 @@ function pruneStaleAnswers(){
    step emitted (reflect replies, follow-ups, continue-step intros). */
 function iaBack(){
   let p=iaStep-1;
-  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'){ p--; continue; } break; }
+  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='gate'){ p--; continue; } break; }   // gate too: its skip button abandons the whole intake - never a Back target
   if(p<0) return;
   const log=document.getElementById('intakeLog');
   [...log.children].forEach(b=>{ if(+(b.dataset.st??-1)>=p) b.remove(); });
@@ -5114,7 +5205,7 @@ function renderIntakeDock(s){
     document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
-  const canBack = iaStep>3;   // Back appears from the situation step onward (index 4+, after gate/tone/intro/name)
+  const canBack = iaStep>3;   // Back appears from the name step onward (index 4+, after gate/tone/situation/intro) - its first target is situation, since intro/gate are skipped
   const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
@@ -5128,12 +5219,13 @@ function renderIntakeDock(s){
   const sugg=(isMoney && !iaForceInput && typeof s.suggest==='function') ? s.suggest(iaAns) : null;
   if(sugg!=null){
     const hpwNow=+iaAns.hoursPerWeek||40;
-    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓ Yep, about ${usd(sugg)}/hr</button><button id="iaSuggHours">⏱ I work ${hpwNow===40?'different':hpwNow+''} hours</button><button id="iaSuggNo">✎ Set my own rate</button></div>`
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓ Yep, about ${usd(sugg)}/hr</button><button id="iaSuggHours">⏱ I work ${iaAns.hoursPerWeek>0?hpwNow+'':'different'} hours</button><button id="iaSuggNo">✎ Set my own rate</button></div>`
       +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSuggSkip">Skip this</button>':''}${backBtn}</div>`;
     document.getElementById('iaSuggYes').onclick=()=>{ iaStore(s.key,sugg); iaBub(usd(sugg)+'/hr','me'); iaAdvance(); };
     // the estimate assumes a 40-hour week; let them correct the hours, not just the rate
     document.getElementById('iaSuggHours').onclick=()=>{
       iaBub("How many hours a week do you actually work? The real ones - early starts, late nights, the weekend that wasn't.",'bot');
+      const hpwQ=document.getElementById('intakeLog').lastElementChild;   // so Back can retract the question it abandoned
       dock.innerHTML=`<div class="inrow"><input id="iaHpw" type="number" inputmode="decimal" min="1" max="120" step="any" value="${hpwNow}"><button class="intake-send" id="iaHpwGo">That's my week</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHpwBack">← Back</button></div>`;
       const hi=document.getElementById('iaHpw'); setTimeout(()=>{ hi.focus(); try{hi.select();}catch(_){} },60);
       let sent=false;
@@ -5148,7 +5240,7 @@ function renderIntakeDock(s){
       };
       document.getElementById('iaHpwGo').onclick=goH;
       hi.addEventListener('keydown',e=>{ if(e.key==='Enter') goH(); });
-      document.getElementById('iaHpwBack').onclick=()=>renderIntakeDock(s);
+      document.getElementById('iaHpwBack').onclick=()=>{ if(hpwQ&&hpwQ.parentNode) hpwQ.remove(); renderIntakeDock(s); };
     };
     document.getElementById('iaSuggNo').onclick=()=>{ iaForceInput=true; renderIntakeDock(s); };
     const ssk=document.getElementById('iaSuggSkip'); if(ssk) ssk.onclick=()=>{ iaStore(s.key,0); iaBub('Skip','me'); iaAdvance(); };   // the bot copy promises Skip - honor it
@@ -5185,13 +5277,14 @@ function runIntakeHelper(s){
   // a rate they never earned.
   const prompt=(ask,ph,label,onOK,backFn)=>{
     iaBub(ask,'bot');
+    const qb=document.getElementById('intakeLog').lastElementChild;   // Back retracts the question it abandons - no orphan bubbles
     dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(ph||'')}"><button class="intake-send" id="iaHelpGo">${escapeHtml(label)}</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
     const inp=document.getElementById('iaHelpInput'); setTimeout(()=>inp.focus(),60);
     let done=false;
     const go=()=>{ if(done) return; const n=parseFloat(inp.value); if(isNaN(n)||n<=0){ inp.focus(); return; } done=true; onOK(n); };
     document.getElementById('iaHelpGo').onclick=go;
     inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
-    document.getElementById('iaHelpBack').onclick=backFn;
+    document.getElementById('iaHelpBack').onclick=()=>{ if(qb&&qb.parentNode) qb.remove(); backFn(); };
   };
   const finish=(annual,hpw)=>{
     const res=h.run(annual,hpw);
@@ -5207,7 +5300,7 @@ function runIntakeHelper(s){
     prompt(h.ask2, h.placeholder2, 'Work it out', hpw=>{
       iaBub(hpw+' hrs/week','me');
       finish(annual,hpw);
-    }, ()=>runIntakeHelper(s));
+    }, ()=>{ const log=document.getElementById('intakeLog'); for(let i=0;i<2&&log.lastElementChild;i++) log.lastElementChild.remove(); runIntakeHelper(s); });   // also retract the salary echo + question so the restart doesn't duplicate them
   }, ()=>renderIntakeDock(s));
 }
 /* Reflection: a quick pain-point / aspiration question between sections. Each
@@ -5417,8 +5510,7 @@ function commitIntake(){
   state.liabilities=state.liabilities.filter(l=>l.src!=='intake');
   const addIncome=(amount,source,owner,hours)=>{ const rec={id:uid(),type:'income',amount,day:1,source,src:'intake'}; if(owner) rec.owner=owner; if(hours>0) rec.hours=hours; state.recurring.push(rec); const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}; if(hours>0) tx.hours=hours; state.transactions.push(tx); };
   // main-job hours: the hours they TOLD us beat any figure derived from a rounded rate
-  if(!spend && a.income>0) addIncome(a.income,'Paycheck','a', a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0));
-  if(spend && a.income>0) addIncome(a.income,'Paycheck','a', 0);
+  if(a.income>0) addIncome(a.income,'Paycheck','a', a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0));   // spend path too - otherwise any recurring edit later zeroes an auto wage
   if(!spend) (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
   if(!spend && a.wantHousehold==='yes'){         // "set up the couples view" from intake
     state.householdOn=true;
@@ -5428,7 +5520,7 @@ function commitIntake(){
   if(a.wage>0){
     const blended=intakeBlendedHourly(a); state.hourlyWage = blended>0 ? blended : a.wage;
     // auto only when the rate is derived (accepted pill or blended); a hand-typed rate stays manual
-    state.wageAuto = (a.extraIncome||[]).some(x=>+x.hours>0) || a.wage===estHourlyFromMonthly(a.income||0);
+    state.wageAuto = (a.extraIncome||[]).some(x=>+x.hours>0) || a.wage===estHourlyFromMonthly(a.income||0, a.hoursPerWeek);   // compare against the estimate the pill actually showed
   }
   // Budgets are ASSIGNED (not +=) via a local accumulator, so a re-run is idempotent;
   // duplicate names within one run still merge through the map.
@@ -5446,7 +5538,7 @@ function commitIntake(){
   }
   if(a.tone) state.intensity=a.tone;
   if(a.register) state.register=a.register;
-  if(a.hoursPerWeek>0) state.hoursPerWeek=a.hoursPerWeek;   // real week length powers the true-rate math
+  state.hoursPerWeek = a.hoursPerWeek>0 ? a.hoursPerWeek : 0;   // real week length powers the true-rate math; a re-run without hours CLEARS the old value instead of silently keeping it
   ensureTrackStart();                          // the calendar and streaks originate today, not Jan 1
   if(spend){                                   // "Just my spending" - no four walls, just tracking
     state.spendingMode=true;
@@ -5462,6 +5554,7 @@ function commitIntake(){
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
+  { const h=document.getElementById('hpw'); if(h) h.value=state.hoursPerWeek||''; }
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderRecurring(); renderCharts();
   applyHousehold(); applySpending();
   closeOverlayThenTab('home');
@@ -5478,6 +5571,7 @@ function boot(){
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
+  { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
   renderFreedomToggle(); fillTrueRate();
   renderBackupNote();
   // Progressive interface: never strip a tool an existing user already engaged with.
@@ -5488,7 +5582,9 @@ function boot(){
   initPWA();
   if(history.replaceState) history.replaceState({t:'tab',name:'home'},'');
   activateTab('home',true);
-  if(location.hash==='#gutcheck'||location.hash==='#check') setTimeout(openModal,250);
+  // the home-screen shortcut only skips straight to the scan for a user who is
+  // already set up - a first run still gets the intake, shortcut or not
+  if((location.hash==='#gutcheck'||location.hash==='#check') && state.onboarded) setTimeout(openModal,250);
   else if(!state.onboarded) setTimeout(openIntake,350);
 }
 const HOME_COPY={

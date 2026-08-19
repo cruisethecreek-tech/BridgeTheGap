@@ -58,6 +58,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE).then(c => c.put(req, copy));
       }
       return res;
-    }).catch(() => r))
+    }).catch(() => r || Response.error()))
   );
 });
