@@ -612,6 +612,19 @@
   .tx-amt{font-weight:900;font-size:17px;white-space:nowrap}
   .tx.income .tx-amt{color:var(--income)}
   .tx.expense .tx-amt{color:var(--text)}
+  .tx.invest .tx-amt{color:var(--accent)}
+  /* ---------- time ledger (hours invested vs leaked) ---------- */
+  .time-row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-top:8px}
+  .time-row.leak{border-color:rgba(var(--bad-rgb),.3)}
+  .time-row .tr-ic{font-size:18px;width:24px;text-align:center;flex:none}
+  .time-row .tr-l{font-weight:800;font-size:14px;flex:1;min-width:0}
+  .time-row .tr-l i{display:block;font-style:normal;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .time-row .tr-h{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+  .time-row.leak .tr-h{color:var(--bad)}
+  .time-row .tr-b{display:flex;gap:6px;flex:none}
+  .time-sum{margin-top:12px;font-size:14px;line-height:1.55}
+  .time-leak{margin-top:8px;font-size:13px;font-weight:700;color:var(--bad);line-height:1.5}
+  .time-grow{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.5}
   .tx .del{background:none;border:none;color:var(--muted);font-size:16px;padding:4px 8px;border-radius:8px}
   .tx .del:hover{color:var(--bad);background:var(--ink)}
   .tx .tag-cat{display:inline-block;background:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--muted);margin-right:6px}
@@ -696,6 +709,16 @@
   .wall-sub{font-size:12px;color:var(--muted);font-weight:600}
   .wall-status{font-size:13px;font-weight:800;margin-top:6px;color:var(--accent)}
   .wall.covered .wall-status{color:var(--good)}
+  /* covered walls collapse to chips; the grid collapses to one line when all four are done */
+  .walls-donechips{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+  .wall-chip{background:rgba(var(--good-rgb),.1);border:1px solid rgba(var(--good-rgb),.32);color:var(--text);border-radius:20px;padding:7px 13px;font-size:13px;font-weight:800;cursor:pointer}
+  .wall-chip:hover{border-color:var(--good)}
+  .walls-done{grid-column:1/-1;background:rgba(var(--good-rgb),.09);border:1px solid rgba(var(--good-rgb),.32);border-radius:14px;padding:14px 16px;font-weight:800;font-size:14px;text-align:center}
+  /* wall-to-wall guide: after funding one essential, hand the user the next one */
+  .wall-next{margin-top:10px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.35);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .wall-next.all{background:rgba(var(--good-rgb),.08);border-color:rgba(var(--good-rgb),.35)}
+  .wall-next .wn-t{font-weight:800;font-size:14px;line-height:1.4}
+  .wall-next .wn-b{display:flex;gap:8px;flex-wrap:wrap}
 
   /* ---------- Intake chat ---------- */
   .intake-overlay{position:fixed;inset:0;z-index:70;background:var(--bg);display:none;flex-direction:column}
@@ -952,6 +975,7 @@
   .solve-hint b{color:var(--accent)}
 
   @media (max-width:720px){ .summary{grid-template-columns:repeat(2,1fr)} }
+  @media (min-width:721px){ .summary.five{grid-template-columns:repeat(5,1fr)} }
   @media (max-width:560px){
     .quote-controls{align-items:stretch;width:100%}
     .monthnav .m{min-width:150px;font-size:17px}
@@ -1068,7 +1092,7 @@
         <p class="sub">Set your paycheck and fixed bills once. They post automatically each month so your plan and net worth stay current without you lifting a finger.</p>
         <div class="row">
           <label class="fld">Type
-            <select id="recType"><option value="expense">Expense</option><option value="income">Income</option></select>
+            <select id="recType"><option value="expense">Expense</option><option value="income">Income</option><option value="invest">🌱 Invest</option></select>
           </label>
           <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
           <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
@@ -1095,6 +1119,7 @@
         <div class="typetoggle" id="typeToggle">
           <button data-t="expense" class="on">− Expense</button>
           <button data-t="income">+ Income</button>
+          <button data-t="invest">🌱 Invest</button>
         </div>
 
         <div class="row">
@@ -1115,6 +1140,9 @@
           </label>
           <label class="fld income-only hide" id="fldHours">Hours it took
             <input type="number" id="txHours" min="0" step="0.5" placeholder="opt." style="width:90px">
+          </label>
+          <label class="fld invest-only hide" id="fldInv">Where it went
+            <input type="text" id="txInv" placeholder="Roth IRA, index fund, a course…">
           </label>
           <label class="fld">Date
             <input type="date" id="txDate">
@@ -1147,12 +1175,20 @@
       </div>
 
       <div class="panel">
+        <h2>⏳ Your week in hours</h2>
+        <p class="sub">Money isn't the only thing you invest. Everyone gets the same 168 hours a week - some you sell to work, some you invest in yourself (health, learning, building, people), and some just leak into the screen. Where the hours go decides what the dollars can do next year.</p>
+        <div id="timeRows"></div>
+        <div id="timeSummary"></div>
+      </div>
+
+      <div class="panel">
         <div id="blindspotBar"></div>
-        <div class="summary" id="txSummary" style="grid-template-columns:repeat(4,1fr)"></div>
+        <div class="summary" id="txSummary"></div>
         <div class="filters">
           <button class="pill on" data-f="all">All</button>
           <button class="pill" data-f="income">Income</button>
           <button class="pill" data-f="expense">Expenses</button>
+          <button class="pill" data-f="invest">Invested</button>
           <input type="text" id="txSearch" placeholder="Search notes, sources, categories…">
           <button class="btn sm ghost" id="allMonthsBtn">Showing: this month</button>
         </div>
@@ -1772,6 +1808,12 @@ const INDIE_WIN={
   middle:{clean:["Independent income logged. Money can come from more than one place.","You just showed money isn't only a paycheck. Build on it."],blunt:["You proved you can create money on demand. Scale it.","One stream is fragile. You just started a second - keep going."],savage:["That's the income they can't fire you from. Grow it.","Now do it on purpose, not by accident."]},
   mature:{clean:["Income created on your own terms. That's real leverage.","You proved money doesn't only come from an employer. Build on it."],blunt:["That's a stream nobody can revoke. Widen it.","Proof of concept, done. Now make it repeatable."],savage:["That's freedom income. Don't let it be a one-time thing.","Now turn the fluke into a system."]}
 };
+/* the growth lane's log-win: money that keeps working after you stop */
+const GROWTH_WIN={
+  genz:{clean:["That money's still yours - it just got a job. 🌱","Future you is getting paid off this one.","Money planted, not spent. That's the difference."],blunt:["Spending buys a moment. This buys momentum. Keep planting.","Every dollar in there works shifts you don't have to.","That's a dollar that earns while you sleep. Stack more."],savage:["Everyone else bought dopamine today. You bought an employee.","That dollar now works for YOU. Most people never flip that switch.","Planted, not burned. Do it again before the urge finds you."]},
+  middle:{clean:["That money is still yours - it just went to work.","Invested, not spent. Future you says thanks.","You moved money from comfort to growth. That compounds."],blunt:["Spending ends the moment you swipe. This one keeps paying. Keep it up.","A dollar invested works hours you never have to.","That's ownership, not consumption. Different game entirely."],savage:["You just hired a dollar to work around the clock. Most people only ever rent theirs out.","Spent money is gone. This money multiplies. Remember the difference.","That's a seed, not a receipt. Plant more."]},
+  mature:{clean:["Still your money - now it's working, not waiting.","Invested rather than spent. That's how the curve bends.","You paid your future first. Well done."],blunt:["Spending is a cost. This is a position. Keep building it.","Every invested dollar is an hour you won't have to work later.","That's the quiet move that actually builds wealth."],savage:["You bought an asset while everyone else bought a moment.","That dollar reports for work every day from now on. Hire more like it.","Consumption ends. Compounding doesn't. You chose right."]}
+};
 const DEBT_BALANCE={
   genz:{clean:["Kill the debt to drop your floor - but grow income to raise your ceiling.","Debt down = lower floor. Income up = higher roof. Do both."],blunt:["Clawing out of the hole is half of it. Build a ladder too - earn more.","Payoff lowers the floor. Only income raises the roof."],savage:["Don't just survive the debt. Out-earn it.","Defense clears the hole. Offense builds the tower."]},
   middle:{clean:["Pay the debt to lower your floor, and expand income to raise your ceiling.","Debt payoff steadies the base. Income lifts the whole thing."],blunt:["Kill the debt to lower your floor, but expand your income to raise your ceiling.","You're all defense. Add one offensive move this month."],savage:["Paying debt is survival. Earning is freedom. Don't stop at survival.","Out-earning the debt beats out-cutting it. Every time."]},
@@ -1804,7 +1846,10 @@ const LESSONS=[
   {t:"Catch the Raise",p:"Here's why more money so often changes nothing: the raise arrives, the lifestyle rises to meet it within about two months, and the new normal feels exactly as tight as the old one. That's not weakness, it's adaptation - humans normalize upgrades fast. The people who get ahead aren't earning wildly more, they're just catching the increase before it's absorbed. Decide where a raise goes BEFORE it lands, or your spending will decide for you.",try:"Pick your split now for the next raise, bonus, or tax refund - say half to the goal, half to life. Write it down before the money exists."},
   {t:"Cutting Has a Floor",p:"You can only cut to zero, and the bottom rung of frugality still leaves you trading hours for dollars forever. Earning has no ceiling - that's the asymmetry nobody frames properly. Defense (spending less) is where you start because it's fast and fully in your control. But offense - a skill worth more, a side income, a raise you actually asked for with a number in hand - is where the math stops being a grind. Scarcity narrows your attention to crumbs; the loaf is somewhere in your peripheral vision.",try:"Spend one hour this week on offense instead of a coupon: research what your role pays elsewhere, or list one skill someone would pay you for."},
   {t:"Make Money That Isn't Yours Work",p:"Every dollar you keep can either sit still or go to work. Money that works comes back with friends - and the returns start earning returns, which is the quiet engine behind most real wealth. The catch is that it's slow at the start and dull in the middle, which is precisely why most people quit and go buy something exciting instead. Time in beats timing, and boring beats clever. This app isn't going to tell you what to buy - that's yours, and worth a licensed professional's time. It'll just make sure you have something left over to invest.",try:"Find your surplus in the budget - the amount that has no job yet. That number, showing up every month, is where growth starts."},
-  {t:"Resilience Is Recovering",p:"Nobody runs a clean streak forever. The month goes sideways, the car dies, you blow the budget on a Saturday you needed. Resilience was never about never struggling - it's about how fast you come back, and whether you come back at all. The people who make it aren't the ones who never fell off; they're the ones who treated falling off as information instead of a verdict. One bad week is a data point. Quitting is the only thing that actually ends it.",try:"After your next slip, do the review instead of the shame spiral: what happened, what triggered it, what's one smaller step for next time."}
+  {t:"Resilience Is Recovering",p:"Nobody runs a clean streak forever. The month goes sideways, the car dies, you blow the budget on a Saturday you needed. Resilience was never about never struggling - it's about how fast you come back, and whether you come back at all. The people who make it aren't the ones who never fell off; they're the ones who treated falling off as information instead of a verdict. One bad week is a data point. Quitting is the only thing that actually ends it.",try:"After your next slip, do the review instead of the shame spiral: what happened, what triggered it, what's one smaller step for next time."},
+  /* ---- Time: the other thing you invest ---- */
+  {t:"The Other Paycheck: 168 Hours",p:"Money income varies wildly between people. Time income doesn't - everyone gets exactly 168 hours a week, and it's the only paycheck that never gets a raise. Some of those hours you sell to an employer. Some you invest - in your health, a skill, a person, a thing you're building - and those pay you back later, usually with interest. And some just leak: the scroll, the autoplay, the hour you can't account for. A budget that only watches dollars misses the richer ledger underneath it: where the hours went decides what the dollars CAN do next year.",try:"On the Track tab, log your hours for one honest week - invested and leaked both. Don't change anything yet. Just look at the split."},
+  {t:"Wealth Isn't the Money",p:"Take two people and delete their bank accounts to zero. One rebuilds in a couple of years; the other never does. The difference was never the balance - it's what survives the wipe: skills someone will pay for, habits that compound, people who pick up the call, health that lets you show up. That's the actual wealth; money is just its current harvest. It's why lottery winners go broke and why cutting your latte was never going to be the whole answer. Grow the tree, not just the pile of fruit.",try:"Write down the three assets you'd still own at $0: your most sellable skill, your strongest habit, your realest ally. Invest an hour in one of them this week."}
 ];
 
 /* ---------- state ---------- */
@@ -1819,7 +1864,7 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
-           comfortMenu:[],
+           comfortMenu:[], timeLog:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -2422,7 +2467,19 @@ function txnsInMonth(month){ return state.transactions.filter(t=>monthOf(t.date)
 function spentFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='expense'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
 function monthIncome(month){ return txnsInMonth(month).filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
 function monthExpense(month){ return txnsInMonth(month).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
-function allTimeBalance(){ return state.transactions.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0); }
+function allTimeBalance(){ return state.transactions.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0); }   // invest txs subtract too: the cash left the account - it lives in the Invested-capital asset now
+/* The growth lane: an invest transaction is neither income nor an expense. Cash
+   goes down, but the money is still YOURS - it lands in one auto-managed "Invested
+   capital" asset (kind real), so net worth holds steady at the deposit and the
+   Freedom Runway counts it. Deleting the transaction unwinds the asset. */
+function investAssetAdd(delta){
+  let a=(state.assets||[]).find(x=>x.auto==='invest');
+  if(!a){ if(!(delta>0)) return; a={id:uid(),name:'Invested capital',value:0,kind:'real',cost:0,auto:'invest'}; state.assets.push(a); }
+  a.value=Math.round((a.value+delta)*100)/100;
+  if(a.value<=0.005) state.assets=state.assets.filter(x=>x!==a);
+}
+function monthInvested(month){ return txnsInMonth(month).filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0); }
+function investedAllTime(){ return state.transactions.filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0); }
 
 /* ---------- quote engine ---------- */
 let lastQuote='';
@@ -2727,13 +2784,19 @@ document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); 
 /* Cover First cards deep-link to their own category on Plan: find/create it,
    scroll to it, flash it, and focus its Assign field so funding is one tap. */
 document.addEventListener('click',e=>{ const w=e.target.closest('[data-wall]'); if(w) goToWall(w.dataset.wall); });
+/* The wall the user is currently being walked through. While set, funding that
+   category surfaces an inline "next wall" hand-off - no bouncing back to Home
+   between essentials. Cleared on Done / when all four are covered. */
+let wallGuideCat=null;
 function goToWall(catName){
   const before=state.categories.length;
   const c=findOrCreateEssential(catName);
   const created=state.categories.length>before;
   if(created) save();
   activateTab('budget');
-  if(created) renderBudget();
+  const w=(typeof WALLS!=='undefined')?WALLS.find(x=>x.cat===catName):null;
+  wallGuideCat=w?w.cat:null;
+  renderBudget();
   setTimeout(()=>{
     const inp=document.querySelector('#cats input[data-cat="'+c.id+'"]');
     if(!inp) return;
@@ -2796,6 +2859,20 @@ function topCats(){ return state.categories.filter(c=>!c.parentId); }
 function catSpent(id,M){ return spentFor(id,M)+childrenOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
 
 /* ---------- budget render ---------- */
+/* inline hand-off under the wall the user just funded: next uncovered wall, or the
+   all-covered close. Rendered as part of the category row so it survives re-renders. */
+function wallGuideHTML(c,M){
+  if(!wallGuideCat || c.parentId) return '';
+  const w=categoryWall(c.name); if(!w||w.cat!==wallGuideCat) return '';
+  if(!(assignedFor(c.id,M)>0)) return '';
+  const next=WALLS.find(x=>{
+    if(x.cat===w.cat) return false;
+    const cats=state.categories.filter(k=>!k.parentId && x.match.some(t=>k.name.toLowerCase().includes(t)));
+    return cats.reduce((s,k)=>s+assignedFor(k.id,M),0)<=0;
+  });
+  if(next) return `<div class="wall-next"><span class="wn-t">✓ ${escapeHtml(w.name)} set aside. Next wall: ${next.icon} ${escapeHtml(next.name)}</span><span class="wn-b"><button class="btn sm primary" data-wallnext="${escapeHtml(next.cat)}">Fund ${escapeHtml(next.name)} →</button><button class="btn sm ghost" data-walldone>Done for now</button></span></div>`;
+  return `<div class="wall-next all"><span class="wn-t">🎉 All four walls covered this month. That's the foundation - everything else builds on it.</span><span class="wn-b"><button class="btn sm primary" data-walldone data-goto="home">Back to Home →</button><button class="btn sm ghost" data-walldone>Keep budgeting</button></span></div>`;
+}
 function renderBudget(){
   document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth) + (state.activeMonth===thisMonth()?'<small>This month</small>':'<small>&nbsp;</small>');
   const M=state.activeMonth;
@@ -2864,9 +2941,12 @@ function renderBudget(){
         ${rebalance}
         ${subsHTML}
         ${addSub}
+        ${wallGuideHTML(c,M)}
       </div>`;
     }).join('');
   }
+  box.querySelectorAll('[data-wallnext]').forEach(b=>b.addEventListener('click',()=>goToWall(b.dataset.wallnext)));
+  box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; renderBudget(); }));
   let budgetAdvancing=false;
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
     inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=parseFloat(inp.value)||0; save(); refreshBudgetSummary(); });
@@ -2954,6 +3034,7 @@ document.getElementById('typeToggle').addEventListener('click',e=>{
   document.querySelectorAll('#typeToggle button').forEach(x=>x.classList.toggle('on',x.dataset.t===txType));
   document.querySelectorAll('.expense-only').forEach(x=>x.classList.toggle('hide',txType!=='expense'));
   document.querySelectorAll('.income-only').forEach(x=>x.classList.toggle('hide',txType!=='income'));
+  document.querySelectorAll('.invest-only').forEach(x=>x.classList.toggle('hide',txType!=='invest'));
 });
 let txEnergy='';
 document.getElementById('energySel').addEventListener('click',e=>{
@@ -2971,6 +3052,11 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const catId=document.getElementById('txCat').value;
     if(!catId){ alert('Add a category first (Budget tab).'); return; }
     const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy; state.transactions.push(tx);
+  } else if(txType==='invest'){
+    const dest=document.getElementById('txInv').value.trim()||'Investment';
+    state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note});
+    investAssetAdd(amt);
+    document.getElementById('txInv').value='';
   } else {
     const source=document.getElementById('txSrc').value.trim()||'Income';
     const srcType=document.getElementById('txSrcType').value;
@@ -2986,10 +3072,12 @@ document.getElementById('addTx').addEventListener('click',()=>{
   // jump active month to the transaction's month so the user sees it land
   state.activeMonth=monthOf(date);
   save(); renderBudget(); renderTx(); renderHome();
+  if(txType==='invest') renderNetWorth();
   const lw=document.getElementById('logWin');
   if(lw){
     let m;
     if(indieCrossed) m=`🚀 <b>${money(indieCrossed)} independent milestone!</b> ${escapeHtml(pickVoice(INDIE_WIN))}`;
+    else if(txType==='invest') m=`🌱 ${escapeHtml(pickVoice(GROWTH_WIN))}`;
     else if(txType==='income'&&isIndependent(document.getElementById('txSrcType').value)) m=`🚀 ${escapeHtml(pickVoice(INDIE_WIN))}`;
     else m=`🛡️ ${escapeHtml(pickVoice(BLINDSPOT_COPY))}`;
     lw.innerHTML=`<div class="logwin">${m}</div>`; setTimeout(()=>{ if(lw.firstChild) lw.innerHTML=''; },7000);
@@ -3318,17 +3406,75 @@ function renderQuickLog(){
     else { quickLogOpen=false; renderQuickLog(); if(typeof toast==='function') toast('Logged '+added+' purchase'+(added>1?'s':'')+'.'); }
   };
 }
+/* ============================================================
+   TIME LEDGER - the other thing you invest.
+   Same 168-hour paycheck for everyone: hours sold to work (from hoursPerWeek),
+   hours invested in yourself (health, learning, building, people - the assets
+   that survive a $0 balance), and hours leaked to the screen. Leaked hours get
+   priced in dollars at the user's own rate, because the feed monetizes them
+   even when the user doesn't. Rolling 7-day window; log kept to 90 days.
+   ============================================================ */
+const TIME_KINDS=[
+  {k:'health', ic:'💪', label:'Health',       hint:'moved, cooked, slept right'},
+  {k:'learn',  ic:'📚', label:'Learning',     hint:'a skill, a book, a course'},
+  {k:'build',  ic:'🔨', label:'Building',     hint:'side work, the dream'},
+  {k:'people', ic:'🤝', label:'People',       hint:'family, friends, network'},
+  {k:'leak',   ic:'📱', label:'Screen drift', hint:'scroll, autoplay'}
+];
+function timeWeekFrom(){ return localYMD(new Date(Date.parse(todayStr()+'T00:00:00')-6*86400000)); }
+function timeWeekTotals(){ const from=timeWeekFrom(); const tot={}; (state.timeLog||[]).forEach(e=>{ if(e.date>=from) tot[e.kind]=(tot[e.kind]||0)+(+e.hours||0); }); return tot; }
+function logTime(kind,hours){
+  state.timeLog=state.timeLog||[];
+  state.timeLog.push({id:uid(),date:todayStr(),kind,hours});
+  const cutoff=localYMD(new Date(Date.parse(todayStr()+'T00:00:00')-90*86400000));
+  state.timeLog=state.timeLog.filter(e=>e.date>=cutoff);   // bound storage; the ledger is about this season, not forever
+  save(); renderTimeLog();
+}
+function unlogTime(kind){
+  const from=timeWeekFrom(); const arr=state.timeLog||[];
+  for(let i=arr.length-1;i>=0;i--){ if(arr[i].kind===kind&&arr[i].date>=from){ arr.splice(i,1); break; } }
+  save(); renderTimeLog();
+}
+function renderTimeLog(){
+  const rows=document.getElementById('timeRows'); if(!rows) return;
+  const tot=timeWeekTotals(), r1=x=>Math.round(x*10)/10;
+  rows.innerHTML=TIME_KINDS.map(k=>{
+    const h=r1(tot[k.k]||0);
+    return `<div class="time-row ${k.k==='leak'?'leak':''}"><span class="tr-ic">${k.ic}</span><span class="tr-l">${escapeHtml(k.label)}<i>${escapeHtml(k.hint)}</i></span><span class="tr-h">${h?h+'h this week':'·'}</span><span class="tr-b"><button class="btn sm ghost" data-tmin="${k.k}" ${h?'':'disabled'} title="Undo an hour">−</button><button class="btn sm" data-tadd="${k.k}">+1 hr</button></span></div>`;
+  }).join('');
+  rows.querySelectorAll('[data-tadd]').forEach(b=>b.onclick=()=>logTime(b.dataset.tadd,1));
+  rows.querySelectorAll('[data-tmin]').forEach(b=>b.onclick=()=>unlogTime(b.dataset.tmin));
+  const sum=document.getElementById('timeSummary'); if(!sum) return;
+  const invested=TIME_KINDS.filter(k=>k.k!=='leak').reduce((s,k)=>s+(tot[k.k]||0),0);
+  const leak=tot.leak||0, H=effectiveHourly();
+  const sold=state.hoursPerWeek>0?state.hoursPerWeek:0;
+  const soldTxt=sold?`~${sold}h sold to work`:`work hours not set (Settings)`;
+  let leakLine='';
+  if(leak>0&&H>0){ const v=leak*H, t=baseInt();
+    leakLine = t==='savage' ? `That ${r1(leak)}h of drift is ${usd(v)} of your life, handed to the feed for free. The algorithm monetized your hours - you didn't.`
+             : t==='blunt'  ? `${r1(leak)}h of drift = ${usd(v)} of your life at your rate. The feed got those hours for free.`
+                            : `Those ${r1(leak)}h are worth about ${usd(v)} at your rate - worth spending on purpose.`;
+  }
+  const growLine = invested>0 ? `Hours in health, learning, building and people are the assets that survive a $0 balance - they're what raise your rate later.` : '';
+  sum.innerHTML=`<div class="time-sum">This week: ${soldTxt} · <b>${r1(invested)}h invested in you</b>${leak?` · ${r1(leak)}h leaked to the screen`:''}.</div>${leakLine?`<div class="time-leak">${leakLine}</div>`:''}${growLine?`<div class="time-grow">${growLine}</div>`:''}`;
+}
 function renderTx(){
   renderTxForm();
+  renderTimeLog();
   const bsBar=document.getElementById('blindspotBar');
   if(bsBar){ const bs=blindspotShield(); bsBar.innerHTML = bs.count>0 ? `<div class="blindspot"><span class="bs-ic">🛡️</span><div><div class="bs-k">Zero-Blindspot Shield</div><div class="bs-v">${bs.count} on the record · ${bs.streak}-day logging streak 🔥</div><div class="bs-note">Nothing hidden. Every logged dollar is one that can't ambush you.</div></div></div>` : ''; }
   const M=state.activeMonth;
   const inc=txAllMonths?state.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0):monthIncome(M);
   const exp=txAllMonths?state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0):monthExpense(M);
-  document.getElementById('txSummary').innerHTML=`
+  const inv=txAllMonths?investedAllTime():monthInvested(M);
+  const showInv=investedAllTime()>0;   // the growth lane's tile appears once they've ever invested
+  const sumEl=document.getElementById('txSummary');
+  sumEl.classList.toggle('five',showInv);
+  sumEl.innerHTML=`
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('income','Income')}</div><div class="v good">${money(inc)}</div></div>
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('spent','Spent')}</div><div class="v">${money(exp)}</div></div>
-    <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp)<0?'bad':'good'}">${money(inc-exp)}</div></div>
+    ${showInv?`<div class="stat"><div class="k">🌱 Invested ${txAllMonths?'(all time)':'(month)'}</div><div class="v pos">${money(inv)}</div></div>`:''}
+    <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
     <div class="stat"><div class="k">Balance (all time)</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
   renderTxList();
   renderRecurring();
@@ -3350,28 +3496,35 @@ function renderTxList(){
     const d=new Date(t.date+'T00:00:00');
     const day=isNaN(d)?'--':d.toLocaleString(undefined,{day:'numeric'});
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
-    const title=t.type==='income'?escapeHtml(t.source||'Income'):(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
+    const title=t.type==='income'?escapeHtml(t.source||'Income')
+              :t.type==='invest'?(`<span class="tag-cat">🌱 Invested</span>${escapeHtml(t.source||'Investment')}`)
+              :(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
-    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):'')):((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
+    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):''))
+            :t.type==='invest'?('Still yours - working'+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
+            :((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
     const owner=t.owner||'a', Ho=hourlyFor(owner);
     let badge='';
     if(t.type==='income' && t.hours>0) badge=`<span class="tx-yield">${usd(t.amount/t.hours)}/hr</span>`;
-    else if(Ho>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount,Ho)})</span>`;
+    else if(t.type!=='invest' && Ho>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount,Ho)})</span>`;
     return `<div class="tx ${t.type}">
       <div class="tx-date">${mon}<b>${day}</b></div>
       <div class="tx-main"><div class="tx-title">${title}</div><div class="tx-sub">${sub}</div></div>
-      <div class="tx-amt">${t.type==='income'?'+':'−'}${moneyOwner(t.amount,owner)}${badge}</div>
+      <div class="tx-amt">${t.type==='income'?'+':t.type==='invest'?'→':'−'}${moneyOwner(t.amount,owner)}${badge}</div>
       <button class="del" data-deltx="${t.id}" title="Delete">✕</button>
     </div>`;
   }).join('');
   box.querySelectorAll('button[data-deltx]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.deltx;
+    const gone=state.transactions.find(t=>t.id===id);
+    if(gone&&gone.type==='invest') investAssetAdd(-gone.amount);   // unwind the auto asset so net worth stays honest
     state.transactions=state.transactions.filter(t=>t.id!==id);
     // keep the linked ledgers honest: a deleted gift/ransom must leave Giving and the Shield too
     state.giving=(state.giving||[]).filter(g=>g.txId!==id);
     state.impulse=(state.impulse||[]).filter(i=>!(i.type==='buy'&&i.txId===id));
     save(); renderBudget(); renderTx(); if(typeof renderGiving==='function') renderGiving(); if(typeof renderImpulse==='function') renderImpulse(); renderHome();
+    if(gone&&gone.type==='invest') renderNetWorth();
   }));
 }
 
@@ -4774,9 +4927,11 @@ document.getElementById('copyLink').addEventListener('click',()=>{
 
 /* --- recurring transactions --- */
 document.getElementById('recType').addEventListener('change',()=>{
-  const inc=document.getElementById('recType').value==='income';
-  document.getElementById('recCatWrap').classList.toggle('hide',inc);
-  document.getElementById('recSrcWrap').classList.toggle('hide',!inc);
+  const t=document.getElementById('recType').value, inc=t==='income', inv=t==='invest';
+  document.getElementById('recCatWrap').classList.toggle('hide',inc||inv);
+  document.getElementById('recSrcWrap').classList.toggle('hide',!(inc||inv));   // invest reuses the source field as its destination
+  const srcLbl=document.querySelector('#recSrcWrap'); if(srcLbl) srcLbl.firstChild.textContent=inv?'Where it goes':'Source';
+  const rs=document.getElementById('recSrc'); if(rs) rs.placeholder=inv?'Roth IRA, index fund…':'Paycheck…';
   document.getElementById('recOwnerWrap').classList.toggle('hide',!inc);
   const rhw=document.getElementById('recHoursWrap'); if(rhw) rhw.classList.toggle('hide',!inc);
 });
@@ -4787,6 +4942,7 @@ document.getElementById('addRec').addEventListener('click',()=>{
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
   const item={id:uid(),type,amount:amt,day};
   if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ alert('Add a category first on the Budget tab.'); return; } item.catId=catId; }
+  else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; }
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
     if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; }
@@ -4809,8 +4965,9 @@ function renderRecurring(){
   const box=document.getElementById('recList'); if(!box) return;
   if(!state.recurring.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No recurring items yet. Add your paycheck and fixed bills.</div>`; return; }
   box.innerHTML=state.recurring.map(r=>{
-    const label=r.type==='income'?escapeHtml(r.source||'Income'):escapeHtml(catName(r.catId));
-    return `<div class="rec ${r.type}"><span class="tag">${r.type==='income'?'Income':'Expense'}</span><span class="nm">${label} · day ${r.day}</span><span class="am">${r.type==='income'?'+':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
+    const label=r.type==='expense'?escapeHtml(catName(r.catId)):escapeHtml(r.source||(r.type==='invest'?'Investment':'Income'));
+    const tag=r.type==='income'?'Income':r.type==='invest'?'🌱 Invest':'Expense';
+    return `<div class="rec ${r.type}"><span class="tag">${tag}</span><span class="nm">${label} · day ${r.day}</span><span class="am">${r.type==='income'?'+':r.type==='invest'?'→':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
   }).join('');
   box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
 }
@@ -4820,6 +4977,7 @@ function postRecurring(month){
     if(state.transactions.some(t=>t.recId===r.id&&monthOf(t.date)===month)) return;
     const date=`${month}-${String(r.day).padStart(2,'0')}`;
     if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
+    else if(r.type==='invest'){ state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}); investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
     else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
     added++;
   });
@@ -5813,20 +5971,30 @@ function mergeDuplicates(){
 }
 function renderWalls(){
   const M=state.activeMonth, grid=document.getElementById('wallsGrid'); if(!grid) return;
-  let covered=0, anyMissing=false;
-  grid.innerHTML=WALLS.map(w=>{
+  let anyMissing=false;
+  // covered walls step aside (compact chips) so the unfunded ones own the space;
+  // walls are per-month, so they return asking again when the month turns
+  const rows=WALLS.map(w=>{
     const matched=state.categories.filter(c=>!c.parentId && w.match.some(t=>c.name.toLowerCase().includes(t)));
     if(!matched.length) anyMissing=true;
     const assigned=matched.reduce((s,c)=>s+assignedFor(c.id,M),0);
-    const isCovered=assigned>0; if(isCovered) covered++;
-    const status = !matched.length ? 'Not set up' : (isCovered ? money(assigned)+' set aside' : 'Fund it first');
-    return `<button class="wall ${isCovered?'covered':''}" data-wall="${escapeHtml(w.cat)}">
-      <span class="wall-ic">${w.icon}</span>
-      <span class="wall-name">${w.name}${isCovered?' <span class="wall-check">✓</span>':''}</span>
-      <span class="wall-sub">${w.sub}</span>
-      <span class="wall-status">${status}</span>
-    </button>`;
-  }).join('');
+    return {w, matched, assigned, isCovered:assigned>0};
+  });
+  const covered=rows.filter(r=>r.isCovered).length;
+  if(covered===WALLS.length){
+    grid.innerHTML=`<div class="walls-done">🎉 All four walls covered this month${rows.some(r=>r.assigned>0)?' - '+money(rows.reduce((s,r)=>s+r.assigned,0))+' set aside for the essentials':''}. They'll ask again next month.</div>`;
+  } else {
+    grid.innerHTML = rows.filter(r=>!r.isCovered).map(({w,matched})=>{
+      const status = !matched.length ? 'Not set up' : 'Fund it first';
+      return `<button class="wall" data-wall="${escapeHtml(w.cat)}">
+        <span class="wall-ic">${w.icon}</span>
+        <span class="wall-name">${w.name}</span>
+        <span class="wall-sub">${w.sub}</span>
+        <span class="wall-status">${status}</span>
+      </button>`;
+    }).join('')
+    + (covered ? `<div class="walls-donechips">${rows.filter(r=>r.isCovered).map(r=>`<button class="wall-chip" data-wall="${escapeHtml(r.w.cat)}" title="Adjust it">✓ ${r.w.icon} ${escapeHtml(r.w.name)} · ${money(r.assigned)}</button>`).join('')}</div>` : '');
+  }
   const prog=document.getElementById('wallsProgress'); if(prog) prog.textContent=`${covered} of 4 covered this month`;
   const setup=document.getElementById('wallsSetup'); if(setup) setup.style.display = anyMissing ? '' : 'none';
 }
