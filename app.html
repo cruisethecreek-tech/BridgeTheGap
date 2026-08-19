@@ -126,6 +126,35 @@
   .cat-split{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px}
   .cat-split.neg{color:var(--accent-2)}
   .cat-split.rolled{color:var(--good)}
+  /* ---------- dig deeper ladder ---------- */
+  .deepen{margin-top:14px;background:rgba(var(--good-rgb),.07);border:1px solid rgba(var(--good-rgb),.32);border-radius:14px;padding:16px 17px}
+  .deepen .dp-k{font-weight:900;font-size:14px;color:var(--good)}
+  .deepen .dp-lead{font-size:13px;line-height:1.55;color:var(--text);margin-top:7px}
+  .deepen .dp-next{display:flex;gap:12px;margin-top:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+  .deepen .dp-ic{font-size:22px;flex:none}
+  .deepen .dp-t{font-weight:800;font-size:15px}
+  .deepen .dp-why{font-size:13px;color:var(--muted);line-height:1.5;margin-top:4px}
+  .deepen .dp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .deepen .dp-ladder{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+  .dp-chip{font-size:11px;font-weight:700;color:var(--muted);background:var(--ink);border:1px solid var(--line);border-radius:20px;padding:3px 9px}
+  .dp-chip.done{color:var(--good);border-color:rgba(var(--good-rgb),.34);background:rgba(var(--good-rgb),.1)}
+  .dp-chip.skip{opacity:.5;text-decoration:line-through}
+  /* ---------- membership sweep ---------- */
+  #subSweepPanel{display:none}
+  #subSweepPanel.open{display:block}
+  .sw-list{margin-top:10px}
+  .sw-row{display:flex;align-items:center;gap:8px;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:7px}
+  .sw-name{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 9px;font-size:13px}
+  .sw-dol{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:12px}
+  .sw-amt{width:78px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 8px;font-size:13px}
+  .sw-yr{font-size:11px;font-weight:800;color:var(--accent);white-space:nowrap;min-width:62px;text-align:right}
+  .sw-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px}
+  .sw-x:hover{color:var(--bad)}
+  .sw-manual{margin-top:9px}
+  .sw-sum{margin-top:14px;background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accent-rgb),.3);border-radius:12px;padding:14px 15px}
+  .sw-big{font-size:17px;font-weight:900}
+  .sw-note{font-size:13px;color:var(--muted);line-height:1.55;margin-top:6px}
+  .sw-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .assign-now{background:rgba(var(--good-rgb),.14);border:1px solid rgba(var(--good-rgb),.4);color:var(--good);border-radius:20px;padding:3px 11px;font-size:12px;font-weight:800;cursor:pointer;margin-left:4px;white-space:nowrap}
   .assign-now:hover{background:rgba(var(--good-rgb),.24)}
   .roll-tag{font-size:11px;font-weight:800;color:var(--good);background:rgba(var(--good-rgb),.12);border:1px solid rgba(var(--good-rgb),.3);border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap}
@@ -722,6 +751,7 @@
   .walls-donechips{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
   .wall-chip{background:rgba(var(--good-rgb),.1);border:1px solid rgba(var(--good-rgb),.32);color:var(--text);border-radius:20px;padding:7px 13px;font-size:13px;font-weight:800;cursor:pointer}
   .wall-chip:hover{border-color:var(--good)}
+  .wd-next{margin-top:10px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
   .walls-done{grid-column:1/-1;background:rgba(var(--good-rgb),.09);border:1px solid rgba(var(--good-rgb),.32);border-radius:14px;padding:14px 16px;font-weight:800;font-size:14px;text-align:center}
   /* wall-to-wall guide: after funding one essential, hand the user the next one */
   .wall-next{margin-top:10px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.35);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -1119,6 +1149,12 @@
         </div>
         <div id="recList"></div>
         <div style="margin-top:14px"><button class="btn sm" id="postRec">Post recurring</button></div>
+      </div>
+
+      <div class="panel" id="subSweepPanel">
+        <h2>🔍 Membership sweep</h2>
+        <p class="sub">The quiet ones. Small, monthly, automatic - which is exactly why they never get questioned. Tap what you actually pay for, put the real monthly cost in, and see what a year of it costs. Nothing here judges you; a membership you use and love is money well spent. The point is knowing which ones those are.</p>
+        <div id="subSweep"></div>
       </div>
     </section>
 
@@ -1879,7 +1915,7 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
-           comfortMenu:[], timeLog:[],
+           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -2918,6 +2954,164 @@ function splitNoteHTML(id,M,label){
 }
 
 /* ---------- budget render ---------- */
+/* ============================================================
+   DIG DEEPER - what happens AFTER the four walls are covered
+   Covering the essentials is where most budgeting apps stop and say "nice job."
+   That's exactly the moment someone is engaged enough to go further, so instead
+   of a dead-end celebration this hands them the next real move. The order is
+   deliberate: pay yourself FIRST (before the walls, properly - it's the one bill
+   most people pay last and it's the only one that buys freedom), then find the
+   memberships quietly draining the plan, then a real emergency fund, then a
+   payoff date for the debt. Each step knows whether it's already done.
+   ============================================================ */
+const PAYFIRST_RX=/pay ?yourself|savings|saving|future|invest|nest ?egg|wealth/i;
+const EMERG_RX=/emergency|cushion|rainy|buffer|safety|e-?fund/i;
+function payFirstDone(M){
+  if(state.categories.some(c=>!c.parentId && PAYFIRST_RX.test(c.name) && catAssigned(c.id,M)>0)) return true;
+  if((state.recurring||[]).some(r=>r.type==='invest')) return true;
+  return state.transactions.some(t=>t.type==='invest' && monthOf(t.date)===M);
+}
+function emergencyDone(){
+  return (state.goals||[]).some(g=>EMERG_RX.test(g.name))
+      || state.categories.some(c=>!c.parentId && EMERG_RX.test(c.name) && catAssigned(c.id,state.activeMonth)>0);
+}
+function deepenSteps(){
+  const M=state.activeMonth, income=monthIncome(M);
+  const skipped=state.deepenSkipped||[];
+  const steps=[
+    {k:'payfirst', ic:'💰', t:'Pay yourself first',
+     why:income>0?`Before the bills, not after. Even ${money(Math.max(25,Math.round(income*0.1)))} a month - 10% of what you make - is the only bill that buys you freedom instead of renting it.`
+                 :'Before the bills, not after. It is the one bill that buys you freedom instead of renting it.',
+     cta:'Set it up', done:payFirstDone(M)},
+    {k:'subs', ic:'🔍', t:'Find the memberships you forgot',
+     why:'The average plan hides a few of these. Small, monthly, automatic - which is exactly why they never get questioned. Let us price them by the year and see them clearly.',
+     cta:'Run the sweep', done:!!(state.subSweep&&state.subSweep.done)},
+    {k:'emergency', ic:'🛟', t:'Build a real emergency fund',
+     why:'Not a dream - insurance. Without it, the first flat tire goes on a credit card and the whole plan unravels. Start with one month of essentials.',
+     cta:'Start it', done:emergencyDone()},
+    {k:'debt', ic:'💳', t:'Get a real payoff date',
+     why:'Interest is a negative return you are guaranteed to pay. Put the numbers in and the calculator gives you an actual date - and what each extra dollar shaves off it.',
+     cta:'Open the calculator', done:(state.debts||[]).length>0}
+  ];
+  return steps.map(s=>Object.assign(s,{skipped:skipped.includes(s.k)}));
+}
+function deepenHTML(){
+  const steps=deepenSteps();
+  const next=steps.find(s=>!s.done&&!s.skipped);
+  const doneN=steps.filter(s=>s.done).length;
+  if(!next) return `<div class="wall-next all"><span class="wn-t">🎉 Walls covered, and you have gone past them - paid yourself first, swept the memberships, built the cushion, dated the debt. That is the whole foundation.</span><span class="wn-b"><button class="btn sm primary" data-walldone data-goto="home">Back to Home →</button><button class="btn sm ghost" data-walldone>Keep budgeting</button></span></div>`;
+  const ladder=steps.map(s=>`<span class="dp-chip ${s.done?'done':''} ${s.skipped?'skip':''}">${s.done?'✓':s.ic} ${escapeHtml(s.t)}</span>`).join('');
+  return `<div class="deepen">
+    <div class="dp-k">🎉 All four walls covered${doneN?` · ${doneN} of 4 deeper moves done`:''}</div>
+    <div class="dp-lead">That is the foundation. Most apps would stop here and congratulate you - but covering the essentials is the floor, not the ceiling. Here is what actually moves you forward:</div>
+    <div class="dp-next"><span class="dp-ic">${next.ic}</span><div class="dp-body"><div class="dp-t">${escapeHtml(next.t)}</div><div class="dp-why">${escapeHtml(next.why)}</div></div></div>
+    <div class="dp-actions"><button class="btn sm primary" data-deepen="${next.k}">${escapeHtml(next.cta)} →</button><button class="btn sm ghost" data-deepskip="${next.k}">Not now</button></div>
+    <div class="dp-ladder">${ladder}</div>
+  </div>`;
+}
+/* ============================================================
+   MEMBERSHIP SWEEP
+   Subscriptions are the leak that hides in plain sight: priced monthly on
+   purpose, so nobody does the x12. This lists the usual suspects by CATEGORY
+   (not brand pricing - the user knows their own numbers), totals the year, and
+   prices it in hours of their life. Anything they keep can go straight into the
+   budget as Memberships > that service, using the nested categories.
+   ============================================================ */
+const SUB_SEEDS=['Streaming video','Music','Gym / fitness','Cloud storage','Gaming','Food delivery','News / magazine','Apps & software','Shipping / delivery club','Subscription box','Phone extras','Kids / pet apps'];
+let subSweepRows=[];
+function subRowHTML(r,i){
+  return `<div class="sw-row"><input class="sw-name" data-swi="${i}" type="text" value="${escapeHtml(r.name||'')}" placeholder="What is it?"><span class="sw-dol">$<input class="sw-amt" data-swi="${i}" type="number" min="0" step="any" inputmode="decimal" value="${r.amt||''}" placeholder="0"></span><span class="sw-yr">${r.amt>0?money(r.amt*12)+'/yr':''}</span><button class="sw-x" data-swdel="${i}" title="Remove">✕</button></div>`;
+}
+function renderSubSweep(){
+  const box=document.getElementById('subSweep'); if(!box) return;
+  const used=new Set(subSweepRows.map(r=>(r.name||'').toLowerCase()));
+  const seeds=SUB_SEEDS.filter(s=>!used.has(s.toLowerCase()));
+  const total=subSweepRows.reduce((s,r)=>s+(+r.amt||0),0);
+  const H=effectiveHourly();
+  const yr=total*12;
+  const summary = total>0
+    ? `<div class="sw-sum"><div class="sw-big">${money(total)}/mo · <b>${money(yr)} a year</b></div><div class="sw-note">${H>0?`That is <b>${fmtHours(yr/H)}</b> of your life every year, on autopilot. `:''}Keep what you genuinely use. Cancel one you had forgotten and that money is a raise you gave yourself.</div><div class="sw-acts"><button class="btn sm primary" id="swAdd">Add these to my budget →</button><button class="btn sm ghost" id="swDone">Done sweeping</button></div></div>`
+    : `<div class="sw-note" style="margin-top:10px">Tap the ones you pay for. Add anything missing by hand.</div>`;
+  box.innerHTML=`<div class="cm-chips">${seeds.map(s=>`<button class="cm-seed" data-swadd="${escapeHtml(s)}">+ ${escapeHtml(s)}</button>`).join('')}</div>`
+    + (subSweepRows.length?`<div class="sw-list">${subSweepRows.map(subRowHTML).join('')}</div>`:'')
+    + `<div class="sw-manual"><button class="btn sm ghost" id="swManual">＋ Add another</button></div>`
+    + summary;
+  box.querySelectorAll('[data-swadd]').forEach(b=>b.onclick=()=>{ subSweepRows.push({name:b.dataset.swadd,amt:''}); renderSubSweep(); const inps=box.querySelectorAll('.sw-amt'); const last=inps[inps.length-1]; if(last) last.focus(); });
+  const man=document.getElementById('swManual'); if(man) man.onclick=()=>{ subSweepRows.push({name:'',amt:''}); renderSubSweep(); const inps=box.querySelectorAll('.sw-name'); const last=inps[inps.length-1]; if(last) last.focus(); };
+  box.querySelectorAll('.sw-name').forEach(i=>i.oninput=()=>{ subSweepRows[+i.dataset.swi].name=i.value; });
+  box.querySelectorAll('.sw-amt').forEach(i=>{
+    i.oninput=()=>{ subSweepRows[+i.dataset.swi].amt=parseFloat(i.value)||''; };
+    i.onchange=()=>renderSubSweep();   // refresh the yearly totals once they finish typing
+  });
+  box.querySelectorAll('[data-swdel]').forEach(b=>b.onclick=()=>{ subSweepRows.splice(+b.dataset.swdel,1); renderSubSweep(); });
+  const add=document.getElementById('swAdd');
+  if(add) add.onclick=()=>{
+    const keep=subSweepRows.filter(r=>(r.name||'').trim() && +r.amt>0);
+    if(!keep.length){ if(typeof toast==='function') toast('Put a monthly cost on at least one first.'); return; }
+    const parent=findOrCreateCat('Memberships');
+    const M=state.activeMonth;
+    keep.forEach(r=>{
+      const nm=r.name.trim();
+      let sub=state.categories.find(c=>c.parentId===parent.id && c.name.toLowerCase()===nm.toLowerCase());
+      if(!sub){ sub={id:uid(),name:nm,parentId:parent.id}; state.categories.push(sub); }
+      budgetFor(M)[sub.id]=+r.amt;
+    });
+    state.subSweep={done:todayStr(),count:keep.length,monthly:keep.reduce((s,r)=>s+(+r.amt||0),0)};
+    save(); renderBudget(); renderTxForm(); renderHome();
+    if(typeof toast==='function') toast('Added '+keep.length+' membership'+(keep.length>1?'s':'')+' under Memberships - they roll up into one pool.');
+    const el=document.getElementById('subSweepPanel'); if(el) el.classList.remove('open');
+  };
+  const dn=document.getElementById('swDone');
+  if(dn) dn.onclick=()=>{
+    state.subSweep={done:todayStr(),count:subSweepRows.length,monthly:total};
+    save(); renderBudget(); renderHome();
+    const el=document.getElementById('subSweepPanel'); if(el) el.classList.remove('open');
+    if(typeof toast==='function') toast('Swept. Now you know the number.');
+  };
+}
+function openSubSweep(){
+  activateTab('budget');
+  const el=document.getElementById('subSweepPanel'); if(!el) return;
+  el.classList.add('open');
+  if(!subSweepRows.length) subSweepRows=[];
+  renderSubSweep();
+  setTimeout(()=>{ el.scrollIntoView({behavior:'auto',block:'start'}); window.scrollBy(0,-70); },140);
+}
+function wireDeepen(scope){
+  (scope||document).querySelectorAll('[data-deepen]').forEach(b=>b.onclick=()=>runDeepen(b.dataset.deepen));
+  (scope||document).querySelectorAll('[data-deepskip]').forEach(b=>b.onclick=()=>{
+    state.deepenSkipped=[...new Set([...(state.deepenSkipped||[]), b.dataset.deepskip])];
+    save(); renderBudget(); renderHome();
+  });
+}
+function runDeepen(k){
+  const M=state.activeMonth, income=monthIncome(M);
+  if(k==='payfirst'){
+    const c=findOrCreateCat('Pay Yourself First');
+    if(!(assignedFor(c.id,M)>0) && income>0) budgetFor(M)[c.id]=Math.max(25,Math.round(income*0.1));
+    save(); activateTab('budget'); renderBudget();
+    setTimeout(()=>{
+      const inp=document.querySelector('#cats input[data-cat="'+c.id+'"]');
+      if(inp){ const row=inp.closest('.cat'); if(row){ row.scrollIntoView({behavior:'auto',block:'center'}); row.classList.add('cat-flash'); setTimeout(()=>row.classList.remove('cat-flash'),1600); } try{ inp.focus({preventScroll:true}); inp.select&&inp.select(); }catch(_){} }
+    },140);
+    if(typeof toast==='function') toast(income>0?'Started you at 10% - change it to whatever is real for you.':'Add your income and this will suggest a number.');
+    return;
+  }
+  if(k==='subs'){ openSubSweep(); return; }
+  if(k==='emergency'){
+    const ess=Math.round(essentialMonthly()||0);
+    const target=ess>0?ess:1000;
+    state.goals.push({id:uid(),name:'Emergency fund',target,saved:0,date:'',goalType:'safety'});
+    save(); activateTab('goals'); renderGoals(); renderHome();
+    if(typeof toast==='function') toast('Emergency fund started at '+money(target)+(ess>0?' - one month of your essentials.':'.'));
+    return;
+  }
+  if(k==='debt'){
+    activateTab('debt'); renderDebt();
+    setTimeout(()=>{ const el=document.getElementById('debtName'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },140);
+    return;
+  }
+}
 /* inline hand-off under the wall the user just funded: next uncovered wall, or the
    all-covered close. Rendered as part of the category row so it survives re-renders. */
 function wallGuideHTML(c,M){
@@ -2930,7 +3124,7 @@ function wallGuideHTML(c,M){
     return cats.reduce((s,k)=>s+assignedFor(k.id,M),0)<=0;
   });
   if(next) return `<div class="wall-next"><span class="wn-t">✓ ${escapeHtml(w.name)} set aside. Next wall: ${next.icon} ${escapeHtml(next.name)}</span><span class="wn-b"><button class="btn sm primary" data-wallnext="${escapeHtml(next.cat)}">Fund ${escapeHtml(next.name)} →</button><button class="btn sm ghost" data-walldone>Done for now</button></span></div>`;
-  return `<div class="wall-next all"><span class="wn-t">🎉 All four walls covered this month. That's the foundation - everything else builds on it.</span><span class="wn-b"><button class="btn sm primary" data-walldone data-goto="home">Back to Home →</button><button class="btn sm ghost" data-walldone>Keep budgeting</button></span></div>`;
+  return deepenHTML();   // the walls are the floor, not the finish line
 }
 function renderBudget(){
   document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth) + (state.activeMonth===thisMonth()?'<small>This month</small>':'<small>&nbsp;</small>');
@@ -3012,6 +3206,7 @@ function renderBudget(){
       </div>`;
     }).join('');
   }
+  wireDeepen(box);
   box.querySelectorAll('[data-assignnow]').forEach(b=>b.addEventListener('click',()=>{
     const id=b.dataset.assignnow, sum=kidsAssigned(id,M);
     budgetFor(M)[id]=sum; save(); renderBudget(); renderHome();
@@ -6130,7 +6325,11 @@ function renderWalls(){
   });
   const covered=rows.filter(r=>r.isCovered).length;
   if(covered===WALLS.length){
-    grid.innerHTML=`<div class="walls-done">🎉 All four walls covered this month${rows.some(r=>r.assigned>0)?' - '+money(rows.reduce((s,r)=>s+r.assigned,0))+' set aside for the essentials':''}. They'll ask again next month.</div>`;
+    const nextDeep=deepenSteps().find(s=>!s.done&&!s.skipped);
+    grid.innerHTML=`<div class="walls-done">🎉 All four walls covered this month${rows.some(r=>r.assigned>0)?' - '+money(rows.reduce((s,r)=>s+r.assigned,0))+' set aside for the essentials':''}. They'll ask again next month.`
+      + (nextDeep?`<div class="wd-next">The floor is set. Next: <b>${escapeHtml(nextDeep.t)}</b> <button class="btn sm primary" data-deepen="${nextDeep.k}">${escapeHtml(nextDeep.cta)} →</button></div>`:'')
+      + `</div>`;
+    wireDeepen(grid);
   } else {
     grid.innerHTML = rows.filter(r=>!r.isCovered).map(({w,matched})=>{
       const status = !matched.length ? 'Not set up' : 'Fund it first';
