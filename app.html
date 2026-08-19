@@ -909,7 +909,10 @@
   .rec .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;flex-shrink:0}
   .rec.income .tag{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
   .rec.expense .tag{background:var(--ink);color:var(--muted);border:1px solid var(--line)}
-  .rec .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rec .nm{flex:1;font-weight:700;font-size:14px;min-width:0;overflow-wrap:anywhere}
+  .rec .rec-when{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--muted);line-height:1.4;margin-top:2px}
+  .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
+  .rec.invest .am{color:var(--accent)}
   .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
   .rec .del{background:none;border:none;color:var(--muted);cursor:pointer}
   .rec .del:hover{color:var(--bad)}
@@ -1108,7 +1111,10 @@
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
           <label class="fld income-only-rec hide" id="recHoursWrap">Hours/mo it takes<input type="number" id="recHours" min="0" step="0.5" placeholder="opt." style="width:90px"></label>
-          <label class="fld">Day<input type="number" id="recDay" min="1" max="28" value="1" style="width:70px"></label>
+          <label class="fld">Repeats
+            <select id="recFreq"><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="semimonthly">Twice a month</option><option value="monthly" selected>Monthly</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select>
+          </label>
+          <label class="fld">First due<input type="date" id="recDate" style="width:150px"></label>
           <button class="btn primary" id="addRec">Add</button>
         </div>
         <div id="recList"></div>
@@ -4352,7 +4358,9 @@ function recomputeBlendedWage(){
   if(!state.wageAuto) return;
   const work=state.recurring.filter(r=>r.type==='income' && (r.owner||'a')==='a' && +r.hours>0);
   if(!work.length){ state.hourlyWage=0; return; }   // effectiveHourly() falls back to personal income / their real month-hours
-  const amt=work.reduce((s,r)=>s+(+r.amount||0),0), hrs=work.reduce((s,r)=>s+(+r.hours||0),0);
+  // normalize to a MONTH: a bi-weekly paycheck of $1,500 is not $1,500 a month,
+  // and hours are entered per month - mixing the two would skew the blended rate
+  const amt=work.reduce((s,r)=>s+recMonthly(r),0), hrs=work.reduce((s,r)=>s+(+r.hours||0),0);
   if(hrs>0){ state.hourlyWage=Math.round(amt/hrs*100)/100; }
 }
 function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
@@ -5009,9 +5017,11 @@ document.getElementById('recType').addEventListener('change',()=>{
 document.getElementById('addRec').addEventListener('click',()=>{
   const type=document.getElementById('recType').value;
   const amt=parseFloat(document.getElementById('recAmt').value);
-  const day=Math.min(28,Math.max(1,parseInt(document.getElementById('recDay').value)||1));
+  const freq=document.getElementById('recFreq').value;
+  const anchor=document.getElementById('recDate').value||todayStr();
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
-  const item={id:uid(),type,amount:amt,day};
+  // day is kept in sync for anything still reading the old field
+  const item={id:uid(),type,amount:amt,freq,anchor,day:Math.min(28,Math.max(1,+anchor.slice(8,10)||1))};
   if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ alert('Add a category first on the Budget tab.'); return; } item.catId=catId; }
   else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; }
   else {
@@ -5033,24 +5043,91 @@ function renderRecurring(){
   const sel=document.getElementById('recCat');
   if(sel) sel.innerHTML=state.categories.length?categoryOptions():'<option value="">Add a category first</option>';
   const pr=document.getElementById('postRec'); if(pr) pr.textContent='Post recurring to '+fmtMonth(state.activeMonth);
+  const rd=document.getElementById('recDate'); if(rd&&!rd.value) rd.value=todayStr();
   const box=document.getElementById('recList'); if(!box) return;
   if(!state.recurring.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No recurring items yet. Add your paycheck and fixed bills.</div>`; return; }
   box.innerHTML=state.recurring.map(r=>{
     const label=r.type==='expense'?escapeHtml(catName(r.catId)):escapeHtml(r.source||(r.type==='invest'?'Investment':'Income'));
     const tag=r.type==='income'?'Income':r.type==='invest'?'🌱 Invest':'Expense';
-    return `<div class="rec ${r.type}"><span class="tag">${tag}</span><span class="nm">${label} · day ${r.day}</span><span class="am">${r.type==='income'?'+':r.type==='invest'?'→':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
+    const meta=recFreqMeta(r), next=recNextDue(r);
+    const nextTxt=next?new Date(next+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}):'-';
+    const equiv=meta.per!==1?` · ≈${money(Math.round(recMonthly(r)))}/mo`:'';   // an approximation - cents would be false precision
+    return `<div class="rec ${r.type}"><span class="tag">${tag}</span><span class="nm">${label}<i class="rec-when">${meta.short} · next ${nextTxt}${equiv}</i></span><span class="am">${r.type==='income'?'+':r.type==='invest'?'→':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
   }).join('');
   box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
+}
+/* ============================================================
+   RECURRING SCHEDULES
+   Bills and paychecks don't all run on a day-of-the-month: rent is monthly on
+   the 1st, the paycheck is every other Friday, the water bill is quarterly, the
+   insurance is once a year. Each item carries a frequency plus an anchor date
+   (the first time it's due), and the engine works out every date it lands on
+   inside a given month. Legacy items (day-of-month only, no anchor) keep
+   behaving exactly as before: monthly, always due, posting to any month.
+   ============================================================ */
+const REC_FREQS=[
+  {k:'weekly',      label:'Weekly',            short:'weekly',       per:52/12},
+  {k:'biweekly',    label:'Every 2 weeks',     short:'every 2 wks',  per:26/12},
+  {k:'semimonthly', label:'Twice a month',     short:'twice a mo',   per:2},
+  {k:'monthly',     label:'Monthly',           short:'monthly',      per:1},
+  {k:'quarterly',   label:'Every 3 months',    short:'quarterly',    per:1/3},
+  {k:'yearly',      label:'Once a year',       short:'yearly',       per:1/12}
+];
+function recFreq(r){ const f=r&&r.freq; return REC_FREQS.some(x=>x.k===f)?f:'monthly'; }
+function recFreqMeta(r){ const f=recFreq(r); return REC_FREQS.find(x=>x.k===f)||REC_FREQS[3]; }
+function recAnchor(r){ if(r&&r.anchor) return r.anchor; const d=Math.min(28,Math.max(1,+((r||{}).day)||1)); return `${thisMonth()}-${String(d).padStart(2,'0')}`; }
+function daysInMonth(month){ const [y,m]=month.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function monIdx(month){ const [y,m]=month.split('-').map(Number); return y*12+m; }
+/* what this item costs (or brings in) in an average month, whatever its interval */
+function recMonthly(r){ return (+r.amount||0)*recFreqMeta(r).per; }
+/* every date this item is due inside `month` */
+function recOccurrences(r,month){
+  const f=recFreq(r), anchored=!!(r&&r.anchor), anchor=recAnchor(r);
+  const dim=daysInMonth(month), first=month+'-01', last=month+'-'+String(dim).padStart(2,'0');
+  if(anchored && anchor>last) return [];                 // hasn't started yet
+  const aDay=Math.max(1,+anchor.slice(8,10)||1);
+  const day=n=>month+'-'+String(Math.min(Math.max(1,n),dim)).padStart(2,'0');
+  let out=[];
+  if(f==='weekly'||f==='biweekly'){
+    const step=f==='weekly'?7:14;
+    let d=anchor;
+    if(d<first){                                          // jump whole steps instead of walking day by day
+      const gap=Math.round((Date.parse(first+'T00:00:00')-Date.parse(d+'T00:00:00'))/86400000);
+      d=shiftDay(d,Math.ceil(gap/step)*step);
+    }
+    let guard=0;
+    while(d<=last && guard++<40){ if(d>=first) out.push(d); d=shiftDay(d,step); }
+  } else if(f==='semimonthly'){
+    out=[day(aDay), day(aDay+15>dim ? aDay-15 : aDay+15)];
+  } else if(f==='quarterly'){
+    if(((monIdx(month)-monIdx(anchor.slice(0,7)))%3+3)%3!==0) return [];
+    out=[day(aDay)];
+  } else if(f==='yearly'){
+    if(month.slice(5,7)!==anchor.slice(5,7)) return [];
+    out=[day(aDay)];
+  } else {
+    out=[day(aDay)];
+  }
+  out=[...new Set(out)].sort();
+  return anchored ? out.filter(d=>d>=anchor) : out;
+}
+/* the next date this item is due from today, looking a year ahead */
+function recNextDue(r){
+  let m=thisMonth(), t=todayStr();
+  for(let i=0;i<13;i++){ const hit=recOccurrences(r,m).find(d=>d>=t); if(hit) return hit; m=shiftMonth(m,1); }
+  return null;
 }
 function postRecurring(month){
   let added=0;
   state.recurring.forEach(r=>{
-    if(state.transactions.some(t=>t.recId===r.id&&monthOf(t.date)===month)) return;
-    const date=`${month}-${String(r.day).padStart(2,'0')}`;
-    if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
-    else if(r.type==='invest'){ state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}); investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
-    else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
-    added++;
+    recOccurrences(r,month).forEach(date=>{
+      // dedupe per OCCURRENCE, not per month - a weekly bill lands four times
+      if(state.transactions.some(t=>t.recId===r.id&&t.date===date)) return;
+      if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
+      else if(r.type==='invest'){ state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}); investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
+      else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
+      added++;
+    });
   });
   return added;
 }
