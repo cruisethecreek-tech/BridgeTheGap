@@ -16,7 +16,16 @@ The bottom nav leads with the three core jobs and tucks the support surfaces beh
 a **More** toggle, so a new user sees a sharp, low-clutter front door instead of seven
 competing tabs. **Shield** (the anti-impulse differentiator) carries a gold accent.
 
-**Primary:** Home · Plan · **Shield** · Build   **More ▾:** Track · Debt · Learn · Settings.
+**Bottom bar (thumb-reach, 5 slots):** Home · Plan · **[I want to...]** · Build · More
+**More ▾ expands upward:** Shield · Track · Debt · Learn · Settings.
+
+The nav moved from a top tab strip to a fixed bottom bar with a centre notch holding
+the "I want to..." hub. Shield moved into More deliberately: its *action* (the
+gut-check) is the hub's gold hero row, reachable in one tap from any screen, while the
+Shield *tab* is the review surface (vault, War Chest, badges) you visit less often.
+The bar is opaque with a top shadow, respects `env(safe-area-inset-bottom)`, and the
+notch button lifts clear when More is expanded. Body padding compensates for both
+states so nothing hides behind the bar.
 
 The underlying money journey is unchanged: **Plan → Track → Shield → Build → Learn**
 (shown as the numbered flow on Home). Internal view ids in parentheses are unchanged
@@ -175,3 +184,27 @@ as labels or diagnosis (labelling breeds shame and defensiveness, which is what 
 avoidance in the first place). This composes with the existing situation floor - a user in
 survival mode still never gets roasted - and the app continues to route serious distress to
 a qualified professional rather than treating it in-app.
+
+---
+
+## "I want to..." intent hub (the FAB)
+
+Borrowed from the intent-first pattern big consumer apps use (state the job, let the
+app route you). The app had grown enough surface - gut-check, quick log, notepad
+photo, money map, comfort list, debt planner, dreams, insights - that features were
+only findable if you already knew which tab hid them. The FAB now opens a sheet of
+plain-language intents instead of a single action.
+
+- **Always reachable.** The FAB used to hide on Home and Shield (where the gut-check
+  was already visible); as a hub it now shows on every tab.
+- **Gut-check stays first and is styled as the hero row**, so the differentiator and
+  the FAB's old behaviour are one extra tap away, never buried.
+- **Context-aware** (`intentItems`): spend-mode users aren't offered zero-based
+  budgeting; the debt row appears only once a debt or liability exists; the dream row
+  respects the stage ladder; the comfort row flips between "Set up" and "Update".
+- **Routes through the existing deep-link plumbing** (`closeOverlayThenTab`,
+  `runNextStep`, focus-after-navigate), so every row lands on the exact field - e.g.
+  "Log what I spent" opens Track *with the batch quick-log already open and focused*.
+- Joins the overlay/back stack (`closeTopOverlay`), so Android Back closes the sheet
+  and the FAB label resets. Engine: `intentItems`, `renderIntentSheet`,
+  `openIntentSheet`, `setFabOpen`.
