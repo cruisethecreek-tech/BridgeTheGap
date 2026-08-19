@@ -175,3 +175,27 @@ as labels or diagnosis (labelling breeds shame and defensiveness, which is what 
 avoidance in the first place). This composes with the existing situation floor - a user in
 survival mode still never gets roasted - and the app continues to route serious distress to
 a qualified professional rather than treating it in-app.
+
+---
+
+## "I want to..." intent hub (the FAB)
+
+Borrowed from the intent-first pattern big consumer apps use (state the job, let the
+app route you). The app had grown enough surface - gut-check, quick log, notepad
+photo, money map, comfort list, debt planner, dreams, insights - that features were
+only findable if you already knew which tab hid them. The FAB now opens a sheet of
+plain-language intents instead of a single action.
+
+- **Always reachable.** The FAB used to hide on Home and Shield (where the gut-check
+  was already visible); as a hub it now shows on every tab.
+- **Gut-check stays first and is styled as the hero row**, so the differentiator and
+  the FAB's old behaviour are one extra tap away, never buried.
+- **Context-aware** (`intentItems`): spend-mode users aren't offered zero-based
+  budgeting; the debt row appears only once a debt or liability exists; the dream row
+  respects the stage ladder; the comfort row flips between "Set up" and "Update".
+- **Routes through the existing deep-link plumbing** (`closeOverlayThenTab`,
+  `runNextStep`, focus-after-navigate), so every row lands on the exact field - e.g.
+  "Log what I spent" opens Track *with the batch quick-log already open and focused*.
+- Joins the overlay/back stack (`closeTopOverlay`), so Android Back closes the sheet
+  and the FAB label resets. Engine: `intentItems`, `renderIntentSheet`,
+  `openIntentSheet`, `setFabOpen`.
