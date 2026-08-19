@@ -126,6 +126,8 @@
   .cat-split{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px}
   .cat-split.neg{color:var(--accent-2)}
   .cat-split.rolled{color:var(--good)}
+  .ltb-note{font-size:12.5px;line-height:1.55;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:10px 0}
+  .ltb-note b{color:var(--text)}
   /* ---------- dig deeper ladder ---------- */
   .deepen{margin-top:14px;background:rgba(var(--good-rgb),.07);border:1px solid rgba(var(--good-rgb),.32);border-radius:14px;padding:16px 17px}
   .deepen .dp-k{font-weight:900;font-size:14px;color:var(--good)}
@@ -1089,8 +1091,8 @@
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
       <div id="nextSteps" class="hide-in-spending"></div>
-      <div id="lifeKeyHome" class="hide-in-spending"></div>
       <div class="snapshot hide-in-spending" id="homeSnap"></div>
+      <div id="lifeKeyHome" class="hide-in-spending"></div>
       <div id="householdBox"></div>
       <div id="retroBox" class="hide-in-spending"></div>
       <div id="offenseCard" data-stage="2"></div>
@@ -3166,7 +3168,7 @@ function renderBudget(){
     flipStat('Assigned', assigned, '')+
     flipStat(lifeLabel('spent','Spent'), spent, '')+
     flipStat('Left to spend', lts, lts<0?'bad':'good');
-  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${flipHintHTML()}`;
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb)}${flipHintHTML()}`;
 
   const dupEl=document.getElementById('dupBanner');
   if(dupEl){
@@ -6147,6 +6149,17 @@ function renderDataGuard(){
   </div>`;
   const x=document.getElementById('dgX'); if(x) x.onclick=()=>{ dataGuardOff=true; renderDataGuard(); };
 }
+/* "Left to budget" trips people up when it goes negative, because it does NOT
+   mean overspent - nothing has necessarily been spent at all. It means: you have
+   given jobs to more dollars than you have logged arriving. Say that plainly,
+   with the actual arithmetic, wherever the number appears. */
+function ltbNoteHTML(income,assigned,ltb){
+  if(income<=0 && assigned>0) return `<div class="ltb-note">You've given <b>${money(assigned)}</b> a job but haven't logged any income yet, so it reads as <b>${money(ltb)}</b> left to budget. Nothing is overspent - the plan just doesn't have money behind it yet. Log your paycheck on Track and this flips.</div>`;
+  if(ltb<-0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than has come in. That's not overspending - it's a plan that needs either more income logged or a category trimmed.</div>`;
+  if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every logged dollar has a job. That's zero-based, done right.</div>`;
+  if(ltb>0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.</div>`;
+  return '';
+}
 function renderHome(){
   renderDataGuard();
   const hc=HOME_COPY[state.register]||HOME_COPY.middle;
@@ -6160,7 +6173,10 @@ function renderHome(){
     const cta=document.getElementById('hhCta'); if(cta) cta.setAttribute('data-goto','impulse');
   } else { const cta=document.getElementById('hhCta'); if(cta) cta.setAttribute('data-goto','budget'); }
   const M=state.activeMonth;
-  const income=monthIncome(M), assigned=state.categories.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  // MUST match the Plan tab exactly: count each pool ONCE. Summing every category
+  // double-counted any parent that also had subcategories, so Home and Plan
+  // disagreed about the same month.
+  const income=monthIncome(M), assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const ltb=income-assigned, spent=monthExpense(M);
   const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
@@ -6170,7 +6186,8 @@ function renderHome(){
     flipStat('Spent this month', spent, '')+
     plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
-  const lkh=document.getElementById('lifeKeyHome'); if(lkh) lkh.innerHTML=flipHintHTML();
+  const lkh=document.getElementById('lifeKeyHome');
+  if(lkh) lkh.innerHTML=ltbNoteHTML(income,assigned,ltb)+flipHintHTML();
   renderWhyCard();
   renderMoneyStoryNote();
   renderEnough(income);
