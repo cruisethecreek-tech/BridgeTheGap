@@ -248,19 +248,29 @@
 
   /* ---------- Layout ---------- */
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-  .tabs{display:flex;gap:2px;margin:22px 0 4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-  .tab{background:none;border:none;color:var(--muted);font-weight:700;font-size:15px;padding:14px 14px;position:relative}
-  .tab.on{color:var(--text)}
-  .tab.on::after{content:'';position:absolute;left:10px;right:10px;bottom:-1px;height:3px;background:var(--accent);border-radius:3px}
-  /* Shield is the differentiator - give it a subtle gold weight */
-  .tab-hero{color:var(--accent)}
-  .tab-hero.on{color:var(--accent)}
-  .tab-more-btn{color:var(--muted);font-size:14px}
-  .tab-more-btn:hover{color:var(--text)}
-  /* Secondary tabs stay tucked behind "More" until opened */
-  .tab-more{display:none}
-  .tabs.more-open .tab-more{display:contents}
-  .tabs.more-open .tab-more-btn{color:var(--text)}
+  /* ---- Bottom nav bar with a centre "I want to..." notch (thumb-reach) ---- */
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--bg);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 24px rgba(0,0,0,.35)}
+  .tabrow{display:flex;align-items:stretch;max-width:560px;margin:0 auto}
+  /* the notch the FAB sits in - carries the hub's label at the bar's baseline */
+  .tabrow .tab-gap{flex:1;min-width:64px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:7px;font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap}
+  .tabs.hub-open .tab-gap{color:var(--accent)}
+  body.more-open .fab{bottom:calc(124px + env(safe-area-inset-bottom))}   /* clear the 114px expanded bar */
+  body.more-open{padding-bottom:196px}
+  .tab{flex:1;background:none;border:none;color:var(--muted);font-weight:700;font-size:11px;padding:9px 2px 7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-width:0}
+  .tab .t-ic{font-size:19px;line-height:1;filter:grayscale(.55) opacity(.75);transition:filter .15s ease}
+  .tab .t-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .tab.on{color:var(--accent)}
+  .tab.on .t-ic{filter:none}
+  .tab.on::after{content:'';position:absolute;left:50%;transform:translateX(-50%);top:0;width:26px;height:3px;background:var(--accent);border-radius:0 0 3px 3px}
+  .tab-more-btn .t-ic{letter-spacing:1px}
+  /* Secondary tabs expand UPWARD out of More, above the bar */
+  .tab-more{display:none;max-width:560px;margin:0 auto;border-bottom:1px solid var(--line);padding:4px 0}
+  .tabs.more-open .tab-more{display:flex}
+  .tabs.more-open .tab-more-btn{color:var(--accent)}
+  .tabs.more-open .tab-more-btn .t-ic{filter:none}
+  /* keep content clear of the fixed bar + notch */
+  body{padding-bottom:104px}
+  @media(min-width:560px){ body{padding-bottom:96px} }
   /* CSV import */
   .import-drop{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:1.5px dashed var(--line);border-radius:14px;padding:18px;margin-top:6px;transition:border-color .15s,background .15s}
   .import-drop.drag{border-color:var(--accent);background:rgba(212,168,67,.06)}
@@ -818,10 +828,13 @@
   .decision .del:hover{color:var(--bad)}
 
   /* ---------- FAB + modal ---------- */
-  .fab{position:fixed;right:16px;bottom:16px;z-index:50;background:var(--accent);color:var(--on-accent);border:none;border-radius:50px;padding:15px 20px;font-weight:900;font-size:15px;box-shadow:0 10px 30px rgba(230,178,77,.4);display:flex;align-items:center;gap:8px;transition:transform .12s ease}
-  .fab:hover{transform:translateY(-2px)}
+  /* Centre notch button - the intent hub, sitting in the bar's gap */
+  .fab{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:58;background:var(--accent);color:var(--on-accent);border:none;border-radius:50px;width:60px;height:60px;padding:0;font-weight:900;font-size:10px;box-shadow:0 8px 24px rgba(230,178,77,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease;border:4px solid var(--bg)}
+  .fab:hover{transform:translateX(-50%) translateY(-3px);box-shadow:0 12px 30px rgba(230,178,77,.55)}
+  .fab:active{transform:translateX(-50%) scale(.95)}
   .fab.hide{display:none}
-  .fab .fab-ic{font-size:17px;line-height:1}
+  .fab .fab-ic{font-size:20px;line-height:1}
+  .fab #fabLbl{font-size:0}   /* the visible label lives in the bar under the notch */
   /* "I want to..." intent sheet - one tap from anywhere to any job the app does */
   .modal.sheet{max-height:86vh;overflow-y:auto}
   .intent{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-top:9px;cursor:pointer;transition:border-color .12s ease,transform .12s ease}
@@ -969,18 +982,21 @@
   </header>
 
   <div class="wrap">
-    <nav class="tabs" id="tabs">
-      <button class="tab" data-view="home">Home</button>
-      <button class="tab" data-view="budget">Plan</button>
-      <button class="tab tab-hero" data-view="impulse">Shield</button>
-      <button class="tab" data-view="goals" data-stage="2">Build</button>
-      <button class="tab tab-more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="tabMore">More ▾</button>
+    <nav class="tabs" id="tabs" aria-label="Main">
       <span class="tab-more" id="tabMore">
-        <button class="tab" data-view="tx">Track</button>
-        <button class="tab" data-view="debt">Debt</button>
-        <button class="tab" data-view="learn">Learn</button>
-        <button class="tab" data-view="settings">Settings</button>
+        <button class="tab" data-view="impulse"><span class="t-ic">🛡️</span><span class="t-l">Shield</span></button>
+        <button class="tab" data-view="tx"><span class="t-ic">🧾</span><span class="t-l">Track</span></button>
+        <button class="tab" data-view="debt"><span class="t-ic">💳</span><span class="t-l">Debt</span></button>
+        <button class="tab" data-view="learn"><span class="t-ic">📖</span><span class="t-l">Learn</span></button>
+        <button class="tab" data-view="settings"><span class="t-ic">⚙️</span><span class="t-l">Settings</span></button>
       </span>
+      <div class="tabrow">
+        <button class="tab" data-view="home"><span class="t-ic">🏠</span><span class="t-l">Home</span></button>
+        <button class="tab" data-view="budget"><span class="t-ic">📋</span><span class="t-l">Plan</span></button>
+        <span class="tab-gap" aria-hidden="true">I want to…</span>
+        <button class="tab" data-view="goals" data-stage="2"><span class="t-ic">🌱</span><span class="t-l">Build</span></button>
+        <button class="tab tab-more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="tabMore"><span class="t-ic">•••</span><span class="t-l">More</span></button>
+      </div>
     </nav>
 
     <!-- ============ HOME ============ -->
@@ -2420,7 +2436,7 @@ function renderIntensity(){
 function renderRegister(){ document.querySelectorAll('#register button').forEach(b=>b.classList.toggle('on',b.dataset.reg===(state.register||'middle'))); }
 
 /* ---------- tabs ---------- */
-const MORE_VIEWS=['tx','debt','learn','settings'];
+const MORE_VIEWS=['impulse','tx','debt','learn','settings'];   // Shield moved into More; its ACTION is the hub's hero row
 let currentTab='home';
 function activateTab(name,fromHistory){
   currentTab=name;
@@ -2431,7 +2447,7 @@ function activateTab(name,fromHistory){
   const v=document.getElementById('view-'+name); if(v) v.classList.add('on');
   const tabsEl=document.getElementById('tabs');
   if(tabsEl){ const inMore=MORE_VIEWS.includes(name); tabsEl.classList.toggle('more-open',inMore);
-    const mb=document.getElementById('moreBtn'); if(mb) mb.setAttribute('aria-expanded',inMore?'true':'false'); }
+    const mb=document.getElementById('moreBtn'); if(mb) mb.setAttribute('aria-expanded',inMore?'true':'false'); document.body.classList.toggle('more-open',inMore); }
   // the gut-check FAB is redundant where an inline gut-check button already exists (Home, Shield)
   const fab=document.getElementById('fab'); if(fab) fab.classList.remove('hide');   // intent hub: reachable from every tab
   if(name==='learn') renderCharts();
@@ -2442,7 +2458,7 @@ function activateTab(name,fromHistory){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
-(function(){ const mb=document.getElementById('moreBtn'); if(mb) mb.addEventListener('click',()=>{ const t=document.getElementById('tabs'); const open=t.classList.toggle('more-open'); mb.setAttribute('aria-expanded',open?'true':'false'); }); })();
+(function(){ const mb=document.getElementById('moreBtn'); if(mb) mb.addEventListener('click',()=>{ const t=document.getElementById('tabs'); const open=t.classList.toggle('more-open'); mb.setAttribute('aria-expanded',open?'true':'false'); document.body.classList.toggle('more-open',open); }); })();
 
 /* ============================================================
    Back-button navigation (Android hardware/gesture back + browser back).
@@ -4638,7 +4654,13 @@ function renderIntentSheet(){
   box.querySelectorAll('button[data-int]').forEach(b=>b.onclick=()=>{ const it=items[+b.dataset.int]; if(it&&it.go) it.go(); });
 }
 function openIntentSheet(){ renderIntentSheet(); document.getElementById('intentSheet').classList.add('on'); setFabOpen(true); pushOverlay(); }
-function setFabOpen(on){ const ic=document.getElementById('fabIc'), l=document.getElementById('fabLbl'); if(ic) ic.textContent=on?'✕':'✦'; if(l) l.textContent=on?'Close':'I want to…'; }
+function setFabOpen(on){
+  const ic=document.getElementById('fabIc'), l=document.getElementById('fabLbl'), tabs=document.getElementById('tabs');
+  if(ic) ic.textContent=on?'✕':'✦';
+  if(l) l.textContent=on?'Close':'I want to…';
+  if(tabs) tabs.classList.toggle('hub-open',!!on);
+  const gap=document.querySelector('.tab-gap'); if(gap) gap.textContent=on?'Close':'I want to…';
+}
 document.getElementById('fab').addEventListener('click',()=>{
   const sh=document.getElementById('intentSheet');
   if(sh.classList.contains('on')) dismissOverlay(); else openIntentSheet();

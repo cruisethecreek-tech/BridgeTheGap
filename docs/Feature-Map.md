@@ -16,7 +16,16 @@ The bottom nav leads with the three core jobs and tucks the support surfaces beh
 a **More** toggle, so a new user sees a sharp, low-clutter front door instead of seven
 competing tabs. **Shield** (the anti-impulse differentiator) carries a gold accent.
 
-**Primary:** Home · Plan · **Shield** · Build   **More ▾:** Track · Debt · Learn · Settings.
+**Bottom bar (thumb-reach, 5 slots):** Home · Plan · **[I want to...]** · Build · More
+**More ▾ expands upward:** Shield · Track · Debt · Learn · Settings.
+
+The nav moved from a top tab strip to a fixed bottom bar with a centre notch holding
+the "I want to..." hub. Shield moved into More deliberately: its *action* (the
+gut-check) is the hub's gold hero row, reachable in one tap from any screen, while the
+Shield *tab* is the review surface (vault, War Chest, badges) you visit less often.
+The bar is opaque with a top shadow, respects `env(safe-area-inset-bottom)`, and the
+notch button lifts clear when More is expanded. Body padding compensates for both
+states so nothing hides behind the bar.
 
 The underlying money journey is unchanged: **Plan → Track → Shield → Build → Learn**
 (shown as the numbered flow on Home). Internal view ids in parentheses are unchanged
