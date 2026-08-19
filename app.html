@@ -126,6 +126,8 @@
   .cat-split{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px}
   .cat-split.neg{color:var(--accent-2)}
   .cat-split.rolled{color:var(--good)}
+  .assign-now{background:rgba(var(--good-rgb),.14);border:1px solid rgba(var(--good-rgb),.4);color:var(--good);border-radius:20px;padding:3px 11px;font-size:12px;font-weight:800;cursor:pointer;margin-left:4px;white-space:nowrap}
+  .assign-now:hover{background:rgba(var(--good-rgb),.24)}
   .roll-tag{font-size:11px;font-weight:800;color:var(--good);background:rgba(var(--good-rgb),.12);border:1px solid rgba(var(--good-rgb),.3);border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap}
   .subrow{display:flex;align-items:center;gap:8px;padding:9px 10px;margin-top:8px;background:var(--ink);border:1px solid var(--line);border-radius:10px}
   .subrow .sub-name{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2901,7 +2903,9 @@ function kidsAssigned(id,M){ return childrenOf(id).reduce((s,k)=>s+catAssigned(k
 function splitNoteHTML(id,M,label){
   const kids=childrenOf(id); if(!kids.length) return '';
   const own=assignedFor(id,M), sum=kidsAssigned(id,M), extra=id&&label?'subsplit':'';
-  if(sum>own) return `<div class="cat-split rolled ${extra}">↑ ${money(sum)} total, added up from your ${kids.length} sub${kids.length>1?'s':''}${own>0?` (you'd typed ${money(own)})`:''}.</div>`;
+  // one tap writes the rolled-up total into the parent's own Assign field, so the
+  // number the user is reading becomes the number actually on the books
+  if(sum>own) return `<div class="cat-split rolled ${extra}">↑ ${money(sum)} total, added up from your ${kids.length} sub${kids.length>1?'s':''}${own>0?` (you'd typed ${money(own)})`:''}. <button class="assign-now" data-assignnow="${id}">Assign ${money(sum)} →</button></div>`;
   const left=own-sum;
   if(left<=0.005) return `<div class="cat-split ${extra}">Fully split - every dollar of this pool has a home.</div>`;
   return `<div class="cat-split ${extra}">${money(left)}${label?' of '+escapeHtml(label):''} left to split into subs.</div>`;
@@ -3002,6 +3006,12 @@ function renderBudget(){
       </div>`;
     }).join('');
   }
+  box.querySelectorAll('[data-assignnow]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.assignnow, sum=kidsAssigned(id,M);
+    budgetFor(M)[id]=sum; save(); renderBudget(); renderHome();
+    const c=state.categories.find(x=>x.id===id);
+    if(typeof toast==='function') toast((c?c.name:'That pool')+' set to '+money(sum)+' - the subs add up to it exactly.');
+  }));
   box.querySelectorAll('[data-wallnext]').forEach(b=>b.addEventListener('click',()=>goToWall(b.dataset.wallnext)));
   box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; renderBudget(); }));
   let budgetAdvancing=false;
