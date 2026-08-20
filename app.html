@@ -72,6 +72,13 @@
   /* ---------- Hero ---------- */
   .hero{background:var(--hero-grad);border-bottom:1px solid var(--line);padding:26px 20px 30px}
   .theme-toggle{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;font-size:16px;width:38px;height:38px;line-height:1;cursor:pointer;flex:none}
+.ft-help{background:none;border:1px solid var(--line);color:var(--muted);border-radius:50%;width:20px;height:20px;font-size:12px;font-weight:900;line-height:1;cursor:pointer;flex:none;padding:0;margin-left:5px}
+.ft-help:hover{color:var(--accent);border-color:var(--accent)}
+.ft-math{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:14px;line-height:1.7}
+.ft-math b{color:var(--accent)}
+.ft-rung{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ft-rung:last-child{border-bottom:none}
+.ft-rung span:last-child{color:var(--muted);text-align:right}
   .theme-toggle:hover{border-color:var(--accent)}
   .hero-inner{max-width:1080px;margin:0 auto}
   .brand{display:flex;align-items:center;gap:13px;flex-wrap:wrap;row-gap:8px}
@@ -1010,7 +1017,10 @@
   .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
   .rec.invest .am{color:var(--accent)}
   .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
-  .rec .del{background:none;border:none;color:var(--muted);cursor:pointer}
+  .rec .edit,.rec .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0}
+.rec .edit:hover{color:var(--accent)}
+.rec.editing{border-color:var(--accent);background:rgba(230,178,77,.08)}
+.rec .del{background:none;border:none;color:var(--muted);cursor:pointer}
   .rec .del:hover{color:var(--bad)}
 
   /* ---------- charts ---------- */
@@ -1111,6 +1121,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <button data-mode="life">⌛</button>
             </div>
             <span class="ft-label" id="ftLabel">Dollars</span>
+            <button class="ft-help" id="ftHelpBtn" title="How this is worked out" aria-label="How the time conversion is worked out">?</button>
           </div>
           <button class="theme-toggle" id="themeToggle" title="Light / dark" aria-label="Toggle light or dark mode">🌙</button>
         </div>
@@ -1217,6 +1228,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </label>
           <label class="fld">First due<input type="date" id="recDate" style="width:150px"></label>
           <button class="btn primary" id="addRec">Add</button>
+          <button class="btn sm hide" id="recCancel">Cancel</button>
         </div>
         <div id="recList"></div>
         <div style="margin-top:14px"><button class="btn sm" id="postRec">Post recurring</button></div>
@@ -1730,6 +1742,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div id="intentList"></div>
     </div>
   </div>
+  <div class="modal-overlay" id="ftHelp">
+    <div class="modal">
+      <button class="x" id="ftHelpX">✕</button>
+      <h3>⌛ How hours of your life are worked out</h3>
+      <div id="ftHelpBody"></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <button class="x" id="modalX">✕</button>
@@ -2029,8 +2049,13 @@ function normalizeState(s){
   // REAL transaction (imported history included) so days before it never score as
   // wins. Intake-seeded transactions are dated the 1st for month math - they're a
   // setup artifact, not evidence of tracking, so they must not drag the origin back.
-  const dates=(s.transactions||[]).filter(t=>t.note!=='Intake').map(t=>t.date).filter(Boolean).sort();
-  if(dates[0] && (!s.trackStart || dates[0]<s.trackStart)) s.trackStart=dates[0];
+  // A recurring paycheck posts backdated to its anchor (often the 1st). That is the
+  // app writing history on your behalf, not you tracking - so it must not drag the
+  // origin back either, or a budget started on the 18th scores 17 days of fake green.
+  const dates=genuineTxDates(s);
+  const day1d=(s.day1&&s.day1.date)||'';
+  const origin=[dates[0],day1d].filter(Boolean).sort()[0];
+  if(origin && (!s.trackStart || s.trackStart<origin)) s.trackStart=origin;   // moving it FORWARD repairs state already dragged back
   // Every number that arrives from outside (import, restore, sync, a hand-edited
   // backup) is forced to a finite number here. One string in a money field would
   // otherwise turn addition into concatenation everywhere downstream.
@@ -2374,7 +2399,11 @@ function renderCalDay(M, allowance){
    days before it (with nothing logged) are "pre" - never green, never a streak
    day, never surplus. Imported history still scores: a pre-origin day WITH real
    spending is treated as a normal scored day. */
-function ensureTrackStart(){ if(!state.trackStart){ const dates=(state.transactions||[]).filter(t=>t.note!=='Intake').map(t=>t.date).filter(Boolean).sort(); state.trackStart=dates[0]||todayStr(); } }   // intake-seeded txs are dated the 1st - never the origin
+/* Dates of transactions the USER actually logged. Intake seeds the 1st for month
+   math and recurring items post backdated to their anchor; both are setup
+   artifacts, and neither is evidence that anyone was tracking that day. */
+function genuineTxDates(st){ return (st.transactions||[]).filter(t=>t.note!=='Intake' && !t.recId).map(t=>t.date).filter(Boolean).sort(); }
+function ensureTrackStart(){ if(!state.trackStart){ state.trackStart=genuineTxDates(state)[0]||todayStr(); } }
 function calIsPre(dateStr, hasSpend){ return !!state.trackStart && dateStr<state.trackStart && !hasSpend; }
 function calElapsedDays(M){
   const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate();
@@ -2734,6 +2763,7 @@ function closeTopOverlay(){
   const cel=document.querySelector('.stagecelebrate'); if(cel){ cel.remove(); return true; }
   // check order = paint order: the modal is later in the DOM, so it paints on top
   // of the sheet - Back must dismiss the overlay the user can actually see
+  const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
   const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
   const ik=document.getElementById('intake'); if(ik&&ik.classList.contains('on')){ ik.classList.remove('on'); document.body.style.overflow=''; return true; }
@@ -5297,6 +5327,63 @@ const THEME_MODES=['auto','light','dark'];
 const prefersLight=()=>!!(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
 const themeMode=()=>THEME_MODES.includes(state.theme)?state.theme:'auto';
 function resolvedTheme(){ const m=themeMode(); return m==='auto' ? (prefersLight()?'light':'dark') : m; }
+/* ============================================================
+   SHOWING THE WORK behind Freedom Mode
+   The units shift as amounts grow (min -> hrs -> days -> months) and a "day"
+   here is a WORKday, not a calendar day. Without that stated, one month of pay
+   reading as "18.2 days" looks like the app contradicting itself. So: name the
+   rate, name where it came from, and show the ladder with real numbers.
+   ============================================================ */
+function freedomExplainHTML(){
+  const H=effectiveHourly();
+  const hpw=state.hoursPerWeek>0?state.hoursPerWeek:40;
+  const moHrs=(state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS);
+  const dayHrs=moHrs/21.7;
+  if(!(H>0)) return `<p class="sub">There is no rate set yet, so every figure stays in dollars. Add your take-home pay per hour in Settings and the whole app can reprice itself in hours of your life.</p>
+    <button class="btn sm" id="ftGoWage">Set my rate in Settings</button>`;
+  const src = state.hourlyWage>0
+    ? (state.wageAuto ? 'worked out from the income you logged and the hours it takes' : 'the rate you entered yourself')
+    : 'estimated from your monthly income divided by the hours you work';
+  // a real number from their own budget beats an invented example
+  const pick = [...(state.recurring||[])].filter(r=>r.type==='expense'&&+r.amount>0).sort((a,b)=>b.amount-a.amount)[0];
+  const exAmt = pick ? +pick.amount : 100;
+  const exName = pick ? catName(pick.catId) : 'a $100 buy';
+  const exHrs = exAmt/H;
+  const exOut = fmtLife(exAmt);
+  return `<p class="sub" style="margin-bottom:4px">Every figure is divided by what one hour of your life actually pays.</p>
+  <div class="ft-math">
+    Your rate: <b>${usd(H)}</b> per hour<br>
+    <span class="sub" style="font-size:12.5px">${escapeHtml(src)}.</span><br>
+    Your week: <b>${hpw} hrs</b> worked, which is <b>${Math.round(moHrs)} hrs</b> in a month.
+  </div>
+  <div class="ft-math">
+    <b>${escapeHtml(exName)}</b> costs ${usd(exAmt)}.<br>
+    ${usd(exAmt)} ÷ ${usd(H)}/hr = <b>${(Math.round(exHrs*10)/10)} hours</b> of work = <b>${exOut}</b>.
+  </div>
+  <p class="sub" style="margin:14px 0 6px"><b>Why the unit changes.</b> Small amounts read in minutes, big ones in months, so the number stays something you can picture:</p>
+  <div class="ft-math" style="padding:6px 14px">
+    <div class="ft-rung"><span>Under an hour</span><span>minutes</span></div>
+    <div class="ft-rung"><span>Under a workday</span><span>hours</span></div>
+    <div class="ft-rung"><span>Under a working month</span><span>days</span></div>
+    <div class="ft-rung"><span>A working month or more</span><span>months</span></div>
+  </div>
+  <p class="sub" style="margin-top:12px"><b>These are working days, not calendar days.</b> One day here is <b>${Math.round(dayHrs*10)/10} hrs</b> at your desk, and one month is <b>${Math.round(moHrs)} hrs</b> - about 21.7 working days. That is why a full month of pay can read as roughly 18 to 22 days rather than 30: nobody works all 30.</p>
+  <p class="sub" style="margin-top:10px">You always <b>type dollars</b>. Only the display changes, so nothing you enter is ever converted or lost.</p>`;
+}
+function openFreedomHelp(){
+  const body=document.getElementById('ftHelpBody'); if(!body) return;
+  body.innerHTML=freedomExplainHTML();
+  document.getElementById('ftHelp').classList.add('on');
+  const go=document.getElementById('ftGoWage');
+  if(go) go.onclick=()=>{ document.getElementById('ftHelp').classList.remove('on'); activateTab('settings');
+    setTimeout(()=>{ const w=document.getElementById('wage'); if(w){ w.scrollIntoView({block:'center'}); w.focus(); } },180); };
+}
+(function(){
+  const b=document.getElementById('ftHelpBtn'); if(b) b.addEventListener('click',openFreedomHelp);
+  const x=document.getElementById('ftHelpX'); if(x) x.addEventListener('click',()=>document.getElementById('ftHelp').classList.remove('on'));
+  const ov=document.getElementById('ftHelp');
+  if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
+})();
 function applyTheme(){
   const m=themeMode(), light=resolvedTheme()==='light';
   document.documentElement.setAttribute('data-theme', light?'light':'dark');
@@ -5604,7 +5691,7 @@ document.getElementById('copyLink').addEventListener('click',()=>{
 });
 
 /* --- recurring transactions --- */
-document.getElementById('recType').addEventListener('change',()=>{
+function recSyncTypeFields(){
   const t=document.getElementById('recType').value, inc=t==='income', inv=t==='invest';
   document.getElementById('recCatWrap').classList.toggle('hide',inc||inv);
   document.getElementById('recSrcWrap').classList.toggle('hide',!(inc||inv));   // invest reuses the source field as its destination
@@ -5613,7 +5700,45 @@ document.getElementById('recType').addEventListener('change',()=>{
   document.getElementById('recOwnerWrap').classList.toggle('hide',!inc);
   const rhw=document.getElementById('recHoursWrap'); if(rhw) rhw.classList.toggle('hide',!inc);
   const rik=document.getElementById('recInvKindWrap'); if(rik) rik.classList.toggle('hide',!inv);
-});
+}
+document.getElementById('recType').addEventListener('change',recSyncTypeFields);
+
+/* ============================================================
+   EDITING A RECURRING ITEM
+   Until now the only thing you could do to a saved paycheck or bill was delete
+   it and retype the whole thing. Editing loads the item back into the same form
+   that created it - no second UI to keep in sync - and Add becomes Save.
+   Transactions this item already posted are history and are left alone; if the
+   amount changed, we say so rather than silently rewriting the past.
+   ============================================================ */
+let recEditId=null;
+function recEditCancel(){
+  recEditId=null;
+  const add=document.getElementById('addRec'); if(add) add.textContent='Add';
+  const c=document.getElementById('recCancel'); if(c) c.classList.add('hide');
+  ['recAmt','recSrc','recHours'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  renderRecurring();
+}
+function recEditLoad(id){
+  const r=state.recurring.find(x=>x.id===id); if(!r) return;
+  recEditId=id;
+  const set=(el,v)=>{ const e=document.getElementById(el); if(e) e.value=v; };
+  set('recType', r.type||'expense');
+  recSyncTypeFields();                                    // show the fields this type actually uses
+  set('recAmt', r.amount||'');
+  set('recFreq', r.freq||'monthly');
+  // legacy items carry only a day-of-month; rebuild an anchor so the date input has something real
+  set('recDate', r.anchor || (r.day ? state.activeMonth+'-'+String(Math.min(28,Math.max(1,+r.day||1))).padStart(2,'0') : todayStr()));
+  if(r.type==='expense') set('recCat', r.catId||'');
+  else { set('recSrc', r.source||''); if(r.type==='invest') set('recInvKind', r.ikind||'holds');
+         else { if(state.householdOn) set('recOwner', r.owner||'a'); set('recHours', r.hours||''); } }
+  const add=document.getElementById('addRec'); if(add) add.textContent='Save';
+  const c=document.getElementById('recCancel'); if(c) c.classList.remove('hide');
+  renderRecurring();
+  document.getElementById('recAmt')?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+document.getElementById('recCancel')?.addEventListener('click',recEditCancel);
+
 document.getElementById('addRec').addEventListener('click',()=>{
   const type=document.getElementById('recType').value;
   const amt=parseFloat(document.getElementById('recAmt').value);
@@ -5628,6 +5753,30 @@ document.getElementById('addRec').addEventListener('click',()=>{
     item.source=document.getElementById('recSrc').value.trim()||'Income';
     if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; }
     const h=parseFloat((document.getElementById('recHours')||{}).value); if(h>0) item.hours=Math.min(h,400);   // hours of YOUR life this income costs each month
+  }
+  if(recEditId){
+    const i=state.recurring.findIndex(x=>x.id===recEditId);
+    if(i>-1){
+      const prev=state.recurring[i];
+      item.id=prev.id;                       // keep identity so posted transactions stay linked
+      if(prev.src) item.src=prev.src;        // and keep the intake tag, so re-running setup still replaces it
+      const amtChanged = +prev.amount !== +item.amount;
+      state.recurring[i]=item;
+      const posted = state.transactions.some(t=>t.recId===item.id && monthOf(t.date)===thisMonth());
+      recEditId=null;
+      const add=document.getElementById('addRec'); if(add) add.textContent='Add';
+      const c=document.getElementById('recCancel'); if(c) c.classList.add('hide');
+      recomputeBlendedWage(); save();
+      renderRecurring(); renderBudget(); renderTx(); renderHome();
+      if(typeof renderNetWorth==='function') renderNetWorth();
+      document.getElementById('recAmt').value=''; document.getElementById('recSrc').value='';
+      const rh0=document.getElementById('recHours'); if(rh0) rh0.value='';
+      toast(amtChanged && posted
+        ? 'Saved. What already posted this month keeps the old amount - delete it on Track to re-post.'
+        : 'Saved.');
+      return;
+    }
+    recEditId=null;
   }
   state.recurring.push(item);
   recomputeBlendedWage();   // a new work-hours source changes the true rate immediately
@@ -5663,9 +5812,14 @@ function renderRecurring(){
     const meta=recFreqMeta(r), next=recNextDue(r);
     const nextTxt=next?new Date(next+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}):'-';
     const equiv=meta.per!==1?` · ≈${money(Math.round(recMonthly(r)))}/mo`:'';   // an approximation - cents would be false precision
-    return `<div class="rec ${r.type}"><span class="tag">${tag}</span><span class="nm">${label}<i class="rec-when">${meta.short} · next ${nextTxt}${equiv}</i></span><span class="am">${r.type==='income'?'+':r.type==='invest'?'→':'−'}${money(r.amount)}</span><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
+    // Whichever mode is on, show the other one too. In Freedom Mode a bill read
+    // "+1 mo" and the dollar figure you typed was nowhere on screen.
+    const alt = state.freedomMode ? usd(r.amount) : (effectiveHourly()>0 ? fmtLife(r.amount) : '');
+    const sign = r.type==='income'?'+':r.type==='invest'?'→':'−';
+    return `<div class="rec ${r.type}${recEditId===r.id?' editing':''}"><span class="tag">${tag}</span><span class="nm">${label}<i class="rec-when">${meta.short} · next ${nextTxt}${equiv}${alt?' · '+alt:''}</i></span><span class="am">${sign}${money(r.amount)}</span><button class="edit" data-editrec="${r.id}" title="Edit">✎</button><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
   }).join('');
-  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
+  box.querySelectorAll('button[data-editrec]').forEach(b=>b.addEventListener('click',()=>recEditLoad(b.dataset.editrec)));
+  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ if(recEditId===b.dataset.delrec) recEditId=null; state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
 }
 /* ============================================================
    RECURRING SCHEDULES
