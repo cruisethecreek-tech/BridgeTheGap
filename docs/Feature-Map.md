@@ -200,11 +200,20 @@ feeling / free comfort list / set a floor not a ban; *status* -> compare to your
 year / remember what the photo hides / define winning yourself; *leak* -> price the year not
 the month / audit renewals / set the cancel reminder now. Both engines can render together.
 
-**3. Free comfort list (`state.comfortMenu`, Settings panel + `comfortHTML`).** The user
-writes, while calm, the no-cost things that actually help them; the list is surfaced inside
-every gut-check at the moment of temptation, with seed suggestions when empty. Comfort
-spending is an attempt to change a feeling - this offers a different answer to the same
-feeling instead of only shaming the purchase.
+**3. Free comfort list (`state.comfortMenu`; collected in intake, editable in Settings,
+rendered by `comfortHTML`).** The user names, while calm, the no-cost things that actually
+help them; the list is surfaced inside every gut-check at the moment of temptation, with
+seed suggestions when empty. Comfort spending is an attempt to change a feeling - this
+offers a different answer to the same feeling instead of only shaming the purchase.
+
+It is **asked during setup** (`INTAKE` step `comfort`, `renderComfortStep`, just before
+`why`) rather than left in Settings. The feature only pays off if the list exists before
+the first urge, and every other route to it was post-hoc: wander into Settings, open the
+FAB hub, or hit a gut-check and meet the empty state - which asks someone mid-urge to go
+do calm reflective setup, the one thing they cannot do right then. The intake step is
+chip-taps only and skippable, so it costs about two taps; free-text entry stays on the
+Settings card. `commitIntake` unions the picks into any existing list rather than
+overwriting, so re-running setup never wipes entries added later.
 
 **Tone constraint carried through:** patterns are framed as things to notice and try, never
 as labels or diagnosis (labelling breeds shame and defensiveness, which is what drives

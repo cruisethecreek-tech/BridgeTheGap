@@ -840,6 +840,7 @@
   .intake-chips button{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px}
   .intake-chips button:hover{border-color:var(--accent)}
   .intake-chips button.go{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.intake-chips button.picked{border-color:var(--accent);background:rgba(230,178,77,.14);color:var(--accent)}
   .intake-skip{display:block;text-align:center;margin:10px auto 0;background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;cursor:pointer}
   .intake-underrow{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:10px}
   .intake-underrow .intake-skip{margin:0}
@@ -6013,6 +6014,12 @@ const INTAKE=[
       return `That's ${usd(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
+  {id:'comfort', sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
+    why:"Because a lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button you can reach. If you name what else helps while you're calm, I can hand the list back to you when the urge is loud and you can't think of a single thing.",
+    bot:a=>{ const t=iaTone(a);
+      if(t==='savage') return `One more${a.name?', '+a.name:''}, and it's the one that saves you money at 11pm. Buying is a feeling with a checkout button. So tell me now, while you're calm: what ELSE actually works on you? Tap anything real. I'll shove this list in your face the second you're about to blow $140 on nothing.`;
+      if(t==='blunt') return `One more${a.name?', '+a.name:''}. A lot of spending isn't about the thing - it's about a feeling, and buying is the fastest button there is. Tap what actually helps you when money isn't the answer. I'll show this back to you inside every gut-check, right when the urge hits.`;
+      return `One last small thing${a.name?', '+a.name:''}, and it helps more than it looks. A lot of spending isn't really about the thing - it's about a feeling, and buying is just the quickest button to press. Tap anything here that genuinely helps you. I'll show it back to you inside every gut-check, exactly when you need it.`; }},
   {id:'why', bot:a=> iaTone(a)==='savage'
       ? "Last thing, and it's the one that matters most: why does getting this right matter to you, RIGHT NOW? Don't give me the polite answer - give me the real one. Swear if you need to, I can take it. I'm going to hold onto this and read it back to you at the exact moment you're about to blow it."
       : "Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out. I'll hold onto it - and remind you at the moments it matters.", input:'text', key:'why', optional:true, placeholder:'In your own words…', sum:'Why this matters'},
@@ -6147,6 +6154,7 @@ function iaSummaryRows(){
     let disp;
     if(s.input==='money') disp = (+v>0)?usd(v):'Skipped';
     else if(s.options){ const o=s.options.find(x=>(x.value!==undefined?x.value:x.label)===v); disp=o?o.label:String(v); }
+    else if(Array.isArray(v)){ if(!v.length) return; disp=v.join(', '); }
     else disp=String(v);
     rows.push({i,label:s.sum,value:disp});
   });
@@ -6190,6 +6198,7 @@ function renderIntakeDock(s){
   if(s.input==='zeroClose'){ renderZeroClose(s); return; }
   if(s.input==='leak'){ leakFinder(s); return; }
   if(s.input==='reflect'){ renderReflect(s); return; }
+  if(s.input==='comfort'){ renderComfortStep(s); return; }
   if(s.input==='gate'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
@@ -6303,6 +6312,39 @@ function runIntakeHelper(s){
    option gives a tailored reply (so the user feels heard = engagement); some
    open an optional free-text follow-up. Answers are stored on iaAns and kept in
    state.intake for later personalization. Fully skippable. */
+/* Comfort list, asked during setup instead of hidden in Settings. Chips only - the
+   whole point is that it costs two taps, so it does not add drag to an intake people
+   already struggle to finish. Free-text entry still lives on the Settings card. */
+function renderComfortStep(s){
+  const dock=document.getElementById('intakeDock');
+  const picked=new Set((iaAns.comfort||[]).map(x=>x.toLowerCase()));
+  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const whyBtn = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
+  const draw=()=>{
+    dock.innerHTML=`<div class="intake-chips">${COMFORT_SEEDS.map((c,i)=>`<button data-ci="${i}" class="${picked.has(c.toLowerCase())?'picked':''}">${picked.has(c.toLowerCase())?'✓ ':'+ '}${escapeHtml(c)}</button>`).join('')}</div>`
+      +`<div class="intake-chips" style="margin-top:10px"><button class="go" id="iaCmDone">${picked.size?`Done - ${picked.size} on my list →`:'Continue →'}</button></div>`
+      +`<div class="intake-underrow">${whyBtn}${picked.size?'':'<button class="intake-skip" id="iaCmSkip">Skip this</button>'}${back}</div>`;
+    const wb=document.getElementById('iaWhy'); if(wb) wb.onclick=()=>{ iaBub(s.why,'bot'); wb.remove(); };
+    dock.querySelectorAll('button[data-ci]').forEach(b=>b.onclick=()=>{
+      const c=COMFORT_SEEDS[+b.dataset.ci], k=c.toLowerCase();
+      picked.has(k) ? picked.delete(k) : picked.add(k);
+      iaAns.comfort=COMFORT_SEEDS.filter(x=>picked.has(x.toLowerCase()));   // keep seed order, not tap order
+      draw();
+    });
+    document.getElementById('iaCmDone').onclick=()=>{
+      const list=iaAns.comfort||[];
+      iaBub(list.length?list.join(', '):'Skip for now','me');
+      if(list.length) iaBub(list.length>2
+        ? "Good - that's a real list. When the urge shows up, you won't have to think of anything; it'll already be on the screen."
+        : "That's a start. You can add more anytime in Settings, and they'll show up inside every gut-check.", 'bot');
+      setTimeout(iaAdvance, list.length?620:120);
+    };
+    const sk=document.getElementById('iaCmSkip');
+    if(sk) sk.onclick=()=>{ delete iaAns.comfort; iaBub('Skip for now','me'); iaAdvance(); };
+    const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+  };
+  draw();
+}
 function renderReflect(s){
   const dock=document.getElementById('intakeDock');
   const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
@@ -6545,6 +6587,9 @@ function commitIntake(){
     if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
   }
   Object.keys(bAdd).forEach(id=>{ budgetFor(M)[id]=bAdd[id]; });
+  // Union, not overwrite: re-running setup must not wipe entries added later in Settings.
+  (a.comfort||[]).forEach(v=>{ state.comfortMenu=state.comfortMenu||[];
+    if(v && !state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); });
   state.intake={name:a.name||'',why:a.why||'',
     reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', incomeAvoid:a.incomeAvoid||'', budgetPast:a.budgetPast||'', budgetPastNote:a.budgetPastNote||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
   state.onboarded=true; save();
