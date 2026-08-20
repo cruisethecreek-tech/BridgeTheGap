@@ -1043,6 +1043,28 @@
 .gl-today.over{color:var(--bad)}
 .gl-go{margin-top:11px;background:none;border:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:12.5px;cursor:pointer;padding:0}
 .gl-go:hover{color:var(--accent)}
+.stagebar{cursor:pointer}
+.stagebar:hover{border-color:var(--accent)}
+.sm-open{font-size:11.5px;font-weight:600;color:var(--accent);white-space:nowrap;flex:none}
+.sm-card{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px;background:var(--panel-2)}
+.sm-card.now{border-color:var(--accent);background:rgba(var(--accent-rgb),.07)}
+.sm-card.locked{opacity:.72}
+.sm-head{display:flex;align-items:flex-start;gap:11px}
+.sm-n{width:26px;height:26px;border-radius:50%;background:var(--line);color:var(--text);display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+.sm-card.done .sm-n,.sm-card.now .sm-n{background:var(--accent);color:var(--on-accent)}
+.sm-head>div{flex:1;min-width:0}
+.sm-nm{font-weight:600;font-size:15px}
+.sm-tag{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.sm-badge{font-size:10.5px;font-weight:600;border-radius:20px;padding:3px 9px;white-space:nowrap;flex:none;border:1px solid var(--line);color:var(--muted)}
+.sm-badge.now{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.sm-badge.done{color:var(--good);border-color:var(--good)}
+.sm-opens{font-size:13px;line-height:1.55;margin-top:10px;color:var(--text)}
+.sm-opens b{color:var(--accent)}
+.sm-gate{margin-top:11px}
+.sm-bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.sm-bar span{display:block;height:100%;background:var(--accent);border-radius:6px}
+.sm-need{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
+.sm-foot{margin-top:14px;font-size:12.5px;line-height:1.6}
 .bd-ctl{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin:10px 0}
 .bd-seg{display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px;flex-wrap:wrap}
 .bd-seg button{background:none;border:none;color:var(--muted);font:inherit;font-size:12.5px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
@@ -1939,6 +1961,13 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
   <div class="glance" id="glance" style="display:none">
     <button class="gl-tab" id="glanceTab" aria-expanded="false" aria-controls="glanceBody" title="Quick glance"><span>☰</span></button>
     <div class="gl-panel" id="glanceBody"></div>
+  </div>
+
+  <div class="modal-overlay" id="stageMap">
+    <div class="modal">
+      <button class="x" id="stageMapX">✕</button>
+      <div id="stageMapBody"></div>
+    </div>
   </div>
 
   <div class="modal-overlay" id="ftHelp">
@@ -2968,6 +2997,7 @@ function closeTopOverlay(){
   const cel=document.querySelector('.stagecelebrate'); if(cel){ cel.remove(); return true; }
   // check order = paint order: the modal is later in the DOM, so it paints on top
   // of the sheet - Back must dismiss the overlay the user can actually see
+  const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
@@ -3041,6 +3071,69 @@ function applyStage(opts){
   if(typeof positionFab==='function') positionFab();     // showing/hiding Build reshapes the bar - re-seat the FAB
   if(leveledUp && !opts.silent) celebrateStage(leveledUp);
 }
+/* ============================================================
+   STAGE MAP
+   The ladder was invisible from below. You could see "3 mo to Stage 2" but not
+   what Stage 2 actually was, which makes the gate feel arbitrary rather than
+   earned - you cannot want something you cannot see.
+
+   The gate itself stays where it is: runway, not a self-certification button.
+   Letting someone tick "I finished Stage 1" would hand them tools that assume a
+   cushion they do not have, and the honest version of this app cannot do that.
+   What it can do is show the whole ladder, name exactly what each rung opens,
+   and show how far along the climb they are. Settings still carries "Show
+   everything" for anyone who wants to walk past the whole system.
+   ============================================================ */
+const STAGE_NEED={2:3, 3:12};   // months of runway
+function stageReq(n){ return STAGE_NEED[n]||0; }
+function stageProgressPct(n){
+  const need=stageReq(n); if(!need) return 100;
+  const r=(typeof freedomRunway==='function')?(freedomRunway()||0):0;
+  return Math.max(0, Math.min(100, Math.round((r/need)*100)));
+}
+function stageMapHTML(){
+  const cur=activeStage(), forced=state.uiMode==='all';
+  const r=(typeof freedomRunway==='function')?(freedomRunway()||0):0;
+  const cards=[1,2,3].map(n=>{
+    const m=STAGE_META[n]||{};
+    const st = forced ? (n<=cur?'done':'done') : n<cur ? 'done' : n===cur ? 'now' : 'locked';
+    const badge = st==='done' ? 'Unlocked' : st==='now' ? 'You are here' : 'Locked';
+    const opens = n===1
+      ? 'Cover First, the Trap Radar gut-check, the 24-hour vault, and your spending map.'
+      : (m.unlocked||'');
+    let gate='';
+    if(st==='locked'){
+      const need=stageReq(n), pct=stageProgressPct(n);
+      const left=Math.max(0, Math.round((need-r)*10)/10);
+      gate=`<div class="sm-gate">
+        <div class="sm-bar"><span style="width:${pct}%"></span></div>
+        <div class="sm-need">${escapeHtml(fmtRunway(r))} of ${need} months of runway${left>0?` · ${left} to go`:''}</div>
+      </div>`;
+    }
+    return `<div class="sm-card ${st}">
+      <div class="sm-head"><span class="sm-n">${n}</span>
+        <div><div class="sm-nm">${escapeHtml(m.name||'')}</div><div class="sm-tag">${escapeHtml(m.tag||'')}</div></div>
+        <span class="sm-badge ${st}">${badge}</span></div>
+      <div class="sm-opens"><b>${st==='locked'?'What this opens':'What this gave you'}:</b> ${escapeHtml(opens)}</div>
+      ${gate}
+    </div>`;
+  }).join('');
+  const foot = forced
+    ? 'Guided mode is off, so every tool is already showing. Turn it back on in Settings to climb the ladder properly.'
+    : 'Runway is what unlocks these: how many months you could cover with what you have. It is not a button, because the tools above assume a cushion that has to be real.';
+  return `<h3>The ladder</h3><p class="sub" style="margin-bottom:14px">Three stages. The app only shows what you are ready for, and opens the rest as your runway grows.</p>${cards}<p class="sub sm-foot">${foot}</p>`;
+}
+function openStageMap(){
+  const ov=document.getElementById('stageMap'); if(!ov) return;
+  document.getElementById('stageMapBody').innerHTML=stageMapHTML();
+  ov.classList.add('on');
+}
+(function(){
+  const x=document.getElementById('stageMapX');
+  if(x) x.addEventListener('click',()=>document.getElementById('stageMap').classList.remove('on'));
+  const ov=document.getElementById('stageMap');
+  if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
+})();
 function renderStageBar(){
   const el=document.getElementById('stageBar'); if(!el) return;
   const stage=activeStage(), meta=STAGE_META[stage];
@@ -3052,7 +3145,11 @@ function renderStageBar(){
   else { const need=stage===1?3:12; const have=r==null?0:r; prog=`${fmtRunway(have)} of runway · ${(Math.round(Math.max(0,need-have)*10)/10)} mo to Stage ${stage+1}.`; }
   el.innerHTML=`<span class="ic">${meta.ic}</span>
     <div class="info"><div class="nm">Stage ${stage} · <b>${escapeHtml(meta.name)}</b></div><div class="pr">${escapeHtml(prog)}</div></div>
-    <div class="dots">${[1,2,3].map(i=>`<span class="dot ${i<=stage?'on':''}"></span>`).join('')}</div>`;
+    <div class="dots">${[1,2,3].map(i=>`<span class="dot ${i<=stage?'on':''}"></span>`).join('')}</div>
+    <span class="sm-open">See the ladder</span>`;
+  el.onclick=openStageMap;
+  el.setAttribute('role','button'); el.tabIndex=0;
+  el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openStageMap(); } };
 }
 function celebrateStage(stage){
   const meta=STAGE_META[stage]; if(!meta) return;
