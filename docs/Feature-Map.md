@@ -80,6 +80,21 @@ Skips are **month-scoped** (`deepenSkipMonth`): "Not now" sets a step aside for 
 
 **Cover First** (the Four Walls) - Roof / Food / Power & Wi-Fi / Getting Around, matched to categories by keyword (`WALLS`). Drives the Home grid, essential-runway, and sovereignty. Tapping a wall deep-links to its category on Plan and starts the **wall-to-wall guide** (`wallGuideCat`, `wallGuideHTML`): fund it and an inline banner hands you the next uncovered wall, ending in an all-covered close - no bouncing back to Home between essentials. On the Home grid, covered walls collapse to compact ✓ chips (still tappable to adjust) and the whole grid folds to one line when all four are covered; walls are per-month, so they return asking when the month turns. `renderWalls`, `goToWall`, `findOrCreateEssential`.
 
+**Money map** (`renderBreakdown`, `bdRows`, `bdDonutSVG`) - a donut of where money
+went and where it came from, over a **1 / 3 / 6 / 12 month** window. A single month
+is a snapshot and a snapshot lies: one car repair makes Getting Around look like a
+habit, so the interval is a first-class control rather than something faked by
+clicking the month arrows twelve times. Expenses drill into the category tree
+(Food → Groceries → Walmart) and money booked straight to a parent shows as
+"(direct)" so nothing vanishes on the way down. Income groups by source and does
+not drill. Slices are `stroke-dasharray` on one circle each: no library, no canvas.
+
+**Quick glance** (`renderGlance`, `glanceReady`) - an edge pull-tab opening money
+in, money out, and what that leaves for the active month, plus today's spend
+against the daily allowance in spending mode. Gated on `genuineTxDates`, the same
+predicate the calendar origin uses, so an auto-posted paycheck does not count as
+"tracking has started" and nobody meets a drawer reading $0 / $0 / $0 on day one.
+
 **Silent Sovereignty Audit** - Sovereign Capital Ratio, Overhead Drag, Pure Freedom Runway, and a 4-tier classification (Encumbered → Tethered → Unbound → Untouchable). The rank is deliberately NOT called "Sovereign": that name belongs to the paid sync tier, and a free rank sharing it reads as a paywall. `sovereignty`, `renderSovereignty`.
 
 **Anti-shame** - overspend shows a calm **Rebalance Banner** (never red errors); the **Blindspot Shield** rewards logging. Copy never says failed/bad/violated/ruined.
