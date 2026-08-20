@@ -2004,6 +2004,21 @@ function normalizeState(s){
   // setup artifact, not evidence of tracking, so they must not drag the origin back.
   const dates=(s.transactions||[]).filter(t=>t.note!=='Intake').map(t=>t.date).filter(Boolean).sort();
   if(dates[0] && (!s.trackStart || dates[0]<s.trackStart)) s.trackStart=dates[0];
+  // Every number that arrives from outside (import, restore, sync, a hand-edited
+  // backup) is forced to a finite number here. One string in a money field would
+  // otherwise turn addition into concatenation everywhere downstream.
+  const num=(v)=>{ const n=+v; return isFinite(n)?n:0; };
+  Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=num(b[k]); }); });
+  (s.transactions||[]).forEach(t=>{ t.amount=num(t.amount); if(t.hours!=null) t.hours=num(t.hours); });
+  (s.accounts||[]).forEach(a=>{ a.balance=num(a.balance); });
+  (s.assets||[]).forEach(a=>{ a.value=num(a.value); a.cost=num(a.cost); });
+  (s.liabilities||[]).forEach(l=>{ l.value=num(l.value); });
+  (s.goals||[]).forEach(g=>{ g.target=num(g.target); g.saved=num(g.saved); });
+  (s.debts||[]).forEach(d=>{ d.balance=num(d.balance); d.apr=num(d.apr); d.minPayment=num(d.minPayment); });
+  (s.recurring||[]).forEach(r=>{ r.amount=num(r.amount); if(r.hours!=null) r.hours=num(r.hours); });
+  (s.timeLog||[]).forEach(e=>{ e.hours=num(e.hours); });
+  s.hourlyWage=num(s.hourlyWage); s.hoursPerWeek=num(s.hoursPerWeek); s.spendLimit=num(s.spendLimit);
+  s.wageB=num(s.wageB); s.enough=num(s.enough); s.givingPct=num(s.givingPct); s.debtBudget=num(s.debtBudget);
   return s;
 }
 function load(){
@@ -2589,7 +2604,10 @@ function renderInvestCompare(){
 }
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
-function assignedFor(catId,month){ return (state.budgets[month]&&state.budgets[month][catId])||0; }
+/* Coerced on the way out, not trusted on the way in: a budget value that arrived
+   as a string (a hand-edited backup, an older export) would turn every "+" in the
+   app into string concatenation and quietly poison every total. */
+function assignedFor(catId,month){ const v=+((state.budgets[month]&&state.budgets[month][catId])||0); return isFinite(v)?v:0; }
 function txnsInMonth(month){ return state.transactions.filter(t=>monthOf(t.date)===month); }
 function spentFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='expense'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
 function monthIncome(month){ return txnsInMonth(month).filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
@@ -4765,8 +4783,12 @@ function essentialMonthly(){
   const M=thisMonth();   // "current state" metrics (runway, sovereignty, stage) must not shift with the browsed month
   const tops=state.categories.filter(c=>!c.parentId);
   let sum=0;
-  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=assignedFor(c.id,M); }); });
-  if(sum<=0) sum=tops.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  // catAssigned, NOT assignedFor: a wall split into subcategories (Power & Wi-Fi ->
+  // Water + Electric) carries its money on the children. Counting only the parent's
+  // own figure under-stated essentials, which OVER-stated the Freedom Runway - it
+  // told people they were safer than they are. The one direction this must never err.
+  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=catAssigned(c.id,M); }); });
+  if(sum<=0) sum=tops.reduce((s,c)=>s+catAssigned(c.id,M),0);
   if(sum<=0) sum=monthExpense(M);
   return sum;
 }
