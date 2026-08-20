@@ -698,10 +698,26 @@
   .lesson p{color:var(--text);line-height:1.65;font-size:15px}
   .lesson .try{margin-top:16px;padding:14px 16px;background:var(--ink);border-left:3px solid var(--accent);border-radius:8px;font-size:14px}
   .lesson .try b{color:var(--accent)}
-  .lesson-nav{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+  .lesson{touch-action:pan-y;transition:transform .18s ease,opacity .18s ease;will-change:transform}
+  .lesson.out-left{transform:translateX(-28px);opacity:0}
+  .lesson.out-right{transform:translateX(28px);opacity:0}
+  .lesson.in-right{animation:lesSlideR .26s ease}
+  .lesson.in-left{animation:lesSlideL .26s ease}
+  @keyframes lesSlideR{from{transform:translateX(26px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes lesSlideL{from{transform:translateX(-26px);opacity:0}to{transform:none;opacity:1}}
+  .lesson .try{display:flex;flex-direction:column;align-items:flex-start}
+  .lesson .try b{margin-bottom:3px}
+  .try-go{margin-top:12px;background:var(--accent);color:var(--on-accent);border:none;border-radius:10px;padding:9px 15px;font-weight:800;font-size:13.5px;cursor:pointer}
+  .try-go:hover{filter:brightness(1.07)}
+  .lesson-nav{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:18px}
+  .swipe-hint{font-size:12px;color:var(--muted);font-weight:600;text-align:center}
+  .swipe-hint::before{content:'‹ ';color:var(--accent);font-weight:900}
+  .swipe-hint::after{content:' ›';color:var(--accent);font-weight:900}
   .dots{display:flex;gap:6px;flex-wrap:wrap}
+  .dots .dot{width:9px;height:9px;border-radius:50%;background:var(--line);border:none;padding:0;cursor:pointer}
+  .dots .dot:hover{background:var(--muted)}
   .dots span{width:8px;height:8px;border-radius:50%;background:var(--line)}
-  .dots span.on{background:var(--accent)}
+  .dots span.on,.dots .dot.on{background:var(--accent);transform:scale(1.15)}
 
   .foot{max-width:1080px;margin:40px auto 0;padding:0 20px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
   .foot .actions{display:flex;gap:14px;flex-wrap:wrap}
@@ -1525,9 +1541,8 @@
         <p class="sub">The techniques the "financially comfortable" already know. Plain English. No gatekeeping.</p>
         <div class="lesson" id="lesson"></div>
         <div class="lesson-nav">
-          <button class="btn sm" id="prevLesson">← Back</button>
           <div class="dots" id="dots"></div>
-          <button class="btn sm" id="nextLesson">Next →</button>
+          <div class="swipe-hint">Swipe for the next one</div>
         </div>
       </div>
       <div class="panel">
@@ -4113,14 +4128,95 @@ function renderGiving(){
 }
 
 /* ---------- learn ---------- */
+/* Each lesson's "Try this" is a door, not a slogan: it lands on the exact surface
+   that does the thing. Keyed by title so the LESSONS array stays pure copy. */
+const LESSON_ACTIONS={
+  'Zero-Based Budgeting':      {label:'Open my plan',            run:()=>lessonGo('budget','catName')},
+  'Pay Yourself First':        {label:'Set up the transfer',     run:()=>lessonGo('budget','recAmt')},
+  'The Emergency Fund':        {label:'Start the fund',          run:()=>runDeepen('starter')},
+  'Sinking Funds':             {label:'Add a sinking fund',      run:()=>lessonGo('goals','acctName')},
+  'Debt Snowball vs. Avalanche':{label:'Open the payoff planner',run:()=>lessonGo('debt','debtName')},
+  'The 24-Hour Rule':          {label:'Gut-check something',     run:()=>{ activateTab('impulse'); setTimeout(openModal,160); }},
+  'Value Per Dollar, Not Price':{label:'Price it in life-hours', run:()=>{ activateTab('impulse'); setTimeout(openModal,160); }},
+  "What's Actually an Asset?": {label:'Look at what I own',      run:()=>lessonGo('goals','assetName')},
+  'Your Money Script':         {label:'See my money story',      run:()=>lessonGo('home')},
+  'Notice, Name, Slow, Redesign, Automate':{label:'Run a gut-check', run:()=>{ activateTab('impulse'); setTimeout(openModal,160); }},
+  'Name the Feeling First':    {label:'Build my comfort list',   run:()=>lessonGo('settings','comfortInput')},
+  'Look at the Number':        {label:'Open my ledger',          run:()=>lessonGo('tx','txAmt')},
+  'The Growth Ladder':         {label:'Find my rung',            run:()=>lessonGo('budget')},
+  'Catch the Raise':           {label:'Give the money a job',    run:()=>lessonGo('budget','catName')},
+  'Cutting Has a Floor':       {label:'Work on earning',         run:()=>lessonGo('goals','skillName')},
+  "Make Money That Isn't Yours Work":{label:'Log an investment', run:()=>lessonInvest()},
+  'Resilience Is Recovering':  {label:'See where I stand',       run:()=>lessonGo('home')},
+  'The Other Paycheck: 168 Hours':{label:'Log my week in hours', run:()=>lessonGo('tx','timeRows')},
+  "Wealth Isn't the Money":    {label:'Invest in a skill',       run:()=>lessonGo('goals','skillName')}
+};
+function lessonGo(tab,focusId){
+  activateTab(tab);
+  if(!focusId) return;
+  setTimeout(()=>{
+    const el=document.getElementById(focusId); if(!el) return;
+    const d=el.closest('details'); if(d) d.open=true;
+    el.scrollIntoView({behavior:'auto',block:'center'});
+    if(el.tagName==='INPUT'||el.tagName==='SELECT'){ try{ el.focus({preventScroll:true}); }catch(_){} }
+    else { el.classList.add('cat-flash'); setTimeout(()=>el.classList.remove('cat-flash'),1600); }
+  },170);
+}
+function lessonInvest(){
+  activateTab('tx');
+  setTimeout(()=>{
+    const t=document.querySelector('#typeToggle button[data-t="invest"]'); if(t) t.click();
+    const el=document.getElementById('txAmt'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} }
+  },170);
+}
 function renderLesson(){
   const i=((state.lesson%LESSONS.length)+LESSONS.length)%LESSONS.length; const L=LESSONS[i];
   state.lesson=i;   // keep the stored index in-range (the next save persists it)
-  document.getElementById('lesson').innerHTML=`<div class="num">Lesson ${i+1} of ${LESSONS.length}</div><h3>${escapeHtml(L.t)}</h3><p>${escapeHtml(L.p)}</p><div class="try"><b>Try this →</b> ${escapeHtml(L.try)}</div>`;
-  document.getElementById('dots').innerHTML=LESSONS.map((_,d)=>`<span class="${d===i?'on':''}"></span>`).join('');
+  const act=LESSON_ACTIONS[L.t];
+  document.getElementById('lesson').innerHTML=`<div class="num">Lesson ${i+1} of ${LESSONS.length}</div><h3>${escapeHtml(L.t)}</h3><p>${escapeHtml(L.p)}</p>`
+    +`<div class="try"><b>Try this</b> ${escapeHtml(L.try)}${act?`<button class="try-go" id="lessonGo">${escapeHtml(act.label)} →</button>`:''}</div>`;
+  document.getElementById('dots').innerHTML=LESSONS.map((_,d)=>`<button class="dot${d===i?' on':''}" data-lesson="${d}" aria-label="Lesson ${d+1}"></button>`).join('');
+  const go=document.getElementById('lessonGo'); if(go&&act) go.onclick=()=>act.run();
+  document.querySelectorAll('#dots [data-lesson]').forEach(d=>d.onclick=()=>lessonTo(+d.dataset.lesson));
 }
-document.getElementById('nextLesson').addEventListener('click',()=>{ state.lesson++; save(); renderLesson(); });
-document.getElementById('prevLesson').addEventListener('click',()=>{ state.lesson--; save(); renderLesson(); });
+/* swipe beats arrows on a phone: drag the card, it follows your thumb, and a
+   decisive flick moves on. Keyboard arrows and the dots keep it usable elsewhere. */
+function lessonTo(n,dir){
+  const card=document.getElementById('lesson');
+  if(card&&dir){ card.classList.add(dir>0?'out-left':'out-right'); }
+  state.lesson=n; save();
+  setTimeout(()=>{ if(card) card.classList.remove('out-left','out-right'); renderLesson();
+    if(card){ card.classList.add(dir>0?'in-right':'in-left'); setTimeout(()=>card.classList.remove('in-right','in-left'),260); } }, dir?140:0);
+}
+function lessonStep(d){ lessonTo(state.lesson+d, d); }
+(function(){
+  const card=document.getElementById('lesson'); if(!card) return;
+  let x0=null,y0=null,dx=0,dragging=false;
+  card.addEventListener('touchstart',e=>{ if(e.touches.length!==1) return; x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; dragging=false; },{passive:true});
+  card.addEventListener('touchmove',e=>{
+    if(x0===null||e.touches.length!==1) return;
+    const cx=e.touches[0].clientX, cy=e.touches[0].clientY;
+    dx=cx-x0;
+    if(!dragging && Math.abs(dx)>10 && Math.abs(dx)>Math.abs(cy-y0)) dragging=true;   // horizontal intent only - never fight a vertical scroll
+    if(dragging){ card.style.transform='translateX('+(dx*0.5)+'px)'; card.style.opacity=String(Math.max(0.45,1-Math.abs(dx)/500)); }
+  },{passive:true});
+  const end=()=>{
+    if(x0===null) return;
+    card.style.transform=''; card.style.opacity='';
+    if(dragging && Math.abs(dx)>45) lessonStep(dx<0?1:-1);   // drag left = next
+    x0=y0=null; dx=0; dragging=false;
+  };
+  card.addEventListener('touchend',end,{passive:true});
+  card.addEventListener('touchcancel',end,{passive:true});
+  document.addEventListener('keydown',e=>{
+    if(currentTab!=='learn') return;
+    const t=e.target&&e.target.tagName;
+    if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA') return;
+    if(e.key==='ArrowRight'){ e.preventDefault(); lessonStep(1); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); lessonStep(-1); }
+  });
+})();
+
 
 /* ---------- data export / import / reset ---------- */
 document.getElementById('exportBtn').addEventListener('click',()=>{
