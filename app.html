@@ -1170,6 +1170,12 @@
 
 /* Icon slots are empty now that decorative emoji are gone - collapse them so
    nothing renders a phantom gap where a glyph used to sit. */
+.bub.typing{display:inline-flex;gap:5px;align-items:center;min-height:22px}
+.bub.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.45;animation:iatype 1.1s infinite ease-in-out}
+.bub.typing i:nth-child(2){animation-delay:.16s}
+.bub.typing i:nth-child(3){animation-delay:.32s}
+@keyframes iatype{0%,60%,100%{opacity:.28;transform:translateY(0)}30%{opacity:.9;transform:translateY(-3px)}}
+@media (prefers-reduced-motion: reduce){ .bub.typing i{animation:none} }
 .ic:empty,.t-ic:empty,.wall-ic:empty,.sov-tier .ic:empty{display:none}
 
 /* ============================================================
@@ -1857,6 +1863,11 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <button data-reg="middle">Middle</button>
             <button data-reg="mature">Mature</button>
           </div>
+          <p class="sub" style="margin:16px 0 6px">Chat pacing. The setup chat takes a beat before answering, the way a person would. Turn it off if you would rather it kept up with you.</p>
+          <div class="intensity" id="chatPace" style="margin-top:8px">
+            <button data-pace="natural">Takes a beat</button>
+            <button data-pace="instant">Instant</button>
+          </div>
         </div>
       </div>
     </section>
@@ -2175,7 +2186,7 @@ function defaultState(){
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'auto',
-           autoBackup:'weekly', backupNagDay:'', diary:[] };
+           autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural' };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -5909,6 +5920,16 @@ function applyTheme(){
   const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute('content', light?'#f4efe6':'#131c27');
 }
 (function(){
+  const box=document.getElementById('chatPace');
+  if(box){
+    const paint=()=>box.querySelectorAll('button[data-pace]').forEach(b=>b.classList.toggle('on', (state.chatPace||'natural')===b.dataset.pace));
+    box.addEventListener('click',e=>{ const b=e.target.closest('button[data-pace]'); if(!b) return;
+      state.chatPace=b.dataset.pace; save(); paint(); });
+    paint();
+    document.addEventListener('acct:render',paint);
+  }
+})();
+(function(){
   const t=document.getElementById('themeToggle');
   if(t) t.addEventListener('click',()=>{
     state.theme=THEME_MODES[(THEME_MODES.indexOf(themeMode())+1)%THEME_MODES.length];
@@ -6874,6 +6895,7 @@ function iaBack(){
   [...log.children].forEach(b=>{ if(+(b.dataset.st??-1)>=p) b.remove(); });
   const s=INTAKE[p];
   if(s.key){ delete iaAns[s.key]; delete iaAns[s.key+'Note']; }
+  iaSayGen++;   // abandon any line mid-beat: the transcript is about to change
   iaStep=p; iaForceInput=false;
   pruneStaleAnswers();
   runIntakeStep();   // re-emits the step's own bot bubble + dock, keeping transcript and state in lockstep
@@ -6888,13 +6910,52 @@ function iaProgress(idx){
   const pos=vis.indexOf(idx);
   return pos<0 ? Math.round(idx/(INTAKE.length-1)*100) : Math.round(pos/Math.max(1,vis.length-1)*100);
 }
+
+/* ============================================================
+   PACING
+   Every bot line landed in the same tick as the buttons under it, so the reply
+   arrived before you had finished letting go of the tap. Nothing reads more
+   like a machine than an instant answer to a question about your childhood.
+
+   A typing beat scaled to the length of what is about to be said fixes it: a
+   four-word acknowledgement comes back quickly, a long one takes a moment. The
+   buttons wait until the sentence has landed, so you read before you choose.
+   ============================================================ */
+let iaSayGen=0;
+function iaTypingDelay(text){
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+  const words=String(text||'').trim().split(/\s+/).length;
+  if(state.chatPace==='instant') return 0;
+  return Math.max(380, Math.min(1500, 340 + words*22));
+}
+/* Bot lines only. A line the USER "sent" appears instantly, because they sent it. */
+function iaBotSay(text, done){
+  const log=document.getElementById('intakeLog');
+  const wait=iaTypingDelay(text);
+  if(!log || !wait){ iaBub(text,'bot'); if(done) done(); return; }
+  const gen=++iaSayGen;
+  const d=document.createElement('div');
+  d.className='bub bot typing'; d.dataset.st=iaStep;
+  d.innerHTML='<i></i><i></i><i></i>';
+  d.setAttribute('aria-label','typing');
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
+  setTimeout(()=>{
+    // Back, Skip or an edit during the beat abandons this line rather than
+    // dropping a stale sentence into a transcript that has moved on.
+    if(gen!==iaSayGen){ return; }
+    if(!d.isConnected){ if(done) done(); return; }
+    d.classList.remove('typing'); d.removeAttribute('aria-label');
+    d.textContent=text; log.scrollTop=log.scrollHeight;
+    if(done) done();
+  }, wait);
+}
 function runIntakeStep(){
   iaForceInput=false;
   const idx=nextIntakeIndex(iaStep); if(idx<0) return;
   iaStep=idx; const s=INTAKE[idx];
-  iaBub(typeof s.bot==='function'?s.bot(iaAns):s.bot,'bot');
+  const dock=document.getElementById('intakeDock'); if(dock) dock.innerHTML='';
   document.getElementById('intakeBar').style.width=iaProgress(idx)+'%';
-  renderIntakeDock(s);
+  iaBotSay(typeof s.bot==='function'?s.bot(iaAns):s.bot, ()=>{ if(INTAKE[iaStep]===s) renderIntakeDock(s); });
 }
 /* Editing from the review screen: re-ask ONE question, appending to the
    transcript (never rewriting it), then land straight back on the review. If
@@ -7145,9 +7206,11 @@ function renderReflect(s){
     iaBub(o.label,'me');
     if(s.key) iaAns[s.key]=o.value||o.label;
     const reply = (typeof o.reply==='function') ? o.reply(iaAns) : o.reply;   // tone-aware replies
-    if(reply) iaBub(reply,'bot');
-    if(o.followup) setTimeout(()=>askReflectNote(s,o), reply?520:120);
-    else setTimeout(iaAdvance, reply?750:150);
+    // The acknowledgement types, then the next question follows. Chaining off the
+    // callback instead of a fixed timer keeps the beat right for a five-word reply
+    // and a fifty-word one alike.
+    const then = () => { if(o.followup) setTimeout(()=>askReflectNote(s,o),260); else setTimeout(iaAdvance,300); };
+    if(reply) iaBotSay(reply, then); else setTimeout(then,140);
   });
   const sk=document.getElementById('iaReflectSkip'); if(sk) sk.onclick=()=>{ if(picked) return; picked=true; iaAdvance(); };
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
