@@ -9,6 +9,22 @@ interrogate.** The difference is that here the *engine-critical* answers write
 straight into the app - income, essentials, dream, tone - so the moment the chat
 ends, the Home screen is already alive.
 
+## Review before anything is written
+The last step is **not** a blind "Set me up". It shows every answer the user gave -
+name, setup type, income, hourly rate, the walls, other bills, dream, limit, why -
+each on a tappable row. Tapping one re-asks **that single question**, appending to
+the transcript rather than rewriting it, and drops the user straight back on the
+review with the new value. Nothing is committed until the button is pressed, and
+the button is latched against a double-tap. If an edit unlocks a question that now
+has no answer (switching "just track spending" to the full budget), the flow goes
+there first instead of returning early. `renderReview`, `iaSummaryRows`,
+`iaEditStep`, `iaFirstUnanswered`; steps opt in by carrying a short `sum` label.
+
+Money questions show a **`$` prefix inside the field** and a plain-words hint under
+it ("Dollars per month, after taxes - what actually lands in your account. Type 3200
+for $3,200."), because a bare `e.g. 3200` placeholder names neither the unit nor the
+period. Steps carry the hint via a `hint` property.
+
 ## Account type - the first fork (spender path recommended)
 **Tone comes second, right after the age gate** - "how much mercy do you want from me?"
 (Clean / Blunt / Savage) - so the entire conversation speaks in the user's chosen voice,

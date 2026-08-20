@@ -780,6 +780,22 @@
   .intake-dock .inrow{display:flex;gap:8px;max-width:640px;margin:0 auto}
   .intake-dock input{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:13px 15px;font-size:16px;min-width:0}
   .intake-dock input:focus{outline:none;border-color:var(--accent)}
+  .ia-money{flex:1;display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding-left:13px;min-width:0}
+  .ia-money:focus-within{border-color:var(--accent)}
+  .ia-money .ia-cur{color:var(--muted);font-weight:800;font-size:16px;flex:none}
+  .intake-dock .ia-money input{background:none;border:none;padding-left:0}
+  .intake-dock .ia-money input:focus{border-color:transparent}
+  .ia-hint{max-width:640px;margin:7px auto 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  .review{max-width:640px;margin:0 auto 10px}
+  .review .rv-h{font-weight:900;font-size:15px}
+  .review .rv-s{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.45}
+  .rv-list{max-height:34vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+  .rev-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;color:var(--text)}
+  .rev-row:hover{border-color:var(--accent)}
+  .rev-row .rv-k{font-size:12px;color:var(--muted);font-weight:700;flex:none;min-width:34%}
+  .rev-row .rv-v{flex:1;font-weight:800;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rev-row .rv-e{font-size:11px;font-weight:800;color:var(--accent);flex:none}
+  .rv-empty{font-size:13px;color:var(--muted);line-height:1.5}
   .intake-send{background:var(--accent);color:var(--on-accent);border:none;border-radius:12px;padding:0 18px;font-weight:800;font-size:15px;flex-shrink:0}
   .intake-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:640px;margin:0 auto}
   .intake-chips button{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px}
@@ -5439,7 +5455,7 @@ const INTAKE=[
   /* situation comes BEFORE the intro so the tone floor (survival -> clean) is
      already known when the intro speaks - the person the floor protects must
      never get the savage version first and the softening after. */
-  {id:'situation', input:'reflect', key:'situation', optional:true,
+  {id:'situation', sum:'Where you are', input:'reflect', key:'situation', optional:true,
     why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
     bot:"Before anything else - where are you right now with money, honestly? No wrong answer, no judgment. It just tells me how to show up for you.",
     options:[
@@ -5455,8 +5471,8 @@ const INTAKE=[
       if(t==='blunt') return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. Look at the name - the ability is the part that matters. It's not punishment, and it's not me grading you. I can't hold you accountable; nobody can. What I can do is help you see through the bullshit clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No secret sauce, just small wins that stack when you show up. That's it. Ready?`;
       return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ability to hold yourself accountable. Look at the name - the ability is the part that matters. It isn't punishment, and it isn't me grading you. I can't hold you accountable; nobody can do that for you. What I can do is help you SEE clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`;
     }, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
-  {id:'name', bot:"First things first - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
-  {id:'moneyStory', input:'reflect', key:'moneyStory', optional:true,
+  {id:'name', bot:"First things first - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name', sum:'Name'},
+  {id:'moneyStory', sum:'Money growing up', input:'reflect', key:'moneyStory', optional:true,
     why:"Because the way money felt when you were a kid still drives how you spend today - grip it tight, or blow it before it's gone. If I know the pattern, I can catch it for you instead of letting it run quietly in the background.",
     bot:"One more that shapes more than most people admit: what did money feel like growing up?",
     options:[
@@ -5467,7 +5483,7 @@ const INTAKE=[
         ? "Feast or famine wires you for the swing - balling when it's up, scrambling when it's down. We're breaking that damn cycle."
         : "Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
     ]},
-  {id:'budgetPast', input:'reflect', key:'budgetPast', optional:true,
+  {id:'budgetPast', sum:'Budgeted before', input:'reflect', key:'budgetPast', optional:true,
     why:"Because if a budget burned you out before, I don't want to hand you the same thing that failed. Knowing what happened last time tells me how small and light to start so this one actually sticks.",
     bot:"And have you ever tried to budget before? Straight up - no wrong answer, it just tells me where to start.",
     options:[
@@ -5478,12 +5494,13 @@ const INTAKE=[
       {label:'📉 Did it a while, life happened', value:'lapsed', reply:"So you already know it works when you work it. Life happens - the fix is a system light enough to survive a bad week, not another one that needs you to be perfect."},
       {label:'✅ I budget now', value:'current', reply:"Then you're ahead of most - let's sharpen what you've got, not make you start over."}
     ]},
-  {id:'acct', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
+  {id:'acct', sum:'Setup type', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
     return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
-    input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
+    input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'3200',
+    hint:'Dollars per month, after taxes - what actually lands in your account. Type 3200 for $3,200.', sum:'Take-home a month'},
   {id:'incomeAvoid', input:'reflect', key:'incomeAvoid', optional:true,
     showIf:a=>a.acct==='spend' && !(a.income>0),
     bot:"No pressure at all - but I noticed you'd rather not put the income in. Mind if I ask what's behind that? It's not nosy, it just helps me meet you where you are.",
@@ -5512,7 +5529,7 @@ const INTAKE=[
       : a.income>0
       ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; ${a.hoursPerWeek>0?`at the ${a.hoursPerWeek} hours a week you actually work, that's`:`assuming a standard 40-hour week, that works out to`} about ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr. Sound right?${a.hoursPerWeek>0?'':` (If your week isn't 40 hours, tell me - guessing your hours is the one thing this app shouldn't do.)`}${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
-    input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
+    input:'money', key:'wage', optional:true, placeholder:'22', hint:'Dollars per hour, take-home. Type 22 for $22 an hour.', sum:'Your hourly rate',
     suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income, a.hoursPerWeek) : null,
     help:{ cta:"🤔 Help me work it out",
       ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
@@ -5535,7 +5552,7 @@ const INTAKE=[
         : `That side work actually lifts your real rate - nice. Either way, I now price everything against the whole truth, not just one paycheck.`;
       return `Here's the honest math${a.name?', '+a.name:''}: your main job runs about ${usd(mr)}/hr. But that side work is hours of your life too - roughly ${sh} ${sh===1?'hour':'hours'} a month for ${usd(sideAmt)}. Blend every hour you sell and your true take-home rate is ${usd(br)}/hr. ${swing} That's the number behind every "hours of your life" figure from here on.`; }},
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
-  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
+  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
   {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
     bot:"Before we move on - honestly, how's the place you live actually treating you?",
     options:[
@@ -5544,7 +5561,7 @@ const INTAKE=[
       {label:'😮‍💨 Outgrowing it', value:'outgrow', reply:"Heard you. When it's time to level up, these numbers will tell you exactly when it's doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
       {label:'🏡 Dreaming of owning', value:'own', reply:"Owning is a big, real one. Hold that thought - the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
     ]},
-  {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'food', sum:'Food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
   {id:'foodStyle', input:'reflect', key:'foodStyle', optional:true, showIf:a=>a.acct!=='spend' && a.food>0,
     bot:"Quick one - what's your normal with food?",
     options:[
@@ -5554,8 +5571,8 @@ const INTAKE=[
         : "No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
       {label:'⚖️ A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
     ]},
-  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 300'},
-  {id:'transport', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
+  {id:'transport', sum:'Getting around', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
   {id:'commuteFeel', input:'reflect', key:'commuteFeel', optional:true, showIf:a=>a.acct!=='spend' && a.transport>0,
     bot:"How do you feel about getting around day to day?",
     options:[
@@ -5580,7 +5597,7 @@ const INTAKE=[
       {label:'📉 Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
       {label:'🆕 Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
     ]},
-  {id:'dream',
+  {id:'dream', sum:'Your dream',
     bot:a=>{
       if(a.roofFeel==='own') return `Now the big one - what are you actually chasing? You said you're dreaming of owning${a.roofFeelNote?` ("${a.roofFeelNote}")`:' a place'} - want that to be the dream we build toward, or is there a bigger one? ★`;
       if(a.roofFeel==='outgrow') return `Now the big one - what are you actually chasing? Could be leveling up where you live, could be something else entirely. ★`;
@@ -5627,15 +5644,15 @@ const INTAKE=[
         return `You mapped ${usd(known)} against about ${usd(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
       return `That's ${usd(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
-      return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
+      return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
   {id:'why', bot:a=> iaTone(a)==='savage'
       ? "Last thing, and it's the one that matters most: why does getting this right matter to you, RIGHT NOW? Don't give me the polite answer - give me the real one. Swear if you need to, I can take it. I'm going to hold onto this and read it back to you at the exact moment you're about to blow it."
-      : "Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out. I'll hold onto it - and remind you at the moments it matters.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
+      : "Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out. I'll hold onto it - and remind you at the moments it matters.", input:'text', key:'why', optional:true, placeholder:'In your own words…', sum:'Why this matters'},
   {id:'done', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
       const base = a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`;
       const close = surv ? ` Remember - one small win this week. That's all I'm asking. The tool's ready when you are.`
         : (iaTone(a)==='savage' ? ` The tool's ready. Now show the hell up - that's the only part I can't do for you.` : ` The tool's ready. The rest is just you showing up - and I already think you will.`);
-      return base+close; }, input:'finish', cta:'Set me up →'}
+      return base+close; }, input:'review', cta:'Set me up →'}
 ];
 
 let iaStep=0, iaAns={}, iaForceInput=false;
@@ -5696,7 +5713,7 @@ function pruneStaleAnswers(){
    step emitted (reflect replies, follow-ups, continue-step intros). */
 function iaBack(){
   let p=iaStep-1;
-  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='gate'){ p--; continue; } break; }   // gate too: its skip button abandons the whole intake - never a Back target
+  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='gate'||s.input==='review'){ p--; continue; } break; }   // gate too: its skip button abandons the whole intake - never a Back target
   if(p<0) return;
   const log=document.getElementById('intakeLog');
   [...log.children].forEach(b=>{ if(+(b.dataset.st??-1)>=p) b.remove(); });
@@ -5724,7 +5741,72 @@ function runIntakeStep(){
   document.getElementById('intakeBar').style.width=iaProgress(idx)+'%';
   renderIntakeDock(s);
 }
-function iaAdvance(){ pruneStaleAnswers(); iaStep++; runIntakeStep(); }
+/* Editing from the review screen: re-ask ONE question, appending to the
+   transcript (never rewriting it), then land straight back on the review. If
+   the change unlocked a question that now has no answer, go there first
+   instead - e.g. switching from "just track spending" to the full budget. */
+let iaEditReturn=null;
+function iaEditStep(p){ iaEditReturn=iaStep; iaStep=p; iaForceInput=false; runIntakeStep(); }
+function iaFirstUnanswered(){
+  for(let i=0;i<INTAKE.length;i++){
+    const s=INTAKE[i];
+    if(!s.key) continue;
+    if(s.showIf && !s.showIf(iaAns)) continue;
+    const opt=(typeof s.optional==='function')?!!s.optional(iaAns):!!s.optional;
+    if(opt) continue;
+    if(iaAns[s.key]===undefined||iaAns[s.key]==='') return i;
+  }
+  return -1;
+}
+function iaAdvance(){
+  pruneStaleAnswers();
+  if(iaEditReturn!=null){
+    const back=iaEditReturn; iaEditReturn=null;
+    const miss=iaFirstUnanswered();
+    iaStep = (miss>=0 && miss<back) ? miss : back;
+    runIntakeStep(); return;
+  }
+  iaStep++; runIntakeStep();
+}
+/* Everything the user told us, in their own answers, before a single thing is written */
+function iaSummaryRows(){
+  const rows=[];
+  INTAKE.forEach((s,i)=>{
+    if(!s.sum||!s.key) return;
+    if(s.showIf && !s.showIf(iaAns)) return;
+    const v=iaAns[s.key];
+    if(v===undefined||v==='') return;
+    let disp;
+    if(s.input==='money') disp = (+v>0)?usd(v):'Skipped';
+    else if(s.options){ const o=s.options.find(x=>(x.value!==undefined?x.value:x.label)===v); disp=o?o.label:String(v); }
+    else disp=String(v);
+    rows.push({i,label:s.sum,value:disp});
+  });
+  const loop=(key,idFor,label,fmt)=>{
+    const arr=iaAns[key]||[]; if(!arr.length) return;
+    const idx=INTAKE.findIndex(x=>x.id===idFor);
+    rows.push({i:idx<0?INTAKE.length:idx,label,value:arr.map(fmt).join(', ')});
+  };
+  loop('extraIncome','moreIncome','Other income',x=>x.name+' '+usd(x.amount));
+  loop('expenses','expenses','Other monthly bills',x=>x.name+' '+usd(x.amount));
+  loop('leaks','deepDive','Where it goes',x=>x.name+' '+usd(x.monthly));
+  if(iaAns.hasDebt==='yes'&&iaAns.debtAmt>0){ const idx=INTAKE.findIndex(x=>x.id==='debtAmt'); rows.push({i:idx<0?INTAKE.length:idx,label:'Debt',value:usd(iaAns.debtAmt)}); }
+  return rows.sort((a,b)=>a.i-b.i);
+}
+function renderReview(s){
+  const dock=document.getElementById('intakeDock');
+  const rows=iaSummaryRows();
+  const list=rows.length
+    ? rows.map(r=>`<button class="rev-row" data-rev="${r.i}"><span class="rv-k">${escapeHtml(r.label)}</span><span class="rv-v">${escapeHtml(r.value)}</span><span class="rv-e">Change</span></button>`).join('')
+    : `<div class="rv-empty">You skipped everything - that's allowed. I'll set up the basics and you can fill it in whenever.</div>`;
+  dock.innerHTML=`<div class="review"><div class="rv-h">Before I build it - does this look right?</div><div class="rv-s">Tap any line to change it. Nothing is saved until you tap the button.</div><div class="rv-list">${list}</div></div>`
+    +`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta||'Set me up →')}</button></div>`
+    +`<div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`;
+  let committing=false;
+  document.getElementById('iaFin').onclick=()=>{ if(committing) return; committing=true; commitIntake(); };
+  dock.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>iaEditStep(+b.dataset.rev));
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
 function renderIntakeDock(s){
   const dock=document.getElementById('intakeDock');
   if(s.input==='start'){
@@ -5735,6 +5817,7 @@ function renderIntakeDock(s){
   }
   if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
+  if(s.input==='review'){ renderReview(s); return; }
   if(s.input==='loop'){ renderLoop(s); return; }
   if(s.input==='zeroClose'){ renderZeroClose(s); return; }
   if(s.input==='leak'){ leakFinder(s); return; }
@@ -5789,7 +5872,12 @@ function renderIntakeDock(s){
     return;
   }
   const pre=(typeof s.prefill==='function')?(s.prefill(iaAns)||''):'';
-  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
+  // a bare "e.g. 3200" tells nobody what unit or period is wanted - show the $ and say it
+  const hint=s.hint?`<div class="ia-hint">${escapeHtml(s.hint)}</div>`:'';
+  const field=isMoney
+    ? `<span class="ia-money"><span class="ia-cur">$</span><input id="iaInput" type="number" inputmode="decimal" min="0" step="any" value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'0')}"></span>`
+    : `<input id="iaInput" type="text" value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'')}">`;
+  dock.innerHTML=`<div class="inrow">${field}<button class="intake-send" id="iaSend">Send</button></div>${hint}`
     +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}${backBtn}</div>`;
   const inp=document.getElementById('iaInput'); setTimeout(()=>{ inp.focus(); if(pre) try{inp.select();}catch(_){} },60);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
