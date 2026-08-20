@@ -1017,7 +1017,13 @@
   .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
   .rec.invest .am{color:var(--accent)}
   .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
-  .dy-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .dy-echo{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:12px 14px;margin-top:12px;background:var(--panel-2)}
+.dy-echo-k{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.dy-echo-q{margin:8px 0 0;font-size:14.5px;line-height:1.6;font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere}
+.dy-echo-t{margin-top:9px;font-size:13.5px;font-weight:700;color:var(--accent)}
+.dy-echo-go{margin-top:9px;background:none;border:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:12.5px;cursor:pointer;padding:0}
+.dy-echo-go:hover{color:var(--accent)}
+.dy-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .dy-chip{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:11px;padding:9px 13px;font-weight:700;font-size:14px;cursor:pointer}
 .dy-chip.on{border-color:var(--accent);background:rgba(230,178,77,.14);color:var(--accent)}
 .dy-ask{margin:10px 0}
@@ -5694,6 +5700,61 @@ function renderDiary(){ renderDiaryForm(); renderDiarySuggest(); renderDiaryList
   const s=document.getElementById('diarySave'); if(s) s.addEventListener('click',diaryCommit);
 })();
 
+/* ---------- Diary echo: your own words, at the moment of temptation ----------
+   The diary is worth little if it only gets read on the day it is written. The
+   gut-check is where it earns its keep: one entry, chosen for relevance, shown
+   back verbatim while the cart is still open.
+
+   Deliberately NOT voiced. Everywhere else the register dial can go savage, but
+   these are the user's own words about their own hard weeks - quoting someone's
+   grief back at them in a mocking tone is the one place this app must not go.
+   The framing stays warm at every intensity. */
+const DY_ECHO_W={hard:3, plan:2.6, win:1.4, note:1};
+function diaryEcho(name){
+  const list=(state.diary||[]); if(!list.length) return null;
+  const words=(String(name||'').toLowerCase().match(/[a-z]{3,}/g)||[]);
+  const today=new Date(todayStr()+'T00:00:00');
+  let best=null, bestScore=0;
+  list.forEach(e=>{
+    const txt=(e.text||'').toLowerCase();
+    let sc=DY_ECHO_W[e.kind]||1;
+    let overlap=0; words.forEach(w=>{ if(txt.includes(w)) overlap++; });
+    sc += overlap*3;                    // what you are buying decides this, above all else
+    // A funded plan is live whenever money moves, but only nudges: at +2 it beat
+    // every other entry for every purchase, so the same quote surfaced every time.
+    if(e.kind==='plan' && (e.acted||[]).some(a=>a.what==='goal')) sc += 0.5;
+    const age=Math.max(0,Math.round((today-new Date(((e.date||todayStr())+'T00:00:00')))/86400000));
+    sc *= (age<=7 ? 1.35 : age<=30 ? 1.15 : age<=120 ? 1 : 0.8);
+    if(sc>bestScore){ bestScore=sc; best=e; }
+  });
+  return bestScore>=3.2 ? best : null;   // only a strong match speaks; silence beats a non-sequitur
+}
+function diaryEchoHTML(name){
+  const e=diaryEcho(name); if(!e) return '';
+  const k=(typeof DIARY_KINDS!=='undefined'?DIARY_KINDS:[]).find(x=>x.k===e.kind);
+  const when=new Date((e.date||todayStr())+'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric'});
+  const lead = e.kind==='hard' ? 'You wrote this on '+when
+    : e.kind==='plan' ? 'You saw this coming, on '+when
+    : e.kind==='win'  ? 'You wrote this on '+when
+    : 'From your diary, '+when;
+  const tail = e.kind==='hard' ? 'Your words, not mine. Is this purchase worth going back there?'
+    : e.kind==='plan' ? 'This is the money that funds it.'
+    : e.kind==='win'  ? 'You chose that on purpose. This is the same choice again.'
+    : '';
+  const txt=(e.text||'').length>240 ? (e.text||'').slice(0,238).trim()+'…' : (e.text||'');
+  return `<div class="dy-echo">
+    <div class="dy-echo-k">${k?k.ic:'📔'} ${escapeHtml(lead)}</div>
+    <blockquote class="dy-echo-q">${escapeHtml(txt)}</blockquote>
+    ${tail?`<div class="dy-echo-t">${escapeHtml(tail)}</div>`:''}
+    <button class="dy-echo-go" data-dyecho="1">Open the diary</button>
+  </div>`;
+}
+function wireDiaryEcho(){
+  document.querySelectorAll('button[data-dyecho]').forEach(b=>b.onclick=()=>{
+    if(typeof closeOverlayThenTab==='function') closeOverlayThenTab('diary'); else activateTab('diary');
+  });
+}
+
 function applyTheme(){
   const m=themeMode(), light=resolvedTheme()==='light';
   document.documentElement.setAttribute('data-theme', light?'light':'dark');
@@ -5831,6 +5892,7 @@ function renderCheckResult(){
       ${whyReminderHTML()}
       ${altHTML(name)}
       ${triggerSwapHTML(trap)}
+      ${diaryEchoHTML(name)}
       ${comfortHTML()}
       <div class="check-actions">
         <button class="btn income" id="impNeutralize">🛡️ Neutralize</button>
@@ -5839,7 +5901,7 @@ function renderCheckResult(){
         <button class="btn ghost" id="impRansom">🏳️ Pay ransom</button>
       </div>
     </div>`;
-  wireWhyEdit(); wireComfortLinks();
+  wireWhyEdit(); wireComfortLinks(); wireDiaryEcho();
 
   document.getElementById('impNeutralize').addEventListener('click',()=>{
     const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';

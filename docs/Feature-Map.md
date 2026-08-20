@@ -226,6 +226,20 @@ timeline shows "logged $340 - Getting Around" under the words that produced it.
 Declining leaves the budget untouched. Deleting an entry never removes what it
 already logged.
 
+**4. Diary echo (`diaryEcho`, `diaryEchoHTML`, inside the gut-check).** A diary
+only read on the day it is written is a notebook. The gut-check surfaces one
+entry, chosen by relevance, verbatim, while the cart is still open. Scoring is
+keyword overlap with what is being bought (dominant), then entry kind (a hard one
+outweighs a note), then recency; a funded plan nudges but does not decide - at a
+larger bonus it beat everything for every purchase and the same quote surfaced
+every time. Below a threshold it shows nothing: silence beats a non-sequitur.
+
+It is the one surface the register/intensity dial does **not** reach. These are
+the user's own words about their own hard weeks, and quoting somebody's grief
+back at them in the savage voice is the one place this app must not go. The
+framing is identical at clean, blunt and savage, and that is asserted in the
+tests.
+
 **3. Free comfort list (`state.comfortMenu`; collected in intake, editable in Settings,
 rendered by `comfortHTML`).** The user names, while calm, the no-cost things that actually
 help them; the list is surfaced inside every gut-check at the moment of temptation, with
