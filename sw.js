@@ -13,7 +13,8 @@ const ASSETS = [
   './fonts/inter-var-latin.woff2',
   './shots/shot-shield.png',
   './shots/shot-home.png',
-  './shots/shot-calendar.png'
+  './shots/shot-calendar.png',
+  './shots/shot-invest.png'
 ];
 
 self.addEventListener('install', e => {
