@@ -1198,12 +1198,54 @@ h2{font-weight:600;line-height:1.3}
 h3{font-weight:600}
 .verdict,.big{font-weight:600}
 /* Micro-labels: sentence case, normal tracking, one step down in weight. */
-.sp-k,.cal-dow,.gl-h,.bd-span,.metric .k,.trap-tag,.dy-e-head,.dy-echo-k,.rec .tag,
-.meter-lbl,.kicker,.sov-m .k,.cal-stat .sp-k,.acc-sub,.t-l,.ft-label{
+/* Derived from the stylesheet rather than hand-listed: every rule that set
+   uppercase, minus .kicker, which is the one deliberate eyebrow. Hand-listing
+   missed a dozen of these the first time. */
+.bd-span,
+.blindspot .bs-k,
+.brand .tag,
+.comfort .cm-k,
+.decision .badge,
+.drainbox .db-k,
+.dy-e-head,
+.dy-echo-k,
+.enoughcard .ec-k,
+.feat .ft-t,
+.fstat .fb .fbk-lbl,
+.fstat .ff .k,
+.ft-label,
+.gl-h,
+.goal-edit label,
+.goal-type,
+.hh-eye,
+.hh-fair .k,
+.hh-p .nm,
+.imp-table .tt,
+.imp-table th,
+.leak-sub,
+.lesson .num,
+.lineitem .kindtag,
+.meter-lbl,
+.metric .k,
+.monthnav .m small,
+.panel.spending .sp-k,
+.ph-eye,
+.po-head,
+.ql-datel,
+.rec .tag,
+.retro .lbl,
+.retro-table th,
+.runwaybox .rb-k,
+.snap .k,
+.solve-h,
+.sov-m .k,
+.stat .k,
+.sync-tag,
+.trap-tag,
+.why-remind .wr-k,
+label.fld{
   text-transform:none;letter-spacing:.005em;font-weight:600;
 }
-/* Form labels were the loudest of all: TARGET, PRICE $, HOW'D IT FIND YOU?.
-   Three separate rules set them to uppercase 800 at 10-11px. */
 label,label.fld{text-transform:none;letter-spacing:.005em;font-weight:600;font-size:12.5px}
 /* Prose breathes; numbers stay firm but stop shouting. */
 p,.sub{font-weight:400;line-height:1.62}
@@ -1433,7 +1475,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel">
-        <h2>⏳Your week in hours</h2>
+        <h2>Your week in hours</h2>
         <p class="sub">Money isn't the only thing you invest. Everyone gets the same 168 hours a week - some you sell to work, some you invest in yourself (health, learning, building, people), and some just leak into the screen. Where the hours go decides what the dollars can do next year.</p>
         <div id="timeRows"></div>
         <div id="timeSummary"></div>
