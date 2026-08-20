@@ -20,6 +20,14 @@ has no answer (switching "just track spending" to the full budget), the flow goe
 there first instead of returning early. `renderReview`, `iaSummaryRows`,
 `iaEditStep`, `iaFirstUnanswered`; steps opt in by carrying a short `sum` label.
 
+**Cadence is part of the voice.** The copy was warm from the start; what read as
+machine-made was that every line had the same shape. 17 of 20 questions and 27 of
+35 replies used the same `X - now Y` pivot, only 2 replies were a single sentence,
+and lengths clustered tightly around 23 words. A person answering you varies:
+sometimes four words, sometimes a paragraph. When writing new intake copy, vary
+the length deliberately, avoid the balanced-clause pivot, and do not open every
+reply by affirming the answer that was just given.
+
 **Back is available from the second step onward.** `iaBackTarget` walks backwards
 to the last step the user actually answered, stepping over informational beats
 (intro, continue, finish, review) which are not questions. The age gate is a

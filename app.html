@@ -6585,51 +6585,51 @@ function initPWA(){
    Engine-critical (★) answers write straight into app state.
    ============================================================ */
 const INTAKE=[
-  {id:'gate', bot:"Welcome to Accountability  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
+  {id:'gate', bot:"Welcome to Accountability. Which of these sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
   {id:'tone', sum:'How you want to be held', input:'choice', key:'tone',
-    bot:"And how do you want to be held accountable? This is the voice I will use with you from here on - every question, every gut-check, every time you are about to blow it. Pick what you will actually listen to, not what sounds impressive. You can change it anytime in Settings. ★",
+    bot:"And how do you want to be held accountable? This is the voice I'll use from here on. Every question, every gut-check, every time you're about to blow it. Pick what you'll actually listen to, not what sounds impressive. You can change it anytime in Settings. ★",
     options:[{label:'Forgiving - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   /* situation comes BEFORE the intro so the tone floor (survival -> clean) is
      already known when the intro speaks - the person the floor protects must
      never get the savage version first and the softening after. */
   {id:'situation', sum:'Where you are', input:'reflect', key:'situation', optional:true,
     why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
-    bot:"Before anything else - where are you right now with money, honestly? No wrong answer, no judgment. It just tells me how to show up for you.",
+    bot:"So where are you right now with money, honestly? No wrong answer, no judgment. It just tells me how to show up for you.",
     options:[
-      {label:'Just trying to survive', value:'survive', reply:"Thank you for saying it straight - that takes guts. When you're in survival, we don't start with 'assign every dollar.' We start with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
-      {label:'Treading water', value:'treading', reply:"Treading water is exhausting - and you're still here, doing something about it. That counts for more than you think. We'll aim for a little breathing room first, before anything fancy."},
-      {label:'Stable but stuck', value:'stuck', reply:"Stable but stuck is a real place to be. You've got the footing - now it's about pointing it somewhere on purpose instead of letting it drift."},
-      {label:'Stable, ready to build', value:'build', reply:"Love it. You've got the base - now let's turn steady into momentum and actually put your money to work."}
+      {label:'Just trying to survive', value:'survive', reply:"That took guts to say. So we're not going to start with 'assign every dollar.' We're starting with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
+      {label:'Treading water', value:'treading', reply:"Exhausting, that one. And you're still here doing something about it. Let's get you a little breathing room before anything fancy."},
+      {label:'Stable but stuck', value:'stuck', reply:"Stuck is its own kind of tiring. You've got the footing though, so now it's about aiming it somewhere on purpose."},
+      {label:'Stable, ready to build', value:'build', reply:"Good place to be. Let's put that steadiness to work."}
     ]},
   {id:'intro', bot:a=>{
       const hi=a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great.";
       const t=iaTone(a);
-      if(t==='savage') return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. Look at the name - the ability is the part that matters. It's not punishment and it's not me grading you. Nobody hands you that ability and I damn sure can't do it for you - it's a muscle, and you build it by seeing through your own bullshit and deciding what stays and what dies. No secret sauce. Just small wins that stack when you actually show up. That's it. Ready?`;
-      if(t==='blunt') return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. Look at the name - the ability is the part that matters. It's not punishment, and it's not me grading you. I can't hold you accountable; nobody can. What I can do is help you see through the bullshit clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No secret sauce, just small wins that stack when you show up. That's it. Ready?`;
-      return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ability to hold yourself accountable. Look at the name - the ability is the part that matters. It isn't punishment, and it isn't me grading you. I can't hold you accountable; nobody can do that for you. What I can do is help you SEE clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`;
+      if(t==='savage') return `${hi} One thing before we start, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. The ability. Nobody hands you that, and I damn sure can't do it for you. It's a muscle. You build it by seeing through your own bullshit and deciding what stays and what dies. No secret sauce. Ready?`;
+      if(t==='blunt') return `${hi} One thing before we start, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. The ability. I can't hold you accountable; nobody can. What I can do is help you see clearly enough to decide what stays and what goes. It gets easier every time you do it. Ready?`;
+      return `${hi} One thing before we start, because it's the whole point. Accountability is the ability to hold yourself accountable. The ability. Nobody can do that part for you, me included. What I can do is help you see clearly enough to decide what stays and what goes. It gets easier every time. No shame, no lecture. Ready?`;
     }, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
-  {id:'name', bot:"First things first - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name', sum:'Name'},
+  {id:'name', bot:"What should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name', sum:'Name'},
   {id:'moneyStory', sum:'Money growing up', input:'reflect', key:'moneyStory', optional:true,
     why:"Because the way money felt when you were a kid still drives how you spend today - grip it tight, or blow it before it's gone. If I know the pattern, I can catch it for you instead of letting it run quietly in the background.",
     bot:"One more that shapes more than most people admit: what did money feel like growing up?",
     options:[
-      {label:'Never enough, kind of scary', value:'fear', reply:"That leaves a mark. It can make you grip every dollar, or spend it before it disappears - two sides of the same fear. Naming it is how you stop it quietly running the show.", followup:"Say a bit more, if you want (optional)"},
-      {label:'Tight, but we managed', value:'tight', reply:"Tight-but-managed teaches resourcefulness most people never build. We'll use that muscle - just aimed at building now, not only surviving."},
-      {label:'Comfortable and steady', value:'stable', reply:"A steady start is a real gift. The one trap is coasting on it - stability is the launchpad, not the destination."},
+      {label:'Never enough, kind of scary', value:'fear', reply:"That leaves a mark. Some people come out gripping every dollar. Others spend it before it can disappear. Same fear underneath, and naming it is how it stops quietly running things.", followup:"Say a bit more, if you want (optional)"},
+      {label:'Tight, but we managed', value:'tight', reply:"That teaches you a resourcefulness most people never build. Same muscle works for building, not just surviving."},
+      {label:'Comfortable and steady', value:'stable', reply:"That's a real gift, and not a common one. Only trap is coasting on it."},
       {label:'Feast or famine', value:'chaos', reply:a=> iaTone(a)==='savage'
         ? "Feast or famine wires you for the swing - balling when it's up, scrambling when it's down. We're breaking that damn cycle."
         : "Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
     ]},
   {id:'budgetPast', sum:'Budgeted before', input:'reflect', key:'budgetPast', optional:true,
     why:"Because if a budget burned you out before, I don't want to hand you the same thing that failed. Knowing what happened last time tells me how small and light to start so this one actually sticks.",
-    bot:"And have you ever tried to budget before? Straight up - no wrong answer, it just tells me where to start.",
+    bot:"Have you ever tried to budget before? Straight up, no wrong answer. It just tells me where to start.",
     options:[
-      {label:'Never really tried', value:'never', reply:"Perfect - no bad habits to unlearn, then. We start clean and simple, and build from there."},
+      {label:'Never really tried', value:'never', reply:"No bad habits to unlearn, then. We'll start simple."},
       {label:'Tried, fell off', value:'fell', reply:a=> iaTone(a)==='savage'
         ? "You and every other damn human who's tried. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out."
         : "You and almost everyone who's ever budgeted. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out last time.", followup:"What made it not stick, if you know? (optional)"},
-      {label:'Did it a while, life happened', value:'lapsed', reply:"So you already know it works when you work it. Life happens - the fix is a system light enough to survive a bad week, not another one that needs you to be perfect."},
-      {label:'I budget now', value:'current', reply:"Then you're ahead of most - let's sharpen what you've got, not make you start over."}
+      {label:'Did it a while, life happened', value:'lapsed', reply:"Then you already know it works when you work it. Life happens. What you need is something light enough to survive a bad week, not another system that needs you perfect."},
+      {label:'I budget now', value:'current', reply:"You're ahead of most people then. We'll sharpen what you've got rather than start you over."}
     ]},
   {id:'acct', sum:'Setup type', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
     return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
@@ -6640,12 +6640,12 @@ const INTAKE=[
     hint:'Dollars per month, after taxes - what actually lands in your account. Type 3200 for $3,200.', sum:'Take-home a month'},
   {id:'incomeAvoid', input:'reflect', key:'incomeAvoid', optional:true,
     showIf:a=>a.acct==='spend' && !(a.income>0),
-    bot:"No pressure at all - but I noticed you'd rather not put the income in. Mind if I ask what's behind that? It's not nosy, it just helps me meet you where you are.",
+    bot:"No pressure at all. I did notice you'd rather not put the income in, though. Mind if I ask what's behind that? Not nosy, it just helps me meet you where you are.",
     options:[
       {label:"I don't want to look", value:'avoid', reply:"That's the most honest answer there is - and it's exactly why watching where it GOES is a gentler place to start than staring at what comes in. No income needed. When you're ready to look, I'll be right here."},
-      {label:'It is irregular / hard to pin', value:'irregular', reply:"Irregular income is genuinely harder - not a personal failing. When what comes in bounces around, tracking what goes out is the steadier anchor. Smart place to start, honestly."},
-      {label:'It stresses me out', value:'stress', reply:"Money stress is real and I'm not going to add to it. We'll keep this to just watching your spending - small, calm, no big scary number staring back. You set the pace."},
-      {label:'I just want to watch spending', value:'watch', reply:"Totally fair - and it might be the highest-leverage move there is. What you spend is the part you actually control, minute to minute."}
+      {label:'It is irregular / hard to pin', value:'irregular', reply:"Irregular income is genuinely harder. Not a personal failing. When what comes in bounces around, watching what goes out is the steadier anchor."},
+      {label:'It stresses me out', value:'stress', reply:"Money stress is real, and I'm not going to add to it. We'll stay on just your spending. Small, calm, no big number staring back. You set the pace."},
+      {label:'I just want to watch spending', value:'watch', reply:"Fair. It might also be the highest-leverage thing you could do. Spending is the part you actually control, minute to minute."}
     ]},
   {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend',
     bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
@@ -6655,10 +6655,10 @@ const INTAKE=[
     done:"Done - that's all my income →"},
   {id:'householdOffer', input:'reflect', key:'wantHousehold', optional:true,
     showIf:a=>a.acct!=='spend' && (a.extraIncome||[]).some(x=>/partner/i.test(x.name)),
-    bot:"You've got a partner bringing money in too - want the full couples view? It tags who earns what, prices purchases in your partner's life-hours as well, and splits the essentials income-fairly (not just 50/50).",
+    bot:"You've got a partner bringing money in too. Want the full couples view? It tags who earns what, prices purchases in your partner's life-hours as well, and splits the essentials income-fairly (not just 50/50).",
     options:[
-      {label:'Yes, set up the couples view', value:'yes', reply:"Nice - I'll switch on Household mode and use your partner's income to estimate their wage. You can fine-tune the names and numbers in Settings anytime."},
-      {label:'Just count it as income', value:'no', reply:"Cool - it's in your budget total either way. You can flip on the couples view later in Settings."}
+      {label:'Yes, set up the couples view', value:'yes', reply:"I'll switch on Household mode and estimate their wage from that income. Names and numbers are all editable in Settings."},
+      {label:'Just count it as income', value:'no', reply:"It's in your budget total either way. You can flip the couples view on later."}
     ]},
   {id:'wage',
     bot:a=> a.acct==='spend'
@@ -6688,51 +6688,51 @@ const INTAKE=[
         ? `Because that side work pays less per hour than your main job, it quietly drags your real rate DOWN - so from here every purchase costs a little more of your life, priced honestly.`
         : `That side work actually lifts your real rate - nice. Either way, I now price everything against the whole truth, not just one paycheck.`;
       return `Here's the honest math${a.name?', '+a.name:''}: your main job runs about ${usd(mr)}/hr. But that side work is hours of your life too - roughly ${sh} ${sh===1?'hour':'hours'} a month for ${usd(sideAmt)}. Blend every hour you sell and your true take-home rate is ${usd(br)}/hr. ${swing} That's the number behind every "hours of your life" figure from here on.`; }},
-  {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
-  {id:'roof', bot:"Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
+  {id:'essIntro', bot:"Now the stuff you cover first. Your essentials, four quick ones. Ballpark each, and skip any that's zero.", input:'continue', showIf:a=>a.acct!=='spend'},
+  {id:'roof', bot:"Roof. Rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
   {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
-    bot:"Before we move on - honestly, how's the place you live actually treating you?",
+    bot:"Honestly, how's the place you live actually treating you?",
     options:[
-      {label:'Love it, staying put', value:'love', reply:"Love that. A place that feels like home is worth protecting - that's the whole point of covering it first."},
+      {label:'Love it, staying put', value:'love', reply:"Then it's worth protecting. That's the whole reason we cover it first."},
       {label:"It's fine for now", value:'fine', reply:"Fine works. We'll keep it funded so it never quietly turns into your biggest stress."},
-      {label:'Outgrowing it', value:'outgrow', reply:"Heard you. When it's time to level up, these numbers will tell you exactly when it's doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
-      {label:'Dreaming of owning', value:'own', reply:"Owning is a big, real one. Hold that thought - the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
+      {label:'Outgrowing it', value:'outgrow', reply:"Noted. These numbers will tell you when the move is actually doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
+      {label:'Dreaming of owning', value:'own', reply:"Big one. Hold that thought, the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
     ]},
-  {id:'food', sum:'Food', bot:"Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'food', sum:'Food', bot:"Food. Groceries and eating out, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
   {id:'foodStyle', input:'reflect', key:'foodStyle', optional:true, showIf:a=>a.acct!=='spend' && a.food>0,
-    bot:"Quick one - what's your normal with food?",
+    bot:"What's your normal with food?",
     options:[
-      {label:'Mostly cook at home', value:'cook', reply:"Cooking's a quiet superpower for your wallet and your health. Respect."},
+      {label:'Mostly cook at home', value:'cook', reply:"Quiet superpower, that one. Respect."},
       {label:'Eat out / takeout a lot', value:'out', reply:a=> iaTone(a)==='savage'
         ? "No judgment - but eating out is where money loves to fucking evaporate. We'll watch it together."
         : "No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
-      {label:'A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
+      {label:'A bit of both', value:'both', reply:"Balanced. We'll just watch that the 'both' doesn't drift into 'mostly out.'"}
     ]},
-  {id:'util', bot:"Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
-  {id:'transport', sum:'Getting around', bot:"Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'util', bot:"Power and Wi-Fi. Electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
+  {id:'transport', sum:'Getting around', bot:"Getting around. Gas, transit, rideshare, the car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
   {id:'commuteFeel', input:'reflect', key:'commuteFeel', optional:true, showIf:a=>a.acct!=='spend' && a.transport>0,
     bot:"How do you feel about getting around day to day?",
     options:[
-      {label:'The commute drains me', value:'drain', reply:"That drain is real - and Freedom Mode will show you exactly how many hours of life it costs. Sometimes that number changes everything."},
+      {label:'The commute drains me', value:'drain', reply:"That drain is real. Freedom Mode will show you what it costs in hours. That number changes minds."},
       {label:"It's fine", value:'fine', reply:"Good - one less thing weighing on you."},
-      {label:'Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
+      {label:'Love my setup', value:'love', reply:"Underrated, actually enjoying how you get around."},
       {label:'Sick of the car payment', value:'payment', reply:a=> iaTone(a)==='savage'
         ? "Car payments are the biggest silent freedom-killer there is. We're going to make that shit impossible to ignore."
         : "Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
   {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend',
-    bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
+    bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount, or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
     chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
     done:"Done - that's my spending →"},
-  {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free ",value:'no'}]},
+  {id:'debt', bot:"Carrying any debt right now? No shame in it. It just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free ",value:'no'}]},
   {id:'debtAmt', bot:"Roughly how much, all in?", input:'money', key:'debtAmt', showIf:a=>a.hasDebt==='yes', placeholder:'e.g. 8000'},
   {id:'debtFeel', input:'reflect', key:'debtFeel', optional:true, showIf:a=>a.hasDebt==='yes' && a.debtAmt>0,
-    bot:"And the debt - honestly, how does carrying it feel right now?",
+    bot:"And honestly, how does carrying it feel?",
     options:[
-      {label:'Treading water', value:'treading', reply:"Treading water is exhausting - but you just named it, and that's the first real step. The Debt planner will show you the way out, priced in your life."},
-      {label:'Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
-      {label:'Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
+      {label:'Treading water', value:'treading', reply:"You just named it, which is the part most people skip. The Debt planner will show you the way out, priced in hours of your life."},
+      {label:'Slowly winning', value:'winning', reply:"Slowly winning is still winning."},
+      {label:'Just getting started', value:'starting', reply:"You're already past the hardest part, which is starting."}
     ]},
   {id:'dream', sum:'Your dream',
     bot:a=>{
@@ -6759,7 +6759,7 @@ const INTAKE=[
     options:[
       {label:'Map my averages now', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
       {label:"I'll track it for real (30 days)", value:'track', reply:"That's the one that doesn't lie. Jot every discretionary buy however's fastest for you - a notebook, the notes app, a receipt in your pocket - and punch it in when you sit down. 30 days and you'll see the truth in your own handwriting. I'll count the days with you."},
-      {label:'Just track as I go', value:'light', reply:"Fair - watching it in real time works too. The quick map and the 30-day challenge are both here whenever you want them."}
+      {label:'Just track as I go', value:'light', reply:"Works too. The map and the 30-day challenge are both here when you want them."}
     ]},
   {id:'deepDive', input:'leak', showIf:a=>a.acct==='spend' && a.deepDive==='deep',
     bot:a=> iaTone(a)==='savage'
