@@ -785,6 +785,18 @@
   .ia-money .ia-cur{color:var(--muted);font-weight:800;font-size:16px;flex:none}
   .intake-dock .ia-money input{background:none;border:none;padding-left:0}
   .intake-dock .ia-money input:focus{border-color:transparent}
+  .traplegend{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
+  .traplegend>summary{cursor:pointer;font-weight:800;font-size:13.5px;padding:12px 0;color:var(--accent);list-style:none}
+  .traplegend>summary::-webkit-details-marker{display:none}
+  .traplegend>summary::before{content:'▸ ';font-size:11px}
+  .traplegend[open]>summary::before{content:'▾ '}
+  .traplegend .tl-lead{font-size:13px;color:var(--text);line-height:1.55;margin:0 0 12px}
+  .tl-row{display:flex;gap:11px;padding:11px 0;border-top:1px solid var(--line)}
+  .tl-ic{font-size:20px;flex:none;width:26px;text-align:center}
+  .tl-n{font-weight:800;font-size:14px}
+  .tl-d{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:3px}
+  .traplegend .tl-row:last-child{padding-bottom:14px}
+  .trap-hint{display:block;font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:5px;font-weight:600;text-transform:none;letter-spacing:0}
   .ia-hint{max-width:640px;margin:7px auto 0;font-size:12.5px;color:var(--muted);line-height:1.45}
   .review{max-width:640px;margin:0 auto 10px}
   .review .rv-h{font-weight:900;font-size:15px}
@@ -1285,16 +1297,13 @@
           <label class="fld">Price $
             <input type="number" id="impAmt" min="0" step="0.01" placeholder="0.00" style="width:120px">
           </label>
-          <label class="fld">How'd it find you?
-            <select id="impTrap">
-              <option value="scroll">📱 Scroll Trap</option>
-              <option value="friction">🍔 Friction Trap</option>
-              <option value="status">🪞 Status Trap</option>
-              <option value="leak">🔄 Leak Trap</option>
-            </select>
+          <label class="fld" style="flex:1;min-width:230px">How'd it find you?
+            <select id="impTrap"></select>
+            <span class="trap-hint">The four ways money gets pulled out of you. Not sure? Pick the closest - it only changes which advice you get back.</span>
           </label>
           <button class="btn primary" id="impRun">Scan target</button>
         </div>
+        <details class="traplegend" id="trapLegend"><summary>What are the four traps?</summary><div id="trapLegendBody"></div></details>
         <div id="impResult"></div>
         <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">📌 Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
@@ -1677,7 +1686,8 @@
       </div>
       <div class="row" style="margin-top:12px">
         <label class="fld" style="flex:1">How'd it find you?
-          <select id="mTrap"><option value="scroll">📱 Scroll Trap</option><option value="friction">🍔 Friction Trap</option><option value="status">🪞 Status Trap</option><option value="leak">🔄 Leak Trap</option></select>
+          <select id="mTrap"></select>
+          <span class="trap-hint">Not sure? Pick the closest - it only changes which advice you get back.</span>
         </label>
         <button class="btn primary" id="mRun" style="flex:1;min-width:150px">Scan target →</button>
       </div>
@@ -4477,12 +4487,34 @@ function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDa
 /* ============================================================
    ANTI-TRAP ENGINE - traps, tactical copy, cooling vault
    ============================================================ */
+/* The four traps are the app's own vocabulary, so every place that ASKS the user
+   to pick one has to define it in the same breath - naming a thing you have never
+   explained is just jargon. `pick` is the plain-words version used in the dropdowns. */
 const TRAPS=[
-  {v:'scroll', icon:'📱', label:'Scroll Trap', sub:'An ad or feed served it to you'},
-  {v:'friction', icon:'🍔', label:'Friction Trap', sub:"Convenience because you're tired"},
-  {v:'status', icon:'🪞', label:'Status Trap', sub:"Clout or an upgrade you don't need"},
-  {v:'leak', icon:'🔄', label:'Leak Trap', sub:'Trial, auto-renew, micro-sub'}
+  {v:'scroll', icon:'📱', label:'Scroll Trap', sub:'An ad or feed served it to you',
+   pick:'an ad or a feed put it in front of me'},
+  {v:'friction', icon:'🍔', label:'Friction Trap', sub:"Convenience because you're tired",
+   pick:'I was tired or busy and paid for the easy option'},
+  {v:'status', icon:'🪞', label:'Status Trap', sub:"Clout or an upgrade you don't need",
+   pick:"it's about how it looks to other people"},
+  {v:'leak', icon:'🔄', label:'Leak Trap', sub:'Trial, auto-renew, micro-sub',
+   pick:'small and recurring - a sub, a trial, an auto-renew'}
 ];
+function trapOptions(sel){ return TRAPS.map(t=>`<option value="${t.v}"${t.v===sel?' selected':''}>${t.icon} ${t.label} - ${t.pick}</option>`).join(''); }
+/* fill both pickers from one source, so the wording can never drift apart */
+function fillTrapPickers(){
+  ['impTrap','mTrap'].forEach(id=>{ const el=document.getElementById(id); if(el){ const cur=el.value||'scroll'; el.innerHTML=trapOptions(cur); } });
+  const leg=document.getElementById('trapLegendBody');
+  if(leg) leg.innerHTML=`<p class="tl-lead">Four ways money gets pulled out of you. They're not character flaws - they're designs, built by people who are paid to be good at this. Naming which one you're in is how you stop arguing with yourself and start seeing the mechanism.</p>`
+    +TRAPS.map(t=>`<div class="tl-row"><span class="tl-ic">${t.icon}</span><div><div class="tl-n">${escapeHtml(t.label)}</div><div class="tl-d">${escapeHtml(TRAP_MEANS[t.v])}</div></div></div>`).join('');
+}
+/* the full explanation, for the legend - longer than the dropdown one-liners */
+const TRAP_MEANS={
+  scroll:"You weren't looking for it - it was served to you. An ad, a feed, a suggested buy, a creator's link. The want didn't exist ten seconds ago; something engineered it. Tell: you can name the app you were in when you found it.",
+  friction:"You paid extra to make something easier because you were tired, busy, hungry or fried. Delivery instead of cooking, the closer pricier option, one-tap checkout. The convenience is real - so is the markup. Tell: an hour earlier, you'd have done it yourself.",
+  status:"The purchase is doing a job for how you're seen - keeping up, looking successful, the upgrade nobody asked for. Tell: you can picture who you'd want to notice it.",
+  leak:"Small, recurring, automatic. Subscriptions, trials that converted, memberships you forgot, micro-charges. Priced monthly so you never do the x12. Tell: you'd have to check your statement to be sure you still pay it."
+};
 const TRAP_RESPONSES={
   scroll:{
     genz:{clean:"That ad found you on purpose - the algorithm clocked your weak spot.",blunt:"Meta ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log the hell off, bestie."},
@@ -6218,7 +6250,7 @@ function boot(){
   renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
-  renderFreedomToggle(); fillTrueRate();
+  renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
   renderBackupNote();
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
