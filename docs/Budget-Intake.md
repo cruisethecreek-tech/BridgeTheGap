@@ -20,6 +20,14 @@ has no answer (switching "just track spending" to the full budget), the flow goe
 there first instead of returning early. `renderReview`, `iaSummaryRows`,
 `iaEditStep`, `iaFirstUnanswered`; steps opt in by carrying a short `sum` label.
 
+**Back is available from the second step onward.** `iaBackTarget` walks backwards
+to the last step the user actually answered, stepping over informational beats
+(intro, continue, finish, review) which are not questions. The age gate is a
+valid target - getting it wrong sets the wrong voice for the whole conversation,
+so it has to be undoable. Only the very first screen has no Back, because there
+is nothing behind it. `iaCanBack()` is the single source of truth, so every dock
+that renders a Back button agrees with what `iaBack()` will actually do.
+
 Money questions show a **`$` prefix inside the field** and a plain-words hint under
 it ("Dollars per month, after taxes - what actually lands in your account. Type 3200
 for $3,200."), because a bare `e.g. 3200` placeholder names neither the unit nor the

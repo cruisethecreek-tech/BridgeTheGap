@@ -1017,7 +1017,25 @@
   .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
   .rec.invest .am{color:var(--accent)}
   .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
-  .rec .edit,.rec .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0}
+  .dy-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.dy-chip{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:11px;padding:9px 13px;font-weight:700;font-size:14px;cursor:pointer}
+.dy-chip.on{border-color:var(--accent);background:rgba(230,178,77,.14);color:var(--accent)}
+.dy-ask{margin:10px 0}
+.dy-text{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:13px 14px;font:inherit;font-size:15px;line-height:1.55;resize:vertical}
+.dy-text:focus{outline:none;border-color:var(--accent)}
+.dy-sugbox{margin-top:16px;border:1px solid var(--accent);border-radius:14px;padding:14px;background:rgba(230,178,77,.07)}
+.dy-sug-h{font-weight:800;font-size:13.5px;color:var(--accent);margin-bottom:10px}
+.dy-sug{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:12px;margin-top:9px}
+.dy-sug-t{font-size:14.5px;line-height:1.5}
+.dy-sug .dy-cat{margin-top:9px;width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 10px;font:inherit;font-size:14px}
+.dy-sug-a{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.dy-entry{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 34px 12px 14px;margin-top:10px}
+.dy-e-head{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:6px}
+.dy-e-t{font-size:14.5px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.dy-acted{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);font-size:12.5px;font-weight:700;color:var(--good)}
+.dy-e-x{position:absolute;top:9px;right:9px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px}
+.dy-e-x:hover{color:var(--bad)}
+.rec .edit,.rec .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 4px;flex-shrink:0}
 .rec .edit:hover{color:var(--accent)}
 .rec.editing{border-color:var(--accent);background:rgba(230,178,77,.08)}
 .rec .del{background:none;border:none;color:var(--muted);cursor:pointer}
@@ -1142,6 +1160,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <button class="tab" data-view="tx"><span class="t-ic">🧾</span><span class="t-l">Track</span></button>
         <button class="tab" data-view="debt"><span class="t-ic">💳</span><span class="t-l">Debt</span></button>
         <button class="tab" data-view="learn"><span class="t-ic">📖</span><span class="t-l">Learn</span></button>
+        <button class="tab" data-view="diary"><span class="t-ic">📔</span><span class="t-l">Diary</span></button>
         <button class="tab" data-view="settings"><span class="t-ic">⚙️</span><span class="t-l">Settings</span></button>
       </span>
       <div class="tabrow">
@@ -1592,6 +1611,26 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
     </section>
 
+    <!-- ============ DIARY ============ -->
+    <section class="view" id="view-diary">
+      <div class="panel">
+        <h2>📔 Money diary</h2>
+        <p class="sub">Write what actually happened, in your own words. The wins, the hard ones, what is coming. Nothing here is graded - and anything that sounds like money, I will offer to log for you.</p>
+        <div class="dy-chips" id="diaryKinds"></div>
+        <div id="diaryAsk" class="dy-ask"></div>
+        <textarea id="diaryText" class="dy-text" rows="4" placeholder="However it comes out…"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="diarySave">Save entry</button>
+          <span class="sub" id="diaryHint" style="font-size:12.5px"></span>
+        </div>
+        <div id="diarySuggest"></div>
+      </div>
+      <div class="panel">
+        <h2>🧵 Your story so far</h2>
+        <div id="diaryList"></div>
+      </div>
+    </section>
+
     <!-- ============ SETTINGS ============ -->
     <section class="view" id="view-settings">
       <div class="panel">
@@ -1693,6 +1732,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <button class="btn ghost" id="encRestoreBtn">🔓 Restore from backup</button>
             <input type="file" id="encRestoreFile" accept=".acct,application/json" class="hide">
           </div>
+          <label class="fld" style="margin-top:12px">Remind me to back up
+            <select id="autoBackupSel"></select>
+          </label>
+          <p class="sub" style="margin-top:8px;font-size:12.5px">A web app cannot write a file to your device on its own - no browser allows it, which is the same rule that stops any page dropping files on your machine. So this watches the clock and asks; saving is one tap. <span id="autoBackupWhen"></span></p>
         </div>
         <div class="databox">
           <div class="db-head">🪜 Interface depth</div>
@@ -2028,7 +2071,8 @@ function defaultState(){
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
-           investReturn:7, investYears:10, theme:'auto' };
+           investReturn:7, investYears:10, theme:'auto',
+           autoBackup:'weekly', backupNagDay:'', diary:[] };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -2052,6 +2096,10 @@ function normalizeState(s){
   // A recurring paycheck posts backdated to its anchor (often the 1st). That is the
   // app writing history on your behalf, not you tracking - so it must not drag the
   // origin back either, or a budget started on the 18th scores 17 days of fake green.
+  if(!Array.isArray(s.diary)) s.diary=[];
+  s.diary=s.diary.filter(e=>e&&e.id&&typeof e.text==='string').map(e=>({
+    id:e.id, date:e.date||todayStr(), ts:e.ts||'', kind:(['win','hard','plan','note'].includes(e.kind)?e.kind:'note'),
+    prompt:e.prompt||'', text:String(e.text), acted:Array.isArray(e.acted)?e.acted:[] }));
   const dates=genuineTxDates(s);
   const day1d=(s.day1&&s.day1.date)||'';
   const origin=[dates[0],day1d].filter(Boolean).sort()[0];
@@ -2719,7 +2767,7 @@ function renderIntensity(){
 function renderRegister(){ document.querySelectorAll('#register button').forEach(b=>b.classList.toggle('on',b.dataset.reg===(state.register||'middle'))); }
 
 /* ---------- tabs ---------- */
-const MORE_VIEWS=['impulse','tx','debt','learn','settings'];   // Shield moved into More; its ACTION is the hub's hero row
+const MORE_VIEWS=['impulse','tx','debt','learn','diary','settings'];   // Shield moved into More; its ACTION is the hub's hero row
 let currentTab='home';
 function activateTab(name,fromHistory){
   currentTab=name;
@@ -2738,6 +2786,7 @@ function activateTab(name,fromHistory){
   if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
   if(name==='impulse') renderVault();
+  if(name==='diary') renderDiary();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
@@ -4261,11 +4310,12 @@ function lessonStep(d){ lessonTo(state.lesson+d, d); }
 
 
 /* ---------- data export / import / reset ---------- */
-document.getElementById('exportBtn').addEventListener('click',()=>{
+function exportData(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='accountability-budget-backup.json'; a.click(); URL.revokeObjectURL(a.href);
-});
+  a.download='accountability-budget-'+todayStr()+'.json'; a.click(); URL.revokeObjectURL(a.href);
+}
+document.getElementById('exportBtn').addEventListener('click',exportData);
 document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f) return; const r=new FileReader();
@@ -4304,7 +4354,8 @@ async function encryptBackup(){
     const blob=new Blob([JSON.stringify(envelope,null,2)],{type:'application/json'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
     a.download='accountability-backup-'+state.activeMonth+'.acct'; a.click(); URL.revokeObjectURL(a.href);
-    state.lastBackup=todayStr(); save(); renderBackupNote();
+    state.lastBackup=todayStr(); state.backupNagDay=todayStr(); save();   // just answered - do not ask again today
+    renderBackupNote(); renderAutoBackup(); renderDataGuard();
   }catch(e){ alert('Could not create the backup: '+e.message); }
 }
 async function restoreBackup(file){
@@ -4330,6 +4381,23 @@ async function restoreBackup(file){
   }catch(e){ alert('Could not read that backup file.'); } };
   r.readAsText(file);
 }
+function renderAutoBackup(){
+  const sel=document.getElementById('autoBackupSel');
+  if(sel){
+    if(!sel.options.length) sel.innerHTML=BACKUP_FREQS.map(f=>`<option value="${f.k}">${escapeHtml(f.label)}</option>`).join('');
+    sel.value=backupFreq().k;
+  }
+  const when=document.getElementById('autoBackupWhen');
+  if(when){
+    if(backupFreq().k==='off') when.textContent='Reminders are off.';
+    else if(!state.lastBackup) when.textContent='No backup saved yet.';
+    else { const a=backupAgeDays(); when.textContent='Last backup '+(a===0?'today':a+' day'+(a===1?'':'s')+' ago')+'.'; }
+  }
+}
+(function(){
+  const sel=document.getElementById('autoBackupSel');
+  if(sel) sel.addEventListener('change',()=>{ state.autoBackup=sel.value; state.backupNagDay=''; save(); renderAutoBackup(); renderDataGuard(); });
+})();
 function renderBackupNote(){
   const el=document.getElementById('backupNote'); if(!el) return;
   const busy=(state.transactions&&state.transactions.length)||0;
@@ -5317,7 +5385,7 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 /* Theme: 'auto' follows the phone; 'light'/'dark' are explicit overrides. Auto is
@@ -5384,6 +5452,248 @@ function openFreedomHelp(){
   const ov=document.getElementById('ftHelp');
   if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
 })();
+/* ============================================================
+   MONEY DIARY
+   The budget asks for numbers; people think in stories. An entry is written in
+   plain words, and the app reads it for money facts and OFFERS to log them -
+   never writes anything on its own. Reading is deterministic pattern matching,
+   done on-device like everything else: no model, no network, nothing to phone
+   home with. When it is unsure it says so and asks rather than guessing.
+   ============================================================ */
+const DIARY_KINDS=[
+  {k:'win',  ic:'🎉', label:'A win',            prompt:"What went right? Even a small one counts - it is evidence you can do this."},
+  {k:'hard', ic:'😮‍💨', label:'A hard one',   prompt:"What happened? No judgment here. Naming it is how it stops running the show."},
+  {k:'plan', ic:'🗓️', label:"Something coming up", prompt:"What is on the horizon? Anything you can see coming is something we can fund early."},
+  {k:'note', ic:'✍️', label:'Just writing',   prompt:"However it comes out. This is yours."}
+];
+/* Words that tell us which direction money moved. Order matters: the longest,
+   most specific phrases are tested first so "got paid" never reads as "paid". */
+const DIARY_IN=/\b(got paid|get paid|paid me|came in|deposit(?:ed)?|refund(?:ed)?|reimburs\w*|rebate|raise|bonus|commission|tip(?:s|ped)?|sold|selling|earned|made|profit|cashed|side gig|payout|settlement|inherit\w*|won)\b/i;
+const DIARY_OUT=/\b(spent|spend|paid|pay|paying|bought|buy|buying|cost|costs|charged|blew|dropped|owe[ds]?|bill(?:ed)?|repair(?:s|ed)?|fix(?:ed|ing)?|replace[d]?|renew(?:ed|al)?|fee|fine|ticket|copay|deductible|premium)\b/i;
+const DIARY_SAVE=/\b(saved|save|saving|put away|set aside|stashed|socked away|banked)\b/i;
+const DIARY_FUTURE=/\b(next (?:week|month|year|friday|monday|payday)|coming up|upcoming|will|going to|gonna|plan(?:ning)? to|need to|have to|due|soon|by (?:the )?\d|before)\b/i;
+const DIARY_PAST=/\b(yesterday|last (?:week|month|night|year)|today|this (?:morning|week|month|afternoon|evening)|ago|already|just)\b/i;
+/* Guesses only, and only when the budget has nothing closer. */
+const DIARY_CATS=[
+  {re:/\b(gas|fuel|petrol|diesel|uber|lyft|transit|bus fare|oil change|tires?|car (?:repair|payment|note)|mechanic|parking|toll)\b/i, hint:'Getting Around'},
+  {re:/\b(grocer\w*|food|takeout|take-?out|dinner|lunch|breakfast|restaurant|doordash|ubereats|coffee|snacks?|walmart|meijer|kroger|aldi)\b/i, hint:'Food'},
+  {re:/\b(rent|mortgage|landlord|lease|hoa|property tax)\b/i, hint:'Roof'},
+  {re:/\b(electric\w*|water bill|gas bill|internet|wi-?fi|phone bill|utilit\w*|cable|trash)\b/i, hint:'Power & Wi-Fi'},
+  {re:/\b(doctor|dentist|meds?|medication|prescription|copay|therapy|hospital|clinic|vet)\b/i, hint:'Health'},
+  {re:/\b(netflix|spotify|hulu|subscription|membership|gym|prime|disney)\b/i, hint:'Memberships'},
+  {re:/\b(daycare|school|tuition|books?|course|class)\b/i, hint:'Kids & School'}
+];
+/* $1,200 · 1200 dollars · 45 bucks · $5k · 12.50 - the plain integer case is
+   deliberately last so a bare year or house number does not become money. */
+function diaryAmounts(text){
+  const out=[]; const seen=new Set();
+  const push=(val,idx,raw)=>{ if(!(val>0)||val>10000000) return; const k=idx+':'+val; if(seen.has(k)) return; seen.add(k); out.push({amount:Math.round(val*100)/100, at:idx, raw}); };
+  let m;
+  const re=/(?:\$\s?)?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(k\b|dollars?|bucks?)?/gi;
+  while((m=re.exec(text))!==null){
+    const hasSign = text.slice(Math.max(0,m.index-2), m.index+1).includes('$');
+    const unit=(m[3]||'').toLowerCase();
+    if(!hasSign && !unit) {
+      // a bare number only counts as money next to a money verb, and never if it
+      // looks like a date, a time, a year, or a percentage
+      const around=text.slice(Math.max(0,m.index-28), m.index+m[0].length+16);
+      if(/\b(19|20)\d\d\b/.test(m[0])) continue;
+      if(/\d\s*(?:%|am|pm|st|nd|rd|th|:|\/)/i.test(text.slice(m.index, m.index+m[0].length+3))) continue;
+      if(!(DIARY_OUT.test(around)||DIARY_IN.test(around)||DIARY_SAVE.test(around))) continue;
+    }
+    let val=parseFloat((m[1]||'').replace(/,/g,''));
+    if(m[2]) val=parseFloat((m[1]||'').replace(/,/g,'')+'.'+m[2]);
+    if(unit==='k') val*=1000;
+    push(val, m.index, m[0].trim());
+  }
+  return out;
+}
+const DIARY_REACH=90;
+function diaryNearest(text, re, at){
+  const r=new RegExp(re.source, re.flags.includes('g')?re.flags:re.flags+'g');
+  let best=Infinity, m;
+  while((m=r.exec(text))!==null){
+    const d=Math.abs(m.index-at); if(d<best) best=d;
+    if(r.lastIndex===m.index) r.lastIndex++;
+  }
+  return best>DIARY_REACH ? Infinity : best;
+}
+function diaryWhen(text, at){
+  const f=diaryNearest(text,DIARY_FUTURE,at), p=diaryNearest(text,DIARY_PAST,at);
+  if(f===Infinity) return 'past';
+  return f<=p ? 'future' : 'past';   // the marker nearest the money wins
+}
+function diaryDate(text, at){
+  // Only date markers near THIS amount count - otherwise one "yesterday" stamps
+  // every figure in the entry, including next month's plans.
+  const t=(at==null?text:text.slice(Math.max(0,at-DIARY_REACH), at+DIARY_REACH)).toLowerCase();
+  const d=new Date(todayStr()+'T00:00:00');
+  if(/\byesterday\b|\blast night\b/.test(t)){ d.setDate(d.getDate()-1); return localYMD(d); }
+  const dom=t.match(/\bon the (\d{1,2})(?:st|nd|rd|th)?\b/);
+  if(dom){ const day=Math.min(28,Math.max(1,+dom[1])); return state.activeMonth+'-'+String(day).padStart(2,'0'); }
+  const ago=t.match(/\b(\d{1,2})\s+days? ago\b/);
+  if(ago){ d.setDate(d.getDate()-Math.min(60,+ago[1])); return localYMD(d); }
+  return todayStr();
+}
+/* Prefer a category the user already has; fall back to a keyword hint; else null
+   so the picker opens on "Uncategorized" instead of inventing something. */
+function diaryCategory(text, at){
+  const scope = (at==null) ? text : text.slice(Math.max(0,at-45), at+45);
+  const words=(scope.toLowerCase().match(/[a-z]{3,}/g)||[]);
+  let best=null, bestScore=0;
+  (state.categories||[]).forEach(c=>{
+    const parts=(c.name||'').toLowerCase().match(/[a-z]{3,}/g)||[];
+    let sc=0; parts.forEach(p=>{ if(words.includes(p)) sc+=2; else if(words.some(w=>w.startsWith(p.slice(0,4)))) sc+=1; });
+    if(sc>bestScore){ bestScore=sc; best=c.id; }
+  });
+  if(best) return best;
+  for(const g of DIARY_CATS){
+    if(g.re.test(scope) || (at!=null && g.re.test(text) && !DIARY_CATS.some(o=>o!==g && o.re.test(scope)))){
+      const hit=(state.categories||[]).find(c=>(c.name||'').toLowerCase().includes(g.hint.toLowerCase().split(' ')[0]));
+      if(hit) return hit.id;
+      return {newName:g.hint};
+    }
+  }
+  return null;
+}
+function diaryScan(text){
+  const t=(text||'').trim(); if(!t) return [];
+  return diaryAmounts(t).map(a=>{
+    const around=t.slice(Math.max(0,a.at-60), a.at+60);
+    const signed = /\$/.test(a.raw);
+    const dir = DIARY_IN.test(around) ? 'in'
+      : (DIARY_SAVE.test(around) && !DIARY_OUT.test(around)) ? 'save'
+      : DIARY_OUT.test(around) ? 'out'
+      : signed ? 'out'          // a written dollar figure with no income word is money going out
+      : null;                   // a bare number with no verb stays unread rather than guessed
+    if(!dir) return null;
+    const when=diaryWhen(t, a.at);
+    return { amount:a.amount, dir, when, date:diaryDate(t,a.at), cat: dir==='out'?diaryCategory(t,a.at):null, raw:a.raw };
+  }).filter(Boolean);
+}
+
+/* ---------- Diary: writing, and turning words into offers ---------- */
+let diaryKind='note', diaryPending=null;
+function diaryPrompt(k){
+  const kind=DIARY_KINDS.find(x=>x.k===k)||DIARY_KINDS[3];
+  const name=(state.intake&&state.intake.name)?', '+state.intake.name:'';
+  const last=(state.diary||[])[0];
+  const gap=last?daysSince(last.date):Infinity;
+  if(gap===0) return "Back again"+name+"? Add whatever else is on your mind.";
+  if(gap<=2 && k==='note') return "How has it gone since you last wrote"+name+"?";
+  return kind.prompt;
+}
+function renderDiaryForm(){
+  const chips=document.getElementById('diaryKinds');
+  if(chips) chips.innerHTML=DIARY_KINDS.map(k=>`<button class="dy-chip${k.k===diaryKind?' on':''}" data-dk="${k.k}">${k.ic} ${escapeHtml(k.label)}</button>`).join('');
+  const ask=document.getElementById('diaryAsk');
+  if(ask) ask.innerHTML=`<div class="bub bot" style="max-width:100%">${escapeHtml(diaryPrompt(diaryKind))}</div>`;
+  const hint=document.getElementById('diaryHint');
+  if(hint) hint.textContent='Mention an amount and I will offer to log it.';
+  if(chips) chips.querySelectorAll('button[data-dk]').forEach(b=>b.onclick=()=>{ diaryKind=b.dataset.dk; renderDiaryForm(); document.getElementById('diaryText')?.focus(); });
+}
+function diaryDirWord(d){ return d==='in'?'came in':d==='save'?'set aside':'went out'; }
+function diarySuggestHTML(f,i){
+  const isNew = f.cat && typeof f.cat==='object';
+  const catTxt = f.dir!=='out' ? '' : isNew ? `a new <b>${escapeHtml(f.cat.newName)}</b> category`
+    : f.cat ? `<b>${escapeHtml(catName(f.cat))}</b>` : '<b>Uncategorized</b>';
+  const head = f.when==='future'
+    ? `<b>${usd(f.amount)}</b> coming up. Start a goal so it is funded before it lands?`
+    : f.dir==='in' ? `<b>${usd(f.amount)}</b> ${diaryDirWord(f.dir)}. Log it as income?`
+    : f.dir==='save' ? `<b>${usd(f.amount)}</b> ${diaryDirWord(f.dir)}. Log it toward a goal?`
+    : `<b>${usd(f.amount)}</b> ${diaryDirWord(f.dir)} on ${f.date===todayStr()?'today':f.date}. Log it to ${catTxt}?`;
+  const catSel = (f.dir==='out' && f.when!=='future')
+    ? `<select class="dy-cat" data-i="${i}">${(state.categories||[]).map(c=>`<option value="${c.id}"${(!isNew&&f.cat===c.id)?' selected':''}>${escapeHtml(catName(c.id))}</option>`).join('')}<option value="">Uncategorized</option>${isNew?`<option value="__new" selected>+ New: ${escapeHtml(f.cat.newName)}</option>`:''}</select>` : '';
+  return `<div class="dy-sug" data-sug="${i}">
+    <div class="dy-sug-t">${head}</div>
+    ${catSel}
+    <div class="dy-sug-a"><button class="btn sm primary" data-yes="${i}">Yes, log it</button><button class="btn sm ghost" data-no="${i}">Not this one</button></div>
+  </div>`;
+}
+function renderDiarySuggest(){
+  const box=document.getElementById('diarySuggest'); if(!box) return;
+  if(!diaryPending || !diaryPending.finds.length){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="dy-sugbox"><div class="dy-sug-h">I read ${diaryPending.finds.length} thing${diaryPending.finds.length>1?'s':''} in that. Nothing is logged unless you say so.</div>${diaryPending.finds.map(diarySuggestHTML).join('')}</div>`;
+  box.querySelectorAll('button[data-yes]').forEach(b=>b.onclick=()=>diaryApply(+b.dataset.yes));
+  box.querySelectorAll('button[data-no]').forEach(b=>b.onclick=()=>diaryDrop(+b.dataset.no));
+}
+function diaryDrop(i){
+  if(!diaryPending) return;
+  diaryPending.finds.splice(i,1);
+  renderDiarySuggest();
+}
+function diaryApply(i){
+  if(!diaryPending) return;
+  const f=diaryPending.finds[i]; if(!f) return;
+  const entry=(state.diary||[]).find(e=>e.id===diaryPending.entryId);
+  const note=(diaryPending.text||'').slice(0,60);
+  let did=null;
+  if(f.when==='future' || f.dir==='save'){
+    const nm = f.when==='future' ? (note||'Coming up') : 'Savings';
+    let g=(state.goals||[]).find(x=>x.name.toLowerCase()===nm.toLowerCase());
+    if(!g){ g={id:uid(),name:nm,target:f.amount,saved:f.dir==='save'?f.amount:0,src:'diary'}; state.goals.push(g); }
+    else { if(f.dir==='save') g.saved=(+g.saved||0)+f.amount; else g.target=Math.max(+g.target||0,f.amount); }
+    did={what:f.dir==='save'?'saved to goal':'goal', id:g.id, amount:f.amount, label:g.name};
+  } else if(f.dir==='in'){
+    const tx={id:uid(),type:'income',amount:f.amount,source:note||'Income',date:f.date,note:'Diary'};
+    state.transactions.push(tx);
+    did={what:'income', id:tx.id, amount:f.amount, label:tx.source};
+  } else {
+    const sel=document.querySelector(`.dy-cat[data-i="${i}"]`);
+    let catId = sel ? sel.value : (typeof f.cat==='string'?f.cat:'');
+    if(catId==='__new') catId=findOrCreateCat(f.cat.newName).id;
+    const tx={id:uid(),type:'expense',amount:f.amount,catId:catId||null,date:f.date,note:note||'Diary'};
+    state.transactions.push(tx);
+    did={what:'expense', id:tx.id, amount:f.amount, label:catId?catName(catId):'Uncategorized'};
+  }
+  if(entry){ entry.acted=entry.acted||[]; entry.acted.push(did); }
+  diaryPending.finds.splice(i,1);
+  save();
+  renderDiarySuggest(); renderDiaryList();
+  renderBudget(); renderTx(); renderGoals(); renderHome();
+  toast('Logged '+usd(did.amount)+' - '+did.label+'.');
+}
+function diaryCommit(){
+  const ta=document.getElementById('diaryText'); if(!ta) return;
+  const text=(ta.value||'').trim();
+  if(!text){ toast('Write something first - even one line.'); ta.focus(); return; }
+  const now=new Date();
+  const entry={ id:uid(), date:todayStr(), ts:localYMD(now)+'T'+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),
+                kind:diaryKind, prompt:diaryPrompt(diaryKind), text, acted:[] };
+  state.diary=state.diary||[]; state.diary.unshift(entry);
+  save();
+  ta.value='';
+  const finds=diaryScan(text);
+  diaryPending = finds.length ? { entryId:entry.id, text, finds } : null;
+  renderDiaryForm(); renderDiarySuggest(); renderDiaryList();
+  if(!finds.length) toast('Saved to your story.');
+}
+function renderDiaryList(){
+  const box=document.getElementById('diaryList'); if(!box) return;
+  const list=(state.diary||[]);
+  if(!list.length){ box.innerHTML='<div class="empty">Nothing written yet. The first entry is always the hardest - one line will do.</div>'; return; }
+  box.innerHTML=list.map(e=>{
+    const k=DIARY_KINDS.find(x=>x.k===e.kind)||DIARY_KINDS[3];
+    const when=new Date(e.date+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const time=(e.ts||'').slice(11);
+    const acted=(e.acted||[]).length
+      ? `<div class="dy-acted">${e.acted.map(a=>`✓ logged ${escapeHtml(usd(a.amount))} · ${escapeHtml(a.label||a.what)}`).join('<br>')}</div>` : '';
+    return `<div class="dy-entry">
+      <div class="dy-e-head"><span class="dy-e-k">${k.ic} ${escapeHtml(k.label)}</span><span class="dy-e-d">${when}${time?' · '+time:''}</span></div>
+      <div class="dy-e-t">${escapeHtml(e.text)}</div>${acted}
+      <button class="dy-e-x" data-dydel="${e.id}" title="Delete entry">✕</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button[data-dydel]').forEach(b=>b.onclick=()=>{
+    if(!confirm('Delete this entry? Anything it logged stays in your budget.')) return;
+    state.diary=state.diary.filter(x=>x.id!==b.dataset.dydel); save(); renderDiaryList();
+  });
+}
+function renderDiary(){ renderDiaryForm(); renderDiarySuggest(); renderDiaryList(); }
+(function(){
+  const s=document.getElementById('diarySave'); if(s) s.addEventListener('click',diaryCommit);
+})();
+
 function applyTheme(){
   const m=themeMode(), light=resolvedTheme()==='light';
   document.documentElement.setAttribute('data-theme', light?'light':'dark');
@@ -6240,9 +6550,21 @@ function pruneStaleAnswers(){
    is stamped with the step that produced it, so Back can remove exactly the
    bubbles from that step onward - no transcript desync however many bubbles a
    step emitted (reflect replies, follow-ups, continue-step intros). */
-function iaBack(){
+function iaBackTarget(){
   let p=iaStep-1;
-  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='gate'||s.input==='review'){ p--; continue; } break; }   // gate too: its skip button abandons the whole intake - never a Back target
+  while(p>=0){ const s=INTAKE[p];
+    if(s.showIf && !s.showIf(iaAns)){ p--; continue; }
+    // informational beats are not questions, so Back steps over them to the last
+    // thing the user actually answered. The age gate IS answerable and is now a
+    // valid target: getting it wrong set the wrong voice for the whole chat.
+    if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='review'){ p--; continue; }
+    return p;
+  }
+  return -1;
+}
+function iaCanBack(){ return iaBackTarget()>=0; }
+function iaBack(){
+  const p=iaBackTarget();
   if(p<0) return;
   const log=document.getElementById('intakeLog');
   [...log.children].forEach(b=>{ if(+(b.dataset.st??-1)>=p) b.remove(); });
@@ -6340,12 +6662,17 @@ function renderReview(s){
 function renderIntakeDock(s){
   const dock=document.getElementById('intakeDock');
   if(s.input==='start'){
-    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaGo">${escapeHtml(s.cta)}</button></div><button class="intake-skip" id="iaSkip">${escapeHtml(s.skip)}</button>`;
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaGo">${escapeHtml(s.cta)}</button></div>`
+      +`<div class="intake-underrow">${iaCanBack()?'<button class="intake-skip" id="iaBack">← Back</button>':''}<button class="intake-skip" id="iaSkip">${escapeHtml(s.skip)}</button></div>`;
     document.getElementById('iaGo').onclick=iaAdvance;
+    { const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack; }
     document.getElementById('iaSkip').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
-  if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
+  if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`+(iaCanBack()?`<div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`:'');
+    document.getElementById('iaCont').onclick=iaAdvance;
+    { const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack; }
+    return; }
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
   if(s.input==='review'){ renderReview(s); return; }
   if(s.input==='loop'){ renderLoop(s); return; }
@@ -6359,7 +6686,7 @@ function renderIntakeDock(s){
     document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
-  const canBack = iaStep>3;   // Back appears from the name step onward (index 4+, after gate/tone/situation/intro) - its first target is situation, since intro/gate are skipped
+  const canBack = iaCanBack();
   const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
@@ -6472,7 +6799,7 @@ function runIntakeHelper(s){
 function renderComfortStep(s){
   const dock=document.getElementById('intakeDock');
   const picked=new Set((iaAns.comfort||[]).map(x=>x.toLowerCase()));
-  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const whyBtn = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
   const draw=()=>{
     dock.innerHTML=`<div class="intake-chips">${COMFORT_SEEDS.map((c,i)=>`<button data-ci="${i}" class="${picked.has(c.toLowerCase())?'picked':''}">${picked.has(c.toLowerCase())?'✓ ':'+ '}${escapeHtml(c)}</button>`).join('')}</div>`
@@ -6501,7 +6828,7 @@ function renderComfortStep(s){
 }
 function renderReflect(s){
   const dock=document.getElementById('intakeDock');
-  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const whyBtn = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
   dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-ri="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`
     +`<div class="intake-underrow">${whyBtn}${s.optional?'<button class="intake-skip" id="iaReflectSkip">Skip</button>':''}${back}</div>`;
@@ -6538,7 +6865,7 @@ function renderLoop(s){
   const used=new Set(arr.map(x=>x.name.toLowerCase()));
   const chips=s.chips.filter(c=>c.custom||!used.has(c.name.toLowerCase()));
   const total=arr.reduce((sum,x)=>sum+(+x.amount||0),0);
-  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const running = arr.length ? `<div class="loop-sum">Added: ${arr.map(x=>escapeHtml(x.name)+' '+usd(x.amount)).join(' · ')} <b>= ${usd(total)}</b></div>` : '';
   dock.innerHTML=running
     +`<div class="intake-chips">${chips.map((c,i)=>`<button data-ci="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>`
@@ -6769,7 +7096,7 @@ function boot(){
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
   renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
-  renderBackupNote();
+  renderBackupNote(); renderAutoBackup();
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
@@ -6789,20 +7116,55 @@ const HOME_COPY={
   mature:{ eye:"Zero-based budgeting · straight talk", title:"Give every dollar a purpose.", sub:"Budget to zero, weigh every purchase, and fund what matters - clear, honest, no runaround.", cta:"Build my plan →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Cover these before anything else - they're the foundation the rest stands on." }
 };
 let dataGuardOff=false;
+/* ============================================================
+   BACKUP REMINDERS
+   A browser cannot write a file to your disk on its own - there is no API for
+   it, by design, or any page could drop files on your machine. So "auto backup"
+   here means the app WATCHES the clock and asks; the save itself is one tap.
+   Anything else would be a promise the platform will not keep.
+   ============================================================ */
+const BACKUP_FREQS=[
+  {k:'off',     label:'Never remind me',  days:0},
+  {k:'launch',  label:'Every day I use the app', days:0},
+  {k:'weekly',  label:'Weekly (recommended)', days:7},
+  {k:'monthly', label:'Monthly',          days:30}
+];
+function backupFreq(){ const k=state.autoBackup; return BACKUP_FREQS.find(f=>f.k===k)||BACKUP_FREQS[2]; }
+function daysSince(ymd){ if(!ymd) return Infinity; const a=new Date(ymd+'T00:00:00'), b=new Date(todayStr()+'T00:00:00'); return Math.round((b-a)/86400000); }
+function backupAgeDays(){ return daysSince(state.lastBackup); }
+function backupDue(){
+  const f=backupFreq(); if(f.k==='off') return false;
+  if(!state.lastBackup) return true;
+  return backupAgeDays() >= (f.k==='launch' ? 0 : f.days);
+}
+function backupNagHidden(){ return state.backupNagDay===todayStr(); }
 function renderDataGuard(){
   const el=document.getElementById('dataGuard'); if(!el) return;
   const busy=(state.transactions?state.transactions.length:0)+(state.assets?state.assets.length:0)+(state.goals?state.goals.length:0)+(state.liabilities?state.liabilities.length:0);
-  if(dataGuardOff || state.lastBackup || busy<4){ el.innerHTML=''; return; }
+  const never=!state.lastBackup;
+  // Before: this vanished forever after one backup, so a six-month-old backup
+  // looked exactly as safe as one taken this morning.
+  if(dataGuardOff || backupNagHidden() || busy<4 || (!never && !backupDue())){ el.innerHTML=''; return; }
+  const age=backupAgeDays();
+  const title = never ? 'Your data lives only in this browser'
+    : (age===0 ? 'Back up again?' : 'Your last backup is '+age+' day'+(age===1?'':'s')+' old');
+  const body = never
+    ? 'Your data lives only in this browser - which means a cleared cache or a new phone wipes your budget, goals and history. Save an encrypted backup so you can restore it anywhere.'
+    : 'You have logged more since then. A fresh encrypted backup takes a few seconds, and it is the only copy that survives a cleared cache or a lost phone.';
   el.innerHTML=`<div class="dataguard">
     <span class="dg-ic">🛟</span>
     <div class="dg-body">
-      <div class="dg-t">Your data lives only in this browser</div>
-      <div class="dg-s">Your data lives only in this browser - which means a cleared cache or a new phone wipes your budget, goals and history. Save an encrypted backup so you can restore it anywhere.</div>
-      <div class="dg-actions"><button class="btn sm primary" data-goto="settings">Back it up →</button></div>
+      <div class="dg-t">${escapeHtml(title)}</div>
+      <div class="dg-s">${escapeHtml(body)}</div>
+      <div class="dg-actions"><button class="btn sm primary" id="dgBackup">🔒 Back up now</button><button class="btn sm ghost" id="dgPlain">Plain file</button></div>
     </div>
-    <button class="dg-x" id="dgX" title="Dismiss for now">✕</button>
+    <button class="dg-x" id="dgX" title="Not now">✕</button>
   </div>`;
-  const x=document.getElementById('dgX'); if(x) x.onclick=()=>{ dataGuardOff=true; renderDataGuard(); };
+  const bk=document.getElementById('dgBackup'); if(bk) bk.onclick=()=>encryptBackup();
+  const pl=document.getElementById('dgPlain'); if(pl) pl.onclick=()=>{ exportData(); state.lastBackup=todayStr(); state.backupNagDay=todayStr(); save(); renderDataGuard(); renderBackupNote(); renderAutoBackup(); };
+  // dismissing hides it for the DAY, not the session - a reminder that returns on
+  // every reload is a reminder people learn to swat without reading
+  const x=document.getElementById('dgX'); if(x) x.onclick=()=>{ dataGuardOff=true; state.backupNagDay=todayStr(); save(); renderDataGuard(); };
 }
 /* "Left to budget" trips people up when it goes negative, because it does NOT
    mean overspent - nothing has necessarily been spent at all. It means: you have
