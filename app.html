@@ -72,6 +72,13 @@
   /* ---------- Hero ---------- */
   .hero{background:var(--hero-grad);border-bottom:1px solid var(--line);padding:26px 20px 30px}
   .theme-toggle{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;font-size:16px;width:38px;height:38px;line-height:1;cursor:pointer;flex:none}
+.ft-help{background:none;border:1px solid var(--line);color:var(--muted);border-radius:50%;width:20px;height:20px;font-size:12px;font-weight:900;line-height:1;cursor:pointer;flex:none;padding:0;margin-left:5px}
+.ft-help:hover{color:var(--accent);border-color:var(--accent)}
+.ft-math{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:14px;line-height:1.7}
+.ft-math b{color:var(--accent)}
+.ft-rung{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ft-rung:last-child{border-bottom:none}
+.ft-rung span:last-child{color:var(--muted);text-align:right}
   .theme-toggle:hover{border-color:var(--accent)}
   .hero-inner{max-width:1080px;margin:0 auto}
   .brand{display:flex;align-items:center;gap:13px;flex-wrap:wrap;row-gap:8px}
@@ -1114,6 +1121,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <button data-mode="life">⌛</button>
             </div>
             <span class="ft-label" id="ftLabel">Dollars</span>
+            <button class="ft-help" id="ftHelpBtn" title="How this is worked out" aria-label="How the time conversion is worked out">?</button>
           </div>
           <button class="theme-toggle" id="themeToggle" title="Light / dark" aria-label="Toggle light or dark mode">🌙</button>
         </div>
@@ -1734,6 +1742,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div id="intentList"></div>
     </div>
   </div>
+  <div class="modal-overlay" id="ftHelp">
+    <div class="modal">
+      <button class="x" id="ftHelpX">✕</button>
+      <h3>⌛ How hours of your life are worked out</h3>
+      <div id="ftHelpBody"></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <button class="x" id="modalX">✕</button>
@@ -2747,6 +2763,7 @@ function closeTopOverlay(){
   const cel=document.querySelector('.stagecelebrate'); if(cel){ cel.remove(); return true; }
   // check order = paint order: the modal is later in the DOM, so it paints on top
   // of the sheet - Back must dismiss the overlay the user can actually see
+  const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
   const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
   const ik=document.getElementById('intake'); if(ik&&ik.classList.contains('on')){ ik.classList.remove('on'); document.body.style.overflow=''; return true; }
@@ -5310,6 +5327,63 @@ const THEME_MODES=['auto','light','dark'];
 const prefersLight=()=>!!(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
 const themeMode=()=>THEME_MODES.includes(state.theme)?state.theme:'auto';
 function resolvedTheme(){ const m=themeMode(); return m==='auto' ? (prefersLight()?'light':'dark') : m; }
+/* ============================================================
+   SHOWING THE WORK behind Freedom Mode
+   The units shift as amounts grow (min -> hrs -> days -> months) and a "day"
+   here is a WORKday, not a calendar day. Without that stated, one month of pay
+   reading as "18.2 days" looks like the app contradicting itself. So: name the
+   rate, name where it came from, and show the ladder with real numbers.
+   ============================================================ */
+function freedomExplainHTML(){
+  const H=effectiveHourly();
+  const hpw=state.hoursPerWeek>0?state.hoursPerWeek:40;
+  const moHrs=(state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS);
+  const dayHrs=moHrs/21.7;
+  if(!(H>0)) return `<p class="sub">There is no rate set yet, so every figure stays in dollars. Add your take-home pay per hour in Settings and the whole app can reprice itself in hours of your life.</p>
+    <button class="btn sm" id="ftGoWage">Set my rate in Settings</button>`;
+  const src = state.hourlyWage>0
+    ? (state.wageAuto ? 'worked out from the income you logged and the hours it takes' : 'the rate you entered yourself')
+    : 'estimated from your monthly income divided by the hours you work';
+  // a real number from their own budget beats an invented example
+  const pick = [...(state.recurring||[])].filter(r=>r.type==='expense'&&+r.amount>0).sort((a,b)=>b.amount-a.amount)[0];
+  const exAmt = pick ? +pick.amount : 100;
+  const exName = pick ? catName(pick.catId) : 'a $100 buy';
+  const exHrs = exAmt/H;
+  const exOut = fmtLife(exAmt);
+  return `<p class="sub" style="margin-bottom:4px">Every figure is divided by what one hour of your life actually pays.</p>
+  <div class="ft-math">
+    Your rate: <b>${usd(H)}</b> per hour<br>
+    <span class="sub" style="font-size:12.5px">${escapeHtml(src)}.</span><br>
+    Your week: <b>${hpw} hrs</b> worked, which is <b>${Math.round(moHrs)} hrs</b> in a month.
+  </div>
+  <div class="ft-math">
+    <b>${escapeHtml(exName)}</b> costs ${usd(exAmt)}.<br>
+    ${usd(exAmt)} ÷ ${usd(H)}/hr = <b>${(Math.round(exHrs*10)/10)} hours</b> of work = <b>${exOut}</b>.
+  </div>
+  <p class="sub" style="margin:14px 0 6px"><b>Why the unit changes.</b> Small amounts read in minutes, big ones in months, so the number stays something you can picture:</p>
+  <div class="ft-math" style="padding:6px 14px">
+    <div class="ft-rung"><span>Under an hour</span><span>minutes</span></div>
+    <div class="ft-rung"><span>Under a workday</span><span>hours</span></div>
+    <div class="ft-rung"><span>Under a working month</span><span>days</span></div>
+    <div class="ft-rung"><span>A working month or more</span><span>months</span></div>
+  </div>
+  <p class="sub" style="margin-top:12px"><b>These are working days, not calendar days.</b> One day here is <b>${Math.round(dayHrs*10)/10} hrs</b> at your desk, and one month is <b>${Math.round(moHrs)} hrs</b> - about 21.7 working days. That is why a full month of pay can read as roughly 18 to 22 days rather than 30: nobody works all 30.</p>
+  <p class="sub" style="margin-top:10px">You always <b>type dollars</b>. Only the display changes, so nothing you enter is ever converted or lost.</p>`;
+}
+function openFreedomHelp(){
+  const body=document.getElementById('ftHelpBody'); if(!body) return;
+  body.innerHTML=freedomExplainHTML();
+  document.getElementById('ftHelp').classList.add('on');
+  const go=document.getElementById('ftGoWage');
+  if(go) go.onclick=()=>{ document.getElementById('ftHelp').classList.remove('on'); activateTab('settings');
+    setTimeout(()=>{ const w=document.getElementById('wage'); if(w){ w.scrollIntoView({block:'center'}); w.focus(); } },180); };
+}
+(function(){
+  const b=document.getElementById('ftHelpBtn'); if(b) b.addEventListener('click',openFreedomHelp);
+  const x=document.getElementById('ftHelpX'); if(x) x.addEventListener('click',()=>document.getElementById('ftHelp').classList.remove('on'));
+  const ov=document.getElementById('ftHelp');
+  if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('on'); });
+})();
 function applyTheme(){
   const m=themeMode(), light=resolvedTheme()==='light';
   document.documentElement.setAttribute('data-theme', light?'light':'dark');
