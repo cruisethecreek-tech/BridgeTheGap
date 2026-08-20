@@ -780,6 +780,45 @@
   .intake-dock .inrow{display:flex;gap:8px;max-width:640px;margin:0 auto}
   .intake-dock input{flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:13px 15px;font-size:16px;min-width:0}
   .intake-dock input:focus{outline:none;border-color:var(--accent)}
+  .ia-money{flex:1;display:flex;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding-left:13px;min-width:0}
+  .ia-money:focus-within{border-color:var(--accent)}
+  .ia-money .ia-cur{color:var(--muted);font-weight:800;font-size:16px;flex:none}
+  .intake-dock .ia-money input{background:none;border:none;padding-left:0}
+  .intake-dock .ia-money input:focus{border-color:transparent}
+  .acct-row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:9px}
+  .acct-row .ac-ic{font-size:19px;flex:none}
+  .acct-row .ac-b{flex:1;min-width:0}
+  .acct-row .ac-n{font-weight:800;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .acct-row .ac-k{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
+  .ac-tag{font-size:10.5px;font-weight:800;color:var(--good);background:rgba(var(--good-rgb),.12);border:1px solid rgba(var(--good-rgb),.3);border-radius:20px;padding:1px 8px}
+  .acct-row input[data-acctbal]{width:100px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 9px;font-size:13px}
+  .ac-total{margin-top:14px;font-size:15px;font-weight:800}
+  .ac-total .ac-sub{font-size:12.5px;color:var(--muted);font-weight:600}
+  .ac-line{font-size:13px;line-height:1.55;margin-top:7px}
+  .ac-line.sub{color:var(--muted);font-size:12.5px}
+  .traplegend{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
+  .traplegend>summary{cursor:pointer;font-weight:800;font-size:13.5px;padding:12px 0;color:var(--accent);list-style:none}
+  .traplegend>summary::-webkit-details-marker{display:none}
+  .traplegend>summary::before{content:'▸ ';font-size:11px}
+  .traplegend[open]>summary::before{content:'▾ '}
+  .traplegend .tl-lead{font-size:13px;color:var(--text);line-height:1.55;margin:0 0 12px}
+  .tl-row{display:flex;gap:11px;padding:11px 0;border-top:1px solid var(--line)}
+  .tl-ic{font-size:20px;flex:none;width:26px;text-align:center}
+  .tl-n{font-weight:800;font-size:14px}
+  .tl-d{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:3px}
+  .traplegend .tl-row:last-child{padding-bottom:14px}
+  .trap-hint{display:block;font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:5px;font-weight:600;text-transform:none;letter-spacing:0}
+  .ia-hint{max-width:640px;margin:7px auto 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  .review{max-width:640px;margin:0 auto 10px}
+  .review .rv-h{font-weight:900;font-size:15px}
+  .review .rv-s{font-size:12.5px;color:var(--muted);margin:4px 0 10px;line-height:1.45}
+  .rv-list{max-height:34vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+  .rev-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;color:var(--text)}
+  .rev-row:hover{border-color:var(--accent)}
+  .rev-row .rv-k{font-size:12px;color:var(--muted);font-weight:700;flex:none;min-width:34%}
+  .rev-row .rv-v{flex:1;font-weight:800;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rev-row .rv-e{font-size:11px;font-weight:800;color:var(--accent);flex:none}
+  .rv-empty{font-size:13px;color:var(--muted);line-height:1.5}
   .intake-send{background:var(--accent);color:var(--on-accent);border:none;border-radius:12px;padding:0 18px;font-weight:800;font-size:15px;flex-shrink:0}
   .intake-chips{display:flex;flex-wrap:wrap;gap:8px;max-width:640px;margin:0 auto}
   .intake-chips button{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px}
@@ -1144,6 +1183,7 @@
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
           <label class="fld income-only-rec hide" id="recHoursWrap">Hours/mo it takes<input type="number" id="recHours" min="0" step="0.5" placeholder="opt." style="width:90px"></label>
+          <label class="fld invest-only-rec hide" id="recInvKindWrap">Kind<select id="recInvKind"><option value="holds">Holds its value</option><option value="self">Into me (health, skills)</option></select></label>
           <label class="fld">Repeats
             <select id="recFreq"><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="semimonthly">Twice a month</option><option value="monthly" selected>Monthly</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select>
           </label>
@@ -1196,7 +1236,13 @@
             <input type="number" id="txHours" min="0" step="0.5" placeholder="opt." style="width:90px">
           </label>
           <label class="fld invest-only hide" id="fldInv">Where it went
-            <input type="text" id="txInv" placeholder="Roth IRA, index fund, a course…">
+            <input type="text" id="txInv" placeholder="Roth IRA, index fund, supplements…">
+          </label>
+          <label class="fld invest-only hide" id="fldInvKind">Kind
+            <select id="txInvKind">
+              <option value="holds">Holds its value (account, fund, gold)</option>
+              <option value="self">Into me (health, skills, tools)</option>
+            </select>
           </label>
           <label class="fld">Date
             <input type="date" id="txDate">
@@ -1238,6 +1284,7 @@
       <div class="panel">
         <div id="blindspotBar"></div>
         <div class="summary" id="txSummary"></div>
+        <div id="bankNote"></div>
         <div class="filters">
           <button class="pill on" data-f="all">All</button>
           <button class="pill" data-f="income">Income</button>
@@ -1262,16 +1309,13 @@
           <label class="fld">Price $
             <input type="number" id="impAmt" min="0" step="0.01" placeholder="0.00" style="width:120px">
           </label>
-          <label class="fld">How'd it find you?
-            <select id="impTrap">
-              <option value="scroll">📱 Scroll Trap</option>
-              <option value="friction">🍔 Friction Trap</option>
-              <option value="status">🪞 Status Trap</option>
-              <option value="leak">🔄 Leak Trap</option>
-            </select>
+          <label class="fld" style="flex:1;min-width:230px">How'd it find you?
+            <select id="impTrap"></select>
+            <span class="trap-hint">The four ways money gets pulled out of you. Not sure? Pick the closest - it only changes which advice you get back.</span>
           </label>
           <button class="btn primary" id="impRun">Scan target</button>
         </div>
+        <details class="traplegend" id="trapLegend"><summary>What are the four traps?</summary><div id="trapLegendBody"></div></details>
         <div id="impResult"></div>
         <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">📌 Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
@@ -1335,6 +1379,22 @@
     <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
     <section class="view" id="view-goals">
       <p class="build-intro">Your wealth layer. Net worth is open below; tap any section to expand it.</p>
+
+      <details class="panel acc" open>
+        <summary><span class="acc-hd">🏦 Accounts<span class="acc-sub">What's actually in the bank, in your words</span></span></summary>
+        <div class="acc-body">
+          <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what's really sitting in each account today. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
+          <div class="row" style="gap:8px;margin-top:12px">
+            <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
+            <select id="acctKind" style="min-width:120px"></select>
+            <select id="acctPurpose" style="min-width:140px"></select>
+            <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px"></span>
+            <button class="btn sm primary" id="addAcct">＋ Add</button>
+          </div>
+          <div id="acctList"></div>
+          <div id="acctSummary"></div>
+        </div>
+      </details>
 
       <details class="panel acc" data-stage="2" open>
         <summary><span class="acc-hd">Assets vs. Liabilities<span class="acc-sub">What you own, honestly - and your net worth</span></span></summary>
@@ -1654,7 +1714,8 @@
       </div>
       <div class="row" style="margin-top:12px">
         <label class="fld" style="flex:1">How'd it find you?
-          <select id="mTrap"><option value="scroll">📱 Scroll Trap</option><option value="friction">🍔 Friction Trap</option><option value="status">🪞 Status Trap</option><option value="leak">🔄 Leak Trap</option></select>
+          <select id="mTrap"></select>
+          <span class="trap-hint">Not sure? Pick the closest - it only changes which advice you get back.</span>
         </label>
         <button class="btn primary" id="mRun" style="flex:1;min-width:150px">Scan target →</button>
       </div>
@@ -1918,7 +1979,7 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
-           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'',
+           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -1943,6 +2004,21 @@ function normalizeState(s){
   // setup artifact, not evidence of tracking, so they must not drag the origin back.
   const dates=(s.transactions||[]).filter(t=>t.note!=='Intake').map(t=>t.date).filter(Boolean).sort();
   if(dates[0] && (!s.trackStart || dates[0]<s.trackStart)) s.trackStart=dates[0];
+  // Every number that arrives from outside (import, restore, sync, a hand-edited
+  // backup) is forced to a finite number here. One string in a money field would
+  // otherwise turn addition into concatenation everywhere downstream.
+  const num=(v)=>{ const n=+v; return isFinite(n)?n:0; };
+  Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=num(b[k]); }); });
+  (s.transactions||[]).forEach(t=>{ t.amount=num(t.amount); if(t.hours!=null) t.hours=num(t.hours); });
+  (s.accounts||[]).forEach(a=>{ a.balance=num(a.balance); });
+  (s.assets||[]).forEach(a=>{ a.value=num(a.value); a.cost=num(a.cost); });
+  (s.liabilities||[]).forEach(l=>{ l.value=num(l.value); });
+  (s.goals||[]).forEach(g=>{ g.target=num(g.target); g.saved=num(g.saved); });
+  (s.debts||[]).forEach(d=>{ d.balance=num(d.balance); d.apr=num(d.apr); d.minPayment=num(d.minPayment); });
+  (s.recurring||[]).forEach(r=>{ r.amount=num(r.amount); if(r.hours!=null) r.hours=num(r.hours); });
+  (s.timeLog||[]).forEach(e=>{ e.hours=num(e.hours); });
+  s.hourlyWage=num(s.hourlyWage); s.hoursPerWeek=num(s.hoursPerWeek); s.spendLimit=num(s.spendLimit);
+  s.wageB=num(s.wageB); s.enough=num(s.enough); s.givingPct=num(s.givingPct); s.debtBudget=num(s.debtBudget);
   return s;
 }
 function load(){
@@ -1972,7 +2048,9 @@ function fmtLife(amount, rateOverride){
   let out;
   if(hrs*60 < 60){ const m=Math.max(1,Math.round(hrs*60)); out=m+' min'; }
   else if(hrs < dayHrs){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
-  else if(hrs < moHrs){ const v=Math.round(hrs/dayHrs*10)/10; out=v+(v===1?' day':' days'); }
+  // switch to months a little before the exact boundary: floating point made a
+  // full month of pay read as "21.7 days", and nobody says 21.7 days anyway
+  else if(hrs < moHrs*0.95){ const v=Math.round(hrs/dayHrs*10)/10; out=v+(v===1?' day':' days'); }
   else { const v=Math.round(hrs/moHrs*10)/10; out=v+' mo'; }
   return (neg?'-':'')+out;
 }
@@ -2528,7 +2606,10 @@ function renderInvestCompare(){
 }
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
-function assignedFor(catId,month){ return (state.budgets[month]&&state.budgets[month][catId])||0; }
+/* Coerced on the way out, not trusted on the way in: a budget value that arrived
+   as a string (a hand-edited backup, an older export) would turn every "+" in the
+   app into string concatenation and quietly poison every total. */
+function assignedFor(catId,month){ const v=+((state.budgets[month]&&state.budgets[month][catId])||0); return isFinite(v)?v:0; }
 function txnsInMonth(month){ return state.transactions.filter(t=>monthOf(t.date)===month); }
 function spentFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='expense'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
 function monthIncome(month){ return txnsInMonth(month).filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
@@ -2598,7 +2679,7 @@ function activateTab(name,fromHistory){
   positionFab();
   if(name==='learn') renderCharts();
   if(name==='home') renderHome();
-  if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
+  if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
   if(name==='impulse') renderVault();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2984,25 +3065,55 @@ function deepenSkips(){
   if(state.deepenSkipMonth!==state.activeMonth) return [];
   return state.deepenSkipped||[];
 }
+/* how much emergency money genuinely exists: earmarked accounts first (real
+   balances), plus anything saved into a goal that is clearly the same job */
+function emergencyMoney(){
+  const acct=earmarked('emergency');
+  const goal=(state.goals||[]).filter(g=>EMERG_RX.test(g.name)).reduce((s,g)=>s+(+g.saved||0),0);
+  return acct+goal;
+}
+function debtsOutstanding(){ return (state.debts||[]).reduce((s,d)=>s+Math.max(0,+d.balance||0),0); }
+function hasMortgage(){ return (state.liabilities||[]).some(l=>/mortgage|home ?loan|house/i.test(l.name||'')); }
+/* The sequence. It is deliberately ONE ladder in the app's own words - the order
+   is the widely-taught one (small cushion, kill the interest, real fund, then
+   grow) because it works, not because any particular program says so. Each rung
+   reads the user's real numbers rather than asking them to self-report. */
 function deepenSteps(){
   const M=state.activeMonth, income=monthIncome(M);
   const skipped=deepenSkips();
+  const ess=Math.round(essentialMonthly()||0);
+  const em=emergencyMoney(), debt=debtsOutstanding();
+  const fullTarget=ess>0?ess*3:3000;
   const steps=[
-    {k:'payfirst', ic:'💰', t:'Pay yourself first',
-     why:income>0?`Before the bills, not after. Even ${money(Math.max(25,Math.round(income*0.1)))} a month - 10% of what you make - is the only bill that buys you freedom instead of renting it.`
+    {k:'starter', ic:'🛟', t:'Put $1,000 between you and disaster',
+     why:`Not a dream - a shock absorber. Without it the next flat tire goes on a credit card and the whole plan unravels. ${em>0?`You've got ${usd(em)} so far.`:'Start here, before anything else.'}`,
+     cta:em>0?'Add to it':'Start it', done:em>=1000},
+    {k:'subs', ic:'🔍', t:'Find the memberships you forgot',
+     why:'Quick win that funds the rest. Small, monthly, automatic - which is exactly why they never get questioned. Let us price them by the year and see them clearly.',
+     cta:'Run the sweep', done:!!(state.subSweep&&state.subSweep.done)},
+    {k:'debt', ic:'💳', t:'Kill the interest',
+     why:debt>0?`${usd(debt)} outstanding. Interest is a negative return you are guaranteed to pay - clearing it beats almost any investment, risk-free. Get a real payoff date and watch what each extra dollar shaves off it.`
+               :'Interest is a negative return you are guaranteed to pay. Put your balances in and the calculator gives you an actual payoff date.',
+     cta:'Open the calculator', done:(state.debts||[]).length>0 && debt<=0},
+    {k:'fullfund', ic:'🏰', t:'Grow it to a real cushion',
+     why:ess>0?`Three months of your essentials is ${usd(fullTarget)}. That's the difference between a lost job being a crisis and being an inconvenience. You're at ${usd(em)}.`
+              :`Three months of essentials. That's the difference between a lost job being a crisis and being an inconvenience.`,
+     cta:'Work on it', done:em>=fullTarget},
+    {k:'payfirst', ic:'💰', t:'Pay yourself first, every month',
+     why:income>0?`Before the bills, not after. Even ${money(Math.max(25,Math.round(income*0.15)))} a month - 15% of what you make - is the only bill that buys you freedom instead of renting it. Automate it and willpower stops mattering.`
                  :'Before the bills, not after. It is the one bill that buys you freedom instead of renting it.',
      cta:'Set it up', done:payFirstDone(M)},
-    {k:'subs', ic:'🔍', t:'Find the memberships you forgot',
-     why:'The average plan hides a few of these. Small, monthly, automatic - which is exactly why they never get questioned. Let us price them by the year and see them clearly.',
-     cta:'Run the sweep', done:!!(state.subSweep&&state.subSweep.done)},
-    {k:'emergency', ic:'🛟', t:'Build a real emergency fund',
-     why:'Not a dream - insurance. Without it, the first flat tire goes on a credit card and the whole plan unravels. Start with one month of essentials.',
-     cta:'Start it', done:emergencyDone()},
-    {k:'debt', ic:'💳', t:'Get a real payoff date',
-     why:'Interest is a negative return you are guaranteed to pay. Put the numbers in and the calculator gives you an actual date - and what each extra dollar shaves off it.',
-     cta:'Open the calculator', done:(state.debts||[]).length>0}
+    {k:'college', ic:'🎓', t:'Fund what is coming for the kids',
+     why:'Education, a first car, whatever is genuinely ahead. Naming it and funding it monthly beats hoping, and it stops the big year ambushing you.',
+     cta:'Open an account for it', done:earmarked('college')>0 || (state.goals||[]).some(g=>/college|school|tuition|kid/i.test(g.name))},
+    {k:'home', ic:'🏠', t:'Own where you live, outright',
+     why:'The single biggest bill most people carry. Every extra payment now is a year of your life you buy back later - and a mortgage-free retirement needs a far smaller number to work.',
+     cta:'Plan it', done:!hasMortgage(), hide:!hasMortgage()},
+    {k:'give', ic:'🌊', t:'Build it, and let it move',
+     why:'The last rung is not a number. Money that only ever piles up stops doing anything. Decide what it is FOR - what you build, who you help - or the pile becomes the point.',
+     cta:'Set a giving target', done:(state.giving||[]).length>0 || state.givingPct>0}
   ];
-  return steps.map(s=>Object.assign(s,{skipped:skipped.includes(s.k)}));
+  return steps.filter(s=>!s.hide).map(s=>Object.assign(s,{skipped:skipped.includes(s.k)}));
 }
 function deepenHTML(){
   const steps=deepenSteps();
@@ -3119,12 +3230,32 @@ function runDeepen(k){
     return;
   }
   if(k==='subs'){ openSubSweep(); return; }
-  if(k==='emergency'){
-    const ess=Math.round(essentialMonthly()||0);
-    const target=ess>0?ess:1000;
-    state.goals.push({id:uid(),name:'Emergency fund',target,saved:0,date:'',goalType:'safety'});
-    save(); activateTab('goals'); renderGoals(); renderHome();
-    if(typeof toast==='function') toast('Emergency fund started at '+money(target)+(ess>0?' - one month of your essentials.':'.'));
+  if(k==='starter'||k==='fullfund'||k==='college'){
+    // send them to the real thing: a named account they can put actual money in
+    const spec = k==='college'
+      ? {name:'College fund', purpose:'college', kind:'savings', msg:'Name it and give it a real balance whenever you fund it.'}
+      : {name:'Emergency fund', purpose:'emergency', kind:'savings',
+         msg: k==='starter' ? 'Starter goal: $1,000 between you and disaster.'
+                            : 'Next goal: three months of your essentials.'};
+    let a=(state.accounts||[]).find(x=>x.purpose===spec.purpose);
+    if(!a){ state.accounts=state.accounts||[]; a={id:uid(),name:spec.name,kind:spec.kind,purpose:spec.purpose,balance:0,updated:todayStr()}; state.accounts.push(a); save(); }
+    activateTab('goals'); renderAccounts(); renderNetWorth();
+    setTimeout(()=>{
+      const inp=document.querySelector('input[data-acctbal="'+a.id+'"]');
+      if(inp){ inp.scrollIntoView({behavior:'auto',block:'center'}); try{ inp.focus({preventScroll:true}); inp.select&&inp.select(); }catch(_){} }
+    },160);
+    if(typeof toast==='function') toast(spec.msg);
+    return;
+  }
+  if(k==='home'){
+    activateTab('debt'); renderDebt();
+    setTimeout(()=>{ const el=document.getElementById('debtName'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },140);
+    if(typeof toast==='function') toast('Add the mortgage here to see what extra payments really buy you.');
+    return;
+  }
+  if(k==='give'){
+    activateTab('goals'); if(typeof renderGiving==='function') renderGiving();
+    setTimeout(()=>{ const el=document.getElementById('givingPct')||document.getElementById('giveName'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },160);
     return;
   }
   if(k==='debt'){
@@ -3347,8 +3478,11 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy; state.transactions.push(tx);
   } else if(txType==='invest'){
     const dest=document.getElementById('txInv').value.trim()||'Investment';
-    state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note});
-    investAssetAdd(amt);
+    const ikind=(document.getElementById('txInvKind')||{}).value||'holds';
+    state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note,ikind});
+    // supplements, a course, a tool: real growth, but the money is CONSUMED. Only
+    // money that keeps its value becomes an asset, or net worth quietly lies.
+    if(ikind!=='self') investAssetAdd(amt);
     document.getElementById('txInv').value='';
   } else {
     const source=document.getElementById('txSrc').value.trim()||'Income';
@@ -3773,7 +3907,11 @@ function renderTx(){
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('spent','Spent')}</div><div class="v">${money(exp)}</div></div>
     ${showInv?`<div class="stat"><div class="k">🌱 Invested ${txAllMonths?'(all time)':'(month)'}</div><div class="v pos">${money(inv)}</div></div>`:''}
     <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
-    <div class="stat"><div class="k">Balance (all time)</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
+    <div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
+  const bn=document.getElementById('bankNote');
+  if(bn) bn.innerHTML=(state.accounts||[]).length
+    ? `<div class="ltb-note">This is what you've <b>logged</b>, not your bank balance. Your real total is <b>${usd(bankTotal())}</b> across ${(state.accounts||[]).length} account${(state.accounts||[]).length>1?'s':''} - edit those on <b>Build</b>.</div>`
+    : `<div class="ltb-note">Heads up: this is only what you've <b>logged here</b> - it doesn't know your real bank balance. Add your accounts on <b>Build</b> and your net worth and runway start telling the truth.</div>`;
   renderTxList();
   renderRecurring();
   renderCharts();
@@ -3800,7 +3938,7 @@ function renderTxList(){
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
     const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):''))
-            :t.type==='invest'?('Still yours - working'+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
+            :t.type==='invest'?(((t.ikind||'holds')==='self'?'Into you - spent on purpose':'Still yours - working')+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
             :((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
     const owner=t.owner||'a', Ho=hourlyFor(owner);
     let badge='';
@@ -3816,7 +3954,7 @@ function renderTxList(){
   box.querySelectorAll('button[data-deltx]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.deltx;
     const gone=state.transactions.find(t=>t.id===id);
-    if(gone&&gone.type==='invest') investAssetAdd(-gone.amount);   // unwind the auto asset so net worth stays honest
+    if(gone&&gone.type==='invest'&&(gone.ikind||'holds')!=='self') investAssetAdd(-gone.amount);   // unwind the auto asset so net worth stays honest
     state.transactions=state.transactions.filter(t=>t.id!==id);
     // keep the linked ledgers honest: a deleted gift/ransom must leave Giving and the Shield too
     state.giving=(state.giving||[]).filter(g=>g.txId!==id);
@@ -4451,12 +4589,34 @@ function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDa
 /* ============================================================
    ANTI-TRAP ENGINE - traps, tactical copy, cooling vault
    ============================================================ */
+/* The four traps are the app's own vocabulary, so every place that ASKS the user
+   to pick one has to define it in the same breath - naming a thing you have never
+   explained is just jargon. `pick` is the plain-words version used in the dropdowns. */
 const TRAPS=[
-  {v:'scroll', icon:'📱', label:'Scroll Trap', sub:'An ad or feed served it to you'},
-  {v:'friction', icon:'🍔', label:'Friction Trap', sub:"Convenience because you're tired"},
-  {v:'status', icon:'🪞', label:'Status Trap', sub:"Clout or an upgrade you don't need"},
-  {v:'leak', icon:'🔄', label:'Leak Trap', sub:'Trial, auto-renew, micro-sub'}
+  {v:'scroll', icon:'📱', label:'Scroll Trap', sub:'An ad or feed served it to you',
+   pick:'an ad or a feed put it in front of me'},
+  {v:'friction', icon:'🍔', label:'Friction Trap', sub:"Convenience because you're tired",
+   pick:'I was tired or busy and paid for the easy option'},
+  {v:'status', icon:'🪞', label:'Status Trap', sub:"Clout or an upgrade you don't need",
+   pick:"it's about how it looks to other people"},
+  {v:'leak', icon:'🔄', label:'Leak Trap', sub:'Trial, auto-renew, micro-sub',
+   pick:'small and recurring - a sub, a trial, an auto-renew'}
 ];
+function trapOptions(sel){ return TRAPS.map(t=>`<option value="${t.v}"${t.v===sel?' selected':''}>${t.icon} ${t.label} - ${t.pick}</option>`).join(''); }
+/* fill both pickers from one source, so the wording can never drift apart */
+function fillTrapPickers(){
+  ['impTrap','mTrap'].forEach(id=>{ const el=document.getElementById(id); if(el){ const cur=el.value||'scroll'; el.innerHTML=trapOptions(cur); } });
+  const leg=document.getElementById('trapLegendBody');
+  if(leg) leg.innerHTML=`<p class="tl-lead">Four ways money gets pulled out of you. They're not character flaws - they're designs, built by people who are paid to be good at this. Naming which one you're in is how you stop arguing with yourself and start seeing the mechanism.</p>`
+    +TRAPS.map(t=>`<div class="tl-row"><span class="tl-ic">${t.icon}</span><div><div class="tl-n">${escapeHtml(t.label)}</div><div class="tl-d">${escapeHtml(TRAP_MEANS[t.v])}</div></div></div>`).join('');
+}
+/* the full explanation, for the legend - longer than the dropdown one-liners */
+const TRAP_MEANS={
+  scroll:"You weren't looking for it - it was served to you. An ad, a feed, a suggested buy, a creator's link. The want didn't exist ten seconds ago; something engineered it. Tell: you can name the app you were in when you found it.",
+  friction:"You paid extra to make something easier because you were tired, busy, hungry or fried. Delivery instead of cooking, the closer pricier option, one-tap checkout. The convenience is real - so is the markup. Tell: an hour earlier, you'd have done it yourself.",
+  status:"The purchase is doing a job for how you're seen - keeping up, looking successful, the upgrade nobody asked for. Tell: you can picture who you'd want to notice it.",
+  leak:"Small, recurring, automatic. Subscriptions, trials that converted, memberships you forgot, micro-charges. Priced monthly so you never do the x12. Tell: you'd have to check your statement to be sure you still pay it."
+};
 const TRAP_RESPONSES={
   scroll:{
     genz:{clean:"That ad found you on purpose - the algorithm clocked your weak spot.",blunt:"Meta ran the numbers and bet you'd cave. Prove them wrong.",savage:"You're not shopping, you're being farmed. Log the hell off, bestie."},
@@ -4558,7 +4718,42 @@ setInterval(()=>{
 function sumAssets(){ return state.assets.reduce((s,a)=>s+(a.value||0),0); }
 function sumAssetsKind(k){ return state.assets.filter(a=>(a.kind||'real')===k).reduce((s,a)=>s+(a.value||0),0); }
 function sumLiab(){ return state.liabilities.reduce((s,l)=>s+(l.value||0),0); }
-function netWorth(){ return sumAssets()-sumLiab(); }
+/* ============================================================
+   ACCOUNTS - what is ACTUALLY in the bank
+   Everything else in this app is derived from what you logged, which means a
+   brand-new user with $8,000 in checking was being told they had $0. Accounts
+   are the one place the user states plain truth: this is the balance, as of
+   today. The app never silently edits them - it shows what you've logged since
+   you last updated one, and lets you decide whether reality moved.
+   Earmarks are what turn "savings" from one lump into answerable questions:
+   how much is emergency money, how much is the kids' fund.
+   ============================================================ */
+const ACCT_KINDS=[
+  {k:'checking', ic:'🏦', label:'Checking', liquid:true},
+  {k:'savings',  ic:'🐖', label:'Savings',  liquid:true},
+  {k:'cash',     ic:'💵', label:'Cash',     liquid:true},
+  {k:'invest',   ic:'📈', label:'Investment/retirement', liquid:false},
+  {k:'other',    ic:'🗄️', label:'Other',    liquid:false}
+];
+const ACCT_PURPOSES=[
+  {k:'', label:'No particular job'},
+  {k:'emergency', label:'Emergency fund'},
+  {k:'college', label:'College / kids'},
+  {k:'sinking', label:'Sinking fund (known bills ahead)'},
+  {k:'goal', label:'A specific dream'},
+  {k:'retire', label:'Retirement'}
+];
+function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
+function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
+function liquidTotal(){ return (state.accounts||[]).filter(a=>acctKind(a.kind).liquid).reduce((s,a)=>s+(+a.balance||0),0); }
+function earmarked(purpose){ return (state.accounts||[]).filter(a=>a.purpose===purpose).reduce((s,a)=>s+(+a.balance||0),0); }
+/* net logged movement since the user last told us a balance - the honest drift */
+function loggedSince(dateStr){
+  if(!dateStr) return 0;
+  return state.transactions.filter(t=>t.date>dateStr).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+}
+function oldestAcctUpdate(){ const d=(state.accounts||[]).map(a=>a.updated).filter(Boolean).sort(); return d[0]||''; }
+function netWorth(){ return sumAssets()+bankTotal()-sumLiab(); }
 function avgMonthlyIncome(){
   const byM={}; state.transactions.filter(t=>t.type==='income').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
   const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
@@ -4590,14 +4785,21 @@ function essentialMonthly(){
   const M=thisMonth();   // "current state" metrics (runway, sovereignty, stage) must not shift with the browsed month
   const tops=state.categories.filter(c=>!c.parentId);
   let sum=0;
-  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=assignedFor(c.id,M); }); });
-  if(sum<=0) sum=tops.reduce((s,c)=>s+assignedFor(c.id,M),0);
+  // catAssigned, NOT assignedFor: a wall split into subcategories (Power & Wi-Fi ->
+  // Water + Electric) carries its money on the children. Counting only the parent's
+  // own figure under-stated essentials, which OVER-stated the Freedom Runway - it
+  // told people they were safer than they are. The one direction this must never err.
+  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=catAssigned(c.id,M); }); });
+  if(sum<=0) sum=tops.reduce((s,c)=>s+catAssigned(c.id,M),0);
   if(sum<=0) sum=monthExpense(M);
   return sum;
 }
 /* Freedom Runway = liquid resources / essential monthly burn, in months */
 function freedomRunway(){
-  const liquid=Math.max(0, sumAssetsKind('real') + Math.max(0,allTimeBalance()) - sumLiab());
+  // once real balances exist they ARE the truth; the transaction-derived figure
+  // is only a stand-in for users who haven't entered an account yet
+  const cash=(state.accounts||[]).length ? liquidTotal() : Math.max(0,allTimeBalance());
+  const liquid=Math.max(0, sumAssetsKind('real') + cash - sumLiab());
   const ess=essentialMonthly();
   if(ess<=0 || liquid<=0) return null;
   return liquid/ess;
@@ -4861,6 +5063,49 @@ function renderComfortMenu(){
   box.querySelectorAll('button[data-cmdel]').forEach(b=>b.onclick=()=>{ const i=(state.comfortMenu||[]).indexOf(b.dataset.cmdel); if(i>-1){ state.comfortMenu.splice(i,1); comfortChanged(); } });
   box.querySelectorAll('button[data-cmadd]').forEach(b=>b.onclick=()=>{ const v=b.dataset.cmadd; state.comfortMenu=state.comfortMenu||[]; if(!state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); comfortChanged(); });
 }
+function renderAccounts(){
+  const kSel=document.getElementById('acctKind'), pSel=document.getElementById('acctPurpose');
+  if(kSel && !kSel.options.length) kSel.innerHTML=ACCT_KINDS.map(k=>`<option value="${k.k}">${k.ic} ${k.label}</option>`).join('');
+  if(pSel && !pSel.options.length) pSel.innerHTML=ACCT_PURPOSES.map(p=>`<option value="${p.k}">${escapeHtml(p.label)}</option>`).join('');
+  const box=document.getElementById('acctList'); if(!box) return;
+  const accts=state.accounts||[];
+  box.innerHTML = accts.length ? accts.map(a=>{
+    const k=acctKind(a.kind), pur=ACCT_PURPOSES.find(p=>p.k===a.purpose);
+    const tag=(a.purpose&&pur)?`<span class="ac-tag">${escapeHtml(pur.label)}</span>`:'';
+    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${escapeHtml(k.label)}${a.updated?' · as of '+a.updated:''}</div></div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove">✕</button></div>`;
+  }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
+  box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
+    const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
+    a.balance=parseFloat(i.value)||0; a.updated=todayStr(); save(); renderAccounts(); renderNetWorth(); renderHome();
+  }));
+  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{
+    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdel); save(); renderAccounts(); renderNetWorth(); renderHome();
+  }));
+  const sum=document.getElementById('acctSummary'); if(!sum) return;
+  if(!accts.length){ sum.innerHTML=''; return; }
+  const em=earmarked('emergency'), col=earmarked('college'), ess=essentialMonthly();
+  const drift=loggedSince(oldestAcctUpdate());
+  const bits=[];
+  bits.push(`<div class="ac-total">In the bank: <b>${usd(bankTotal())}</b> <span class="ac-sub">· ${usd(liquidTotal())} of it you could spend today</span></div>`);
+  if(em>0) bits.push(`<div class="ac-line">🛟 Emergency fund: <b>${usd(em)}</b>${ess>0?` - that's <b>${(Math.round(em/ess*10)/10)} month${(Math.round(em/ess*10)/10)===1?'':'s'}</b> of your essentials`:''}.</div>`);
+  if(col>0) bits.push(`<div class="ac-line">🎓 College / kids: <b>${usd(col)}</b>.</div>`);
+  if(Math.abs(drift)>0.005) bits.push(`<div class="ac-line sub">Since you last updated a balance you've logged <b>${usd(drift)}</b> of movement. If reality has drifted, retype the real number - the app will never quietly change it for you.</div>`);
+  sum.innerHTML=bits.join('');
+}
+(function(){
+  const btn=document.getElementById('addAcct'); if(!btn) return;
+  btn.addEventListener('click',()=>{
+    const n=document.getElementById('acctName').value.trim();
+    const bal=parseFloat(document.getElementById('acctBal').value);
+    if(!n){ if(typeof toast==='function') toast('Give the account a name.'); return; }
+    if(!(bal>=0)){ if(typeof toast==='function') toast("Put in what's actually in it - $0 is a real answer."); return; }
+    state.accounts=state.accounts||[];
+    state.accounts.push({id:uid(),name:n,kind:document.getElementById('acctKind').value||'checking',
+      purpose:document.getElementById('acctPurpose').value||'',balance:bal,updated:todayStr()});
+    document.getElementById('acctName').value=''; document.getElementById('acctBal').value='';
+    save(); renderAccounts(); renderNetWorth(); renderHome();
+  });
+})();
 let assetKind='real';
 document.getElementById('assetKind').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return; assetKind=b.dataset.k;
@@ -4934,7 +5179,7 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 function applyTheme(){
@@ -5234,6 +5479,7 @@ document.getElementById('recType').addEventListener('change',()=>{
   const rs=document.getElementById('recSrc'); if(rs) rs.placeholder=inv?'Roth IRA, index fund…':'Paycheck…';
   document.getElementById('recOwnerWrap').classList.toggle('hide',!inc);
   const rhw=document.getElementById('recHoursWrap'); if(rhw) rhw.classList.toggle('hide',!inc);
+  const rik=document.getElementById('recInvKindWrap'); if(rik) rik.classList.toggle('hide',!inv);
 });
 document.getElementById('addRec').addEventListener('click',()=>{
   const type=document.getElementById('recType').value;
@@ -5244,7 +5490,7 @@ document.getElementById('addRec').addEventListener('click',()=>{
   // day is kept in sync for anything still reading the old field
   const item={id:uid(),type,amount:amt,freq,anchor,day:Math.min(28,Math.max(1,+anchor.slice(8,10)||1))};
   if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ alert('Add a category first on the Budget tab.'); return; } item.catId=catId; }
-  else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; }
+  else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
     if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; }
@@ -5252,8 +5498,14 @@ document.getElementById('addRec').addEventListener('click',()=>{
   }
   state.recurring.push(item);
   recomputeBlendedWage();   // a new work-hours source changes the true rate immediately
+  // if its first date has already arrived, post it NOW - waiting for the next app
+  // launch made a just-created item look like it did nothing at all
+  const postedNow=postRecurring(thisMonth());
   document.getElementById('recAmt').value=''; document.getElementById('recSrc').value=''; const rh=document.getElementById('recHours'); if(rh) rh.value='';
-  save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote();
+  save(); renderRecurring(); renderBudget(); renderTx(); renderHome();
+  if(typeof renderNetWorth==='function') renderNetWorth();
+  if(typeof updateWageNote==='function') updateWageNote();
+  if(postedNow && typeof toast==='function') toast('Added, and posted '+postedNow+' that was already due.');
 });
 document.getElementById('postRec').addEventListener('click',()=>{
   const n=postRecurring(state.activeMonth);
@@ -5358,7 +5610,7 @@ function postRecurring(month){
       // dedupe per OCCURRENCE, not per month - a weekly bill lands four times
       if(state.transactions.some(t=>t.recId===r.id&&t.date===date)) return;
       if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
-      else if(r.type==='invest'){ state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}); investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
+      else if(r.type==='invest'){ const ik=r.ikind||'holds'; state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id,ikind:ik}); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
       else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
       added++;
     });
@@ -5439,7 +5691,7 @@ const INTAKE=[
   /* situation comes BEFORE the intro so the tone floor (survival -> clean) is
      already known when the intro speaks - the person the floor protects must
      never get the savage version first and the softening after. */
-  {id:'situation', input:'reflect', key:'situation', optional:true,
+  {id:'situation', sum:'Where you are', input:'reflect', key:'situation', optional:true,
     why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
     bot:"Before anything else - where are you right now with money, honestly? No wrong answer, no judgment. It just tells me how to show up for you.",
     options:[
@@ -5455,8 +5707,8 @@ const INTAKE=[
       if(t==='blunt') return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. Look at the name - the ability is the part that matters. It's not punishment, and it's not me grading you. I can't hold you accountable; nobody can. What I can do is help you see through the bullshit clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No secret sauce, just small wins that stack when you show up. That's it. Ready?`;
       return `${hi} Before anything, here's what this word actually means, because it's the whole point. Accountability is the ability to hold yourself accountable. Look at the name - the ability is the part that matters. It isn't punishment, and it isn't me grading you. I can't hold you accountable; nobody can do that for you. What I can do is help you SEE clearly enough to decide what stays and what goes - and that ability gets stronger every time you use it. No shame, no lecture, no secret sauce - only small wins that stack when you show up. That's it. Ready?`;
     }, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
-  {id:'name', bot:"First things first - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name'},
-  {id:'moneyStory', input:'reflect', key:'moneyStory', optional:true,
+  {id:'name', bot:"First things first - what should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name', sum:'Name'},
+  {id:'moneyStory', sum:'Money growing up', input:'reflect', key:'moneyStory', optional:true,
     why:"Because the way money felt when you were a kid still drives how you spend today - grip it tight, or blow it before it's gone. If I know the pattern, I can catch it for you instead of letting it run quietly in the background.",
     bot:"One more that shapes more than most people admit: what did money feel like growing up?",
     options:[
@@ -5467,7 +5719,7 @@ const INTAKE=[
         ? "Feast or famine wires you for the swing - balling when it's up, scrambling when it's down. We're breaking that damn cycle."
         : "Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
     ]},
-  {id:'budgetPast', input:'reflect', key:'budgetPast', optional:true,
+  {id:'budgetPast', sum:'Budgeted before', input:'reflect', key:'budgetPast', optional:true,
     why:"Because if a budget burned you out before, I don't want to hand you the same thing that failed. Knowing what happened last time tells me how small and light to start so this one actually sticks.",
     bot:"And have you ever tried to budget before? Straight up - no wrong answer, it just tells me where to start.",
     options:[
@@ -5478,12 +5730,13 @@ const INTAKE=[
       {label:'📉 Did it a while, life happened', value:'lapsed', reply:"So you already know it works when you work it. Life happens - the fix is a system light enough to survive a bad week, not another one that needs you to be perfect."},
       {label:'✅ I budget now', value:'current', reply:"Then you're ahead of most - let's sharpen what you've got, not make you start over."}
     ]},
-  {id:'acct', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
+  {id:'acct', sum:'Setup type', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
     return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
-    input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'e.g. 3200'},
+    input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'3200',
+    hint:'Dollars per month, after taxes - what actually lands in your account. Type 3200 for $3,200.', sum:'Take-home a month'},
   {id:'incomeAvoid', input:'reflect', key:'incomeAvoid', optional:true,
     showIf:a=>a.acct==='spend' && !(a.income>0),
     bot:"No pressure at all - but I noticed you'd rather not put the income in. Mind if I ask what's behind that? It's not nosy, it just helps me meet you where you are.",
@@ -5512,7 +5765,7 @@ const INTAKE=[
       : a.income>0
       ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; ${a.hoursPerWeek>0?`at the ${a.hoursPerWeek} hours a week you actually work, that's`:`assuming a standard 40-hour week, that works out to`} about ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr. Sound right?${a.hoursPerWeek>0?'':` (If your week isn't 40 hours, tell me - guessing your hours is the one thing this app shouldn't do.)`}${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
-    input:'money', key:'wage', optional:true, placeholder:'e.g. 22',
+    input:'money', key:'wage', optional:true, placeholder:'22', hint:'Dollars per hour, take-home. Type 22 for $22 an hour.', sum:'Your hourly rate',
     suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income, a.hoursPerWeek) : null,
     help:{ cta:"🤔 Help me work it out",
       ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
@@ -5535,7 +5788,7 @@ const INTAKE=[
         : `That side work actually lifts your real rate - nice. Either way, I now price everything against the whole truth, not just one paycheck.`;
       return `Here's the honest math${a.name?', '+a.name:''}: your main job runs about ${usd(mr)}/hr. But that side work is hours of your life too - roughly ${sh} ${sh===1?'hour':'hours'} a month for ${usd(sideAmt)}. Blend every hour you sell and your true take-home rate is ${usd(br)}/hr. ${swing} That's the number behind every "hours of your life" figure from here on.`; }},
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
-  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 1200'},
+  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
   {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
     bot:"Before we move on - honestly, how's the place you live actually treating you?",
     options:[
@@ -5544,7 +5797,7 @@ const INTAKE=[
       {label:'😮‍💨 Outgrowing it', value:'outgrow', reply:"Heard you. When it's time to level up, these numbers will tell you exactly when it's doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
       {label:'🏡 Dreaming of owning', value:'own', reply:"Owning is a big, real one. Hold that thought - the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
     ]},
-  {id:'food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'food', sum:'Food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
   {id:'foodStyle', input:'reflect', key:'foodStyle', optional:true, showIf:a=>a.acct!=='spend' && a.food>0,
     bot:"Quick one - what's your normal with food?",
     options:[
@@ -5554,8 +5807,8 @@ const INTAKE=[
         : "No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
       {label:'⚖️ A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
     ]},
-  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 300'},
-  {id:'transport', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
+  {id:'transport', sum:'Getting around', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
   {id:'commuteFeel', input:'reflect', key:'commuteFeel', optional:true, showIf:a=>a.acct!=='spend' && a.transport>0,
     bot:"How do you feel about getting around day to day?",
     options:[
@@ -5580,7 +5833,7 @@ const INTAKE=[
       {label:'📉 Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
       {label:'🆕 Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
     ]},
-  {id:'dream',
+  {id:'dream', sum:'Your dream',
     bot:a=>{
       if(a.roofFeel==='own') return `Now the big one - what are you actually chasing? You said you're dreaming of owning${a.roofFeelNote?` ("${a.roofFeelNote}")`:' a place'} - want that to be the dream we build toward, or is there a bigger one? ★`;
       if(a.roofFeel==='outgrow') return `Now the big one - what are you actually chasing? Could be leveling up where you live, could be something else entirely. ★`;
@@ -5627,15 +5880,15 @@ const INTAKE=[
         return `You mapped ${usd(known)} against about ${usd(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
       return `That's ${usd(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
-      return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'e.g. 300'},
+      return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
   {id:'why', bot:a=> iaTone(a)==='savage'
       ? "Last thing, and it's the one that matters most: why does getting this right matter to you, RIGHT NOW? Don't give me the polite answer - give me the real one. Swear if you need to, I can take it. I'm going to hold onto this and read it back to you at the exact moment you're about to blow it."
-      : "Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out. I'll hold onto it - and remind you at the moments it matters.", input:'text', key:'why', optional:true, placeholder:'In your own words…'},
+      : "Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out. I'll hold onto it - and remind you at the moments it matters.", input:'text', key:'why', optional:true, placeholder:'In your own words…', sum:'Why this matters'},
   {id:'done', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
       const base = a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`;
       const close = surv ? ` Remember - one small win this week. That's all I'm asking. The tool's ready when you are.`
         : (iaTone(a)==='savage' ? ` The tool's ready. Now show the hell up - that's the only part I can't do for you.` : ` The tool's ready. The rest is just you showing up - and I already think you will.`);
-      return base+close; }, input:'finish', cta:'Set me up →'}
+      return base+close; }, input:'review', cta:'Set me up →'}
 ];
 
 let iaStep=0, iaAns={}, iaForceInput=false;
@@ -5696,7 +5949,7 @@ function pruneStaleAnswers(){
    step emitted (reflect replies, follow-ups, continue-step intros). */
 function iaBack(){
   let p=iaStep-1;
-  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='gate'){ p--; continue; } break; }   // gate too: its skip button abandons the whole intake - never a Back target
+  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='gate'||s.input==='review'){ p--; continue; } break; }   // gate too: its skip button abandons the whole intake - never a Back target
   if(p<0) return;
   const log=document.getElementById('intakeLog');
   [...log.children].forEach(b=>{ if(+(b.dataset.st??-1)>=p) b.remove(); });
@@ -5724,7 +5977,72 @@ function runIntakeStep(){
   document.getElementById('intakeBar').style.width=iaProgress(idx)+'%';
   renderIntakeDock(s);
 }
-function iaAdvance(){ pruneStaleAnswers(); iaStep++; runIntakeStep(); }
+/* Editing from the review screen: re-ask ONE question, appending to the
+   transcript (never rewriting it), then land straight back on the review. If
+   the change unlocked a question that now has no answer, go there first
+   instead - e.g. switching from "just track spending" to the full budget. */
+let iaEditReturn=null;
+function iaEditStep(p){ iaEditReturn=iaStep; iaStep=p; iaForceInput=false; runIntakeStep(); }
+function iaFirstUnanswered(){
+  for(let i=0;i<INTAKE.length;i++){
+    const s=INTAKE[i];
+    if(!s.key) continue;
+    if(s.showIf && !s.showIf(iaAns)) continue;
+    const opt=(typeof s.optional==='function')?!!s.optional(iaAns):!!s.optional;
+    if(opt) continue;
+    if(iaAns[s.key]===undefined||iaAns[s.key]==='') return i;
+  }
+  return -1;
+}
+function iaAdvance(){
+  pruneStaleAnswers();
+  if(iaEditReturn!=null){
+    const back=iaEditReturn; iaEditReturn=null;
+    const miss=iaFirstUnanswered();
+    iaStep = (miss>=0 && miss<back) ? miss : back;
+    runIntakeStep(); return;
+  }
+  iaStep++; runIntakeStep();
+}
+/* Everything the user told us, in their own answers, before a single thing is written */
+function iaSummaryRows(){
+  const rows=[];
+  INTAKE.forEach((s,i)=>{
+    if(!s.sum||!s.key) return;
+    if(s.showIf && !s.showIf(iaAns)) return;
+    const v=iaAns[s.key];
+    if(v===undefined||v==='') return;
+    let disp;
+    if(s.input==='money') disp = (+v>0)?usd(v):'Skipped';
+    else if(s.options){ const o=s.options.find(x=>(x.value!==undefined?x.value:x.label)===v); disp=o?o.label:String(v); }
+    else disp=String(v);
+    rows.push({i,label:s.sum,value:disp});
+  });
+  const loop=(key,idFor,label,fmt)=>{
+    const arr=iaAns[key]||[]; if(!arr.length) return;
+    const idx=INTAKE.findIndex(x=>x.id===idFor);
+    rows.push({i:idx<0?INTAKE.length:idx,label,value:arr.map(fmt).join(', ')});
+  };
+  loop('extraIncome','moreIncome','Other income',x=>x.name+' '+usd(x.amount));
+  loop('expenses','expenses','Other monthly bills',x=>x.name+' '+usd(x.amount));
+  loop('leaks','deepDive','Where it goes',x=>x.name+' '+usd(x.monthly));
+  if(iaAns.hasDebt==='yes'&&iaAns.debtAmt>0){ const idx=INTAKE.findIndex(x=>x.id==='debtAmt'); rows.push({i:idx<0?INTAKE.length:idx,label:'Debt',value:usd(iaAns.debtAmt)}); }
+  return rows.sort((a,b)=>a.i-b.i);
+}
+function renderReview(s){
+  const dock=document.getElementById('intakeDock');
+  const rows=iaSummaryRows();
+  const list=rows.length
+    ? rows.map(r=>`<button class="rev-row" data-rev="${r.i}"><span class="rv-k">${escapeHtml(r.label)}</span><span class="rv-v">${escapeHtml(r.value)}</span><span class="rv-e">Change</span></button>`).join('')
+    : `<div class="rv-empty">You skipped everything - that's allowed. I'll set up the basics and you can fill it in whenever.</div>`;
+  dock.innerHTML=`<div class="review"><div class="rv-h">Before I build it - does this look right?</div><div class="rv-s">Tap any line to change it. Nothing is saved until you tap the button.</div><div class="rv-list">${list}</div></div>`
+    +`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta||'Set me up →')}</button></div>`
+    +`<div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`;
+  let committing=false;
+  document.getElementById('iaFin').onclick=()=>{ if(committing) return; committing=true; commitIntake(); };
+  dock.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>iaEditStep(+b.dataset.rev));
+  const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+}
 function renderIntakeDock(s){
   const dock=document.getElementById('intakeDock');
   if(s.input==='start'){
@@ -5735,6 +6053,7 @@ function renderIntakeDock(s){
   }
   if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
+  if(s.input==='review'){ renderReview(s); return; }
   if(s.input==='loop'){ renderLoop(s); return; }
   if(s.input==='zeroClose'){ renderZeroClose(s); return; }
   if(s.input==='leak'){ leakFinder(s); return; }
@@ -5789,7 +6108,12 @@ function renderIntakeDock(s){
     return;
   }
   const pre=(typeof s.prefill==='function')?(s.prefill(iaAns)||''):'';
-  dock.innerHTML=`<div class="inrow"><input id="iaInput" type="${isMoney?'number':'text'}" ${isMoney?'inputmode="decimal" min="0" step="any"':''} value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'')}"><button class="intake-send" id="iaSend">Send</button></div>`
+  // a bare "e.g. 3200" tells nobody what unit or period is wanted - show the $ and say it
+  const hint=s.hint?`<div class="ia-hint">${escapeHtml(s.hint)}</div>`:'';
+  const field=isMoney
+    ? `<span class="ia-money"><span class="ia-cur">$</span><input id="iaInput" type="number" inputmode="decimal" min="0" step="any" value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'0')}"></span>`
+    : `<input id="iaInput" type="text" value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'')}">`;
+  dock.innerHTML=`<div class="inrow">${field}<button class="intake-send" id="iaSend">Send</button></div>${hint}`
     +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}${backBtn}</div>`;
   const inp=document.getElementById('iaInput'); setTimeout(()=>{ inp.focus(); if(pre) try{inp.select();}catch(_){} },60);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
@@ -6110,10 +6434,10 @@ function boot(){
   // last month first (in full), then this month up to today - nothing slips through
   if(postRecurring(shiftMonth(thisMonth(),-1))+postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
-  renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
+  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
-  renderFreedomToggle(); fillTrueRate();
+  renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
   renderBackupNote();
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
@@ -6181,9 +6505,16 @@ function renderHome(){
   const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
   const snap=document.getElementById('homeSnap'); if(!snap) return;
+  // the growth lane belongs on the dashboard too - otherwise money moves and the
+  // only visible effect is net worth changing for no stated reason
+  const invM=(typeof monthInvested==='function')?monthInvested(M):0;
+  const everInv=(typeof investedAllTime==='function')?investedAllTime():0;
+  const hasAccts=(state.accounts||[]).length>0;
   snap.innerHTML=
     flipStat('Left to budget', ltb, ltbCls)+
     flipStat('Spent this month', spent, '')+
+    (hasAccts?flipStat('🏦 In the bank', bankTotal(), bankTotal()<0?'bad':'good'):'')+
+    (everInv>0?flipStat('🌱 Invested this month', invM, 'pos'):'')+
     plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome');
