@@ -80,7 +80,7 @@ Skips are **month-scoped** (`deepenSkipMonth`): "Not now" sets a step aside for 
 
 **Cover First** (the Four Walls) - Roof / Food / Power & Wi-Fi / Getting Around, matched to categories by keyword (`WALLS`). Drives the Home grid, essential-runway, and sovereignty. Tapping a wall deep-links to its category on Plan and starts the **wall-to-wall guide** (`wallGuideCat`, `wallGuideHTML`): fund it and an inline banner hands you the next uncovered wall, ending in an all-covered close - no bouncing back to Home between essentials. On the Home grid, covered walls collapse to compact ✓ chips (still tappable to adjust) and the whole grid folds to one line when all four are covered; walls are per-month, so they return asking when the month turns. `renderWalls`, `goToWall`, `findOrCreateEssential`.
 
-**Silent Sovereignty Audit** - Sovereign Capital Ratio, Overhead Drag, Pure Freedom Runway, and a 4-tier classification (Encumbered → Tethered → Sovereign → Untouchable). `sovereignty`, `renderSovereignty`.
+**Silent Sovereignty Audit** - Sovereign Capital Ratio, Overhead Drag, Pure Freedom Runway, and a 4-tier classification (Encumbered → Tethered → Unbound → Untouchable). The rank is deliberately NOT called "Sovereign": that name belongs to the paid sync tier, and a free rank sharing it reads as a paywall. `sovereignty`, `renderSovereignty`.
 
 **Anti-shame** - overspend shows a calm **Rebalance Banner** (never red errors); the **Blindspot Shield** rewards logging. Copy never says failed/bad/violated/ruined.
 
