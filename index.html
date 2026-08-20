@@ -61,6 +61,13 @@
   /* top bar */
   header{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
   .bar{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .bar-actions{display:flex;align-items:center;gap:8px;flex:none}
+  .theme-toggle{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;font-size:16px;width:40px;height:40px;line-height:1;cursor:pointer;flex:none;display:grid;place-items:center;padding:0}
+  .theme-toggle:hover{border-color:var(--accent)}
+  /* The bar carries three things now, so the CTA must not wrap on a narrow phone. */
+  .bar .btn.primary{white-space:nowrap;padding:13px 18px;font-size:15px;gap:.3em}
+  .lockup{min-width:0}
+  .lockup .wm{white-space:nowrap}
   .lockup{display:flex;align-items:center;gap:11px}
   .lockup .mk{width:30px;height:30px;color:var(--accent);flex:none}
   .lockup .wm{font-weight:900;font-size:20px;letter-spacing:-.5px;line-height:1}
@@ -173,6 +180,18 @@
   .foot{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
   .foot a:hover{color:var(--accent)}
 
+  /* Header breakpoints. These must come after the base .lockup rules above -
+     same specificity, so source order is what decides. */
+  @media(max-width:430px){
+    .bar .btn.primary{padding:11px 13px;font-size:14px}
+    .theme-toggle{width:36px;height:36px;font-size:15px}
+    .lockup{gap:8px}
+    .lockup .mk{width:26px;height:26px}
+    .lockup .wm{font-size:18px}
+  }
+  /* Below ~360px the CTA drops to "Open" rather than pushing the page sideways. */
+  @media(max-width:360px){ .bar .cta-rest{display:none} .lockup .wm{font-size:16px} }
+
   @media(max-width:820px){
     .hero-grid{grid-template-columns:1fr;gap:30px}
     .phone{grid-row:1;max-width:250px}
@@ -187,7 +206,11 @@
     .lockup .tl{display:none}
   }
 </style>
-<script>try{var _st=JSON.parse(localStorage.getItem("unfiltered_budget_v2")||"{}");if(_st&&_st.theme==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}</script>
+<script>/* Pre-paint theme. An explicit choice made in the app wins; otherwise follow the phone. */
+try{var _s=JSON.parse(localStorage.getItem("unfiltered_budget_v2")||"{}"),_t=_s&&_s.theme;
+if(_t!=="light"&&_t!=="dark"){_t=(window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches)?"light":"dark";}
+document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
+document.documentElement.setAttribute("data-theme-mode",(_s&&(_s.theme==="light"||_s.theme==="dark"))?_s.theme:"auto");}catch(e){}</script>
 </head>
 <body>
 
@@ -197,7 +220,10 @@
       <svg class="mk" viewBox="0 0 512 512" aria-hidden="true"><path d="M297,51 L164,266 L246,266 L205,461 L358,225 L266,225 Z" fill="currentColor"/></svg>
       <div><div class="wm">Account<span class="b">ability</span></div><div class="tl">Every dollar answers to you.</div></div>
     </a>
-    <a class="btn primary" href="app.html">Open the app</a>
+    <div class="bar-actions">
+      <button class="theme-toggle" id="themeToggle" title="Theme" aria-label="Change theme">🌓</button>
+      <a class="btn primary" href="app.html">Open<span class="cta-rest">the app</span></a>
+    </div>
   </div>
 </header>
 
@@ -482,6 +508,39 @@
 .orgbar .prim{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 </style>
 <script>
+/* Theme toggle. Same three modes and the same storage key as the app, so a choice
+   made here is still in force after "Open the app" - two surfaces, one setting. */
+(function themeControl(){
+  var KEY='unfiltered_budget_v2', MODES=['auto','light','dark'], root=document.documentElement;
+  function mode(){ var m=root.getAttribute('data-theme-mode'); return MODES.indexOf(m)>-1?m:'auto'; }
+  function prefersLight(){ return !!(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches); }
+  function paint(){
+    var m=mode(), light=(m==='auto'?prefersLight():m==='light');
+    root.setAttribute('data-theme', light?'light':'dark');
+    var b=document.getElementById('themeToggle');
+    if(b){ b.textContent = m==='light'?'☀️' : m==='dark'?'🌙' : '🌓';
+      var label = m==='auto'?'following your phone':m;
+      b.title='Theme: '+label; b.setAttribute('aria-label','Theme: '+label+'. Tap to change.'); }
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', light?'#eef2f8':'#0b1421');
+  }
+  function persist(m){
+    // Read-modify-write so we never clobber a budget that already lives here.
+    try{ var st={}; try{ st=JSON.parse(localStorage.getItem(KEY)||'{}')||{}; }catch(e){ st={}; }
+      st.theme=m; localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){}
+  }
+  var btn=document.getElementById('themeToggle');
+  if(btn) btn.addEventListener('click', function(){
+    var m=MODES[(MODES.indexOf(mode())+1)%MODES.length];
+    root.setAttribute('data-theme-mode', m); persist(m); paint();
+  });
+  if(window.matchMedia){
+    var mq=matchMedia('(prefers-color-scheme: light)');
+    var onChange=function(){ if(mode()==='auto') paint(); };
+    mq.addEventListener ? mq.addEventListener('change',onChange) : mq.addListener(onChange);
+  }
+  paint();
+})();
 (function previewOriginNotice(){
   try{
     var CANON='accountability.money', h=(location.hostname||'').toLowerCase();
