@@ -20,6 +20,26 @@ has no answer (switching "just track spending" to the full budget), the flow goe
 there first instead of returning early. `renderReview`, `iaSummaryRows`,
 `iaEditStep`, `iaFirstUnanswered`; steps opt in by carrying a short `sum` label.
 
+**Photograph the budget you already have.** Anyone who answers anything but
+"never really tried" at `budgetPast` is offered the camera (`budgetPhoto`,
+`renderBudgetPhoto`). The receipt reader is reused - `loadTesseract` plus
+`qlParseOcr` - with `bpParse` dropping the rows a budget sheet carries that a
+receipt does not: totals, subtotals, the income line at the top.
+
+`bpApply` maps what it read onto the four walls by keyword and drops the rest
+into `expenses`, then sets `photoFilled`. The six number-asking steps
+(`essIntro`, `roof`, `food`, `util`, `transport`, `expenses`) test that flag, so
+they stand down.
+
+**The feeling questions deliberately do not.** `roofFeel`, `foodStyle`,
+`commuteFeel`, `debtFeel` all still run: the photo replaces the typing, not the
+conversation, and a spreadsheet cannot tell you how the commute feels.
+
+Note for anyone adding a gate like this: those six steps already declared
+`showIf` later in their object literal, so a second `showIf` key was silently
+discarded (last key wins) and the guard did nothing while looking correct. Merge
+into the existing condition rather than adding a second one.
+
 **Pacing.** Bot lines type before they land. `iaBotSay` shows a three-dot bubble
 for `iaTypingDelay(text)` milliseconds, then swaps in the sentence and only then
 renders the dock, so the answer buttons never appear before the question has been
