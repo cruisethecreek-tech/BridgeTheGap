@@ -3155,7 +3155,7 @@ function runDeepen(k){
   if(k==='emergency'){
     const ess=Math.round(essentialMonthly()||0);
     const target=ess>0?ess:1000;
-    state.goals.push({id:uid(),name:'Emergency fund',target,saved:0,date:'',goalType:'safety'});
+    state.goals.push({id:uid(),name:'Emergency fund',target,saved:0,date:'',goalType:'foundation'});   // Foundation is the real type - 'safety' matched nothing in GOAL_TYPES
     save(); activateTab('goals'); renderGoals(); renderHome();
     if(typeof toast==='function') toast('Emergency fund started at '+money(target)+(ess>0?' - one month of your essentials.':'.'));
     return;
