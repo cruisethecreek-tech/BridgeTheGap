@@ -10,6 +10,25 @@ and sync sends only ciphertext.
 
 ---
 
+## The ladder
+
+Three stages gated on **runway** (`runwayStage`), which never drops once earned
+(`activeStage`, plus `evidenceStage` so a returning user who already logged assets
+keeps their tools). `STAGE_META` carries what each rung opens.
+
+**Stage map** (`stageMapHTML`, `openStageMap`) - tapping the stage bar opens all
+three rungs at once: what each one gives, whether it is unlocked, and a progress
+bar toward the ones that are not. The ladder used to be invisible from below - you
+could see "3 mo to Stage 2" but never what Stage 2 was, which makes a gate feel
+arbitrary instead of earned.
+
+**The gate stays runway, deliberately.** A "confirm I finished Stage 1" button was
+considered and rejected: it would hand someone net worth, offense tracking and the
+sovereignty audit while they still have no cushion, and every one of those tools
+reads wrong without one. Settings keeps **Show everything** for anyone who wants
+past the system entirely, and the map says so rather than pretending the gate is
+the only option.
+
 ## Visual language
 
 **Midnight** (dark, the default) is a deep blue ground carrying warm ochre
