@@ -2048,7 +2048,9 @@ function fmtLife(amount, rateOverride){
   let out;
   if(hrs*60 < 60){ const m=Math.max(1,Math.round(hrs*60)); out=m+' min'; }
   else if(hrs < dayHrs){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
-  else if(hrs < moHrs){ const v=Math.round(hrs/dayHrs*10)/10; out=v+(v===1?' day':' days'); }
+  // switch to months a little before the exact boundary: floating point made a
+  // full month of pay read as "21.7 days", and nobody says 21.7 days anyway
+  else if(hrs < moHrs*0.95){ const v=Math.round(hrs/dayHrs*10)/10; out=v+(v===1?' day':' days'); }
   else { const v=Math.round(hrs/moHrs*10)/10; out=v+' mo'; }
   return (neg?'-':'')+out;
 }

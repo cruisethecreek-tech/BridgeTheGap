@@ -7,6 +7,7 @@ any public release.
 node tests/math_audit.mjs 400        # property fuzz (optionally: <states> <seed>)
 node tests/math_edges.mjs            # hostile inputs
 node tests/math_golden.mjs           # hand-computed scenario
+node tests/math_claims.mjs           # every money claim, hand-verified
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
@@ -46,7 +47,19 @@ app agrees with reality rather than merely with itself** - the invariants above
 all passed while `essentialMonthly` was under-counting split categories, and only
 the hand math caught it.
 
+## 4. `math_claims.mjs` - the claims inventory
+Every statement the app makes about a person's money, each with a value worked
+out by hand (or by an independently written second implementation, noted
+inline): budget figures, life-hours conversions, the true-rate and blended-wage
+engines, debt payoff months and interest, the invest-vs-payoff comparison,
+runway, the sovereignty metrics, recurring frequency conversions, membership
+totals, the time ledger and the gut-check metrics.
+
+**If the app tells a user a number, it belongs in this file.** Adding a
+calculation without adding it here means shipping an unverified claim.
+
 ## What these do NOT cover
-- Whether a person understands what a number means (that is user testing).
+- Whether a person understands what a number means. See `USER-TESTING.md` -
+  every failure found by real people so far had correct arithmetic underneath.
 - Whether the numbers a user types are true (nothing can verify that).
 - Browser rendering differences; run the app on a real device before release.
