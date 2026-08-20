@@ -20,6 +20,26 @@ has no answer (switching "just track spending" to the full budget), the flow goe
 there first instead of returning early. `renderReview`, `iaSummaryRows`,
 `iaEditStep`, `iaFirstUnanswered`; steps opt in by carrying a short `sum` label.
 
+**Pacing.** Bot lines type before they land. `iaBotSay` shows a three-dot bubble
+for `iaTypingDelay(text)` milliseconds, then swaps in the sentence and only then
+renders the dock, so the answer buttons never appear before the question has been
+read. The delay scales with length (`340 + words*22`, clamped 380-1500ms), so a
+four-word acknowledgement returns fast and a long one takes a moment.
+
+`iaSayGen` guards it: Back or an edit during the beat increments the counter and
+the pending line is abandoned rather than dropped into a transcript that has moved
+on. The delay is 0 under `prefers-reduced-motion`, and 0 when `state.chatPace` is
+`'instant'` (Settings → Chat pacing), which is also what the test harness sets so
+assertions do not sit through the animation.
+
+**Cadence is part of the voice.** The copy was warm from the start; what read as
+machine-made was that every line had the same shape. 17 of 20 questions and 27 of
+35 replies used the same `X - now Y` pivot, only 2 replies were a single sentence,
+and lengths clustered tightly around 23 words. A person answering you varies:
+sometimes four words, sometimes a paragraph. When writing new intake copy, vary
+the length deliberately, avoid the balanced-clause pivot, and do not open every
+reply by affirming the answer that was just given.
+
 **Back is available from the second step onward.** `iaBackTarget` walks backwards
 to the last step the user actually answered, stepping over informational beats
 (intro, continue, finish, review) which are not questions. The age gate is a
