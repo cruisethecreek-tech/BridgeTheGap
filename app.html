@@ -1160,6 +1160,7 @@
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
           <label class="fld income-only-rec hide" id="recHoursWrap">Hours/mo it takes<input type="number" id="recHours" min="0" step="0.5" placeholder="opt." style="width:90px"></label>
+          <label class="fld invest-only-rec hide" id="recInvKindWrap">Kind<select id="recInvKind"><option value="holds">Holds its value</option><option value="self">Into me (health, skills)</option></select></label>
           <label class="fld">Repeats
             <select id="recFreq"><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="semimonthly">Twice a month</option><option value="monthly" selected>Monthly</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select>
           </label>
@@ -1212,7 +1213,13 @@
             <input type="number" id="txHours" min="0" step="0.5" placeholder="opt." style="width:90px">
           </label>
           <label class="fld invest-only hide" id="fldInv">Where it went
-            <input type="text" id="txInv" placeholder="Roth IRA, index fund, a course…">
+            <input type="text" id="txInv" placeholder="Roth IRA, index fund, supplements…">
+          </label>
+          <label class="fld invest-only hide" id="fldInvKind">Kind
+            <select id="txInvKind">
+              <option value="holds">Holds its value (account, fund, gold)</option>
+              <option value="self">Into me (health, skills, tools)</option>
+            </select>
           </label>
           <label class="fld">Date
             <input type="date" id="txDate">
@@ -3363,8 +3370,11 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy; state.transactions.push(tx);
   } else if(txType==='invest'){
     const dest=document.getElementById('txInv').value.trim()||'Investment';
-    state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note});
-    investAssetAdd(amt);
+    const ikind=(document.getElementById('txInvKind')||{}).value||'holds';
+    state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note,ikind});
+    // supplements, a course, a tool: real growth, but the money is CONSUMED. Only
+    // money that keeps its value becomes an asset, or net worth quietly lies.
+    if(ikind!=='self') investAssetAdd(amt);
     document.getElementById('txInv').value='';
   } else {
     const source=document.getElementById('txSrc').value.trim()||'Income';
@@ -3816,7 +3826,7 @@ function renderTxList(){
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
     const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):''))
-            :t.type==='invest'?('Still yours - working'+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
+            :t.type==='invest'?(((t.ikind||'holds')==='self'?'Into you - spent on purpose':'Still yours - working')+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
             :((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
     const owner=t.owner||'a', Ho=hourlyFor(owner);
     let badge='';
@@ -3832,7 +3842,7 @@ function renderTxList(){
   box.querySelectorAll('button[data-deltx]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.deltx;
     const gone=state.transactions.find(t=>t.id===id);
-    if(gone&&gone.type==='invest') investAssetAdd(-gone.amount);   // unwind the auto asset so net worth stays honest
+    if(gone&&gone.type==='invest'&&(gone.ikind||'holds')!=='self') investAssetAdd(-gone.amount);   // unwind the auto asset so net worth stays honest
     state.transactions=state.transactions.filter(t=>t.id!==id);
     // keep the linked ledgers honest: a deleted gift/ransom must leave Giving and the Shield too
     state.giving=(state.giving||[]).filter(g=>g.txId!==id);
@@ -5250,6 +5260,7 @@ document.getElementById('recType').addEventListener('change',()=>{
   const rs=document.getElementById('recSrc'); if(rs) rs.placeholder=inv?'Roth IRA, index fund…':'Paycheck…';
   document.getElementById('recOwnerWrap').classList.toggle('hide',!inc);
   const rhw=document.getElementById('recHoursWrap'); if(rhw) rhw.classList.toggle('hide',!inc);
+  const rik=document.getElementById('recInvKindWrap'); if(rik) rik.classList.toggle('hide',!inv);
 });
 document.getElementById('addRec').addEventListener('click',()=>{
   const type=document.getElementById('recType').value;
@@ -5260,7 +5271,7 @@ document.getElementById('addRec').addEventListener('click',()=>{
   // day is kept in sync for anything still reading the old field
   const item={id:uid(),type,amount:amt,freq,anchor,day:Math.min(28,Math.max(1,+anchor.slice(8,10)||1))};
   if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ alert('Add a category first on the Budget tab.'); return; } item.catId=catId; }
-  else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; }
+  else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
     if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; }
@@ -5268,8 +5279,14 @@ document.getElementById('addRec').addEventListener('click',()=>{
   }
   state.recurring.push(item);
   recomputeBlendedWage();   // a new work-hours source changes the true rate immediately
+  // if its first date has already arrived, post it NOW - waiting for the next app
+  // launch made a just-created item look like it did nothing at all
+  const postedNow=postRecurring(thisMonth());
   document.getElementById('recAmt').value=''; document.getElementById('recSrc').value=''; const rh=document.getElementById('recHours'); if(rh) rh.value='';
-  save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote();
+  save(); renderRecurring(); renderBudget(); renderTx(); renderHome();
+  if(typeof renderNetWorth==='function') renderNetWorth();
+  if(typeof updateWageNote==='function') updateWageNote();
+  if(postedNow && typeof toast==='function') toast('Added, and posted '+postedNow+' that was already due.');
 });
 document.getElementById('postRec').addEventListener('click',()=>{
   const n=postRecurring(state.activeMonth);
@@ -5374,7 +5391,7 @@ function postRecurring(month){
       // dedupe per OCCURRENCE, not per month - a weekly bill lands four times
       if(state.transactions.some(t=>t.recId===r.id&&t.date===date)) return;
       if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
-      else if(r.type==='invest'){ state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}); investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
+      else if(r.type==='invest'){ const ik=r.ikind||'holds'; state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id,ikind:ik}); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
       else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
       added++;
     });
@@ -6269,9 +6286,14 @@ function renderHome(){
   const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
   const snap=document.getElementById('homeSnap'); if(!snap) return;
+  // the growth lane belongs on the dashboard too - otherwise money moves and the
+  // only visible effect is net worth changing for no stated reason
+  const invM=(typeof monthInvested==='function')?monthInvested(M):0;
+  const everInv=(typeof investedAllTime==='function')?investedAllTime():0;
   snap.innerHTML=
     flipStat('Left to budget', ltb, ltbCls)+
     flipStat('Spent this month', spent, '')+
+    (everInv>0?flipStat('🌱 Invested this month', invM, 'pos'):'')+
     plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome');
