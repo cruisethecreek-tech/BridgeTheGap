@@ -6550,9 +6550,21 @@ function pruneStaleAnswers(){
    is stamped with the step that produced it, so Back can remove exactly the
    bubbles from that step onward - no transcript desync however many bubbles a
    step emitted (reflect replies, follow-ups, continue-step intros). */
-function iaBack(){
+function iaBackTarget(){
   let p=iaStep-1;
-  while(p>=0){ const s=INTAKE[p]; if(s.showIf && !s.showIf(iaAns)){ p--; continue; } if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='gate'||s.input==='review'){ p--; continue; } break; }   // gate too: its skip button abandons the whole intake - never a Back target
+  while(p>=0){ const s=INTAKE[p];
+    if(s.showIf && !s.showIf(iaAns)){ p--; continue; }
+    // informational beats are not questions, so Back steps over them to the last
+    // thing the user actually answered. The age gate IS answerable and is now a
+    // valid target: getting it wrong set the wrong voice for the whole chat.
+    if(['start','continue','finish','intro'].includes(s.id)||s.input==='start'||s.input==='continue'||s.input==='finish'||s.input==='review'){ p--; continue; }
+    return p;
+  }
+  return -1;
+}
+function iaCanBack(){ return iaBackTarget()>=0; }
+function iaBack(){
+  const p=iaBackTarget();
   if(p<0) return;
   const log=document.getElementById('intakeLog');
   [...log.children].forEach(b=>{ if(+(b.dataset.st??-1)>=p) b.remove(); });
@@ -6650,12 +6662,17 @@ function renderReview(s){
 function renderIntakeDock(s){
   const dock=document.getElementById('intakeDock');
   if(s.input==='start'){
-    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaGo">${escapeHtml(s.cta)}</button></div><button class="intake-skip" id="iaSkip">${escapeHtml(s.skip)}</button>`;
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaGo">${escapeHtml(s.cta)}</button></div>`
+      +`<div class="intake-underrow">${iaCanBack()?'<button class="intake-skip" id="iaBack">← Back</button>':''}<button class="intake-skip" id="iaSkip">${escapeHtml(s.skip)}</button></div>`;
     document.getElementById('iaGo').onclick=iaAdvance;
+    { const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack; }
     document.getElementById('iaSkip').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
-  if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`; document.getElementById('iaCont').onclick=iaAdvance; return; }
+  if(s.input==='continue'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaCont">Continue →</button></div>`+(iaCanBack()?`<div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`:'');
+    document.getElementById('iaCont').onclick=iaAdvance;
+    { const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack; }
+    return; }
   if(s.input==='finish'){ dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaFin">${escapeHtml(s.cta)}</button></div>`; document.getElementById('iaFin').onclick=commitIntake; return; }
   if(s.input==='review'){ renderReview(s); return; }
   if(s.input==='loop'){ renderLoop(s); return; }
@@ -6669,7 +6686,7 @@ function renderIntakeDock(s){
     document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;
   }
-  const canBack = iaStep>3;   // Back appears from the name step onward (index 4+, after gate/tone/situation/intro) - its first target is situation, since intro/gate are skipped
+  const canBack = iaCanBack();
   const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
@@ -6782,7 +6799,7 @@ function runIntakeHelper(s){
 function renderComfortStep(s){
   const dock=document.getElementById('intakeDock');
   const picked=new Set((iaAns.comfort||[]).map(x=>x.toLowerCase()));
-  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const whyBtn = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
   const draw=()=>{
     dock.innerHTML=`<div class="intake-chips">${COMFORT_SEEDS.map((c,i)=>`<button data-ci="${i}" class="${picked.has(c.toLowerCase())?'picked':''}">${picked.has(c.toLowerCase())?'✓ ':'+ '}${escapeHtml(c)}</button>`).join('')}</div>`
@@ -6811,7 +6828,7 @@ function renderComfortStep(s){
 }
 function renderReflect(s){
   const dock=document.getElementById('intakeDock');
-  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const whyBtn = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
   dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-ri="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>`
     +`<div class="intake-underrow">${whyBtn}${s.optional?'<button class="intake-skip" id="iaReflectSkip">Skip</button>':''}${back}</div>`;
@@ -6848,7 +6865,7 @@ function renderLoop(s){
   const used=new Set(arr.map(x=>x.name.toLowerCase()));
   const chips=s.chips.filter(c=>c.custom||!used.has(c.name.toLowerCase()));
   const total=arr.reduce((sum,x)=>sum+(+x.amount||0),0);
-  const back = iaStep>3 ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const running = arr.length ? `<div class="loop-sum">Added: ${arr.map(x=>escapeHtml(x.name)+' '+usd(x.amount)).join(' · ')} <b>= ${usd(total)}</b></div>` : '';
   dock.innerHTML=running
     +`<div class="intake-chips">${chips.map((c,i)=>`<button data-ci="${i}">${escapeHtml(c.label)}</button>`).join('')}</div>`
