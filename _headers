@@ -1,0 +1,38 @@
+# Cloudflare Pages response headers. GitHub Pages ignores this file.
+#
+# Two jobs: make updates roll out fast, and keep the "nothing leaves your
+# device" promise enforceable at the edge rather than only in the copy.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# The service worker decides when everyone else gets an update, so it must
+# never be served stale. Same for the HTML shells it revalidates against.
+/sw.js
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/app.html
+  Cache-Control: no-cache, must-revalidate
+
+/budget.html
+  Cache-Control: no-cache, must-revalidate
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+
+# Content-addressed in practice: these change name when they change.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/shots/*
+  Cache-Control: public, max-age=604800
+
+/icon.svg
+  Cache-Control: public, max-age=604800
