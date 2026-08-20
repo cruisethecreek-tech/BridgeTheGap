@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Accountability - the budgeting app that fights back</title>
 <meta name="description" content="A zero-based budgeting app with a spine. It fights your impulses in real time, prices every purchase in hours of your life, and never phones home. No account, no bank login, nothing leaves your device.">
-<meta name="theme-color" content="#17150f">
+<meta name="theme-color" content="#131c27">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -26,10 +26,10 @@
      page makes ZERO external requests - "never phones home" stays literally true. */
   @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('fonts/inter-var-latin.woff2') format('woff2')}
   :root{
-    --bg:#17150f; --panel:#201d16; --panel-2:#2a251c; --line:#342e24; --ink:#17150f;
-    --on-accent:#17150f; --text:#ece5d8; --muted:#9d9384; --accent:#cfa76a; --accent-2:#c4714f;
+    --bg:#131c27; --panel:#1a2532; --panel-2:#222e3d; --line:#2c3849; --ink:#131c27;
+    --on-accent:#131c27; --text:#ece5d8; --muted:#98a3b0; --accent:#cfa76a; --accent-2:#cd7c59;
     --good:#6fae83; --good-rgb:111,174,131; --bad:#c9736b;
-    --hero-grad:linear-gradient(135deg,#201d16,#2a251c); --header-bg:rgba(23,21,15,.9);
+    --hero-grad:linear-gradient(135deg,#1a2532,#222e3d); --header-bg:rgba(19,28,39,.9);
   }
   :root[data-theme="light"]{
     --bg:#f4efe6; --panel:#fbf8f3; --panel-2:#f0e9dd; --line:#e0d5c4; --ink:#2c2620;
@@ -526,7 +526,7 @@ document.documentElement.setAttribute("data-theme-mode",(_s&&(_s.theme==="light"
       var label = m==='auto'?'following your phone':m;
       b.title='Theme: '+label; b.setAttribute('aria-label','Theme: '+label+'. Tap to change.'); }
     var meta=document.querySelector('meta[name="theme-color"]');
-    if(meta) meta.setAttribute('content', light?'#f4efe6':'#17150f');
+    if(meta) meta.setAttribute('content', light?'#f4efe6':'#131c27');
   }
   function persist(m){
     // Read-modify-write so we never clobber a budget that already lives here.
