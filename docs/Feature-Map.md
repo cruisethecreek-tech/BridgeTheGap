@@ -10,6 +10,32 @@ and sync sends only ciphertext.
 
 ---
 
+## Visual language
+
+Two themes, both warm. **Quiet ink** (dark, the default) is warm charcoal rather
+than cold navy; **Ledger** (light) is paper rather than white, because a budget
+is a ledger and a ledger is paper. The `auto` theme setting picks per device.
+
+The **expression layer** at the end of the stylesheet lowers the voice of the
+whole interface in one place. Before it, the app carried 241 declarations at
+weight 700+ against 33 at 600 or below, 42 `text-transform:uppercase` rules and
+47 `letter-spacing` rules: nothing was quiet, so nothing had hierarchy, and every
+micro-label read as instrument telemetry. Headings and prose use a **system serif
+stack** (Iowan / Palatino / Georgia) - no font file, so "zero external requests"
+stays literally true.
+
+**Emoji are navigation only.** The app carried 116 distinct glyphs, which is the
+single strongest machine-made signal: a person picks eight icons and reuses them.
+336 decorative runs were removed; what remains is the tab bar and the theme
+toggle. Two glyphs that turned out to be functional rather than decorative were
+replaced with words or marks instead of restored - the Freedom Mode toggle now
+reads `$ / hrs`, and the action button is a `+`.
+
+Contrast is checked, not assumed: every foreground/background pair in both themes
+meets WCAG AA or better. The light accent was darkened from `#9a6b2f` to
+`#8a5f28` because the original sat at 4.06 on paper and 4.39 behind button text,
+both short of AA for normal-size text.
+
 ## The flow (primary nav + More)
 
 The bottom nav leads with the three core jobs and tucks the support surfaces behind
