@@ -1,5 +1,5 @@
 /* ACCOUNTABILITY service worker - offline shell + fresh updates */
-const CACHE = 'accountability-v3';
+const CACHE = 'accountability-v4';   // bumped on the move to accountability.money
 const ASSETS = [
   './',
   './index.html',

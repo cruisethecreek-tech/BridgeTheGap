@@ -12,8 +12,15 @@
 <meta property="og:title" content="Accountability - the budgeting app that fights back">
 <meta property="og:description" content="Zero-based budgeting with a spine. Prices every purchase in hours of your life. No account. Nothing leaves your device.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://cruisethecreek-tech.github.io/BridgeTheGap/shots/shot-shield.png">
-<link rel="canonical" href="https://cruisethecreek-tech.github.io/BridgeTheGap/">
+<meta property="og:url" content="https://accountability.money/">
+<meta property="og:site_name" content="Accountability">
+<meta property="og:image" content="https://accountability.money/shots/shot-shield.png">
+<meta property="og:image:alt" content="The Accountability gut-check screen, pricing a purchase in hours of your life.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Accountability - the budgeting app that fights back">
+<meta name="twitter:description" content="Zero-based budgeting with a spine. Prices every purchase in hours of your life. No account. Nothing leaves your device.">
+<meta name="twitter:image" content="https://accountability.money/shots/shot-shield.png">
+<link rel="canonical" href="https://accountability.money/">
 <style>
   /* Inter is self-hosted (fonts/inter-var-latin.woff2, variable 400-900) so the
      page makes ZERO external requests - "never phones home" stays literally true. */
@@ -464,6 +471,37 @@
     // offline shell for return visits starts here, not only after the app is opened
     if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
   })();
+</script>
+
+<style>
+/* Preview-origin notice - see app.html for the reasoning. */
+.orgbar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:200;background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:min(94vw,460px);font-size:13.5px;line-height:1.45}
+.orgbar b{color:var(--accent)}
+.orgbar .orgacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.orgbar button,.orgbar a{font:inherit;font-weight:800;font-size:13px;border-radius:9px;padding:8px 12px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--text);text-decoration:none}
+.orgbar .prim{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+</style>
+<script>
+(function previewOriginNotice(){
+  try{
+    var CANON='accountability.money', h=(location.hostname||'').toLowerCase();
+    if(location.protocol==='file:'||!h) return;
+    if(h===CANON||h==='www.'+CANON) return;
+    if(h==='localhost'||h==='0.0.0.0'||/^127\./.test(h)||/\.local$/.test(h)) return;
+    if(!/\.pages\.dev$|\.github\.io$/.test(h)) return;
+    if(sessionStorage.getItem('acct_origin_notice')==='1') return;
+    var bar=document.createElement('div'); bar.className='orgbar';
+    bar.innerHTML='You are on a preview address. The live site is <b>'+CANON+'</b>.'
+      +' A budget started here will not follow you there - saved data is tied to the address it was saved on.'
+      +'<div class="orgacts"><a class="prim" href="https://'+CANON+'/" rel="noopener">Go to the live site</a>'
+      +'<button data-org="hide">Stay here</button></div>';
+    document.body.appendChild(bar);
+    bar.addEventListener('click',function(e){
+      if(!e.target.closest('[data-org],a')) return;
+      sessionStorage.setItem('acct_origin_notice','1'); bar.remove();
+    });
+  }catch(e){}
+})();
 </script>
 
 </body>
