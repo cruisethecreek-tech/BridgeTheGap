@@ -151,6 +151,7 @@ trackStart                                // tracking origin (YYYY-MM-DD); calen
 comfortMenu                               // the free comfort list (strings, shown inside every gut-check)
 timeLog                                   // time ledger entries [{id, date, kind, hours}], kinds: health|learn|build|people|leak (90-day window)
 theme                                     // 'auto' (default, follows the OS) | 'light' | 'dark' explicit override
+diary                                     // money diary [{id, date, ts, kind, prompt, text, acted:[{what,id,amount,label}]}]
 autoBackup                                // backup reminder cadence: off | launch | weekly (default) | monthly
 backupNagDay                              // YYYY-MM-DD the reminder was answered or dismissed (day-scoped, not session)
 ```
@@ -201,6 +202,29 @@ answer the actual driver, keyed to the trap the user already picked in the gut-c
 feeling / free comfort list / set a floor not a ban; *status* -> compare to your own last
 year / remember what the photo hides / define winning yourself; *leak* -> price the year not
 the month / audit renewals / set the cancel reminder now. Both engines can render together.
+
+**Money diary (`state.diary`, Diary tab).** The budget asks for numbers; people
+think in stories. An entry is written in plain words under one of four framings
+(a win, a hard one, something coming up, just writing), stamped with the date and
+time, and kept in a timeline.
+
+The app then READS the entry for money facts and offers to log them - it never
+writes anything on its own. `diaryScan` is deterministic pattern matching done
+on-device (`diaryAmounts`, `diaryWhen`, `diaryDate`, `diaryCategory`): no model,
+no network, nothing to phone home with. A dollar-signed figure with no income
+word is treated as money out; a bare number is only read as money when a money
+verb sits beside it, so years, house numbers, times and percentages stay out of
+the budget. Tense and date come from whichever marker sits CLOSEST to the amount
+(`DIARY_REACH`), so a "yesterday" in the first sentence cannot date a plan in the
+third. Category is guessed from the words around that amount, preferring a
+category the user already has.
+
+Findings become offer cards: past outflow to a category (with a picker),
+past inflow as income, and anything future or saved as a goal rather than a
+transaction. Approving writes it and records what it did on the entry, so the
+timeline shows "logged $340 - Getting Around" under the words that produced it.
+Declining leaves the budget untouched. Deleting an entry never removes what it
+already logged.
 
 **3. Free comfort list (`state.comfortMenu`; collected in intake, editable in Settings,
 rendered by `comfortHTML`).** The user names, while calm, the no-cost things that actually
