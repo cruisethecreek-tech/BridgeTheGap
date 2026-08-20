@@ -1088,6 +1088,10 @@
     .monthnav .m{min-width:150px;font-size:17px}
   }
 </style>
+<script>/* Pre-paint theme so a light-mode phone never flashes dark. Mirrors resolvedTheme(). */
+try{var _s=JSON.parse(localStorage.getItem("unfiltered_budget_v2")||"{}"),_t=_s&&_s.theme;
+if(!_t||_t==="auto"){_t=(window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches)?"light":"dark";}
+document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");}catch(e){}</script>
 </head>
 <body>
 
@@ -2003,7 +2007,7 @@ function defaultState(){
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
-           investReturn:7, investYears:10, theme:'dark' };
+           investReturn:7, investYears:10, theme:'auto' };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -5285,13 +5289,38 @@ function renderAll(){
   renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
+/* Theme: 'auto' follows the phone; 'light'/'dark' are explicit overrides. Auto is
+   the default, so someone whose phone is in light mode does not get handed a dark
+   app they never asked for. The toggle cycles auto -> light -> dark. */
+const THEME_MODES=['auto','light','dark'];
+const prefersLight=()=>!!(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);
+const themeMode=()=>THEME_MODES.includes(state.theme)?state.theme:'auto';
+function resolvedTheme(){ const m=themeMode(); return m==='auto' ? (prefersLight()?'light':'dark') : m; }
 function applyTheme(){
-  const light=state.theme==='light';
+  const m=themeMode(), light=resolvedTheme()==='light';
   document.documentElement.setAttribute('data-theme', light?'light':'dark');
-  const tt=document.getElementById('themeToggle'); if(tt) tt.textContent=light?'☀️':'🌙';
+  const tt=document.getElementById('themeToggle');
+  if(tt){
+    tt.textContent = m==='light'?'☀️' : m==='dark'?'🌙' : '🌓';
+    const label = m==='auto' ? 'following your phone' : m;
+    tt.title='Theme: '+label; tt.setAttribute('aria-label','Theme: '+label+'. Tap to change.');
+  }
   const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute('content', light?'#eef2f8':'#0b1421');
 }
-(function(){ const t=document.getElementById('themeToggle'); if(t) t.addEventListener('click',()=>{ state.theme=state.theme==='light'?'dark':'light'; save(); applyTheme(); }); })();
+(function(){
+  const t=document.getElementById('themeToggle');
+  if(t) t.addEventListener('click',()=>{
+    state.theme=THEME_MODES[(THEME_MODES.indexOf(themeMode())+1)%THEME_MODES.length];
+    save(); applyTheme();
+    toast(state.theme==='auto'?'Theme follows your phone':'Theme: '+state.theme);
+  });
+  // While on auto, follow the phone live instead of waiting for a reload.
+  if(window.matchMedia){
+    const mq=matchMedia('(prefers-color-scheme: light)');
+    const onChange=()=>{ if(themeMode()==='auto') applyTheme(); };
+    mq.addEventListener ? mq.addEventListener('change',onChange) : mq.addListener(onChange);
+  }
+})();
 document.getElementById('freedomToggle').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   const want=b.dataset.mode==='life';

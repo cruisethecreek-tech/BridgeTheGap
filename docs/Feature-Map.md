@@ -150,7 +150,7 @@ hoursPerWeek                              // real hours worked/week (0 = unknown
 trackStart                                // tracking origin (YYYY-MM-DD); calendar days before it are "pre"
 comfortMenu                               // the free comfort list (strings, shown inside every gut-check)
 timeLog                                   // time ledger entries [{id, date, kind, hours}], kinds: health|learn|build|people|leak (90-day window)
-theme                                     // dark|light override ('' = follow system)
+theme                                     // 'auto' (default, follows the OS) | 'light' | 'dark' explicit override
 ```
 Transaction `type` is `income | expense | invest`. Invest reduces the cash balance but
 credits the auto-managed `Invested capital` asset (`asset.auto==='invest'`); deleting the
