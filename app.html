@@ -785,6 +785,17 @@
   .ia-money .ia-cur{color:var(--muted);font-weight:800;font-size:16px;flex:none}
   .intake-dock .ia-money input{background:none;border:none;padding-left:0}
   .intake-dock .ia-money input:focus{border-color:transparent}
+  .acct-row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:9px}
+  .acct-row .ac-ic{font-size:19px;flex:none}
+  .acct-row .ac-b{flex:1;min-width:0}
+  .acct-row .ac-n{font-weight:800;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .acct-row .ac-k{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
+  .ac-tag{font-size:10.5px;font-weight:800;color:var(--good);background:rgba(var(--good-rgb),.12);border:1px solid rgba(var(--good-rgb),.3);border-radius:20px;padding:1px 8px}
+  .acct-row input[data-acctbal]{width:100px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 9px;font-size:13px}
+  .ac-total{margin-top:14px;font-size:15px;font-weight:800}
+  .ac-total .ac-sub{font-size:12.5px;color:var(--muted);font-weight:600}
+  .ac-line{font-size:13px;line-height:1.55;margin-top:7px}
+  .ac-line.sub{color:var(--muted);font-size:12.5px}
   .traplegend{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
   .traplegend>summary{cursor:pointer;font-weight:800;font-size:13.5px;padding:12px 0;color:var(--accent);list-style:none}
   .traplegend>summary::-webkit-details-marker{display:none}
@@ -1273,6 +1284,7 @@
       <div class="panel">
         <div id="blindspotBar"></div>
         <div class="summary" id="txSummary"></div>
+        <div id="bankNote"></div>
         <div class="filters">
           <button class="pill on" data-f="all">All</button>
           <button class="pill" data-f="income">Income</button>
@@ -1367,6 +1379,22 @@
     <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
     <section class="view" id="view-goals">
       <p class="build-intro">Your wealth layer. Net worth is open below; tap any section to expand it.</p>
+
+      <details class="panel acc" open>
+        <summary><span class="acc-hd">🏦 Accounts<span class="acc-sub">What's actually in the bank, in your words</span></span></summary>
+        <div class="acc-body">
+          <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what's really sitting in each account today. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
+          <div class="row" style="gap:8px;margin-top:12px">
+            <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
+            <select id="acctKind" style="min-width:120px"></select>
+            <select id="acctPurpose" style="min-width:140px"></select>
+            <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px"></span>
+            <button class="btn sm primary" id="addAcct">＋ Add</button>
+          </div>
+          <div id="acctList"></div>
+          <div id="acctSummary"></div>
+        </div>
+      </details>
 
       <details class="panel acc" data-stage="2" open>
         <summary><span class="acc-hd">Assets vs. Liabilities<span class="acc-sub">What you own, honestly - and your net worth</span></span></summary>
@@ -1951,7 +1979,7 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
-           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'',
+           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'dark' };
 }
@@ -2631,7 +2659,7 @@ function activateTab(name,fromHistory){
   positionFab();
   if(name==='learn') renderCharts();
   if(name==='home') renderHome();
-  if(name==='goals'){ renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
+  if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
   if(name==='impulse') renderVault();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -3017,25 +3045,55 @@ function deepenSkips(){
   if(state.deepenSkipMonth!==state.activeMonth) return [];
   return state.deepenSkipped||[];
 }
+/* how much emergency money genuinely exists: earmarked accounts first (real
+   balances), plus anything saved into a goal that is clearly the same job */
+function emergencyMoney(){
+  const acct=earmarked('emergency');
+  const goal=(state.goals||[]).filter(g=>EMERG_RX.test(g.name)).reduce((s,g)=>s+(+g.saved||0),0);
+  return acct+goal;
+}
+function debtsOutstanding(){ return (state.debts||[]).reduce((s,d)=>s+Math.max(0,+d.balance||0),0); }
+function hasMortgage(){ return (state.liabilities||[]).some(l=>/mortgage|home ?loan|house/i.test(l.name||'')); }
+/* The sequence. It is deliberately ONE ladder in the app's own words - the order
+   is the widely-taught one (small cushion, kill the interest, real fund, then
+   grow) because it works, not because any particular program says so. Each rung
+   reads the user's real numbers rather than asking them to self-report. */
 function deepenSteps(){
   const M=state.activeMonth, income=monthIncome(M);
   const skipped=deepenSkips();
+  const ess=Math.round(essentialMonthly()||0);
+  const em=emergencyMoney(), debt=debtsOutstanding();
+  const fullTarget=ess>0?ess*3:3000;
   const steps=[
-    {k:'payfirst', ic:'💰', t:'Pay yourself first',
-     why:income>0?`Before the bills, not after. Even ${money(Math.max(25,Math.round(income*0.1)))} a month - 10% of what you make - is the only bill that buys you freedom instead of renting it.`
+    {k:'starter', ic:'🛟', t:'Put $1,000 between you and disaster',
+     why:`Not a dream - a shock absorber. Without it the next flat tire goes on a credit card and the whole plan unravels. ${em>0?`You've got ${usd(em)} so far.`:'Start here, before anything else.'}`,
+     cta:em>0?'Add to it':'Start it', done:em>=1000},
+    {k:'subs', ic:'🔍', t:'Find the memberships you forgot',
+     why:'Quick win that funds the rest. Small, monthly, automatic - which is exactly why they never get questioned. Let us price them by the year and see them clearly.',
+     cta:'Run the sweep', done:!!(state.subSweep&&state.subSweep.done)},
+    {k:'debt', ic:'💳', t:'Kill the interest',
+     why:debt>0?`${usd(debt)} outstanding. Interest is a negative return you are guaranteed to pay - clearing it beats almost any investment, risk-free. Get a real payoff date and watch what each extra dollar shaves off it.`
+               :'Interest is a negative return you are guaranteed to pay. Put your balances in and the calculator gives you an actual payoff date.',
+     cta:'Open the calculator', done:(state.debts||[]).length>0 && debt<=0},
+    {k:'fullfund', ic:'🏰', t:'Grow it to a real cushion',
+     why:ess>0?`Three months of your essentials is ${usd(fullTarget)}. That's the difference between a lost job being a crisis and being an inconvenience. You're at ${usd(em)}.`
+              :`Three months of essentials. That's the difference between a lost job being a crisis and being an inconvenience.`,
+     cta:'Work on it', done:em>=fullTarget},
+    {k:'payfirst', ic:'💰', t:'Pay yourself first, every month',
+     why:income>0?`Before the bills, not after. Even ${money(Math.max(25,Math.round(income*0.15)))} a month - 15% of what you make - is the only bill that buys you freedom instead of renting it. Automate it and willpower stops mattering.`
                  :'Before the bills, not after. It is the one bill that buys you freedom instead of renting it.',
      cta:'Set it up', done:payFirstDone(M)},
-    {k:'subs', ic:'🔍', t:'Find the memberships you forgot',
-     why:'The average plan hides a few of these. Small, monthly, automatic - which is exactly why they never get questioned. Let us price them by the year and see them clearly.',
-     cta:'Run the sweep', done:!!(state.subSweep&&state.subSweep.done)},
-    {k:'emergency', ic:'🛟', t:'Build a real emergency fund',
-     why:'Not a dream - insurance. Without it, the first flat tire goes on a credit card and the whole plan unravels. Start with one month of essentials.',
-     cta:'Start it', done:emergencyDone()},
-    {k:'debt', ic:'💳', t:'Get a real payoff date',
-     why:'Interest is a negative return you are guaranteed to pay. Put the numbers in and the calculator gives you an actual date - and what each extra dollar shaves off it.',
-     cta:'Open the calculator', done:(state.debts||[]).length>0}
+    {k:'college', ic:'🎓', t:'Fund what is coming for the kids',
+     why:'Education, a first car, whatever is genuinely ahead. Naming it and funding it monthly beats hoping, and it stops the big year ambushing you.',
+     cta:'Open an account for it', done:earmarked('college')>0 || (state.goals||[]).some(g=>/college|school|tuition|kid/i.test(g.name))},
+    {k:'home', ic:'🏠', t:'Own where you live, outright',
+     why:'The single biggest bill most people carry. Every extra payment now is a year of your life you buy back later - and a mortgage-free retirement needs a far smaller number to work.',
+     cta:'Plan it', done:!hasMortgage(), hide:!hasMortgage()},
+    {k:'give', ic:'🌊', t:'Build it, and let it move',
+     why:'The last rung is not a number. Money that only ever piles up stops doing anything. Decide what it is FOR - what you build, who you help - or the pile becomes the point.',
+     cta:'Set a giving target', done:(state.giving||[]).length>0 || state.givingPct>0}
   ];
-  return steps.map(s=>Object.assign(s,{skipped:skipped.includes(s.k)}));
+  return steps.filter(s=>!s.hide).map(s=>Object.assign(s,{skipped:skipped.includes(s.k)}));
 }
 function deepenHTML(){
   const steps=deepenSteps();
@@ -3152,12 +3210,32 @@ function runDeepen(k){
     return;
   }
   if(k==='subs'){ openSubSweep(); return; }
-  if(k==='emergency'){
-    const ess=Math.round(essentialMonthly()||0);
-    const target=ess>0?ess:1000;
-    state.goals.push({id:uid(),name:'Emergency fund',target,saved:0,date:'',goalType:'foundation'});   // Foundation is the real type - 'safety' matched nothing in GOAL_TYPES
-    save(); activateTab('goals'); renderGoals(); renderHome();
-    if(typeof toast==='function') toast('Emergency fund started at '+money(target)+(ess>0?' - one month of your essentials.':'.'));
+  if(k==='starter'||k==='fullfund'||k==='college'){
+    // send them to the real thing: a named account they can put actual money in
+    const spec = k==='college'
+      ? {name:'College fund', purpose:'college', kind:'savings', msg:'Name it and give it a real balance whenever you fund it.'}
+      : {name:'Emergency fund', purpose:'emergency', kind:'savings',
+         msg: k==='starter' ? 'Starter goal: $1,000 between you and disaster.'
+                            : 'Next goal: three months of your essentials.'};
+    let a=(state.accounts||[]).find(x=>x.purpose===spec.purpose);
+    if(!a){ state.accounts=state.accounts||[]; a={id:uid(),name:spec.name,kind:spec.kind,purpose:spec.purpose,balance:0,updated:todayStr()}; state.accounts.push(a); save(); }
+    activateTab('goals'); renderAccounts(); renderNetWorth();
+    setTimeout(()=>{
+      const inp=document.querySelector('input[data-acctbal="'+a.id+'"]');
+      if(inp){ inp.scrollIntoView({behavior:'auto',block:'center'}); try{ inp.focus({preventScroll:true}); inp.select&&inp.select(); }catch(_){} }
+    },160);
+    if(typeof toast==='function') toast(spec.msg);
+    return;
+  }
+  if(k==='home'){
+    activateTab('debt'); renderDebt();
+    setTimeout(()=>{ const el=document.getElementById('debtName'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },140);
+    if(typeof toast==='function') toast('Add the mortgage here to see what extra payments really buy you.');
+    return;
+  }
+  if(k==='give'){
+    activateTab('goals'); if(typeof renderGiving==='function') renderGiving();
+    setTimeout(()=>{ const el=document.getElementById('givingPct')||document.getElementById('giveName'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },160);
     return;
   }
   if(k==='debt'){
@@ -3809,7 +3887,11 @@ function renderTx(){
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('spent','Spent')}</div><div class="v">${money(exp)}</div></div>
     ${showInv?`<div class="stat"><div class="k">🌱 Invested ${txAllMonths?'(all time)':'(month)'}</div><div class="v pos">${money(inv)}</div></div>`:''}
     <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
-    <div class="stat"><div class="k">Balance (all time)</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
+    <div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
+  const bn=document.getElementById('bankNote');
+  if(bn) bn.innerHTML=(state.accounts||[]).length
+    ? `<div class="ltb-note">This is what you've <b>logged</b>, not your bank balance. Your real total is <b>${usd(bankTotal())}</b> across ${(state.accounts||[]).length} account${(state.accounts||[]).length>1?'s':''} - edit those on <b>Build</b>.</div>`
+    : `<div class="ltb-note">Heads up: this is only what you've <b>logged here</b> - it doesn't know your real bank balance. Add your accounts on <b>Build</b> and your net worth and runway start telling the truth.</div>`;
   renderTxList();
   renderRecurring();
   renderCharts();
@@ -4616,7 +4698,42 @@ setInterval(()=>{
 function sumAssets(){ return state.assets.reduce((s,a)=>s+(a.value||0),0); }
 function sumAssetsKind(k){ return state.assets.filter(a=>(a.kind||'real')===k).reduce((s,a)=>s+(a.value||0),0); }
 function sumLiab(){ return state.liabilities.reduce((s,l)=>s+(l.value||0),0); }
-function netWorth(){ return sumAssets()-sumLiab(); }
+/* ============================================================
+   ACCOUNTS - what is ACTUALLY in the bank
+   Everything else in this app is derived from what you logged, which means a
+   brand-new user with $8,000 in checking was being told they had $0. Accounts
+   are the one place the user states plain truth: this is the balance, as of
+   today. The app never silently edits them - it shows what you've logged since
+   you last updated one, and lets you decide whether reality moved.
+   Earmarks are what turn "savings" from one lump into answerable questions:
+   how much is emergency money, how much is the kids' fund.
+   ============================================================ */
+const ACCT_KINDS=[
+  {k:'checking', ic:'🏦', label:'Checking', liquid:true},
+  {k:'savings',  ic:'🐖', label:'Savings',  liquid:true},
+  {k:'cash',     ic:'💵', label:'Cash',     liquid:true},
+  {k:'invest',   ic:'📈', label:'Investment/retirement', liquid:false},
+  {k:'other',    ic:'🗄️', label:'Other',    liquid:false}
+];
+const ACCT_PURPOSES=[
+  {k:'', label:'No particular job'},
+  {k:'emergency', label:'Emergency fund'},
+  {k:'college', label:'College / kids'},
+  {k:'sinking', label:'Sinking fund (known bills ahead)'},
+  {k:'goal', label:'A specific dream'},
+  {k:'retire', label:'Retirement'}
+];
+function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
+function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
+function liquidTotal(){ return (state.accounts||[]).filter(a=>acctKind(a.kind).liquid).reduce((s,a)=>s+(+a.balance||0),0); }
+function earmarked(purpose){ return (state.accounts||[]).filter(a=>a.purpose===purpose).reduce((s,a)=>s+(+a.balance||0),0); }
+/* net logged movement since the user last told us a balance - the honest drift */
+function loggedSince(dateStr){
+  if(!dateStr) return 0;
+  return state.transactions.filter(t=>t.date>dateStr).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+}
+function oldestAcctUpdate(){ const d=(state.accounts||[]).map(a=>a.updated).filter(Boolean).sort(); return d[0]||''; }
+function netWorth(){ return sumAssets()+bankTotal()-sumLiab(); }
 function avgMonthlyIncome(){
   const byM={}; state.transactions.filter(t=>t.type==='income').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
   const ms=Object.keys(byM); return ms.length? ms.reduce((s,m)=>s+byM[m],0)/ms.length : 0;
@@ -4655,7 +4772,10 @@ function essentialMonthly(){
 }
 /* Freedom Runway = liquid resources / essential monthly burn, in months */
 function freedomRunway(){
-  const liquid=Math.max(0, sumAssetsKind('real') + Math.max(0,allTimeBalance()) - sumLiab());
+  // once real balances exist they ARE the truth; the transaction-derived figure
+  // is only a stand-in for users who haven't entered an account yet
+  const cash=(state.accounts||[]).length ? liquidTotal() : Math.max(0,allTimeBalance());
+  const liquid=Math.max(0, sumAssetsKind('real') + cash - sumLiab());
   const ess=essentialMonthly();
   if(ess<=0 || liquid<=0) return null;
   return liquid/ess;
@@ -4919,6 +5039,49 @@ function renderComfortMenu(){
   box.querySelectorAll('button[data-cmdel]').forEach(b=>b.onclick=()=>{ const i=(state.comfortMenu||[]).indexOf(b.dataset.cmdel); if(i>-1){ state.comfortMenu.splice(i,1); comfortChanged(); } });
   box.querySelectorAll('button[data-cmadd]').forEach(b=>b.onclick=()=>{ const v=b.dataset.cmadd; state.comfortMenu=state.comfortMenu||[]; if(!state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); comfortChanged(); });
 }
+function renderAccounts(){
+  const kSel=document.getElementById('acctKind'), pSel=document.getElementById('acctPurpose');
+  if(kSel && !kSel.options.length) kSel.innerHTML=ACCT_KINDS.map(k=>`<option value="${k.k}">${k.ic} ${k.label}</option>`).join('');
+  if(pSel && !pSel.options.length) pSel.innerHTML=ACCT_PURPOSES.map(p=>`<option value="${p.k}">${escapeHtml(p.label)}</option>`).join('');
+  const box=document.getElementById('acctList'); if(!box) return;
+  const accts=state.accounts||[];
+  box.innerHTML = accts.length ? accts.map(a=>{
+    const k=acctKind(a.kind), pur=ACCT_PURPOSES.find(p=>p.k===a.purpose);
+    const tag=(a.purpose&&pur)?`<span class="ac-tag">${escapeHtml(pur.label)}</span>`:'';
+    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${escapeHtml(k.label)}${a.updated?' · as of '+a.updated:''}</div></div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove">✕</button></div>`;
+  }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
+  box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
+    const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
+    a.balance=parseFloat(i.value)||0; a.updated=todayStr(); save(); renderAccounts(); renderNetWorth(); renderHome();
+  }));
+  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{
+    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdel); save(); renderAccounts(); renderNetWorth(); renderHome();
+  }));
+  const sum=document.getElementById('acctSummary'); if(!sum) return;
+  if(!accts.length){ sum.innerHTML=''; return; }
+  const em=earmarked('emergency'), col=earmarked('college'), ess=essentialMonthly();
+  const drift=loggedSince(oldestAcctUpdate());
+  const bits=[];
+  bits.push(`<div class="ac-total">In the bank: <b>${usd(bankTotal())}</b> <span class="ac-sub">· ${usd(liquidTotal())} of it you could spend today</span></div>`);
+  if(em>0) bits.push(`<div class="ac-line">🛟 Emergency fund: <b>${usd(em)}</b>${ess>0?` - that's <b>${(Math.round(em/ess*10)/10)} month${(Math.round(em/ess*10)/10)===1?'':'s'}</b> of your essentials`:''}.</div>`);
+  if(col>0) bits.push(`<div class="ac-line">🎓 College / kids: <b>${usd(col)}</b>.</div>`);
+  if(Math.abs(drift)>0.005) bits.push(`<div class="ac-line sub">Since you last updated a balance you've logged <b>${usd(drift)}</b> of movement. If reality has drifted, retype the real number - the app will never quietly change it for you.</div>`);
+  sum.innerHTML=bits.join('');
+}
+(function(){
+  const btn=document.getElementById('addAcct'); if(!btn) return;
+  btn.addEventListener('click',()=>{
+    const n=document.getElementById('acctName').value.trim();
+    const bal=parseFloat(document.getElementById('acctBal').value);
+    if(!n){ if(typeof toast==='function') toast('Give the account a name.'); return; }
+    if(!(bal>=0)){ if(typeof toast==='function') toast("Put in what's actually in it - $0 is a real answer."); return; }
+    state.accounts=state.accounts||[];
+    state.accounts.push({id:uid(),name:n,kind:document.getElementById('acctKind').value||'checking',
+      purpose:document.getElementById('acctPurpose').value||'',balance:bal,updated:todayStr()});
+    document.getElementById('acctName').value=''; document.getElementById('acctBal').value='';
+    save(); renderAccounts(); renderNetWorth(); renderHome();
+  });
+})();
 let assetKind='real';
 document.getElementById('assetKind').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return; assetKind=b.dataset.k;
@@ -4992,7 +5155,7 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 function applyTheme(){
@@ -6247,7 +6410,7 @@ function boot(){
   // last month first (in full), then this month up to today - nothing slips through
   if(postRecurring(shiftMonth(thisMonth(),-1))+postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
-  renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
+  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
   renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
@@ -6322,9 +6485,11 @@ function renderHome(){
   // only visible effect is net worth changing for no stated reason
   const invM=(typeof monthInvested==='function')?monthInvested(M):0;
   const everInv=(typeof investedAllTime==='function')?investedAllTime():0;
+  const hasAccts=(state.accounts||[]).length>0;
   snap.innerHTML=
     flipStat('Left to budget', ltb, ltbCls)+
     flipStat('Spent this month', spent, '')+
+    (hasAccts?flipStat('🏦 In the bank', bankTotal(), bankTotal()<0?'bad':'good'):'')+
     (everInv>0?flipStat('🌱 Invested this month', invM, 'pos'):'')+
     plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
