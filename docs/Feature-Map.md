@@ -12,9 +12,15 @@ and sync sends only ciphertext.
 
 ## Visual language
 
-Two themes, both warm. **Quiet ink** (dark, the default) is warm charcoal rather
-than cold navy; **Ledger** (light) is paper rather than white, because a budget
-is a ledger and a ledger is paper. The `auto` theme setting picks per device.
+**Midnight** (dark, the default) is a deep blue ground carrying warm ochre
+content - the pairing of a warm painting hung on a midnight wall. The app's first
+palette was blue but COLD: blue-grey text on near-black navy, which read as a
+trading terminal. The blue was never the problem; the temperature of everything
+sitting on it was. Text is warm cream, the accent is soft gold, so the ground
+stays blue and everything on it stays warm.
+
+**Ledger** (light) is paper rather than white, because a budget is a ledger and a
+ledger is paper. The `auto` theme setting picks per device.
 
 The **expression layer** at the end of the stylesheet lowers the voice of the
 whole interface in one place. Before it, the app carried 241 declarations at

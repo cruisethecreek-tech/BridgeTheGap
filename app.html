@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Accountability - Zero-Based Budgeting</title>
 <meta name="description" content="No-nonsense zero-based budgeting with a gut check for every purchase.">
-<meta name="theme-color" content="#17150f">
+<meta name="theme-color" content="#131c27">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -19,29 +19,32 @@
      app makes ZERO external requests - "never phones home" stays literally true. */
   @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('fonts/inter-var-latin.woff2') format('woff2')}
 
-  /* ===== Quiet ink (dark) - the default =====
-     Warm charcoal rather than cold navy. The old palette was fintech-dashboard
-     blue with a saturated gold on top; this keeps the gold identity but pulls
-     every value toward paper and ink so it reads human rather than telemetry. */
+  /* ===== Midnight (dark) - the default =====
+     Deep blue ground, warm ochre content: the pairing of a warm painting hung on
+     a midnight wall. The first version of this app was blue but COLD - blue-grey
+     text on near-black navy, reading as a trading terminal. The blue was never
+     the problem; the temperature of everything sitting on it was. Text is warm
+     cream and the accent is soft gold, so the ground stays blue and everything
+     on it stays warm. */
   :root{
-    --bg:#17150f;
-    --panel:#201d16;
-    --panel-2:#2a251c;
-    --line:#342e24;
-    --ink:#17150f;
-    --on-accent:#17150f;
+    --bg:#131c27;
+    --panel:#1a2532;
+    --panel-2:#222e3d;
+    --line:#2c3849;
+    --ink:#131c27;
+    --on-accent:#131c27;
     --text:#ece5d8;
-    --muted:#9d9384;
+    --muted:#98a3b0;
     --accent:#cfa76a;
     --accent-rgb:207,167,106;
-    --accent-2:#c4714f;
+    --accent-2:#cd7c59;
     --good:#6fae83;
     --good-rgb:111,174,131;
     --bad:#c9736b;
     --bad-rgb:201,115,107;
     --income:#6fae83;
-    --shadow:0 12px 34px rgba(0,0,0,.4);
-    --hero-grad:linear-gradient(135deg,#201d16,#2a251c);
+    --shadow:0 12px 34px rgba(0,0,0,.45);
+    --hero-grad:linear-gradient(135deg,#1a2532,#222e3d);
   }
   /* ===== Ledger (light) - warm paper, not white =====
      A budget is a ledger, and a ledger is paper. Pure white with blue-grey
@@ -5903,7 +5906,7 @@ function applyTheme(){
     const label = m==='auto' ? 'following your phone' : m;
     tt.title='Theme: '+label; tt.setAttribute('aria-label','Theme: '+label+'. Tap to change.');
   }
-  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute('content', light?'#f4efe6':'#17150f');
+  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute('content', light?'#f4efe6':'#131c27');
 }
 (function(){
   const t=document.getElementById('themeToggle');
