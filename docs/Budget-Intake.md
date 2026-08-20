@@ -206,6 +206,7 @@ These map to real app fields. If a consultation roams, make sure it still covers
 | ★ Debt | "Carrying any debt right now?" (+ how much) | Liability (→ net worth, future payoff) |
 | ★ The dream | "What are you actually chasing?" (+ cost) | A goal on the Dreams board |
 | ★ Tone | "How do you want me to talk to you?" | `intensity` (Clean / Blunt / Savage) |
+| ★ Free comfort list | "What actually helps when money isn't the answer?" - chip taps only, optional, asked just before "why this matters" | `comfortMenu` (surfaced inside every gut-check) |
 
 Everything below is for the human read - it personalizes the voice, it never gates.
 
