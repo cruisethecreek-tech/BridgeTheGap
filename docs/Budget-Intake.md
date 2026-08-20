@@ -213,7 +213,7 @@ These map to real app fields. If a consultation roams, make sure it still covers
 | ★ Getting Around | "Gas, transit, rideshare, car - monthly?" | Cover First → **Getting Around** |
 | ★ Debt | "Carrying any debt right now?" (+ how much) | Liability (→ net worth, future payoff) |
 | ★ The dream | "What are you actually chasing?" (+ cost) | A goal on the Dreams board |
-| ★ Tone | "How do you want me to talk to you?" | `intensity` (Clean / Blunt / Savage) |
+| ★ Tone | "How do you want to be held accountable?" - stated as the voice used from that point on | `intensity` (Forgiving / Blunt / Savage; stored values stay `clean`/`blunt`/`savage`) |
 | ★ Free comfort list | "What actually helps when money isn't the answer?" - chip taps only, optional, asked just before "why this matters" | `comfortMenu` (surfaced inside every gut-check) |
 
 Everything below is for the human read - it personalizes the voice, it never gates.

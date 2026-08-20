@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Accountability - the budgeting app that fights back</title>
 <meta name="description" content="A zero-based budgeting app with a spine. It fights your impulses in real time, prices every purchase in hours of your life, and never phones home. No account, no bank login, nothing leaves your device.">
-<meta name="theme-color" content="#0b1421">
+<meta name="theme-color" content="#17150f">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -26,16 +26,16 @@
      page makes ZERO external requests - "never phones home" stays literally true. */
   @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('fonts/inter-var-latin.woff2') format('woff2')}
   :root{
-    --bg:#0b1421; --panel:#131f30; --panel-2:#1a2840; --line:#2a3a52; --ink:#070d17;
-    --on-accent:#070d17; --text:#eef2f8; --muted:#90a0b8; --accent:#e6b24d; --accent-2:#e0663c;
-    --good:#35c99a; --good-rgb:53,201,154; --bad:#f76d6d;
-    --hero-grad:linear-gradient(135deg,#0e1a2b,#16273d); --header-bg:rgba(11,20,33,.82);
+    --bg:#17150f; --panel:#201d16; --panel-2:#2a251c; --line:#342e24; --ink:#17150f;
+    --on-accent:#17150f; --text:#ece5d8; --muted:#9d9384; --accent:#cfa76a; --accent-2:#c4714f;
+    --good:#6fae83; --good-rgb:111,174,131; --bad:#c9736b;
+    --hero-grad:linear-gradient(135deg,#201d16,#2a251c); --header-bg:rgba(23,21,15,.9);
   }
   :root[data-theme="light"]{
-    --bg:#eef2f8; --panel:#ffffff; --panel-2:#f2f5fb; --line:#d5dce8; --ink:#e7ecf4;
-    --on-accent:#0b1421; --text:#17233a; --muted:#5f6d82; --accent:#b5822a; --accent-2:#cf5a2f;
-    --good:#1f9e78; --good-rgb:31,158,120; --bad:#d3453f;
-    --hero-grad:linear-gradient(135deg,#e8eef7,#dae4f1); --header-bg:rgba(238,242,248,.85);
+    --bg:#f4efe6; --panel:#fbf8f3; --panel-2:#f0e9dd; --line:#e0d5c4; --ink:#2c2620;
+    --on-accent:#fbf8f3; --text:#2c2620; --muted:#7b6f60; --accent:#8a5f28; --accent-2:#a8452c;
+    --good:#3f7d53; --good-rgb:63,125,83; --bad:#a8452c;
+    --hero-grad:linear-gradient(135deg,#fbf8f3,#f0e9dd); --header-bg:rgba(244,239,230,.88);
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -130,7 +130,7 @@
   .band .freenote{max-width:620px;margin:22px auto 0;color:var(--muted);font-size:14px;line-height:1.65}
   .plan3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
   .p3{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px}
-  .p3 .n{width:38px;height:38px;border-radius:10px;background:var(--accent);color:#0b1421;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .p3 .n{width:38px;height:38px;border-radius:10px;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
   .p3 h3{margin:0 0 8px;font-size:19px}
   .p3 p{margin:0;color:var(--muted);font-size:15px;line-height:1.55}
   .plan-cta{text-align:center;margin-top:30px}
@@ -205,6 +205,15 @@
     .stage .arrow{display:none}
     .lockup .tl{display:none}
   }
+
+  /* Match the app: serif for anything that reads as prose, and stop shouting. */
+  h1,h2,h3,blockquote,.big,.wm{font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;letter-spacing:-.01em}
+  h2{font-weight:600}
+  h3{font-weight:600}
+  p,.sec-sub,.lede{font-weight:400;line-height:1.62}
+  .btn{font-weight:600}
+  .btn.primary{box-shadow:none}
+  .card .vs,.pill,.trust span{font-weight:600}
 </style>
 <script>/* Pre-paint theme. An explicit choice made in the app wins; otherwise follow the phone. */
 try{var _s=JSON.parse(localStorage.getItem("unfiltered_budget_v2")||"{}"),_t=_s&&_s.theme;
@@ -353,9 +362,9 @@ document.documentElement.setAttribute("data-theme-mode",(_s&&(_s.theme==="light"
   <div class="wrap">
     <div class="kicker">The voice</div>
     <h2>It talks like a person, not a bank</h2>
-    <p class="sec-sub">Copy adapts to your generation and how much mercy you want - Clean, Blunt, or Savage.</p>
+    <p class="sec-sub">You choose how you want to be held accountable - Forgiving, Blunt, or Savage - and it adapts to your generation too.</p>
     <div class="voice">
-      <div class="q"><div class="lvl">Clean</div><blockquote>"This one's a want. Sleep on it. Nice-to-have, not need-to-have - your call."</blockquote></div>
+      <div class="q"><div class="lvl">Forgiving</div><blockquote>"This one's a want. Sleep on it. Nice-to-have, not need-to-have - your call."</blockquote></div>
       <div class="q"><div class="lvl">Blunt</div><blockquote>"Be honest - you didn't want this an hour ago. Comfort spending doesn't fund the dream."</blockquote></div>
       <div class="q"><div class="lvl savage">Savage</div><blockquote>"You're not broke, you're delulu about that cart. Close it."</blockquote></div>
     </div>
@@ -517,7 +526,7 @@ document.documentElement.setAttribute("data-theme-mode",(_s&&(_s.theme==="light"
       var label = m==='auto'?'following your phone':m;
       b.title='Theme: '+label; b.setAttribute('aria-label','Theme: '+label+'. Tap to change.'); }
     var meta=document.querySelector('meta[name="theme-color"]');
-    if(meta) meta.setAttribute('content', light?'#eef2f8':'#0b1421');
+    if(meta) meta.setAttribute('content', light?'#f4efe6':'#17150f');
   }
   function persist(m){
     // Read-modify-write so we never clobber a budget that already lives here.

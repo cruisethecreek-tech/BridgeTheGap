@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Accountability - Zero-Based Budgeting</title>
 <meta name="description" content="No-nonsense zero-based budgeting with a gut check for every purchase.">
-<meta name="theme-color" content="#0b1421">
+<meta name="theme-color" content="#17150f">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -19,47 +19,52 @@
      app makes ZERO external requests - "never phones home" stays literally true. */
   @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('fonts/inter-var-latin.woff2') format('woff2')}
 
-  /* ===== Deep blue (dark) - the default ===== */
+  /* ===== Quiet ink (dark) - the default =====
+     Warm charcoal rather than cold navy. The old palette was fintech-dashboard
+     blue with a saturated gold on top; this keeps the gold identity but pulls
+     every value toward paper and ink so it reads human rather than telemetry. */
   :root{
-    --bg:#0b1421;
-    --panel:#131f30;
-    --panel-2:#1a2840;
-    --line:#2a3a52;
-    --ink:#070d17;
-    --on-accent:#070d17;
-    --text:#eef2f8;
-    --muted:#90a0b8;
-    --accent:#e6b24d;
-    --accent-rgb:230,178,77;
-    --accent-2:#e0663c;
-    --good:#35c99a;
-    --good-rgb:53,201,154;
-    --bad:#f76d6d;
-    --bad-rgb:247,109,109;
-    --income:#35c99a;
-    --shadow:0 20px 50px rgba(0,0,0,.5);
-    --hero-grad:linear-gradient(135deg,#0e1a2b,#16273d);
+    --bg:#17150f;
+    --panel:#201d16;
+    --panel-2:#2a251c;
+    --line:#342e24;
+    --ink:#17150f;
+    --on-accent:#17150f;
+    --text:#ece5d8;
+    --muted:#9d9384;
+    --accent:#cfa76a;
+    --accent-rgb:207,167,106;
+    --accent-2:#c4714f;
+    --good:#6fae83;
+    --good-rgb:111,174,131;
+    --bad:#c9736b;
+    --bad-rgb:201,115,107;
+    --income:#6fae83;
+    --shadow:0 12px 34px rgba(0,0,0,.4);
+    --hero-grad:linear-gradient(135deg,#201d16,#2a251c);
   }
-  /* ===== Light (clean, blue-tinted) ===== */
+  /* ===== Ledger (light) - warm paper, not white =====
+     A budget is a ledger, and a ledger is paper. Pure white with blue-grey
+     panels read as a spreadsheet app; this reads as something you write in. */
   :root[data-theme="light"]{
-    --bg:#eef2f8;
-    --panel:#ffffff;
-    --panel-2:#f2f5fb;
-    --line:#d5dce8;
-    --ink:#e7ecf4;
-    --on-accent:#0b1421;
-    --text:#17233a;
-    --muted:#5f6d82;
-    --accent:#b5822a;
-    --accent-rgb:181,130,42;
-    --accent-2:#cf5a2f;
-    --good:#1f9e78;
-    --good-rgb:31,158,120;
-    --bad:#d3453f;
-    --bad-rgb:211,69,63;
-    --income:#1f9e78;
-    --shadow:0 12px 30px rgba(30,50,90,.12);
-    --hero-grad:linear-gradient(135deg,#e8eef7,#dae4f1);
+    --bg:#f4efe6;
+    --panel:#fbf8f3;
+    --panel-2:#f0e9dd;
+    --line:#e0d5c4;
+    --ink:#2c2620;
+    --on-accent:#fbf8f3;
+    --text:#2c2620;
+    --muted:#7b6f60;
+    --accent:#8a5f28;
+    --accent-rgb:138,95,40;
+    --accent-2:#a8452c;
+    --good:#3f7d53;
+    --good-rgb:63,125,83;
+    --bad:#a8452c;
+    --bad-rgb:168,69,44;
+    --income:#3f7d53;
+    --shadow:0 2px 10px rgba(60,45,25,.08);
+    --hero-grad:linear-gradient(135deg,#fbf8f3,#f0e9dd);
   }
 
   *{margin:0;padding:0;box-sizing:border-box}
@@ -91,7 +96,7 @@
   .freedom-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
   .ft-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
   .freedom-toggle{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;gap:3px;flex-shrink:0}
-  .freedom-toggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:16px;width:38px;height:34px;border-radius:8px;line-height:1}
+  .freedom-toggle button{font-size:13px;background:transparent;border:none;color:var(--muted);font-weight:800;font-size:16px;width:38px;height:34px;border-radius:8px;line-height:1}
   .freedom-toggle button.on{background:var(--accent);color:var(--on-accent)}
   .truerate{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .truerate summary{cursor:pointer;padding:12px 14px;font-weight:700;font-size:14px;color:var(--text);list-style:none;display:flex;align-items:center;gap:8px}
@@ -304,7 +309,7 @@
   .tabs.hub-open .tab-gap{color:var(--accent)}
   body.more-open .fab{bottom:calc(124px + env(safe-area-inset-bottom))}   /* clear the 114px expanded bar */
   body.more-open{padding-bottom:196px}
-  /* Hub open: lift the FAB above the sheet's scrim so the ✕ is visible and tappable,
+  /* Hub open: lift the FAB above the sheet's scrim so the ✕is visible and tappable,
      and pin it back to its notch (the more-open lift is pointless behind a scrim). */
   body.hub-open .fab{z-index:62;bottom:calc(28px + env(safe-area-inset-bottom))}
   #intentSheet .modal.sheet{margin-bottom:calc(96px + env(safe-area-inset-bottom))}   /* the card floats above the notch + FAB */
@@ -1017,7 +1022,50 @@
   .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
   .rec.invest .am{color:var(--accent)}
   .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
-  .dy-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .glance{position:fixed;right:0;top:38%;z-index:120;display:flex;align-items:flex-start}
+.gl-tab{background:var(--panel);border:1px solid var(--line);border-right:none;color:var(--accent);border-radius:12px 0 0 12px;width:34px;height:46px;font-size:17px;line-height:1;cursor:pointer;box-shadow:-3px 0 14px rgba(0,0,0,.28);flex:none;padding:0}
+.gl-tab:hover{border-color:var(--accent)}
+.gl-panel{width:0;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-right:none;border-radius:12px 0 0 12px;box-shadow:-6px 0 24px rgba(0,0,0,.35);transition:width .18s ease,padding .18s ease;padding:0;max-width:min(78vw,270px)}
+.glance.on .gl-panel{width:min(78vw,270px);padding:13px 15px}
+.glance.on .gl-tab{border-radius:12px 0 0 0}
+.gl-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:9px;white-space:nowrap}
+.gl-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:6px 0;font-size:13.5px;white-space:nowrap}
+.gl-row b{font-size:15px;font-weight:900}
+.gl-row.in b{color:var(--good)}
+.gl-row.out b{color:var(--accent-2)}
+.gl-row.bal{border-top:1px solid var(--line);margin-top:5px;padding-top:9px}
+.gl-row.bal.pos b{color:var(--good)}
+.gl-row.bal.neg b{color:var(--bad)}
+.gl-today{margin-top:9px;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.gl-today.over{color:var(--bad)}
+.gl-go{margin-top:11px;background:none;border:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:12.5px;cursor:pointer;padding:0}
+.gl-go:hover{color:var(--accent)}
+.bd-ctl{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin:10px 0}
+.bd-seg{display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px;flex-wrap:wrap}
+.bd-seg button{background:none;border:none;color:var(--muted);font:inherit;font-size:12.5px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.bd-seg button.on{background:var(--accent);color:var(--on-accent)}
+.bd-span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+.bd-back{background:none;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:6px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.bd-back:hover{border-color:var(--accent)}
+.bd-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.bd-donut{width:140px;height:140px;flex:none}
+.bd-legend{flex:1;min-width:190px;display:flex;flex-direction:column;gap:2px}
+.bd-row{display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:8px;background:none;border:none;color:var(--text);font:inherit;text-align:left;width:100%}
+.bd-row.can{cursor:pointer}
+.bd-row.can:hover{background:var(--panel-2)}
+.bd-dot{width:10px;height:10px;border-radius:3px;flex:none}
+.bd-nm{flex:1;font-size:13.5px;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.bd-more{color:var(--accent)}
+.bd-v{font-size:13.5px;font-weight:800;white-space:nowrap;text-align:right}
+.bd-v i{display:block;font-style:normal;font-size:11px;font-weight:700;color:var(--muted)}
+.bd-per{margin-top:12px;font-size:13px;color:var(--muted);font-weight:600}
+.dy-echo{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:12px 14px;margin-top:12px;background:var(--panel-2)}
+.dy-echo-k{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.dy-echo-q{margin:8px 0 0;font-size:14.5px;line-height:1.6;font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere}
+.dy-echo-t{margin-top:9px;font-size:13.5px;font-weight:700;color:var(--accent)}
+.dy-echo-go{margin-top:9px;background:none;border:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:12.5px;cursor:pointer;padding:0}
+.dy-echo-go:hover{color:var(--accent)}
+.dy-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .dy-chip{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:11px;padding:9px 13px;font-weight:700;font-size:14px;cursor:pointer}
 .dy-chip.on{border-color:var(--accent);background:rgba(230,178,77,.14);color:var(--accent)}
 .dy-ask{margin:10px 0}
@@ -1116,6 +1164,48 @@
     .quote-controls{align-items:stretch;width:100%}
     .monthnav .m{min-width:150px;font-size:17px}
   }
+
+/* Icon slots are empty now that decorative emoji are gone - collapse them so
+   nothing renders a phantom gap where a glyph used to sit. */
+.ic:empty,.t-ic:empty,.wall-ic:empty,.sov-tier .ic:empty{display:none}
+
+/* ============================================================
+   EXPRESSION LAYER
+   The app was built almost entirely at font-weight 800-900, with 42 uppercase
+   rules and 47 letter-spacing rules. Nothing was quiet, so nothing had
+   hierarchy, and every micro-label read as instrument telemetry rather than
+   writing. This layer sits last on purpose: it lowers the voice of the whole
+   interface in one place instead of editing 240 declarations that would drift
+   apart again.
+
+   Headings and anything that reads as prose use a SYSTEM serif stack - no font
+   file, no download, so "zero external requests" stays literally true.
+   ============================================================ */
+h1,h2,h3,.verdict,.big,blockquote,.bub,.dy-e-t,.dy-echo-q,.lesson h3,.q-h{
+  font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;
+  letter-spacing:-.01em;
+}
+h2{font-weight:600;line-height:1.3}
+h3{font-weight:600}
+.verdict,.big{font-weight:600}
+/* Micro-labels: sentence case, normal tracking, one step down in weight. */
+.sp-k,.cal-dow,.gl-h,.bd-span,.metric .k,.trap-tag,.dy-e-head,.dy-echo-k,.rec .tag,
+.meter-lbl,.kicker,.sov-m .k,.cal-stat .sp-k,.acc-sub,.t-l,.ft-label{
+  text-transform:none;letter-spacing:.005em;font-weight:600;
+}
+/* Form labels were the loudest of all: TARGET, PRICE $, HOW'D IT FIND YOU?.
+   Three separate rules set them to uppercase 800 at 10-11px. */
+label,label.fld{text-transform:none;letter-spacing:.005em;font-weight:600;font-size:12.5px}
+/* Prose breathes; numbers stay firm but stop shouting. */
+p,.sub{font-weight:400;line-height:1.62}
+.bub{font-weight:400;line-height:1.6}
+.metric .v,.cal-stat .v,.sov-m .v,.gl-row b{font-weight:600}
+.btn,.btn.primary,button{font-weight:600}
+/* Less boxed-in: hairlines and flat surfaces instead of a border on everything. */
+.panel{border-radius:14px}
+.metric,.cal-stat,.bd-row,.rec,.dy-entry,.sov-m{border-color:transparent;background:var(--panel-2)}
+.fab{box-shadow:0 6px 20px rgba(0,0,0,.28)}
+.btn.primary{box-shadow:none}
 </style>
 <script>/* Pre-paint theme so a light-mode phone never flashes dark. Mirrors resolvedTheme(). */
 try{var _s=JSON.parse(localStorage.getItem("unfiltered_budget_v2")||"{}"),_t=_s&&_s.theme;
@@ -1136,7 +1226,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <div class="freedom-wrap">
             <div class="freedom-toggle" id="freedomToggle" title="Switch between dollars and hours of your life">
               <button data-mode="usd">$</button>
-              <button data-mode="life">⌛</button>
+              <button data-mode="life">hrs</button>
             </div>
             <span class="ft-label" id="ftLabel">Dollars</span>
             <button class="ft-help" id="ftHelpBtn" title="How this is worked out" aria-label="How the time conversion is worked out">?</button>
@@ -1147,7 +1237,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div class="quote-wrap">
         <div class="quote" id="quote">Loading the truth…</div>
         <div class="quote-controls">
-          <button class="hit" id="hitBtn">Hit me again ⚡</button>
+          <button class="hit" id="hitBtn">Hit me again </button>
         </div>
       </div>
     </div>
@@ -1234,7 +1324,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub">Set your paycheck and fixed bills once. They post automatically each month so your plan and net worth stay current without you lifting a finger.</p>
         <div class="row">
           <label class="fld">Type
-            <select id="recType"><option value="expense">Expense</option><option value="income">Income</option><option value="invest">🌱 Invest</option></select>
+            <select id="recType"><option value="expense">Expense</option><option value="income">Income</option><option value="invest">Invest</option></select>
           </label>
           <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
           <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
@@ -1254,7 +1344,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel" id="subSweepPanel">
-        <h2>🔍 Membership sweep</h2>
+        <h2>Membership sweep</h2>
         <p class="sub">The quiet ones. Small, monthly, automatic - which is exactly why they never get questioned. Tap what you actually pay for, put the real monthly cost in, and see what a year of it costs. Nothing here judges you; a membership you use and love is money well spent. The point is knowing which ones those are.</p>
         <div id="subSweep"></div>
       </div>
@@ -1266,13 +1356,13 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Log money in &amp; money out</h2>
         <p class="sub">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
 
-        <button class="btn ghost" id="quickLogBtn" style="margin-bottom:12px">📓 Enter my notes - log several at once</button>
+        <button class="btn ghost" id="quickLogBtn" style="margin-bottom:12px">Enter my notes - log several at once</button>
         <div id="quickLog"></div>
 
         <div class="typetoggle" id="typeToggle">
           <button data-t="expense" class="on">− Expense</button>
           <button data-t="income">+ Income</button>
-          <button data-t="invest">🌱 Invest</button>
+          <button data-t="invest">Invest</button>
         </div>
 
         <div class="row">
@@ -1314,9 +1404,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div class="expense-only" id="energyWrap">
           <label class="fld" style="width:100%;margin-top:12px">What energy is behind this? <span class="sub" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label>
           <div class="energy-sel" id="energySel">
-            <button data-energy="growth">🌿 Growth / Flow</button>
-            <button data-energy="baseline">🛡️ Baseline</button>
-            <button data-energy="fear">🛑 Fear / Scarcity</button>
+            <button data-energy="growth">Growth / Flow</button>
+            <button data-energy="baseline">Baseline</button>
+            <button data-energy="fear">Fear / Scarcity</button>
           </div>
         </div>
         <div id="logWin"></div>
@@ -1334,7 +1424,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel">
-        <h2>⏳ Your week in hours</h2>
+        <h2>⏳Your week in hours</h2>
         <p class="sub">Money isn't the only thing you invest. Everyone gets the same 168 hours a week - some you sell to work, some you invest in yourself (health, learning, building, people), and some just leak into the screen. Where the hours go decides what the dollars can do next year.</p>
         <div id="timeRows"></div>
         <div id="timeSummary"></div>
@@ -1359,7 +1449,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <!-- ============ DEFEND ============ -->
     <section class="view" id="view-impulse">
       <div class="panel">
-        <h2>🎯 Trap Radar - scan the target</h2>
+        <h2>Trap Radar - scan the target</h2>
         <p class="sub">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life. <span class="sub" style="margin:0">Set your wage in <b>Settings</b> for exact hours.</span></p>
         <div class="row">
           <label class="fld" style="flex:1">Target
@@ -1376,17 +1466,17 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <details class="traplegend" id="trapLegend"><summary>What are the four traps?</summary><div id="trapLegendBody"></div></details>
         <div id="impResult"></div>
-        <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">📌 Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
+        <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
 
       <div class="panel" id="vaultPanel">
-        <h2>🔒 24-Hour Cooling Vault</h2>
+        <h2>24-Hour Cooling Vault</h2>
         <p class="sub">Not sure? Lock the target in for 24 hours. The urge fades, the trap dies, and the ransom option only unlocks once the timer runs out. Most traps don't survive the wait.</p>
         <div id="vaultList"></div>
       </div>
 
       <div class="panel">
-        <h2>🏆 War Chest &amp; Freedom Scoreboard</h2>
+        <h2>War Chest &amp; Freedom Scoreboard</h2>
         <p class="sub">Every trap you neutralize is money - and hours of your life - that stayed yours. This is the proof.</p>
         <div id="impCelebrate"></div>
         <div class="scorecards" id="impScore"></div>
@@ -1399,7 +1489,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <!-- ============ DEBT PAYOFF PLANNER ============ -->
     <section class="view" id="view-debt">
       <div class="panel">
-        <h2>💣 Debt Payoff Planner</h2>
+        <h2>Debt Payoff Planner</h2>
         <p class="sub">List what you owe, set what you can throw at it each month, and see the fastest, cheapest way out - with the interest priced in hours of your life.</p>
         <div id="debtReflectNote"></div>
         <div class="row">
@@ -1418,14 +1508,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld">Total you can pay toward debt each month $<input type="number" id="debtBudget" min="0" step="10" placeholder="e.g. 900" style="width:150px"></label>
         </div>
         <div class="uimode" id="debtStrategy" style="margin-top:12px">
-          <button data-s="avalanche">🏔️ Avalanche</button>
-          <button data-s="snowball">⛄ Snowball</button>
+          <button data-s="avalanche">Avalanche</button>
+          <button data-s="snowball">Snowball</button>
         </div>
         <p class="sub" style="margin-top:8px" id="debtStratNote"></p>
         <div id="debtResults"></div>
       </div>
       <div class="panel" id="investPanel">
-        <h2>💡 Plot twist: invest instead?</h2>
+        <h2>Plot twist: invest instead?</h2>
         <p class="sub">Paying off debt earns a <b>guaranteed</b> return equal to its rate. Investing might earn more - but it's not guaranteed. Here's the honest comparison of aiming that same money at the market instead.</p>
         <div class="row">
           <label class="fld">Expected market return %/yr<input type="number" id="investReturn" min="0" step="0.5" placeholder="7" style="width:120px"></label>
@@ -1440,7 +1530,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <p class="build-intro">Your wealth layer. Net worth is open below; tap any section to expand it.</p>
 
       <details class="panel acc" open>
-        <summary><span class="acc-hd">🏦 Accounts<span class="acc-sub">What's actually in the bank, in your words</span></span></summary>
+        <summary><span class="acc-hd">Accounts<span class="acc-sub">What's actually in the bank, in your words</span></span></summary>
         <div class="acc-body">
           <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what's really sitting in each account today. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
           <div class="row" style="gap:8px;margin-top:12px">
@@ -1471,7 +1561,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <label class="fld" style="width:100%">Add asset
                 <div class="row" style="gap:8px"><input type="text" id="assetName" placeholder="Rental, stocks, savings…" style="flex:1;min-width:80px"><input type="number" id="assetVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addAsset">＋</button></div>
               </label>
-              <div id="assetKind" class="kindtoggle"><button data-k="real" class="on">💵 Makes money</button><button data-k="stuff">📉 Loses value</button></div>
+              <div id="assetKind" class="kindtoggle"><button data-k="real" class="on">Makes money</button><button data-k="stuff">Loses value</button></div>
               <div id="assetChallenge"></div>
               <div id="assetList"></div>
             </div>
@@ -1486,7 +1576,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </details>
 
       <details class="panel acc" data-stage="2">
-        <summary><span class="acc-hd">🎯 Dreams &amp; goals<span class="acc-sub">Name what you're chasing and watch it get closer</span></span></summary>
+        <summary><span class="acc-hd">Dreams &amp; goals<span class="acc-sub">Name what you're chasing and watch it get closer</span></span></summary>
         <div class="acc-body">
           <p class="sub">A budget with no dream behind it is just a spreadsheet. Name the thing. Put a number on it. Watch it get closer.</p>
           <div class="row">
@@ -1500,7 +1590,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <input type="date" id="goalDate">
             </label>
             <label class="fld">Strategic type
-              <select id="goalType"><option value="foundation">🛡️ Foundation</option><option value="skill">⚡ Skill & Capacity</option><option value="leverage">🤝 Leverage & Network</option><option value="circulation">🌊 Circulation</option></select>
+              <select id="goalType"><option value="foundation">Foundation</option><option value="skill">Skill & Capacity</option><option value="leverage">Leverage & Network</option><option value="circulation">Circulation</option></select>
             </label>
             <button class="btn primary" id="addGoal">Add dream</button>
           </div>
@@ -1509,7 +1599,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </details>
 
       <details class="panel acc" data-stage="2">
-        <summary><span class="acc-hd">⚡ Skill &amp; Capacity Investments<span class="acc-sub">Spending that raises your earning ceiling</span></span></summary>
+        <summary><span class="acc-hd">Skill &amp; Capacity Investments<span class="acc-sub">Spending that raises your earning ceiling</span></span></summary>
         <div class="acc-body">
           <p class="sub">Courses, certs, tools, events - the spending that raises your <b style="color:var(--text)">earning ceiling</b>. Log the cost and the extra you'd earn per hour, and I'll show the payback. This is offense, not consumption.</p>
           <div class="row">
@@ -1529,7 +1619,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </details>
 
       <details class="panel acc" data-stage="2">
-        <summary><span class="acc-hd">🌊 Giving &amp; Circulation<span class="acc-sub">Money moves on purpose, not by leftover</span></span></summary>
+        <summary><span class="acc-hd">Giving &amp; Circulation<span class="acc-sub">Money moves on purpose, not by leftover</span></span></summary>
         <div class="acc-body">
           <p class="sub">Money is energy. Hoarding stalls it; giving keeps it moving. Set a target, give on purpose, and watch it circulate. This isn't leftover money - it's a discipline of abundance.</p>
           <div class="give-target">Target: give <input type="number" id="givePct" min="0" max="100" step="1" placeholder="10"> % of income</div>
@@ -1548,7 +1638,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </details>
 
       <details class="panel acc" data-stage="3">
-        <summary><span class="acc-hd">🤝 Network Capital<span class="acc-sub">The return on who you invest in</span></span></summary>
+        <summary><span class="acc-hd">Network Capital<span class="acc-sub">The return on who you invest in</span></span></summary>
         <div class="acc-body">
           <p class="sub">The highest-yield asset is often a relationship. Track what you invest in people - a mentor lunch, a conference ticket, a strategic dinner - and rate the <b style="color:var(--text)">Return on Relationship</b> so you can tell social investment from social noise.</p>
           <div class="row">
@@ -1559,7 +1649,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <input type="number" id="netAmt" min="0" step="1" placeholder="0" style="width:110px">
             </label>
             <label class="fld">Return on Relationship
-              <select id="netRor"><option value="high">High return 🔥</option><option value="med">Medium return</option><option value="low">Low / noise</option></select>
+              <select id="netRor"><option value="high">High return </option><option value="med">Medium return</option><option value="low">Low / noise</option></select>
             </label>
             <button class="btn primary" id="addNet">Log it</button>
           </div>
@@ -1569,7 +1659,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </details>
 
       <details class="panel acc" data-stage="3">
-        <summary><span class="acc-hd">👑 Silent Sovereignty Audit<span class="acc-sub">Real wealth is quiet - are you building it?</span></span></summary>
+        <summary><span class="acc-hd">Silent Sovereignty Audit<span class="acc-sub">Real wealth is quiet - are you building it?</span></span></summary>
         <div class="acc-body">
           <p class="sub">Fake wealth looks rich and quietly drains you. Real wealth is silent and pays you. Here's which one you're actually building.</p>
           <div id="sovAudit"></div>
@@ -1589,6 +1679,11 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </div>
       <div class="panel">
+        <h2>Money map</h2>
+        <p class="sub">Where it went and where it came from. Widen the window to tell a one-off from a habit, and tap a slice to break it down further.</p>
+        <div id="bdBox"></div>
+      </div>
+      <div class="panel">
         <h2>Spending by category</h2>
         <p class="sub">Where your money actually went in <span id="chartMonth">this month</span>. Use the month arrows on the Plan tab to change the period.</p>
         <div id="catChart"></div>
@@ -1605,7 +1700,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="trendChart"></div>
       </div>
       <div class="panel">
-        <h2>🌊 Abundance &amp; Circulation</h2>
+        <h2>Abundance &amp; Circulation</h2>
         <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. Tag spends as you log them on the Track tab.</p>
         <div id="circChart"></div>
       </div>
@@ -1614,7 +1709,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <!-- ============ DIARY ============ -->
     <section class="view" id="view-diary">
       <div class="panel">
-        <h2>📔 Money diary</h2>
+        <h2>Money diary</h2>
         <p class="sub">Write what actually happened, in your own words. The wins, the hard ones, what is coming. Nothing here is graded - and anything that sounds like money, I will offer to log for you.</p>
         <div class="dy-chips" id="diaryKinds"></div>
         <div id="diaryAsk" class="dy-ask"></div>
@@ -1626,7 +1721,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="diarySuggest"></div>
       </div>
       <div class="panel">
-        <h2>🧵 Your story so far</h2>
+        <h2>Your story so far</h2>
         <div id="diaryList"></div>
       </div>
     </section>
@@ -1661,7 +1756,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel">
-        <h2>🫱 Free comfort list</h2>
+        <h2>Free comfort list</h2>
         <p class="sub">A lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button. Write down what actually helps you when money isn't the answer. Do it now, while you're calm; the app shows the list back to you inside every gut-check, exactly when the urge is loudest.</p>
         <div class="row" style="margin-top:12px">
           <label class="fld" style="flex:1">What helps<input type="text" id="comfortInput" placeholder="e.g. Walk outside, call my brother, hot shower"></label>
@@ -1671,7 +1766,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel">
-        <h2>🛍️ Just my spending</h2>
+        <h2>Just my spending</h2>
         <p class="sub">Not the one who pays the bills? Turn this on to drop the Four Walls and zero-based budgeting entirely. The home screen becomes your spending, your streak, and the gut-check - built for tracking your own purchases (Amazon, coffee, the random stuff), not running the household.</p>
         <label class="hh-toggle"><input type="checkbox" id="spendOn"> Focus on just my spending</label>
         <div id="spendFields" style="display:none">
@@ -1683,7 +1778,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel">
-        <h2>🏠 Household (couples)</h2>
+        <h2>Household (couples)</h2>
         <p class="sub">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials.</p>
         <label class="hh-toggle"><input type="checkbox" id="hhOn"> We share this budget as a couple</label>
         <div id="hhFields" style="display:none">
@@ -1698,7 +1793,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel">
-        <h2>📬 Weekly Gut-Check</h2>
+        <h2>Weekly Gut-Check</h2>
         <p class="sub">One blunt money prompt a week. Clarity straight to your inbox - nothing else.</p>
         <form id="subForm" class="subform" novalidate>
           <input type="email" id="subEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" required>
@@ -1707,8 +1802,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub subfine">Zero spam. Unsubscribe anytime. Your financial data stays 100% on this device - only your email is shared, and only with the newsletter provider.</p>
         <div id="subResult" class="subresult" role="status" aria-live="polite"></div>
         <div class="offer-row">
-          <a class="btn" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">📖 Get the Method Guide</a>
-          <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">☕ Support the build</a>
+          <a class="btn" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">Get the Method Guide</a>
+          <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">Support the build</a>
         </div>
         <p class="sub offerfine" id="offerFine" style="display:none">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
       </div>
@@ -1717,19 +1812,19 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Setup &amp; data</h2>
         <p class="sub">Everything lives on this device. Nothing leaves it unless you turn on sync - and sync is encrypted before it goes.</p>
         <div class="row">
-          <button class="btn" id="intakeBtn2">💬 Re-run setup chat</button>
-          <button class="btn ghost" id="installBtn2">📲 Install app</button>
+          <button class="btn" id="intakeBtn2">Re-run setup chat</button>
+          <button class="btn ghost" id="installBtn2">Install app</button>
           <button class="btn ghost" id="exportBtn2">Export data</button>
           <button class="btn ghost" id="importBtn2">Import</button>
           <button class="btn ghost danger" id="resetBtn2">Reset all</button>
         </div>
         <div class="databox">
-          <div class="db-head">🔒 Keep a safe backup</div>
+          <div class="db-head">Keep a safe backup</div>
           <p class="sub" style="margin:6px 0 10px">Your data lives only in this browser, so clearing your cache or switching devices would wipe it. Save an <b>encrypted</b> backup file you can restore anywhere with your passphrase. The file is scrambled - useless to anyone without the phrase.</p>
           <div id="backupNote" class="db-note"></div>
           <div class="row">
-            <button class="btn primary" id="encBackupBtn">🔒 Save encrypted backup</button>
-            <button class="btn ghost" id="encRestoreBtn">🔓 Restore from backup</button>
+            <button class="btn primary" id="encBackupBtn">Save encrypted backup</button>
+            <button class="btn ghost" id="encRestoreBtn">Restore from backup</button>
             <input type="file" id="encRestoreFile" accept=".acct,application/json" class="hide">
           </div>
           <label class="fld" style="margin-top:12px">Remind me to back up
@@ -1738,7 +1833,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <p class="sub" style="margin-top:8px;font-size:12.5px">A web app cannot write a file to your device on its own - no browser allows it, which is the same rule that stops any page dropping files on your machine. So this watches the clock and asks; saving is one tap. <span id="autoBackupWhen"></span></p>
         </div>
         <div class="databox">
-          <div class="db-head">🪜 Interface depth</div>
+          <div class="db-head">Interface depth</div>
           <p class="sub" style="margin:6px 0 10px">Guided mode unrolls advanced tools (offense, net worth, sovereignty) only as your Freedom Runway grows, so early on you see just the survival essentials. Switch to Show everything if you want every tool visible now.</p>
           <div class="uimode" id="uiMode">
             <button data-m="auto">Guided</button>
@@ -1747,10 +1842,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <div id="uiModeNote" class="db-note" style="margin-top:10px"></div>
         </div>
         <div class="databox">
-          <div class="db-head">🎚️ Voice &amp; tone</div>
-          <p class="sub" style="margin:6px 0 10px">How much mercy the app gives you. Clean is gentle, Savage pulls no punches - and the generation dial below sets the slang.</p>
+          <div class="db-head">Voice &amp; tone</div>
+          <p class="sub" style="margin:6px 0 10px">How you want to be held accountable. This is the voice used everywhere - questions, gut-checks, nudges. Forgiving is gentle, Savage pulls no punches; the generation dial below sets the slang.</p>
           <div class="intensity" id="intensity">
-            <button data-lvl="clean">Clean</button>
+            <button data-lvl="clean">Forgiving</button>
             <button data-lvl="blunt">Blunt</button>
             <button data-lvl="savage">Savage</button>
           </div>
@@ -1767,8 +1862,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
   <div class="foot">
     <span>Accountability · a working prototype. Everything saves to this browser only - nothing leaves your device.</span>
     <div class="actions">
-      <button class="linkbtn" id="intakeBtn">💬 Setup chat</button>
-      <button class="linkbtn" id="installBtn">📲 Install app</button>
+      <button class="linkbtn" id="intakeBtn">Setup chat</button>
+      <button class="linkbtn" id="installBtn">Install app</button>
       <button class="linkbtn" id="exportBtn">Export data</button>
       <button class="linkbtn" id="importBtn">Import</button>
       <button class="linkbtn" id="resetBtn">Reset all</button>
@@ -1776,7 +1871,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     </div>
   </div>
 
-  <button class="fab" id="fab"><span class="fab-ic" id="fabIc">✦</span><span id="fabLbl">I want to…</span></button>
+  <button class="fab" id="fab"><span class="fab-ic" id="fabIc">+</span><span id="fabLbl">I want to…</span></button>
   <div class="modal-overlay" id="intentSheet">
     <div class="modal sheet">
       <button class="x" id="intentX">✕</button>
@@ -1785,10 +1880,15 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div id="intentList"></div>
     </div>
   </div>
+  <div class="glance" id="glance" style="display:none">
+    <button class="gl-tab" id="glanceTab" aria-expanded="false" aria-controls="glanceBody" title="Quick glance"><span>☰</span></button>
+    <div class="gl-panel" id="glanceBody"></div>
+  </div>
+
   <div class="modal-overlay" id="ftHelp">
     <div class="modal">
       <button class="x" id="ftHelpX">✕</button>
-      <h3>⌛ How hours of your life are worked out</h3>
+      <h3>How hours of your life are worked out</h3>
       <div id="ftHelpBody"></div>
     </div>
   </div>
@@ -1796,7 +1896,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <button class="x" id="modalX">✕</button>
-      <h3>🎯 Trap scan</h3>
+      <h3>Trap scan</h3>
       <p class="sub" style="margin-bottom:16px">About to spend? Scan it before it gets you.</p>
       <div class="row">
         <label class="fld" style="flex:1">Target<input type="text" id="mName" placeholder="Sneakers, gadget, coffee…"></label>
@@ -1968,16 +2068,16 @@ const QUOTES = {
 };
 /* Mindset & Flow (Section 2) */
 const GOAL_TYPES=[
-  {k:'foundation', ic:'🛡️', label:'Foundation', sub:'Emergency buffer, debt clearance - internal peace'},
-  {k:'skill', ic:'⚡', label:'Skill & Capacity', sub:'Education, tools, health - raise your earning output'},
-  {k:'leverage', ic:'🤝', label:'Leverage & Network', sub:'Masterminds, automation, delegation - scale your time'},
-  {k:'circulation', ic:'🌊', label:'Circulation', sub:'Giving, tithing, community - keep capital moving'}
+  {k:'foundation', ic:'', label:'Foundation', sub:'Emergency buffer, debt clearance - internal peace'},
+  {k:'skill', ic:'', label:'Skill & Capacity', sub:'Education, tools, health - raise your earning output'},
+  {k:'leverage', ic:'', label:'Leverage & Network', sub:'Masterminds, automation, delegation - scale your time'},
+  {k:'circulation', ic:'', label:'Circulation', sub:'Giving, tithing, community - keep capital moving'}
 ];
 function goalTypeOf(k){ return GOAL_TYPES.find(t=>t.k===k)||null; }
 const ENERGY=[
-  {k:'growth', ic:'🌿', label:'Growth / Flow', sub:'Investment, learning, joy, intentional giving'},
-  {k:'baseline', ic:'🛡️', label:'Baseline Protection', sub:'Rent, utilities, food'},
-  {k:'fear', ic:'🛑', label:'Fear / Scarcity', sub:'Panic buys, status, guilt purchases'}
+  {k:'growth', ic:'', label:'Growth / Flow', sub:'Investment, learning, joy, intentional giving'},
+  {k:'baseline', ic:'', label:'Baseline Protection', sub:'Rent, utilities, food'},
+  {k:'fear', ic:'', label:'Fear / Scarcity', sub:'Panic buys, status, guilt purchases'}
 ];
 function energyOf(k){ return ENERGY.find(e=>e.k===k)||null; }
 /* Offense / Income-creation engine */
@@ -2009,13 +2109,13 @@ const SCARCITY_COPY={
   mature:{clean:["Thrift matters, but it bottoms out at zero. Earning is where the real room is.","You've mastered the cutting. Income is the half with no limit."],blunt:["You've optimized the cutting. Now build income - that's the uncapped side.","Frugality is defense. You need offense to actually get ahead."],savage:["Penny-pinching alone is a slow ceiling. Create something people pay for.","The savings well is nearly dry. Go dig an income well."]}
 };
 const INDIE_WIN={
-  genz:{clean:["Independent capital unlocked. Money outside the 9-5. 🔓","You made money on your own terms. That's the move."],blunt:["You proved you can create money on demand. Do it again.","That's a stream the boss can't cut. Widen it."],savage:["That's income they can't lay off. Now go get more.","One-off? Prove it wasn't luck. Run it back."]},
+  genz:{clean:["Independent capital unlocked. Money outside the 9-5. ","You made money on your own terms. That's the move."],blunt:["You proved you can create money on demand. Do it again.","That's a stream the boss can't cut. Widen it."],savage:["That's income they can't lay off. Now go get more.","One-off? Prove it wasn't luck. Run it back."]},
   middle:{clean:["Independent income logged. Money can come from more than one place.","You just showed money isn't only a paycheck. Build on it."],blunt:["You proved you can create money on demand. Scale it.","One stream is fragile. You just started a second - keep going."],savage:["That's the income they can't fire you from. Grow it.","Now do it on purpose, not by accident."]},
   mature:{clean:["Income created on your own terms. That's real leverage.","You proved money doesn't only come from an employer. Build on it."],blunt:["That's a stream nobody can revoke. Widen it.","Proof of concept, done. Now make it repeatable."],savage:["That's freedom income. Don't let it be a one-time thing.","Now turn the fluke into a system."]}
 };
 /* the growth lane's log-win: money that keeps working after you stop */
 const GROWTH_WIN={
-  genz:{clean:["That money's still yours - it just got a job. 🌱","Future you is getting paid off this one.","Money planted, not spent. That's the difference."],blunt:["Spending buys a moment. This buys momentum. Keep planting.","Every dollar in there works shifts you don't have to.","That's a dollar that earns while you sleep. Stack more."],savage:["Everyone else bought dopamine today. You bought an employee.","That dollar now works for YOU. Most people never flip that switch.","Planted, not burned. Do it again before the urge finds you."]},
+  genz:{clean:["That money's still yours - it just got a job. ","Future you is getting paid off this one.","Money planted, not spent. That's the difference."],blunt:["Spending buys a moment. This buys momentum. Keep planting.","Every dollar in there works shifts you don't have to.","That's a dollar that earns while you sleep. Stack more."],savage:["Everyone else bought dopamine today. You bought an employee.","That dollar now works for YOU. Most people never flip that switch.","Planted, not burned. Do it again before the urge finds you."]},
   middle:{clean:["That money is still yours - it just went to work.","Invested, not spent. Future you says thanks.","You moved money from comfort to growth. That compounds."],blunt:["Spending ends the moment you swipe. This one keeps paying. Keep it up.","A dollar invested works hours you never have to.","That's ownership, not consumption. Different game entirely."],savage:["You just hired a dollar to work around the clock. Most people only ever rent theirs out.","Spent money is gone. This money multiplies. Remember the difference.","That's a seed, not a receipt. Plant more."]},
   mature:{clean:["Still your money - now it's working, not waiting.","Invested rather than spent. That's how the curve bends.","You paid your future first. Well done."],blunt:["Spending is a cost. This is a position. Keep building it.","Every invested dollar is an hour you won't have to work later.","That's the quiet move that actually builds wealth."],savage:["You bought an asset while everyone else bought a moment.","That dollar reports for work every day from now on. Hire more like it.","Consumption ends. Compounding doesn't. You chose right."]}
 };
@@ -2024,7 +2124,7 @@ const DEBT_BALANCE={
   middle:{clean:["Pay the debt to lower your floor, and expand income to raise your ceiling.","Debt payoff steadies the base. Income lifts the whole thing."],blunt:["Kill the debt to lower your floor, but expand your income to raise your ceiling.","You're all defense. Add one offensive move this month."],savage:["Paying debt is survival. Earning is freedom. Don't stop at survival.","Out-earning the debt beats out-cutting it. Every time."]},
   mature:{clean:["Retire the debt to steady your base; grow income to lift the ceiling.","Debt down lowers the floor; income up raises the roof. Run both."],blunt:["Debt payoff is defense. Pair it with an income move or you'll tread water.","You've got the payoff handled. Now build the earning side."],savage:["Survival is paying the debt. Freedom is out-earning it.","Don't spend a decade only playing defense. Score some points."]}
 };
-const ROR=[{k:'high',label:'High return 🔥'},{k:'med',label:'Medium return'},{k:'low',label:'Low / noise'}];
+const ROR=[{k:'high',label:'High return '},{k:'med',label:'Medium return'},{k:'low',label:'Low / noise'}];
 const GOAL_NUDGES=[
   "This is the one. Feed it first.",
   "Every deposit is a vote for the person you're becoming.",
@@ -2237,7 +2337,7 @@ function renderHousehold(){
   const ess=(typeof essentialMonthly==='function')?essentialMonthly():0;
   const wA=effectiveHourly(), wB=state.wageB||0;
   box.innerHTML=`<div class="panel household">
-    <h2>🏠 Household</h2>
+    <h2>Household</h2>
     <p class="sub">One budget, two earners. It all stays on this device - to share it with your partner's phone, export the encrypted backup in Settings and have them restore it.</p>
     <div class="hh-tot">Combined income this month <b>${usd(inc.total)}</b></div>
     <div class="hh-split">
@@ -2334,19 +2434,19 @@ function renderSpending(){
     const endStr=localYMD(new Date(Date.parse(tc.start+'T00:00:00')+(tc.days-1)*864e5));
     const loggedDays=Math.min(tc.days, new Set(state.transactions.filter(t=>t.type==='expense' && (t.date||'')>=tc.start && (t.date||'')<=endStr).map(t=>t.date)).size);
     tcHTML=`<div class="sp-track${tcDone?' done':''}">
-      <div class="sp-k">📓 30-day money map${tcDone?' · complete':' · day '+day+' of '+tc.days}</div>
+      <div class="sp-k">30-day money map${tcDone?' · complete':' · day '+day+' of '+tc.days}</div>
       <div class="sp-bar"><span style="width:${pct}%"></span></div>
       <div class="sp-limnote">${loggedDays} day${loggedDays===1?'':'s'} logged.${tcDone?" 30 days done - now it's staring you in the face. Scroll your log and see exactly where it went, then decide.":" Jot every buy your way, punch it in when you sit down. The truth shows up by day 30."}</div>
       <button class="sp-track-x" data-tcstop="1" title="End the challenge">✕</button>
     </div>`;
   } else {
-    tcHTML=`<button class="sp-startmap" id="startMap">📓 Start a 30-day money map</button>`;
+    tcHTML=`<button class="sp-startmap" id="startMap">Start a 30-day money map</button>`;
   }
   // Evening nudge: any spend-mode user, viewing the real current month, nothing logged today
   const evening=new Date().getHours()>=18, loggedToday=state.transactions.some(t=>t.type==='expense' && t.date===todayStr());
-  const remindHTML=(evening && !loggedToday && M===thisMonth())?`<div class="sp-remind">🌙 End of the day - got notes to enter? Punch in today's spending while it's fresh. <button class="sp-remind-go" id="remindLog">Log today →</button></div>`:'';
+  const remindHTML=(evening && !loggedToday && M===thisMonth())?`<div class="sp-remind">End of the day - got notes to enter? Punch in today's spending while it's fresh. <button class="sp-remind-go" id="remindLog">Log today →</button></div>`:'';
   const tend = spendTendencies();
-  const tendHTML = tend && tend.length ? `<div class="sp-tend"><div class="sp-k">🔍 Your tendencies</div>${tend.map(l=>`<div class="sp-tend-l">${l}</div>`).join('')}</div>` : '';
+  const tendHTML = tend && tend.length ? `<div class="sp-tend"><div class="sp-k">Your tendencies</div>${tend.map(l=>`<div class="sp-tend-l">${l}</div>`).join('')}</div>` : '';
   const showGateway = spent>0 || tcDone;
   const gatewayHTML = showGateway ? `<div class="sp-gateway">
     <div class="sp-k">When you're ready</div>
@@ -2362,7 +2462,7 @@ function renderSpending(){
     ${limHTML}
     ${tcHTML}
     ${remindHTML}
-    <div class="sp-actions"><button class="btn primary" id="spendScan">🎯 Gut-check a purchase</button><button class="btn ghost" id="spendQuickLog">📓 Log my day</button></div>
+    <div class="sp-actions"><button class="btn primary" id="spendScan">Gut-check a purchase</button><button class="btn ghost" id="spendQuickLog">Log my day</button></div>
     ${tendHTML}
     ${recentHTML}
     ${gatewayHTML}
@@ -2409,7 +2509,7 @@ function renderCalDay(M, allowance){
   let action='';
   if(swept){
     const gs=state.goals.find(x=>x.id===swept.goalId);
-    action=`<div class="cal-swept"><span>✓ You banked <b>${money(swept.amount)}</b>${gs?` toward "${escapeHtml(gs.name)}"`:''}.</span> <button class="cal-undo" data-calunsweep="${dd}">Undo</button></div>`;
+    action=`<div class="cal-swept"><span>✓You banked <b>${money(swept.amount)}</b>${gs?` toward "${escapeHtml(gs.name)}"`:''}.</span> <button class="cal-undo" data-calunsweep="${dd}">Undo</button></div>`;
   } else if(saved>0){
     const g=(typeof topGoal==='function')?topGoal():null;
     if(g){
@@ -2419,11 +2519,11 @@ function renderCalDay(M, allowance){
         action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">A clean day - but across the whole month your real surplus so far is <b>${money(Math.max(0,calRealSurplus(M,allowance)))}</b> (a heavier day ate the rest). Nothing left to bank without banking money you didn't actually keep.</div>`;
       } else {
         action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(canBank)}</b> isn't a pot the app is holding - it's real money you kept this month. Give it a job: bank it toward your dream and watch it become progress, not just a good day.</div>
-          <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">➕ Bank ${money(canBank)} toward "${escapeHtml(g.name)}"</button>`;
+          <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">Bank ${money(canBank)} toward "${escapeHtml(g.name)}"</button>`;
       }
     } else {
       action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Give it one:</div>
-        <button class="cal-bank" data-calgoal="1">🎯 Start a goal to bank it toward</button>`;
+        <button class="cal-bank" data-calgoal="1">Start a goal to bank it toward</button>`;
     }
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
@@ -2496,7 +2596,7 @@ function renderRewardCalendar(){
   const box=document.getElementById('rewardCalBox'); if(!box) return;
   if(!state.spendingMode){ box.innerHTML=''; return; }
   const M=state.activeMonth, lim=state.spendLimit||0;
-  if(lim<=0){ box.innerHTML=`<div class="panel"><h2>🗓️ Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p></div>`; return; }
+  if(lim<=0){ box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p></div>`; return; }
   const [y,mo]=M.split('-').map(Number);
   const dim=new Date(y,mo,0).getDate(), allowance=lim/dim, firstWd=new Date(y,mo-1,1).getDay();
   const tm=thisMonth(), isCur=(M===tm), isFuture=(M>tm), todayDay=isCur?new Date().getDate():(isFuture?0:dim);
@@ -2544,15 +2644,15 @@ function renderRewardCalendar(){
     orgNote=` You started on <b>${od.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</b> - earlier days are greyed out, not counted. No fake green here.`;
   }
   box.innerHTML=`<div class="panel">
-    <h2>🗓️ Reward calendar</h2>
+    <h2>Reward calendar</h2>
     <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${money(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★. <b>Tap any day</b> for what you logged and saved.${orgNote}</p>
     <div class="cal-grid">${['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}${cells}</div>
     ${weekHTML}
     <div class="cal-stats">
-      <div class="cal-stat"><div class="sp-k">Under-budget streak</div><div class="v">${streak} 🔥</div></div>
+      <div class="cal-stat"><div class="sp-k">Under-budget streak</div><div class="v">${streak} </div></div>
       <div class="cal-stat"><div class="sp-k">${aheadNet>=0?'Ahead this month'+(swept>0?' (unbanked)':''):'Over pace by'}</div><div class="v ${aheadNet>=0?'good':'bad'}">${money(Math.abs(aheadNet))}</div></div>
     </div>
-    ${overSwept>0.5?`<div class="cal-rec" style="border-color:rgba(247,109,109,.4)">⚠️ You've banked ${money(overSwept)} more than this month's real surplus now backs (spending went up or the limit came down). Tap a banked day and Undo to square it - the honest move.</div>`:''}
+    ${overSwept>0.5?`<div class="cal-rec" style="border-color:rgba(247,109,109,.4)">You've banked ${money(overSwept)} more than this month's real surplus now backs (spending went up or the limit came down). Tap a banked day and Undo to square it - the honest move.</div>`:''}
     <div id="calDay"></div>
     <div class="cal-rec">${spendRewardRec(bankedToday, aheadNet)}</div>
   </div>`;
@@ -2596,8 +2696,8 @@ function renderDebt(){
   const rn=document.getElementById('debtReflectNote');
   if(rn){ const r=(state.intake&&state.intake.reflections)||{};
     let note='';
-    if(r.commute==='payment') note=`🚗 You told me the car payment weighs on you. Add it here - watch how fast crushing it frees up your monthly cash flow (and your life-hours).`;
-    else if(r.debt==='treading') note=`💪 You said the debt feels like treading water. This is the tool that shows you the shore - a real date you're free, priced in hours of your life.`;
+    if(r.commute==='payment') note=`You told me the car payment weighs on you. Add it here - watch how fast crushing it frees up your monthly cash flow (and your life-hours).`;
+    else if(r.debt==='treading') note=`You said the debt feels like treading water. This is the tool that shows you the shore - a real date you're free, priced in hours of your life.`;
     rn.innerHTML = note ? `<div class="reflect-note">${note}</div>` : '';
   }
   const box=document.getElementById('debtList'); if(!box) return;
@@ -2663,7 +2763,7 @@ function renderDebtResults(){
       <div><div class="sp-k">Debt-free by</div><div class="debt-date">${fmtMonth(freeMonth)}</div><div class="sub" style="margin:2px 0 0">${dur} from now</div></div>
       <div style="text-align:right"><div class="sp-k">Total interest</div><div class="debt-int">${money(plan.totalInterest)}</div>${H>0?`<div class="sub" style="margin:2px 0 0">${fmtHours(plan.totalInterest/H)} of your life</div>`:''}</div>
     </div>
-    ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">⚠️ One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
+    ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
     ${cmp?`<div class="debt-cmp">${cmp}</div>`:''}
     <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/></svg>
     <div class="po-head">Payoff order</div>
@@ -2701,8 +2801,8 @@ function renderInvestCompare(){
   const flags=debts.map(d=>({name:d.name, apr:+d.apr||0, invest:(+d.apr||0)<ret}));
   box.innerHTML=`
     <div class="iv-compare">
-      <div class="iv-card ${diff<=0?'win':''}"><div class="sp-k">🏔️ Crush the debt first</div><div class="iv-net">${money(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
-      <div class="iv-card ${diff>0?'win':''}"><div class="sp-k">📈 Minimums + invest the rest</div><div class="iv-net">${money(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      <div class="iv-card ${diff<=0?'win':''}"><div class="sp-k">Crush the debt first</div><div class="iv-net">${money(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      <div class="iv-card ${diff>0?'win':''}"><div class="sp-k">Minimums + invest the rest</div><div class="iv-net">${money(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
     </div>
     <div class="iv-verdict">${diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years.` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years - your debt costs more than the market is likely to pay.` : `It's roughly a wash over ${yrs} years - the guaranteed route (crush the debt) is the safer call.`}</div>
     <div class="iv-flags">${flags.map(f=>`<div class="iv-flag ${f.invest?'inv':'crush'}"><b>${escapeHtml(f.name)} · ${f.apr}%</b> - ${f.invest?`below ${ret}%, so investing the extra likely beats rushing this one`:`beats ${ret}%; crushing it is a guaranteed ${f.apr}% return`}</div>`).join('')}</div>
@@ -2760,7 +2860,7 @@ function renderIntensity(){
   const host=document.getElementById('intensity');
   if(eff!==state.intensity){
     if(!note && host){ note=document.createElement('div'); note.id='intFloorNote'; note.className='sub'; note.style.cssText='margin-top:6px;font-size:12px'; host.parentNode.insertBefore(note, host.nextSibling); }
-    if(note) note.textContent='Eased to '+(eff==='clean'?'Clean':'Blunt')+' while you told me you\'re '+(state.intake&&state.intake.reflections&&state.intake.reflections.situation==='survive'?'in survival':'treading water')+' - wins first, roasts later. Re-run the setup chat when that changes.';
+    if(note) note.textContent='Eased to '+(eff==='clean'?'Forgiving':'Blunt')+' while you told me you\'re '+(state.intake&&state.intake.reflections&&state.intake.reflections.situation==='survive'?'in survival':'treading water')+' - wins first, roasts later. Re-run the setup chat when that changes.';
   } else if(note){ note.remove(); }
 }
 /* register is chosen at the intake age-gate; adjustable later under Voice & tone */
@@ -2812,6 +2912,7 @@ function closeTopOverlay(){
   const cel=document.querySelector('.stagecelebrate'); if(cel){ cel.remove(); return true; }
   // check order = paint order: the modal is later in the DOM, so it paints on top
   // of the sheet - Back must dismiss the overlay the user can actually see
+  if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
   const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
@@ -2848,10 +2949,10 @@ window.addEventListener('popstate',e=>{
    except when the user forces "Show everything".
    ============================================================ */
 const STAGE_META={
-  1:{ic:'🛡️', name:'Defense & Survival', tag:'Lock in the essentials and dodge the traps.'},
-  2:{ic:'📈', name:'Expansion & Flow', tag:'Breathing room secured. Time to build income.',
+  1:{ic:'', name:'Defense & Survival', tag:'Lock in the essentials and dodge the traps.'},
+  2:{ic:'', name:'Expansion & Flow', tag:'Breathing room secured. Time to build income.',
      unlocked:'Net worth & dreams, the Offense vs. Defense meter, Skill-investment payback, and your "Enough" anchor.'},
-  3:{ic:'👑', name:'Sovereignty Console', tag:'Real runway. The autonomy tools are open.',
+  3:{ic:'', name:'Sovereignty Console', tag:'Real runway. The autonomy tools are open.',
      unlocked:'The Sovereignty Audit (Sovereign Capital Ratio + Overhead Drag) and Network Capital.'}
 };
 /* stage implied by current runway alone */
@@ -2993,7 +3094,7 @@ function renderRetro(){
   const rangeBtn=(k,lbl)=>`<button class="rgbtn ${v.range===k?'on':''}" data-range="${k}">${lbl}</button>`;
   const granBtn=(k,lbl)=>`<button class="${v.gran===k?'on':''}" data-gran="${k}">${lbl}</button>`;
   const delta = (first&&last&&first.netWorth!=null&&last.netWorth!=null) ? last.netWorth-first.netWorth : null;
-  el.innerHTML=`<div class="panel"><h2>📜 Your evolution</h2>
+  el.innerHTML=`<div class="panel"><h2>Your evolution</h2>
     <p class="sub">Your money over time. Snapshots are captured automatically each month.</p>
     <div class="retro-ctl">
       <div class="uimode" id="retroGran">${granBtn('month','Monthly')}${granBtn('quarter','Quarterly')}</div>
@@ -3191,31 +3292,31 @@ function deepenSteps(){
   const em=emergencyMoney(), debt=debtsOutstanding();
   const fullTarget=ess>0?ess*3:3000;
   const steps=[
-    {k:'starter', ic:'🛟', t:'Put $1,000 between you and disaster',
+    {k:'starter', ic:'', t:'Put $1,000 between you and disaster',
      why:`Not a dream - a shock absorber. Without it the next flat tire goes on a credit card and the whole plan unravels. ${em>0?`You've got ${usd(em)} so far.`:'Start here, before anything else.'}`,
      cta:em>0?'Add to it':'Start it', done:em>=1000},
-    {k:'subs', ic:'🔍', t:'Find the memberships you forgot',
+    {k:'subs', ic:'', t:'Find the memberships you forgot',
      why:'Quick win that funds the rest. Small, monthly, automatic - which is exactly why they never get questioned. Let us price them by the year and see them clearly.',
      cta:'Run the sweep', done:!!(state.subSweep&&state.subSweep.done)},
-    {k:'debt', ic:'💳', t:'Kill the interest',
+    {k:'debt', ic:'', t:'Kill the interest',
      why:debt>0?`${usd(debt)} outstanding. Interest is a negative return you are guaranteed to pay - clearing it beats almost any investment, risk-free. Get a real payoff date and watch what each extra dollar shaves off it.`
                :'Interest is a negative return you are guaranteed to pay. Put your balances in and the calculator gives you an actual payoff date.',
      cta:'Open the calculator', done:(state.debts||[]).length>0 && debt<=0},
-    {k:'fullfund', ic:'🏰', t:'Grow it to a real cushion',
+    {k:'fullfund', ic:'', t:'Grow it to a real cushion',
      why:ess>0?`Three months of your essentials is ${usd(fullTarget)}. That's the difference between a lost job being a crisis and being an inconvenience. You're at ${usd(em)}.`
               :`Three months of essentials. That's the difference between a lost job being a crisis and being an inconvenience.`,
      cta:'Work on it', done:em>=fullTarget},
-    {k:'payfirst', ic:'💰', t:'Pay yourself first, every month',
+    {k:'payfirst', ic:'', t:'Pay yourself first, every month',
      why:income>0?`Before the bills, not after. Even ${money(Math.max(25,Math.round(income*0.15)))} a month - 15% of what you make - is the only bill that buys you freedom instead of renting it. Automate it and willpower stops mattering.`
                  :'Before the bills, not after. It is the one bill that buys you freedom instead of renting it.',
      cta:'Set it up', done:payFirstDone(M)},
-    {k:'college', ic:'🎓', t:'Fund what is coming for the kids',
+    {k:'college', ic:'', t:'Fund what is coming for the kids',
      why:'Education, a first car, whatever is genuinely ahead. Naming it and funding it monthly beats hoping, and it stops the big year ambushing you.',
      cta:'Open an account for it', done:earmarked('college')>0 || (state.goals||[]).some(g=>/college|school|tuition|kid/i.test(g.name))},
-    {k:'home', ic:'🏠', t:'Own where you live, outright',
+    {k:'home', ic:'', t:'Own where you live, outright',
      why:'The single biggest bill most people carry. Every extra payment now is a year of your life you buy back later - and a mortgage-free retirement needs a far smaller number to work.',
      cta:'Plan it', done:!hasMortgage(), hide:!hasMortgage()},
-    {k:'give', ic:'🌊', t:'Build it, and let it move',
+    {k:'give', ic:'', t:'Build it, and let it move',
      why:'The last rung is not a number. Money that only ever piles up stops doing anything. Decide what it is FOR - what you build, who you help - or the pile becomes the point.',
      cta:'Set a giving target', done:(state.giving||[]).length>0 || state.givingPct>0}
   ];
@@ -3229,11 +3330,11 @@ function deepenHTML(){
   if(!next){
     // never claim they did something they only dismissed - that is the one lie this app cannot tell
     if(setAside.length) return `<div class="wall-next all"><span class="wn-t">Walls covered${doneN?`, and ${doneN} deeper move${doneN>1?'s':''} done`:''}. You set ${setAside.length===1?'one thing':`${setAside.length} things`} aside for now: ${setAside.map(s=>escapeHtml(s.t)).join(', ')}. No pressure - they'll come back around next month.</span><span class="wn-b"><button class="btn sm primary" data-deepreset>Pick one back up</button><button class="btn sm ghost" data-walldone>Not yet</button></span></div>`;
-    return `<div class="wall-next all"><span class="wn-t">🎉 Walls covered, and you have gone past them - paid yourself first, swept the memberships, built the cushion, dated the debt. That is the whole foundation.</span><span class="wn-b"><button class="btn sm primary" data-walldone data-goto="home">Back to Home →</button><button class="btn sm ghost" data-walldone>Keep budgeting</button></span></div>`;
+    return `<div class="wall-next all"><span class="wn-t">Walls covered, and you have gone past them - paid yourself first, swept the memberships, built the cushion, dated the debt. That is the whole foundation.</span><span class="wn-b"><button class="btn sm primary" data-walldone data-goto="home">Back to Home →</button><button class="btn sm ghost" data-walldone>Keep budgeting</button></span></div>`;
   }
   const ladder=steps.map(s=>`<span class="dp-chip ${s.done?'done':''} ${s.skipped?'skip':''}">${s.done?'✓':s.ic} ${escapeHtml(s.t)}</span>`).join('');
   return `<div class="deepen">
-    <div class="dp-k">🎉 All four walls covered${doneN?` · ${doneN} of 4 deeper moves done`:''}</div>
+    <div class="dp-k">All four walls covered${doneN?` · ${doneN} of 4 deeper moves done`:''}</div>
     <div class="dp-lead">That is the foundation. Most apps would stop here and congratulate you - but covering the essentials is the floor, not the ceiling. Here is what actually moves you forward:</div>
     <div class="dp-next"><span class="dp-ic">${next.ic}</span><div class="dp-body"><div class="dp-t">${escapeHtml(next.t)}</div><div class="dp-why">${escapeHtml(next.why)}</div></div></div>
     <div class="dp-actions"><button class="btn sm primary" data-deepen="${next.k}">${escapeHtml(next.cta)} →</button><button class="btn sm ghost" data-deepskip="${next.k}">Not now</button></div>
@@ -3381,7 +3482,7 @@ function wallGuideHTML(c,M){
     const cats=state.categories.filter(k=>!k.parentId && x.match.some(t=>k.name.toLowerCase().includes(t)));
     return cats.reduce((s,k)=>s+assignedFor(k.id,M),0)<=0;
   });
-  if(next) return `<div class="wall-next"><span class="wn-t">✓ ${escapeHtml(w.name)} set aside. Next wall: ${next.icon} ${escapeHtml(next.name)}</span><span class="wn-b"><button class="btn sm primary" data-wallnext="${escapeHtml(next.cat)}">Fund ${escapeHtml(next.name)} →</button><button class="btn sm ghost" data-walldone>Done for now</button></span></div>`;
+  if(next) return `<div class="wall-next"><span class="wn-t">✓${escapeHtml(w.name)} set aside. Next wall: ${next.icon} ${escapeHtml(next.name)}</span><span class="wn-b"><button class="btn sm primary" data-wallnext="${escapeHtml(next.cat)}">Fund ${escapeHtml(next.name)} →</button><button class="btn sm ghost" data-walldone>Done for now</button></span></div>`;
   return deepenHTML();   // the walls are the floor, not the finish line
 }
 function renderBudget(){
@@ -3410,7 +3511,7 @@ function renderBudget(){
   const dupEl=document.getElementById('dupBanner');
   if(dupEl){
     const dups=duplicateGroups();
-    dupEl.innerHTML = dups.length ? `<div class="dupwarn"><div class="dw-msg"><b>Heads up - duplicate categories.</b> These cover the same essential: ${dups.map(names=>names.join(' + ')).join('; ')}. Tidying merges each set into one and keeps all money and history.</div><button class="btn sm primary" id="dupTidy">⚡ Tidy them up</button></div>` : '';
+    dupEl.innerHTML = dups.length ? `<div class="dupwarn"><div class="dw-msg"><b>Heads up - duplicate categories.</b> These cover the same essential: ${dups.map(names=>names.join(' + ')).join('; ')}. Tidying merges each set into one and keeps all money and history.</div><button class="btn sm primary" id="dupTidy">Tidy them up</button></div>` : '';
     const dt=document.getElementById('dupTidy');
     if(dt) dt.addEventListener('click',()=>{ const n=mergeDuplicates(); renderBudget(); renderTx(); renderNetWorth(); if(n) alert('Merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into one each. Money and transactions were kept and combined.'); });
   }
@@ -3426,7 +3527,7 @@ function renderBudget(){
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
       const rebalance = over ? `<div class="rebalance">
           <div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
-          <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">⚡ Auto-Rebalance</button></div>
+          <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div>
         </div>` : '';
       const subsHTML = (isGroup && !collapsed) ? kids.map(k=>{
         // a sub can be a group itself: Gas → Car 1 / Car 2, Groceries → Walmart / Meijer (three levels max)
@@ -3609,10 +3710,10 @@ document.getElementById('addTx').addEventListener('click',()=>{
   const lw=document.getElementById('logWin');
   if(lw){
     let m;
-    if(indieCrossed) m=`🚀 <b>${money(indieCrossed)} independent milestone!</b> ${escapeHtml(pickVoice(INDIE_WIN))}`;
-    else if(txType==='invest') m=`🌱 ${escapeHtml(pickVoice(GROWTH_WIN))}`;
-    else if(txType==='income'&&isIndependent(document.getElementById('txSrcType').value)) m=`🚀 ${escapeHtml(pickVoice(INDIE_WIN))}`;
-    else m=`🛡️ ${escapeHtml(pickVoice(BLINDSPOT_COPY))}`;
+    if(indieCrossed) m=`<b>${money(indieCrossed)} independent milestone!</b> ${escapeHtml(pickVoice(INDIE_WIN))}`;
+    else if(txType==='invest') m=`${escapeHtml(pickVoice(GROWTH_WIN))}`;
+    else if(txType==='income'&&isIndependent(document.getElementById('txSrcType').value)) m=`${escapeHtml(pickVoice(INDIE_WIN))}`;
+    else m=`${escapeHtml(pickVoice(BLINDSPOT_COPY))}`;
     lw.innerHTML=`<div class="logwin">${m}</div>`; setTimeout(()=>{ if(lw.firstChild) lw.innerHTML=''; },7000);
   }
 });
@@ -3759,7 +3860,7 @@ function commitImport(){
   save(); renderBudget(); renderTx(); renderHome(); renderNetWorth();
   renderImportReview();
   const box=document.getElementById('importReview');
-  if(box) box.innerHTML=`<div class="logwin">✅ Imported <b>${added}</b> transaction${added===1?'':'s'}.${dup?` Skipped ${dup} that looked like duplicates.`:''}</div>`;
+  if(box) box.innerHTML=`<div class="logwin">Imported <b>${added}</b> transaction${added===1?'':'s'}.${dup?` Skipped ${dup} that looked like duplicates.`:''}</div>`;
 }
 function handleCSVFile(file){
   const box=document.getElementById('importReview');
@@ -3866,7 +3967,7 @@ function renderQuickLog(){
   if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPhotoFile=null; return; }
   box.innerHTML=`<div class="ql-panel">
     <div class="ql-head"><span>One line per purchase, then log them all. The little stuff is where it hides.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
-    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">📷 Snap my notepad</button><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">🔎 Read it for me</button></div>
+    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Snap my notepad</button><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
     <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
@@ -3948,11 +4049,11 @@ function renderQuickLog(){
    even when the user doesn't. Rolling 7-day window; log kept to 90 days.
    ============================================================ */
 const TIME_KINDS=[
-  {k:'health', ic:'💪', label:'Health',       hint:'moved, cooked, slept right'},
-  {k:'learn',  ic:'📚', label:'Learning',     hint:'a skill, a book, a course'},
-  {k:'build',  ic:'🔨', label:'Building',     hint:'side work, the dream'},
-  {k:'people', ic:'🤝', label:'People',       hint:'family, friends, network'},
-  {k:'leak',   ic:'📱', label:'Screen drift', hint:'scroll, autoplay'}
+  {k:'health', ic:'', label:'Health',       hint:'moved, cooked, slept right'},
+  {k:'learn',  ic:'', label:'Learning',     hint:'a skill, a book, a course'},
+  {k:'build',  ic:'', label:'Building',     hint:'side work, the dream'},
+  {k:'people', ic:'', label:'People',       hint:'family, friends, network'},
+  {k:'leak',   ic:'', label:'Screen drift', hint:'scroll, autoplay'}
 ];
 function timeWeekFrom(){ return localYMD(new Date(Date.parse(todayStr()+'T00:00:00')-6*86400000)); }
 function timeWeekTotals(){ const from=timeWeekFrom(); const tot={}; (state.timeLog||[]).forEach(e=>{ if(e.date>=from) tot[e.kind]=(tot[e.kind]||0)+(+e.hours||0); }); return tot; }
@@ -4000,7 +4101,7 @@ function renderTx(){
   renderTxForm();
   renderTimeLog();
   const bsBar=document.getElementById('blindspotBar');
-  if(bsBar){ const bs=blindspotShield(); bsBar.innerHTML = bs.count>0 ? `<div class="blindspot"><span class="bs-ic">🛡️</span><div><div class="bs-k">Zero-Blindspot Shield</div><div class="bs-v">${bs.count} on the record · ${bs.streak}-day logging streak 🔥</div><div class="bs-note">Nothing hidden. Every logged dollar is one that can't ambush you.</div></div></div>` : ''; }
+  if(bsBar){ const bs=blindspotShield(); bsBar.innerHTML = bs.count>0 ? `<div class="blindspot"><span class="bs-ic"></span><div><div class="bs-k">Zero-Blindspot Shield</div><div class="bs-v">${bs.count} on the record · ${bs.streak}-day logging streak </div><div class="bs-note">Nothing hidden. Every logged dollar is one that can't ambush you.</div></div></div>` : ''; }
   const M=state.activeMonth;
   const inc=txAllMonths?state.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0):monthIncome(M);
   const exp=txAllMonths?state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0):monthExpense(M);
@@ -4011,7 +4112,7 @@ function renderTx(){
   sumEl.innerHTML=`
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('income','Income')}</div><div class="v good">${money(inc)}</div></div>
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('spent','Spent')}</div><div class="v">${money(exp)}</div></div>
-    ${showInv?`<div class="stat"><div class="k">🌱 Invested ${txAllMonths?'(all time)':'(month)'}</div><div class="v pos">${money(inv)}</div></div>`:''}
+    ${showInv?`<div class="stat"><div class="k">Invested ${txAllMonths?'(all time)':'(month)'}</div><div class="v pos">${money(inv)}</div></div>`:''}
     <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
     <div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
   const bn=document.getElementById('bankNote');
@@ -4039,7 +4140,7 @@ function renderTxList(){
     const day=isNaN(d)?'--':d.toLocaleString(undefined,{day:'numeric'});
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
     const title=t.type==='income'?escapeHtml(t.source||'Income')
-              :t.type==='invest'?(`<span class="tag-cat">🌱 Invested</span>${escapeHtml(t.source||'Investment')}`)
+              :t.type==='invest'?(`<span class="tag-cat">Invested</span>${escapeHtml(t.source||'Investment')}`)
               :(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
@@ -4210,7 +4311,7 @@ function renderGiving(){
   if(sum){
     let html=`<div class="chip">Given this month: <b>${money(givenM)}</b></div><div class="chip">All-time: <b>${money(allTime)}</b></div>`;
     if(income>0) html+=`<div class="chip">${Math.round(givenM/income*100)}% of income</div>`;
-    if(target>0){ const pct=Math.min(100,givenM/target*100); html+=`<div class="give-prog" style="margin-top:10px"><span style="width:${pct}%"></span></div><div class="sub" style="margin:6px 0 0">${givenM>=target?`🌊 Target met - ${money(givenM)} given, keeping it flowing.`:`${money(target-givenM)} to reach your ${state.givingPct}% target this month.`}</div>`; }
+    if(target>0){ const pct=Math.min(100,givenM/target*100); html+=`<div class="give-prog" style="margin-top:10px"><span style="width:${pct}%"></span></div><div class="sub" style="margin:6px 0 0">${givenM>=target?`Target met - ${money(givenM)} given, keeping it flowing.`:`${money(target-givenM)} to reach your ${state.givingPct}% target this month.`}</div>`; }
     sum.innerHTML=html;
   }
   if(!state.giving.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">Nothing given yet. Even a small amount, on purpose, changes your relationship with money.</div>`; return; }
@@ -4401,8 +4502,8 @@ function renderAutoBackup(){
 function renderBackupNote(){
   const el=document.getElementById('backupNote'); if(!el) return;
   const busy=(state.transactions&&state.transactions.length)||0;
-  if(state.lastBackup){ el.className='db-note ok'; el.textContent='✓ Last encrypted backup: '+state.lastBackup+'. Save a fresh one after big changes.'; }
-  else if(busy>=3){ el.className='db-note warn'; el.textContent='⚠ No backup yet. You have real data here - one cache clear would erase it. Save a backup now.'; }
+  if(state.lastBackup){ el.className='db-note ok'; el.textContent='✓Last encrypted backup: '+state.lastBackup+'. Save a fresh one after big changes.'; }
+  else if(busy>=3){ el.className='db-note warn'; el.textContent='No backup yet. You have real data here - one cache clear would erase it. Save a backup now.'; }
   else { el.className='db-note'; el.textContent=''; }
 }
 (function(){
@@ -4539,24 +4640,24 @@ function renderSync(){
   const box=document.getElementById('syncPanel'); if(!box) return;
   if(!state.householdOn){ box.innerHTML=''; return; }
   if(!syncConfigured()){
-    box.innerHTML=`<div class="sync-head">☁️ Household Sync <span class="sync-tag">Sovereign tier</span></div>
+    box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag">Sovereign tier</span></div>
       <p class="sub" style="margin-top:6px">End-to-end-encrypted sync across both phones is coming. Your budget gets encrypted on your device <b>before</b> it ever leaves - even we won't be able to read it. For now, share via the encrypted backup below.</p>`;
     return;
   }
   const v=syncUI.view, err=syncUI.err?`<div class="sync-err">${escapeHtml(syncUI.err)}</div>`:'';
-  const warn=`<div class="sync-warn">🔑 <b>Read this carefully.</b> Your Sync Passphrase locks your data <b>before</b> it leaves your device. We never see it, and <b>we cannot reset it.</b> If you both lose it, the cloud copy is gone forever - there is no recovery. Write it somewhere safe.</div>`;
-  if(v==='loading'){ box.innerHTML=`<div class="sync-head">☁️ Household Sync</div><p class="sub">Checking your sync…</p>`; return; }
+  const warn=`<div class="sync-warn"><b>Read this carefully.</b> Your Sync Passphrase locks your data <b>before</b> it leaves your device. We never see it, and <b>we cannot reset it.</b> If you both lose it, the cloud copy is gone forever - there is no recovery. Write it somewhere safe.</div>`;
+  if(v==='loading'){ box.innerHTML=`<div class="sync-head">Household Sync</div><p class="sub">Checking your sync…</p>`; return; }
   if(v==='active'){
-    box.innerHTML=`<div class="sync-head">☁️ Household Sync <span class="sync-tag on">Vault active</span></div>
+    box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag on">Vault active</span></div>
       <p class="sub" style="margin-top:6px">${escapeHtml(syncNote||'Your encrypted vault is live. Changes sync in the background.')}</p>
-      <div class="sync-instr">📱 <b>To link your partner's phone:</b> have them open the app → Settings → turn on "We share this budget" → <b>Link to an existing vault</b>, and enter this account's <b>email, password, and Sync Passphrase</b>.</div>
+      <div class="sync-instr"><b>To link your partner's phone:</b> have them open the app → Settings → turn on "We share this budget" → <b>Link to an existing vault</b>, and enter this account's <b>email, password, and Sync Passphrase</b>.</div>
       <div class="sync-actions"><button class="btn sm" id="syncNow">Sync now</button><button class="btn sm ghost" id="syncOut">Sign out of sync</button></div>${err}`;
     document.getElementById('syncNow').onclick=async()=>{ syncUI.err=''; try{ await pushToVault(); syncNote='Synced just now.'; renderSync(); }catch(e){ syncUI.err=e.message; renderSync(); } };
     document.getElementById('syncOut').onclick=async()=>{ await sbSignOut(); syncUI={view:'menu',email:'',err:''}; renderSync(); };
     return;
   }
   if(v==='unlock'){
-    box.innerHTML=`<div class="sync-head">☁️ Household Sync</div>
+    box.innerHTML=`<div class="sync-head">Household Sync</div>
       <p class="sub" style="margin-top:6px">You're signed in on this device. Enter your Sync Passphrase to unlock and resume syncing (we keep it in memory only, never stored).</p>
       <div class="sync-form"><input type="password" id="syncPassIn" placeholder="Sync Passphrase"><button class="btn sm primary" id="syncUnlock">Unlock →</button></div>${err}
       <button class="intake-skip" id="syncOut2">Sign out instead</button>`;
@@ -4566,7 +4667,7 @@ function renderSync(){
   }
   if(v==='host-auth'||v==='join'){
     const isHost=v==='host-auth';
-    box.innerHTML=`<div class="sync-head">☁️ ${isHost?'Set up Household Sync':'Link to an existing vault'}</div>
+    box.innerHTML=`<div class="sync-head">${isHost?'Set up Household Sync':'Link to an existing vault'}</div>
       <p class="sub" style="margin-top:6px">${isHost?'Create a private sync account. Only your email logs you in - your financial data is encrypted on your device first, so we can\'t read it.':'Enter the account and Sync Passphrase your partner set up.'}</p>
       <div class="sync-form">
         <input type="email" id="syncEmail" placeholder="you@email.com" autocomplete="email" value="${escapeHtml(syncUI.email||'')}">
@@ -4580,14 +4681,14 @@ function renderSync(){
     return;
   }
   if(v==='host-key'){
-    box.innerHTML=`<div class="sync-head">☁️ Create your Sync Passphrase</div>
+    box.innerHTML=`<div class="sync-head">Create your Sync Passphrase</div>
       <p class="sub" style="margin-top:6px">This is the key that encrypts your budget before it syncs. Pick something you'll both remember - and can share with your partner.</p>
       ${warn}
       <div class="sync-form"><input type="password" id="syncKey1" placeholder="Create a Sync Passphrase (min 8)"><input type="password" id="syncKey2" placeholder="Type it again"><button class="btn sm primary" id="syncActivate">Activate vault →</button></div>${err}`;
     document.getElementById('syncActivate').onclick=hostActivate;
     return;
   }
-  box.innerHTML=`<div class="sync-head">☁️ Household Sync <span class="sync-tag">Sovereign tier</span></div>
+  box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag">Sovereign tier</span></div>
     <p class="sub" style="margin-top:6px">One shared budget across both phones, <b>end-to-end encrypted</b> so even we can't read it. One of you sets it up; the other links in.</p>
     <div class="sync-actions"><button class="btn sm primary" id="syncSetup">Set up Household Sync</button><button class="btn sm ghost" id="syncJoin">Link to an existing vault</button></div>${err}`;
   document.getElementById('syncSetup').onclick=()=>{ syncUI={view:'host-auth',email:'',err:''}; renderSync(); };
@@ -4737,9 +4838,9 @@ const IMP_NEED={
   mature:{clean:["A genuine need. Cover it and carry on.","Necessary - note it and move forward."],blunt:["A true need carries no guilt. But needs have a way of multiplying.","If it's a need, it belongs in the plan, not on impulse."],savage:["Needs are real. The deluxe version of a need is a want. Which is this?","The necessity is real. The upgrade is optional."]}
 };
 const SKIP_WINS={
-  genz:["That's money that stayed on your team. 💪","You just paid future you instead. Big W.","Skip logged. The bag got closer.","That's how you lock in. Momentum."],
-  middle:["That's money that stayed on your team. 💪","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."],
-  mature:["That's money that stayed where it belongs - with you. 💪","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
+  genz:["That's money that stayed on your team. ","You just paid future you instead. Big W.","Skip logged. The bag got closer.","That's how you lock in. Momentum."],
+  middle:["That's money that stayed on your team. ","You just paid your future self instead. Respect.","Skip logged. The dream got closer.","That's how it's done. Momentum."],
+  mature:["That's money that stayed where it belongs - with you. ","You just paid your future self first. Well done.","Skip logged. The goal moved closer.","That's the discipline that builds it. Keep going."]
 };
 /* Digital-psychologist tone floor: the intensity the user CHOSE, softened for who
    they told us they are. Someone in survival needs wins, not a roast - so savage/blunt
@@ -4799,13 +4900,13 @@ function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDa
    to pick one has to define it in the same breath - naming a thing you have never
    explained is just jargon. `pick` is the plain-words version used in the dropdowns. */
 const TRAPS=[
-  {v:'scroll', icon:'📱', label:'Scroll Trap', sub:'An ad or feed served it to you',
+  {v:'scroll', icon:'', label:'Scroll Trap', sub:'An ad or feed served it to you',
    pick:'an ad or a feed put it in front of me'},
-  {v:'friction', icon:'🍔', label:'Friction Trap', sub:"Convenience because you're tired",
+  {v:'friction', icon:'', label:'Friction Trap', sub:"Convenience because you're tired",
    pick:'I was tired or busy and paid for the easy option'},
-  {v:'status', icon:'🪞', label:'Status Trap', sub:"Clout or an upgrade you don't need",
+  {v:'status', icon:'', label:'Status Trap', sub:"Clout or an upgrade you don't need",
    pick:"it's about how it looks to other people"},
-  {v:'leak', icon:'🔄', label:'Leak Trap', sub:'Trial, auto-renew, micro-sub',
+  {v:'leak', icon:'', label:'Leak Trap', sub:'Trial, auto-renew, micro-sub',
    pick:'small and recurring - a sub, a trial, an auto-renew'}
 ];
 function trapOptions(sel){ return TRAPS.map(t=>`<option value="${t.v}"${t.v===sel?' selected':''}>${t.icon} ${t.label} - ${t.pick}</option>`).join(''); }
@@ -4890,8 +4991,8 @@ function renderVault(){
     const hrs=H>0?fmtHours(v.amount/H):null;
     return `<div class="vaultitem">
       <div class="vi-top"><span class="vi-ic">${t.icon}</span><span class="vi-name">${escapeHtml(v.name)}</span><span class="vi-amt">${money(v.amount)}</span></div>
-      <div class="vi-meta"><span class="vi-timer ${unlocked?'unlocked':''}" data-unlock="${v.unlocksAt}">${unlocked?'🔓 Unlocked':'⏳ '+fmtCountdown(rem)+' left'}</span>${hrs?`<span class="vi-hrs">${hrs} of life</span>`:''}<span class="vi-trap">${t.label}</span></div>
-      <div class="vi-actions"><button class="btn sm income" data-vneut="${v.id}">🛡️ Neutralize</button><button class="btn sm ghost" data-vrans="${v.id}"${unlocked?'':' disabled'} title="${unlocked?'':'Unlocks when the timer ends'}">🏳️ Pay ransom</button></div>
+      <div class="vi-meta"><span class="vi-timer ${unlocked?'unlocked':''}" data-unlock="${v.unlocksAt}">${unlocked?'Unlocked':'⏳'+fmtCountdown(rem)+' left'}</span>${hrs?`<span class="vi-hrs">${hrs} of life</span>`:''}<span class="vi-trap">${t.label}</span></div>
+      <div class="vi-actions"><button class="btn sm income" data-vneut="${v.id}">Neutralize</button><button class="btn sm ghost" data-vrans="${v.id}"${unlocked?'':' disabled'} title="${unlocked?'':'Unlocks when the timer ends'}">Pay ransom</button></div>
     </div>`;
   }).join('');
   box.querySelectorAll('[data-vneut]').forEach(b=>b.onclick=()=>vaultNeutralize(b.dataset.vneut));
@@ -4915,7 +5016,7 @@ setInterval(()=>{
   const iv=document.getElementById('view-impulse'); if(!iv||!iv.classList.contains('on')) return;
   const now=Date.now(); let crossed=false;
   document.querySelectorAll('.vi-timer[data-unlock]').forEach(el=>{
-    const rem=+el.dataset.unlock-now, txt=rem<=0?'🔓 Unlocked':'⏳ '+fmtCountdown(rem)+' left';
+    const rem=+el.dataset.unlock-now, txt=rem<=0?'Unlocked':'⏳'+fmtCountdown(rem)+' left';
     if(el.textContent!==txt){ el.textContent=txt; if(rem<=0) crossed=true; }
   });
   if(crossed) renderVault();
@@ -4935,11 +5036,11 @@ function sumLiab(){ return state.liabilities.reduce((s,l)=>s+(l.value||0),0); }
    how much is emergency money, how much is the kids' fund.
    ============================================================ */
 const ACCT_KINDS=[
-  {k:'checking', ic:'🏦', label:'Checking', liquid:true},
-  {k:'savings',  ic:'🐖', label:'Savings',  liquid:true},
-  {k:'cash',     ic:'💵', label:'Cash',     liquid:true},
-  {k:'invest',   ic:'📈', label:'Investment/retirement', liquid:false},
-  {k:'other',    ic:'🗄️', label:'Other',    liquid:false}
+  {k:'checking', ic:'', label:'Checking', liquid:true},
+  {k:'savings',  ic:'', label:'Savings',  liquid:true},
+  {k:'cash',     ic:'', label:'Cash',     liquid:true},
+  {k:'invest',   ic:'', label:'Investment/retirement', liquid:false},
+  {k:'other',    ic:'', label:'Other',    liquid:false}
 ];
 const ACCT_PURPOSES=[
   {k:'', label:'No particular job'},
@@ -5034,10 +5135,10 @@ function sovereignty(){
   return {real,stuff,L,scr,overhead,ess,pureRunway,yieldMonthly,highDrag,tier};
 }
 const SOV_TIERS={
-  1:{ic:'🛑',name:'Encumbered',sub:'Under 3 months of real runway (or heavy overhead drag). Your stuff owns you more than you own it.'},
-  2:{ic:'⚓',name:'Tethered',sub:'3-11 months of real runway. Freer, but still anchored to the next paycheck.'},
-  3:{ic:'🛡️',name:'Sovereign',sub:'12+ months of real runway. You could walk away from work for a year and be fine.'},
-  4:{ic:'👑',name:'Untouchable',sub:'Your capital yields enough to cover essentials. Work is now optional.'}
+  1:{ic:'',name:'Encumbered',sub:'Under 3 months of real runway (or heavy overhead drag). Your stuff owns you more than you own it.'},
+  2:{ic:'',name:'Tethered',sub:'3-11 months of real runway. Freer, but still anchored to the next paycheck.'},
+  3:{ic:'',name:'Unbound',sub:'12+ months of real runway. You could walk away from work for a year and be fine.'},
+  4:{ic:'',name:'Untouchable',sub:'Your capital yields enough to cover essentials. Work is now optional.'}
 };
 function renderSovereignty(){
   const box=document.getElementById('sovAudit'); if(!box) return;
@@ -5091,7 +5192,7 @@ function renderNetWorth(){
   document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
     const k=a.kind||'real', yr=(a.cost||0)*12;
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
-      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'💵 Works':'📉 Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" min="0" step="1" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
+      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'Works':'Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" min="0" step="1" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
       <div class="li-cost">Drains $<input type="number" min="0" step="1" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
@@ -5194,7 +5295,7 @@ function altHTML(name){
     if(g){ const remaining=Math.max(0,g.target-g.saved); if(remaining>0){ const months=Math.max(1,Math.ceil(remaining/s.monthlySave)); hint+=` Point it at “${escapeHtml(g.name)}” and you'd fund it in ~<b>${months} month${months>1?'s':''}</b>.`; } }
   }
   const title=typeof s.title==='object'?(s.title[state.register]||s.title.middle):s.title;
-  return `<div class="solve"><div class="solve-h">💡 Try this instead</div><div class="solve-t">${escapeHtml(title)}</div>${s.swaps.map(sw=>`<div class="swap"><span class="swap-n">${escapeHtml(sw.n)}</span><span class="swap-c">${escapeHtml(sw.c)}</span><div class="swap-d">${escapeHtml(sw.d)}</div></div>`).join('')}${hint?`<div class="solve-hint">${hint}</div>`:''}</div>`;
+  return `<div class="solve"><div class="solve-h">Try this instead</div><div class="solve-t">${escapeHtml(title)}</div>${s.swaps.map(sw=>`<div class="swap"><span class="swap-n">${escapeHtml(sw.n)}</span><span class="swap-c">${escapeHtml(sw.c)}</span><div class="swap-d">${escapeHtml(sw.d)}</div></div>`).join('')}${hint?`<div class="solve-hint">${hint}</div>`:''}</div>`;
 }
 /* ============================================================
    TRIGGER SWAPS - the other half of "try this instead"
@@ -5235,7 +5336,7 @@ const TRIGGER_SWAPS={
 };
 function triggerSwapHTML(trap){
   const t=TRIGGER_SWAPS[trap]; if(!t) return '';
-  return `<div class="solve trig"><div class="solve-h">🔁 Or deal with what's driving it</div><div class="solve-t">${escapeHtml(t.title)}</div>${t.moves.map(m=>`<div class="swap"><span class="swap-n">${escapeHtml(m.n)}</span><div class="swap-d">${escapeHtml(m.d)}</div></div>`).join('')}</div>`;
+  return `<div class="solve trig"><div class="solve-h">Or deal with what's driving it</div><div class="solve-t">${escapeHtml(t.title)}</div>${t.moves.map(m=>`<div class="swap"><span class="swap-n">${escapeHtml(m.n)}</span><div class="swap-d">${escapeHtml(m.d)}</div></div>`).join('')}</div>`;
 }
 /* The free comfort menu: the user's OWN list of no-cost things that actually help,
    written while calm and surfaced at the moment of temptation. Comfort spending is
@@ -5243,8 +5344,8 @@ function triggerSwapHTML(trap){
 const COMFORT_SEEDS=['Walk outside','Call someone','Shower / bath','Nap','Music, loud','Cook something','Stretch','Play with the pet','Sit outside','Game / show, one episode'];
 function comfortHTML(){
   const list=(state.comfortMenu||[]).filter(Boolean);
-  if(!list.length) return `<div class="comfort empty"><div class="cm-k">🫱 Your free comfort list is empty</div><div class="cm-s">Write down what actually helps when money isn't the answer - a walk, a call, a nap. It'll be waiting here next time the urge hits.</div><button class="btn sm cm-setup">Set up my list</button></div>`;
-  return `<div class="comfort"><div class="cm-k">🫱 Free instead - your own list</div><div class="cm-chips">${list.map(c=>`<span class="cm-c">${escapeHtml(c)}</span>`).join('')}</div><div class="cm-s">You wrote these when you were calm. Pick one before you pick the card.</div></div>`;
+  if(!list.length) return `<div class="comfort empty"><div class="cm-k">Your free comfort list is empty</div><div class="cm-s">Write down what actually helps when money isn't the answer - a walk, a call, a nap. It'll be waiting here next time the urge hits.</div><button class="btn sm cm-setup">Set up my list</button></div>`;
+  return `<div class="comfort"><div class="cm-k">Free instead - your own list</div><div class="cm-chips">${list.map(c=>`<span class="cm-c">${escapeHtml(c)}</span>`).join('')}</div><div class="cm-s">You wrote these when you were calm. Pick one before you pick the card.</div></div>`;
 }
 function wireComfortLinks(){
   document.querySelectorAll('.cm-setup').forEach(b=>{ b.onclick=()=>{ activateTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },140); }; });
@@ -5293,8 +5394,8 @@ function renderAccounts(){
   const drift=loggedSince(oldestAcctUpdate());
   const bits=[];
   bits.push(`<div class="ac-total">In the bank: <b>${usd(bankTotal())}</b> <span class="ac-sub">· ${usd(liquidTotal())} of it you could spend today</span></div>`);
-  if(em>0) bits.push(`<div class="ac-line">🛟 Emergency fund: <b>${usd(em)}</b>${ess>0?` - that's <b>${(Math.round(em/ess*10)/10)} month${(Math.round(em/ess*10)/10)===1?'':'s'}</b> of your essentials`:''}.</div>`);
-  if(col>0) bits.push(`<div class="ac-line">🎓 College / kids: <b>${usd(col)}</b>.</div>`);
+  if(em>0) bits.push(`<div class="ac-line">Emergency fund: <b>${usd(em)}</b>${ess>0?` - that's <b>${(Math.round(em/ess*10)/10)} month${(Math.round(em/ess*10)/10)===1?'':'s'}</b> of your essentials`:''}.</div>`);
+  if(col>0) bits.push(`<div class="ac-line">College / kids: <b>${usd(col)}</b>.</div>`);
   if(Math.abs(drift)>0.005) bits.push(`<div class="ac-line sub">Since you last updated a balance you've logged <b>${usd(drift)}</b> of movement. If reality has drifted, retype the real number - the app will never quietly change it for you.</div>`);
   sum.innerHTML=bits.join('');
 }
@@ -5385,7 +5486,7 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 /* Theme: 'auto' follows the phone; 'light'/'dark' are explicit overrides. Auto is
@@ -5461,10 +5562,10 @@ function openFreedomHelp(){
    home with. When it is unsure it says so and asks rather than guessing.
    ============================================================ */
 const DIARY_KINDS=[
-  {k:'win',  ic:'🎉', label:'A win',            prompt:"What went right? Even a small one counts - it is evidence you can do this."},
-  {k:'hard', ic:'😮‍💨', label:'A hard one',   prompt:"What happened? No judgment here. Naming it is how it stops running the show."},
-  {k:'plan', ic:'🗓️', label:"Something coming up", prompt:"What is on the horizon? Anything you can see coming is something we can fund early."},
-  {k:'note', ic:'✍️', label:'Just writing',   prompt:"However it comes out. This is yours."}
+  {k:'win',  ic:'', label:'A win',            prompt:"What went right? Even a small one counts - it is evidence you can do this."},
+  {k:'hard', ic:'', label:'A hard one',   prompt:"What happened? No judgment here. Naming it is how it stops running the show."},
+  {k:'plan', ic:'', label:"Something coming up", prompt:"What is on the horizon? Anything you can see coming is something we can fund early."},
+  {k:'note', ic:'', label:'Just writing',   prompt:"However it comes out. This is yours."}
 ];
 /* Words that tell us which direction money moved. Order matters: the longest,
    most specific phrases are tested first so "got paid" never reads as "paid". */
@@ -5677,7 +5778,7 @@ function renderDiaryList(){
     const when=new Date(e.date+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
     const time=(e.ts||'').slice(11);
     const acted=(e.acted||[]).length
-      ? `<div class="dy-acted">${e.acted.map(a=>`✓ logged ${escapeHtml(usd(a.amount))} · ${escapeHtml(a.label||a.what)}`).join('<br>')}</div>` : '';
+      ? `<div class="dy-acted">${e.acted.map(a=>`✓logged ${escapeHtml(usd(a.amount))} · ${escapeHtml(a.label||a.what)}`).join('<br>')}</div>` : '';
     return `<div class="dy-entry">
       <div class="dy-e-head"><span class="dy-e-k">${k.ic} ${escapeHtml(k.label)}</span><span class="dy-e-d">${when}${time?' · '+time:''}</span></div>
       <div class="dy-e-t">${escapeHtml(e.text)}</div>${acted}
@@ -5694,6 +5795,105 @@ function renderDiary(){ renderDiaryForm(); renderDiarySuggest(); renderDiaryList
   const s=document.getElementById('diarySave'); if(s) s.addEventListener('click',diaryCommit);
 })();
 
+/* ---------- Diary echo: your own words, at the moment of temptation ----------
+   The diary is worth little if it only gets read on the day it is written. The
+   gut-check is where it earns its keep: one entry, chosen for relevance, shown
+   back verbatim while the cart is still open.
+
+   Deliberately NOT voiced. Everywhere else the register dial can go savage, but
+   these are the user's own words about their own hard weeks - quoting someone's
+   grief back at them in a mocking tone is the one place this app must not go.
+   The framing stays warm at every intensity. */
+const DY_ECHO_W={hard:3, plan:2.6, win:1.4, note:1};
+function diaryEcho(name){
+  const list=(state.diary||[]); if(!list.length) return null;
+  const words=(String(name||'').toLowerCase().match(/[a-z]{3,}/g)||[]);
+  const today=new Date(todayStr()+'T00:00:00');
+  let best=null, bestScore=0;
+  list.forEach(e=>{
+    const txt=(e.text||'').toLowerCase();
+    let sc=DY_ECHO_W[e.kind]||1;
+    let overlap=0; words.forEach(w=>{ if(txt.includes(w)) overlap++; });
+    sc += overlap*3;                    // what you are buying decides this, above all else
+    // A funded plan is live whenever money moves, but only nudges: at +2 it beat
+    // every other entry for every purchase, so the same quote surfaced every time.
+    if(e.kind==='plan' && (e.acted||[]).some(a=>a.what==='goal')) sc += 0.5;
+    const age=Math.max(0,Math.round((today-new Date(((e.date||todayStr())+'T00:00:00')))/86400000));
+    sc *= (age<=7 ? 1.35 : age<=30 ? 1.15 : age<=120 ? 1 : 0.8);
+    if(sc>bestScore){ bestScore=sc; best=e; }
+  });
+  return bestScore>=3.2 ? best : null;   // only a strong match speaks; silence beats a non-sequitur
+}
+function diaryEchoHTML(name){
+  const e=diaryEcho(name); if(!e) return '';
+  const k=(typeof DIARY_KINDS!=='undefined'?DIARY_KINDS:[]).find(x=>x.k===e.kind);
+  const when=new Date((e.date||todayStr())+'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric'});
+  const lead = e.kind==='hard' ? 'You wrote this on '+when
+    : e.kind==='plan' ? 'You saw this coming, on '+when
+    : e.kind==='win'  ? 'You wrote this on '+when
+    : 'From your diary, '+when;
+  const tail = e.kind==='hard' ? 'Your words, not mine. Is this purchase worth going back there?'
+    : e.kind==='plan' ? 'This is the money that funds it.'
+    : e.kind==='win'  ? 'You chose that on purpose. This is the same choice again.'
+    : '';
+  const txt=(e.text||'').length>240 ? (e.text||'').slice(0,238).trim()+'…' : (e.text||'');
+  return `<div class="dy-echo">
+    <div class="dy-echo-k">${k?k.ic:''} ${escapeHtml(lead)}</div>
+    <blockquote class="dy-echo-q">${escapeHtml(txt)}</blockquote>
+    ${tail?`<div class="dy-echo-t">${escapeHtml(tail)}</div>`:''}
+    <button class="dy-echo-go" data-dyecho="1">Open the diary</button>
+  </div>`;
+}
+function wireDiaryEcho(){
+  document.querySelectorAll('button[data-dyecho]').forEach(b=>b.onclick=()=>{
+    if(typeof closeOverlayThenTab==='function') closeOverlayThenTab('diary'); else activateTab('diary');
+  });
+}
+
+/* ============================================================
+   QUICK GLANCE
+   Checking "am I okay this month?" should not cost a tab change and a scroll.
+   A pull tab on the edge opens the three numbers that answer it: in, out, and
+   what that leaves. It only appears once there is something real to show - a
+   drawer reading $0 / $0 / $0 on day one is noise, not reassurance.
+   ============================================================ */
+let glanceOpen=false;
+function glanceReady(){ return (typeof genuineTxDates==='function') && genuineTxDates(state).length>0; }
+function glanceSetOpen(v){
+  glanceOpen=!!v;
+  const g=document.getElementById('glance'); if(g) g.classList.toggle('on',glanceOpen);
+  const t=document.getElementById('glanceTab'); if(t) t.setAttribute('aria-expanded',glanceOpen?'true':'false');
+  if(glanceOpen) renderGlance();
+}
+function renderGlance(){
+  const g=document.getElementById('glance'); if(!g) return;
+  const show=glanceReady();
+  g.style.display = show ? '' : 'none';
+  if(!show){ if(glanceOpen) glanceSetOpen(false); return; }
+  const M=state.activeMonth, inc=monthIncome(M), out=monthExpense(M), bal=inc-out;
+  const body=document.getElementById('glanceBody'); if(!body) return;
+  const today=todayStr();
+  const todaySpend=state.transactions.filter(t=>t.type==='expense'&&t.date===today).reduce((s,t)=>s+t.amount,0);
+  const lim=+state.spendLimit||0;
+  const [y,mo]=M.split('-').map(Number), dim=new Date(y,mo,0).getDate();
+  const allow=lim>0?lim/dim:0;
+  body.innerHTML=`
+    <div class="gl-h">${escapeHtml(fmtMonth(M))}</div>
+    <div class="gl-row in"><span>Money in</span><b>${escapeHtml(money(inc))}</b></div>
+    <div class="gl-row out"><span>Money out</span><b>${escapeHtml(money(out))}</b></div>
+    <div class="gl-row bal ${bal<0?'neg':'pos'}"><span>${bal<0?'Short by':'Left over'}</span><b>${escapeHtml(money(Math.abs(bal)))}</b></div>
+    ${state.spendingMode&&allow>0?`<div class="gl-today ${todaySpend<=allow?'ok':'over'}">Today: ${escapeHtml(money(todaySpend))} of ${escapeHtml(money(allow))}</div>`:''}
+    <button class="gl-go" id="glanceGo">Open Track →</button>`;
+  const go=document.getElementById('glanceGo');
+  if(go) go.onclick=()=>{ glanceSetOpen(false); activateTab('tx'); };
+}
+(function(){
+  const t=document.getElementById('glanceTab');
+  if(t) t.addEventListener('click',e=>{ e.stopPropagation(); glanceSetOpen(!glanceOpen); });
+  document.addEventListener('click',e=>{ if(glanceOpen && !e.target.closest('#glance')) glanceSetOpen(false); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && glanceOpen) glanceSetOpen(false); });
+})();
+
 function applyTheme(){
   const m=themeMode(), light=resolvedTheme()==='light';
   document.documentElement.setAttribute('data-theme', light?'light':'dark');
@@ -5703,7 +5903,7 @@ function applyTheme(){
     const label = m==='auto' ? 'following your phone' : m;
     tt.title='Theme: '+label; tt.setAttribute('aria-label','Theme: '+label+'. Tap to change.');
   }
-  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute('content', light?'#eef2f8':'#0b1421');
+  const meta=document.querySelector('meta[name="theme-color"]'); if(meta) meta.setAttribute('content', light?'#f4efe6':'#17150f');
 }
 (function(){
   const t=document.getElementById('themeToggle');
@@ -5768,7 +5968,7 @@ function renderWhyCard(){
   const box=document.getElementById('whyCard'); if(!box) return;
   const why=(state.intake&&state.intake.why||'').trim();
   if(!why){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="why-line"><span class="wl-ic">🧭</span><span class="wl-t">Why you're here, in your words: <b>“${escapeHtml(why)}”</b></span><button class="wr-edit" title="Goalposts genuinely moved? Update it.">✎</button></div>`;
+  box.innerHTML=`<div class="why-line"><span class="wl-ic"></span><span class="wl-t">Why you're here, in your words: <b>“${escapeHtml(why)}”</b></span><button class="wr-edit" title="Goalposts genuinely moved? Update it.">✎</button></div>`;
   wireWhyEdit();
 }
 /* The user's own "why" - captured verbatim at intake - is the ultimate reminder.
@@ -5831,15 +6031,16 @@ function renderCheckResult(){
       ${whyReminderHTML()}
       ${altHTML(name)}
       ${triggerSwapHTML(trap)}
+      ${diaryEchoHTML(name)}
       ${comfortHTML()}
       <div class="check-actions">
-        <button class="btn income" id="impNeutralize">🛡️ Neutralize</button>
+        <button class="btn income" id="impNeutralize">Neutralize</button>
         ${goalSelect}
-        <button class="btn" id="impVault">⏳ 24-Hour Vault</button>
-        <button class="btn ghost" id="impRansom">🏳️ Pay ransom</button>
+        <button class="btn" id="impVault">⏳24-Hour Vault</button>
+        <button class="btn ghost" id="impRansom">Pay ransom</button>
       </div>
     </div>`;
-  wireWhyEdit(); wireComfortLinks();
+  wireWhyEdit(); wireComfortLinks(); wireDiaryEcho();
 
   document.getElementById('impNeutralize').addEventListener('click',()=>{
     const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';
@@ -5851,15 +6052,15 @@ function renderCheckResult(){
     const win=pickReg(SKIP_WINS);
     const hrs=H2>0?` Reclaimed <b>${fmtHours(total/H2)}</b> of life.`:'';
     const where = toGoal>0
-      ? (toChest>0.005 ? 'Sent '+money(toGoal)+' to your dream (that topped it off 🎉) - the other '+money(toChest)+' went to your War Chest.' : 'Sent '+money(toGoal)+' straight to your dream.')
+      ? (toChest>0.005 ? 'Sent '+money(toGoal)+' to your dream (that topped it off ) - the other '+money(toChest)+' went to your War Chest.' : 'Sent '+money(toGoal)+' straight to your dream.')
       : money(toChest)+' added to your War Chest'+(goalId?' - that dream was already fully funded.':'.');
-    document.getElementById('impResult').innerHTML=`<div class="checkcard asset"><div class="verdict asset">🛡️ Trap neutralized. ${escapeHtml(win)}</div><p class="sub" style="margin:8px 0 0">${where}${hrs}</p></div>`;
+    document.getElementById('impResult').innerHTML=`<div class="checkcard asset"><div class="verdict asset">Trap neutralized. ${escapeHtml(win)}</div><p class="sub" style="margin:8px 0 0">${where}${hrs}</p></div>`;
   });
   document.getElementById('impVault').addEventListener('click',()=>{
     const nm=pendingCheck.name;
     addToVault(pendingCheck.name,pendingCheck.amt,pendingCheck.trap);
     pendingCheck=null; clearScan();
-    document.getElementById('impResult').innerHTML=`<div class="checkcard"><div class="verdict">⏳ Locked in the 24-Hour Vault.</div><p class="sub" style="margin:8px 0 0">“${escapeHtml(nm)}” is cooling off. If you still want it in 24 hours, the ransom option unlocks below. Most traps don't survive the wait.</p></div>`;
+    document.getElementById('impResult').innerHTML=`<div class="checkcard"><div class="verdict">⏳Locked in the 24-Hour Vault.</div><p class="sub" style="margin:8px 0 0">“${escapeHtml(nm)}” is cooling off. If you still want it in 24 hours, the ransom option unlocks below. Most traps don't survive the wait.</p></div>`;
     renderVault();
     const vp=document.getElementById('vaultPanel'); if(vp) vp.scrollIntoView({behavior:'smooth',block:'center'});
   });
@@ -5869,7 +6070,7 @@ function renderCheckResult(){
     pendingCheck=null; clearScan();
     save(); renderImpulse(); renderBudget(); renderTx();
     const H2=effectiveHourly(); const hrTxt=H2>0?` That's about <b>${fmtHours(amt2/H2)}</b> of work to earn back.`:'';
-    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">🏳️ Ransom paid. No shame - just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged under “Impulse / Wants.”${hrTxt} Streak reset. Next trap, you win.</p></div>`;
+    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">Ransom paid. No shame - just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged under “Impulse / Wants.”${hrTxt} Streak reset. Next trap, you win.</p></div>`;
   });
 }
 
@@ -5881,7 +6082,7 @@ function renderImpulse(){
     <div class="stat"><div class="k">Traps Dodged</div><div class="v good">${dodged}</div></div>
     <div class="stat"><div class="k">War Chest</div><div class="v pos">${money(saved)}</div></div>
     <div class="stat"><div class="k">Life Reclaimed</div><div class="v good">${H>0?fmtHours(saved/H):'-'}</div></div>
-    <div class="stat"><div class="k">Active Streak</div><div class="v pos">${skipStreak()} 🔥</div></div>`;
+    <div class="stat"><div class="k">Active Streak</div><div class="v pos">${skipStreak()} </div></div>`;
   const hoursBox=document.getElementById('impHours');
   if(H>0 && spent>0) hoursBox.innerHTML=`<span class="chip">Ransom paid = <b>${fmtHours(spent/H)}</b> to earn back</span>`;
   else hoursBox.innerHTML='';
@@ -5892,7 +6093,7 @@ function renderImpulse(){
     const g=topGoal(); let line;
     if(g){ const pct=Math.round(monthSkipped/g.target*100); line=`That's <b>${pct}%</b> of your dream “${escapeHtml(g.name)}.” Keep neutralizing, keep building.`; }
     else line='Set a dream on the Goals tab and watch your War Chest fund it.';
-    cel.innerHTML=`<div class="celebrate"><div class="big">🛡️ ${money(monthSkipped)} in traps neutralized this month</div><div class="small">${line} <span style="opacity:.75">(Counts everything defended - including what you routed to dreams.)</span></div></div>`;
+    cel.innerHTML=`<div class="celebrate"><div class="big">${money(monthSkipped)} in traps neutralized this month</div><div class="small">${line} <span style="opacity:.75">(Counts everything defended - including what you routed to dreams.)</span></div></div>`;
   } else cel.innerHTML='';
   // badges
   const st={streak:skipStreak(),saved:saved};
@@ -5913,14 +6114,14 @@ function renderImpulse(){
    BADGES, GUT-CHECK MODAL, RECURRING, CHARTS
    ============================================================ */
 const BADGES=[
-  {id:'streak3', icon:'🔥', label:'On a Roll', desc:'3 traps dodged in a row', test:s=>s.streak>=3},
-  {id:'streak7', icon:'🗓️', label:'Week Strong', desc:'7-trap streak', test:s=>s.streak>=7},
-  {id:'streak14', icon:'🛡️', label:'Ironclad', desc:'14-trap streak', test:s=>s.streak>=14},
-  {id:'streak30', icon:'💎', label:'Unshakeable', desc:'30-trap streak', test:s=>s.streak>=30},
-  {id:'save100', icon:'💵', label:'First $100', desc:'$100 in the War Chest', test:s=>s.saved>=100},
-  {id:'save500', icon:'💰', label:'Serious', desc:'$500 War Chest', test:s=>s.saved>=500},
-  {id:'save1000', icon:'🚀', label:'Dream Fuel', desc:'$1,000 War Chest', test:s=>s.saved>=1000},
-  {id:'save5000', icon:'👑', label:'Untouchable', desc:'$5,000 War Chest', test:s=>s.saved>=5000}
+  {id:'streak3', icon:'', label:'On a Roll', desc:'3 traps dodged in a row', test:s=>s.streak>=3},
+  {id:'streak7', icon:'', label:'Week Strong', desc:'7-trap streak', test:s=>s.streak>=7},
+  {id:'streak14', icon:'', label:'Ironclad', desc:'14-trap streak', test:s=>s.streak>=14},
+  {id:'streak30', icon:'', label:'Unshakeable', desc:'30-trap streak', test:s=>s.streak>=30},
+  {id:'save100', icon:'', label:'First $100', desc:'$100 in the War Chest', test:s=>s.saved>=100},
+  {id:'save500', icon:'', label:'Serious', desc:'$500 War Chest', test:s=>s.saved>=500},
+  {id:'save1000', icon:'', label:'Dream Fuel', desc:'$1,000 War Chest', test:s=>s.saved>=1000},
+  {id:'save5000', icon:'', label:'Untouchable', desc:'$5,000 War Chest', test:s=>s.saved>=5000}
 ];
 
 /* --- gut-check modal + shareable link --- */
@@ -5948,15 +6149,15 @@ function toast(msg){
 function intentItems(){
   const spend=!!state.spendingMode, stage=(typeof activeStage==='function')?activeStage():1;
   const list=[
-    {ic:'🎯', t:'Gut-check something before I buy it', s:'Price it in hours of your life first', hero:true, go:()=>{ const sh=document.getElementById('intentSheet'); if(sh) sh.classList.remove('on'); setFabOpen(false); openModal(true); }},   // synchronous swap: the sheet's history entry becomes the modal's - no async back() to race
-    {ic:'📓', t:'Log what I spent', s:'One line each - or snap your notepad', go:()=>{ quickLogOpen=true; closeOverlayThenTab('tx'); setTimeout(()=>{ if(!document.querySelector('#quickLog .ql-row')) renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },160); }},   // never wipe rows (or a photo) already in progress
-    {ic:'💵', t:'Log money coming in', s:'Paycheck, side gig, anything that landed', go:()=>{ closeOverlayThenTab('tx'); setTimeout(()=>{ const tt=document.querySelector('#typeToggle button[data-t="income"]'); if(tt) tt.click(); const el=document.getElementById('txAmt'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },160); }},
-    {ic:'📋', t:'Give my dollars a job', s:'Assign this month down to zero', hide:spend, go:()=>{ closeOverlayThenTab('budget'); }},
-    {ic:'🔦', t:"See where my money's actually going", s:'Your patterns, not your guesses', go:()=>{ closeOverlayThenTab(spend?'home':'learn'); }},
-    {ic:'⭐', t:'Work on a dream', s:'Name it, fund it, watch it close', hide:spend||stage<2, go:()=>{ closeOverlayThenTab('goals'); setTimeout(()=>{ const el=document.getElementById('goalName'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },160); }},   // spend mode hides every wealth-stage panel - never route there
-    {ic:'💳', t:'Plan my way out of debt', s:'A real payoff date, priced in life', hide:!(state.debts||[]).length && !(state.liabilities||[]).length, go:()=>{ closeOverlayThenTab('debt'); }},
-    {ic:'🫱', t:(state.comfortMenu||[]).length?'Update my free comfort list':'Set up my free comfort list', s:"What helps when money isn't the answer", go:()=>{ closeOverlayThenTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },170); }},
-    {ic:'📖', t:'Learn something in 2 minutes', s:'One lesson, one thing to try', go:()=>{ closeOverlayThenTab('learn'); }}
+    {ic:'', t:'Gut-check something before I buy it', s:'Price it in hours of your life first', hero:true, go:()=>{ const sh=document.getElementById('intentSheet'); if(sh) sh.classList.remove('on'); setFabOpen(false); openModal(true); }},   // synchronous swap: the sheet's history entry becomes the modal's - no async back() to race
+    {ic:'', t:'Log what I spent', s:'One line each - or snap your notepad', go:()=>{ quickLogOpen=true; closeOverlayThenTab('tx'); setTimeout(()=>{ if(!document.querySelector('#quickLog .ql-row')) renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },160); }},   // never wipe rows (or a photo) already in progress
+    {ic:'', t:'Log money coming in', s:'Paycheck, side gig, anything that landed', go:()=>{ closeOverlayThenTab('tx'); setTimeout(()=>{ const tt=document.querySelector('#typeToggle button[data-t="income"]'); if(tt) tt.click(); const el=document.getElementById('txAmt'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },160); }},
+    {ic:'', t:'Give my dollars a job', s:'Assign this month down to zero', hide:spend, go:()=>{ closeOverlayThenTab('budget'); }},
+    {ic:'', t:"See where my money's actually going", s:'Your patterns, not your guesses', go:()=>{ closeOverlayThenTab(spend?'home':'learn'); }},
+    {ic:'', t:'Work on a dream', s:'Name it, fund it, watch it close', hide:spend||stage<2, go:()=>{ closeOverlayThenTab('goals'); setTimeout(()=>{ const el=document.getElementById('goalName'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },160); }},   // spend mode hides every wealth-stage panel - never route there
+    {ic:'', t:'Plan my way out of debt', s:'A real payoff date, priced in life', hide:!(state.debts||[]).length && !(state.liabilities||[]).length, go:()=>{ closeOverlayThenTab('debt'); }},
+    {ic:'', t:(state.comfortMenu||[]).length?'Update my free comfort list':'Set up my free comfort list', s:"What helps when money isn't the answer", go:()=>{ closeOverlayThenTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },170); }},
+    {ic:'', t:'Learn something in 2 minutes', s:'One lesson, one thing to try', go:()=>{ closeOverlayThenTab('learn'); }}
   ];
   return list.filter(x=>!x.hide);
 }
@@ -5969,10 +6170,10 @@ function renderIntentSheet(){
 function openIntentSheet(){ renderIntentSheet(); document.getElementById('intentSheet').classList.add('on'); setFabOpen(true); pushOverlay(); }
 function setFabOpen(on){
   const ic=document.getElementById('fabIc'), l=document.getElementById('fabLbl'), tabs=document.getElementById('tabs');
-  if(ic) ic.textContent=on?'✕':'✦';
+  if(ic) ic.textContent=on?'✕':'';
   if(l) l.textContent=on?'Close':'I want to…';
   if(tabs) tabs.classList.toggle('hub-open',!!on);
-  document.body.classList.toggle('hub-open',!!on);   // lifts the FAB above the sheet's scrim so ✕ is visible + tappable
+  document.body.classList.toggle('hub-open',!!on);   // lifts the FAB above the sheet's scrim so ✕is visible + tappable
   const gap=document.querySelector('.tab-gap'); if(gap) gap.textContent=on?'Close':'I want to…';
 }
 document.getElementById('fab').addEventListener('click',()=>{
@@ -6118,7 +6319,7 @@ function renderRecurring(){
   if(!state.recurring.length){ box.innerHTML=`<div class="empty" style="margin-top:10px">No recurring items yet. Add your paycheck and fixed bills.</div>`; return; }
   box.innerHTML=state.recurring.map(r=>{
     const label=r.type==='expense'?escapeHtml(catName(r.catId)):escapeHtml(r.source||(r.type==='invest'?'Investment':'Income'));
-    const tag=r.type==='income'?'Income':r.type==='invest'?'🌱 Invest':'Expense';
+    const tag=r.type==='income'?'Income':r.type==='invest'?'Invest':'Expense';
     const meta=recFreqMeta(r), next=recNextDue(r);
     const nextTxt=next?new Date(next+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}):'-';
     const equiv=meta.per!==1?` · ≈${money(Math.round(recMonthly(r)))}/mo`:'';   // an approximation - cents would be false precision
@@ -6218,6 +6419,102 @@ function postRecurring(month){
 /* --- charts --- */
 function last6Months(){ const arr=[]; let m=thisMonth(); for(let i=0;i<6;i++){ arr.unshift(m); m=shiftMonth(m,-1); } return arr; }
 function monShort(m){ return new Date(m+'-01T00:00:00').toLocaleString(undefined,{month:'short'}); }
+/* ============================================================
+   MONEY BREAKDOWN - where it went, where it came from
+   A single month is a snapshot and a snapshot lies: one big car repair makes
+   Getting Around look like a habit. Widening to 3, 6 or 12 months is what turns
+   a one-off into a pattern, so the interval is a first-class control rather than
+   something you fake by clicking the month arrows twelve times.
+
+   Expenses drill: tapping a slice with children opens THAT category's split, so
+   Food -> Groceries -> Walmart is three taps rather than three charts.
+   Income groups by source, which has no tree, so it does not drill.
+   ============================================================ */
+const BD_RANGES=[{n:1,label:'1 mo'},{n:3,label:'3 mo'},{n:6,label:'6 mo'},{n:12,label:'12 mo'}];
+const BD_COLORS=['#e6b24d','#e0663c','#35c99a','#5b9bd5','#b47ee0','#e0c15b','#4dc3c3','#e07a9e','#8ecf6b','#c98f4d','#7f8de0','#d45f5f'];
+let bdRange=1, bdSide='out', bdDrill=null;
+function bdMonths(n){ const arr=[]; let m=state.activeMonth; for(let i=0;i<n;i++){ arr.unshift(m); m=shiftMonth(m,-1); } return arr; }
+function bdSpanLabel(){
+  const ms=bdMonths(bdRange);
+  if(bdRange===1) return fmtMonth(ms[0]);
+  const a=ms[0], b=ms[ms.length-1];
+  const yr=b.slice(0,4);
+  return monShort(a)+(a.slice(0,4)!==yr?' '+a.slice(0,4):'')+' to '+monShort(b)+' '+yr;
+}
+/* Sum across the window, not just the active month. */
+function bdCatTotal(id, months){ return months.reduce((s,m)=>s+catSpent(id,m),0); }
+function bdOwnTotal(id, months){ return months.reduce((s,m)=>s+spentFor(id,m),0); }
+function bdRows(){
+  const months=bdMonths(bdRange);
+  if(bdSide==='in'){
+    const by={};
+    months.forEach(m=>txnsInMonth(m).filter(t=>t.type==='income').forEach(t=>{
+      const k=(t.source||'Income').trim()||'Income'; by[k]=(by[k]||0)+(+t.amount||0);
+    }));
+    return Object.keys(by).map(k=>({id:null,name:k,val:by[k],kids:0})).filter(r=>r.val>0).sort((a,b)=>b.val-a.val);
+  }
+  const parent=bdDrill;
+  const list=parent ? childrenOf(parent) : topCats();
+  const rows=list.map(c=>({id:c.id,name:c.name,val:bdCatTotal(c.id,months),kids:childrenOf(c.id).length}))
+                 .filter(r=>r.val>0).sort((a,b)=>b.val-a.val);
+  if(parent){
+    // money booked straight to the parent, not to any child, is real and must not vanish
+    const own=bdOwnTotal(parent,months);
+    if(own>0) rows.push({id:null,name:catName(parent).split(' › ').pop()+' (direct)',val:own,kids:0});
+  } else {
+    const uncat=months.reduce((s,m)=>s+txnsInMonth(m).filter(t=>t.type==='expense'&&!state.categories.some(c=>c.id===t.catId)).reduce((x,t)=>x+t.amount,0),0);
+    if(uncat>0) rows.push({id:null,name:'Uncategorized',val:uncat,kids:0});
+  }
+  return rows.sort((a,b)=>b.val-a.val);
+}
+/* Donut as stroke-dasharray on one circle per slice: no library, no canvas, and
+   it scales with the viewBox instead of a fixed pixel size. */
+function bdDonutSVG(rows,total){
+  if(!rows.length||total<=0) return '';
+  const R=54, C=2*Math.PI*R;
+  let off=0;
+  const arcs=rows.map((r,i)=>{
+    const frac=r.val/total, len=frac*C;
+    const el=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${BD_COLORS[i%BD_COLORS.length]}" stroke-width="22" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)"><title>${escapeHtml(r.name)}: ${escapeHtml(money(r.val))}</title></circle>`;
+    off+=len; return el;
+  }).join('');
+  return `<svg viewBox="0 0 140 140" class="bd-donut" role="img" aria-label="${bdSide==='in'?'Income':'Spending'} breakdown">${arcs}
+    <text x="70" y="66" text-anchor="middle" font-size="11" fill="var(--muted)" font-weight="700">${bdSide==='in'?'IN':'OUT'}</text>
+    <text x="70" y="82" text-anchor="middle" font-size="14" fill="var(--text)" font-weight="800">${escapeHtml(money(total))}</text></svg>`;
+}
+function renderBreakdown(){
+  const box=document.getElementById('bdBox'); if(!box) return;
+  const rows=bdRows(), total=rows.reduce((s,r)=>s+r.val,0);
+  const months=bdMonths(bdRange);
+  const per = bdRange>1 && total>0 ? `<div class="bd-per">About ${money(Math.round(total/bdRange))} a month across ${bdRange} months.</div>` : '';
+  const crumb = (bdSide==='out'&&bdDrill)
+    ? `<button class="bd-back" id="bdBack">← ${escapeHtml(catName(bdDrill))}</button>` : '';
+  const body = rows.length
+    ? `<div class="bd-wrap">${bdDonutSVG(rows,total)}
+        <div class="bd-legend">${rows.map((r,i)=>{
+          const pct=total>0?Math.round(r.val/total*100):0;
+          const can=bdSide==='out'&&r.id&&r.kids>0;
+          return `<${can?'button':'div'} class="bd-row${can?' can':''}"${can?` data-bddrill="${r.id}"`:''}>
+            <span class="bd-dot" style="background:${BD_COLORS[i%BD_COLORS.length]}"></span>
+            <span class="bd-nm">${escapeHtml(r.name)}${can?' <span class="bd-more">▸</span>':''}</span>
+            <span class="bd-v">${escapeHtml(money(r.val))}<i>${pct}%</i></span>
+          </${can?'button':'div'}>`;
+        }).join('')}</div></div>${per}`
+    : `<div class="empty">Nothing logged in this window yet.</div>`;
+  box.innerHTML=`
+    <div class="bd-ctl">
+      <div class="bd-seg">${['out','in'].map(k=>`<button data-bdside="${k}" class="${bdSide===k?'on':''}">${k==='out'?'Where it went':'Where it came from'}</button>`).join('')}</div>
+      <div class="bd-seg">${BD_RANGES.map(r=>`<button data-bdrange="${r.n}" class="${bdRange===r.n?'on':''}">${r.label}</button>`).join('')}</div>
+    </div>
+    <div class="bd-span">${escapeHtml(bdSpanLabel())}</div>
+    ${crumb}${body}`;
+  box.querySelectorAll('button[data-bdside]').forEach(b=>b.onclick=()=>{ bdSide=b.dataset.bdside; bdDrill=null; renderBreakdown(); });
+  box.querySelectorAll('button[data-bdrange]').forEach(b=>b.onclick=()=>{ bdRange=+b.dataset.bdrange; renderBreakdown(); });
+  box.querySelectorAll('button[data-bddrill]').forEach(b=>b.onclick=()=>{ bdDrill=b.dataset.bddrill; renderBreakdown(); });
+  const bk=document.getElementById('bdBack');
+  if(bk) bk.onclick=()=>{ const c=state.categories.find(x=>x.id===bdDrill); bdDrill=c&&c.parentId?c.parentId:null; renderBreakdown(); };
+}
+
 function renderCharts(){
   const M=state.activeMonth;
   const ml=document.getElementById('chartMonth'); if(ml) ml.textContent=fmtMonth(M);
@@ -6243,13 +6540,15 @@ function renderCharts(){
   const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
   const tc=document.getElementById('trendChart'), latest=pts[pts.length-1].bal;
   if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Latest balance: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b></span></div>`;
+  renderBreakdown();
   renderCirculation();
+  renderGlance();
 }
 /* 2D: Abundance & Circulation summary (tagged-expense energy ratio) */
 function renderCirculation(){
   const box=document.getElementById('circChart'); if(!box) return;
   const tagged=state.transactions.filter(t=>t.type==='expense'&&t.energy);
-  if(!tagged.length){ box.innerHTML=`<div class="empty">No energy-tagged spends yet. When you log an expense, tap 🌿 / 🛡️ / 🛑 to see your circulation ratio here.</div>`; return; }
+  if(!tagged.length){ box.innerHTML=`<div class="empty">No energy-tagged spends yet. When you log an expense, tap / / to see your circulation ratio here.</div>`; return; }
   const g=tagged.filter(t=>t.energy==='growth').reduce((s,t)=>s+t.amount,0);
   const b=tagged.filter(t=>t.energy==='baseline').reduce((s,t)=>s+t.amount,0);
   const f=tagged.filter(t=>t.energy==='fear').reduce((s,t)=>s+t.amount,0);
@@ -6260,7 +6559,7 @@ function renderCirculation(){
     : `Balanced flow. Nudge a little more toward growth and giving - that's where compounding lives.`;
   box.innerHTML=`
     <div class="circ-bar"><div class="g" style="width:${g/total*100}%"></div><div class="b" style="width:${b/total*100}%"></div><div class="f" style="width:${f/total*100}%"></div></div>
-    <div class="circ-legend"><span class="k"><span class="sw" style="background:var(--good)"></span>🌿 Growth ${money(g)}</span><span class="k"><span class="sw" style="background:#6b7d8f"></span>🛡️ Baseline ${money(b)}</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>🛑 Fear ${money(f)}</span></div>
+    <div class="circ-legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Growth ${money(g)}</span><span class="k"><span class="sw" style="background:#6b7d8f"></span>Baseline ${money(b)}</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Fear ${money(f)}</span></div>
     <p class="sub" style="margin:12px 0 0">${verdict}</p>`;
 }
 
@@ -6283,8 +6582,10 @@ function initPWA(){
    Engine-critical (★) answers write straight into app state.
    ============================================================ */
 const INTAKE=[
-  {id:'gate', bot:"Welcome to Accountability 👋  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
-  {id:'tone', bot:"And how much mercy do you want from me? This sets the voice for everything - you can change it anytime in Settings. ★", input:'choice', key:'tone', options:[{label:'Clean - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
+  {id:'gate', bot:"Welcome to Accountability  First - which sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
+  {id:'tone', sum:'How you want to be held', input:'choice', key:'tone',
+    bot:"And how do you want to be held accountable? This is the voice I will use with you from here on - every question, every gut-check, every time you are about to blow it. Pick what you will actually listen to, not what sounds impressive. You can change it anytime in Settings. ★",
+    options:[{label:'Forgiving - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   /* situation comes BEFORE the intro so the tone floor (survival -> clean) is
      already known when the intro speaks - the person the floor protects must
      never get the savage version first and the softening after. */
@@ -6292,10 +6593,10 @@ const INTAKE=[
     why:"Because someone barely making it to Friday needs a different first move - and a gentler voice - than someone ready to invest. Your answer changes what I lead with and how blunt I get. Nothing else.",
     bot:"Before anything else - where are you right now with money, honestly? No wrong answer, no judgment. It just tells me how to show up for you.",
     options:[
-      {label:'😮‍💨 Just trying to survive', value:'survive', reply:"Thank you for saying it straight - that takes guts. When you're in survival, we don't start with 'assign every dollar.' We start with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
-      {label:'🌊 Treading water', value:'treading', reply:"Treading water is exhausting - and you're still here, doing something about it. That counts for more than you think. We'll aim for a little breathing room first, before anything fancy."},
-      {label:'🧱 Stable but stuck', value:'stuck', reply:"Stable but stuck is a real place to be. You've got the footing - now it's about pointing it somewhere on purpose instead of letting it drift."},
-      {label:'🚀 Stable, ready to build', value:'build', reply:"Love it. You've got the base - now let's turn steady into momentum and actually put your money to work."}
+      {label:'Just trying to survive', value:'survive', reply:"Thank you for saying it straight - that takes guts. When you're in survival, we don't start with 'assign every dollar.' We start with one small win you can actually get this week. That's the whole plan for now, and it's enough."},
+      {label:'Treading water', value:'treading', reply:"Treading water is exhausting - and you're still here, doing something about it. That counts for more than you think. We'll aim for a little breathing room first, before anything fancy."},
+      {label:'Stable but stuck', value:'stuck', reply:"Stable but stuck is a real place to be. You've got the footing - now it's about pointing it somewhere on purpose instead of letting it drift."},
+      {label:'Stable, ready to build', value:'build', reply:"Love it. You've got the base - now let's turn steady into momentum and actually put your money to work."}
     ]},
   {id:'intro', bot:a=>{
       const hi=a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great.";
@@ -6309,10 +6610,10 @@ const INTAKE=[
     why:"Because the way money felt when you were a kid still drives how you spend today - grip it tight, or blow it before it's gone. If I know the pattern, I can catch it for you instead of letting it run quietly in the background.",
     bot:"One more that shapes more than most people admit: what did money feel like growing up?",
     options:[
-      {label:'😟 Never enough, kind of scary', value:'fear', reply:"That leaves a mark. It can make you grip every dollar, or spend it before it disappears - two sides of the same fear. Naming it is how you stop it quietly running the show.", followup:"Say a bit more, if you want (optional)"},
-      {label:'😬 Tight, but we managed', value:'tight', reply:"Tight-but-managed teaches resourcefulness most people never build. We'll use that muscle - just aimed at building now, not only surviving."},
-      {label:'🙂 Comfortable and steady', value:'stable', reply:"A steady start is a real gift. The one trap is coasting on it - stability is the launchpad, not the destination."},
-      {label:'🎢 Feast or famine', value:'chaos', reply:a=> iaTone(a)==='savage'
+      {label:'Never enough, kind of scary', value:'fear', reply:"That leaves a mark. It can make you grip every dollar, or spend it before it disappears - two sides of the same fear. Naming it is how you stop it quietly running the show.", followup:"Say a bit more, if you want (optional)"},
+      {label:'Tight, but we managed', value:'tight', reply:"Tight-but-managed teaches resourcefulness most people never build. We'll use that muscle - just aimed at building now, not only surviving."},
+      {label:'Comfortable and steady', value:'stable', reply:"A steady start is a real gift. The one trap is coasting on it - stability is the launchpad, not the destination."},
+      {label:'Feast or famine', value:'chaos', reply:a=> iaTone(a)==='savage'
         ? "Feast or famine wires you for the swing - balling when it's up, scrambling when it's down. We're breaking that damn cycle."
         : "Feast or famine wires you for the swing - large when it's up, scrambling when it's down. Smoothing that out is exactly what a plan like this is for."}
     ]},
@@ -6320,12 +6621,12 @@ const INTAKE=[
     why:"Because if a budget burned you out before, I don't want to hand you the same thing that failed. Knowing what happened last time tells me how small and light to start so this one actually sticks.",
     bot:"And have you ever tried to budget before? Straight up - no wrong answer, it just tells me where to start.",
     options:[
-      {label:'🆕 Never really tried', value:'never', reply:"Perfect - no bad habits to unlearn, then. We start clean and simple, and build from there."},
-      {label:'😞 Tried, fell off', value:'fell', reply:a=> iaTone(a)==='savage'
+      {label:'Never really tried', value:'never', reply:"Perfect - no bad habits to unlearn, then. We start clean and simple, and build from there."},
+      {label:'Tried, fell off', value:'fell', reply:a=> iaTone(a)==='savage'
         ? "You and every other damn human who's tried. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out."
         : "You and almost everyone who's ever budgeted. Falling off isn't failure - it's data. This time we start smaller than whatever burned you out last time.", followup:"What made it not stick, if you know? (optional)"},
-      {label:'📉 Did it a while, life happened', value:'lapsed', reply:"So you already know it works when you work it. Life happens - the fix is a system light enough to survive a bad week, not another one that needs you to be perfect."},
-      {label:'✅ I budget now', value:'current', reply:"Then you're ahead of most - let's sharpen what you've got, not make you start over."}
+      {label:'Did it a while, life happened', value:'lapsed', reply:"So you already know it works when you work it. Life happens - the fix is a system light enough to survive a bad week, not another one that needs you to be perfect."},
+      {label:'I budget now', value:'current', reply:"Then you're ahead of most - let's sharpen what you've got, not make you start over."}
     ]},
   {id:'acct', sum:'Setup type', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
     return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
@@ -6338,14 +6639,14 @@ const INTAKE=[
     showIf:a=>a.acct==='spend' && !(a.income>0),
     bot:"No pressure at all - but I noticed you'd rather not put the income in. Mind if I ask what's behind that? It's not nosy, it just helps me meet you where you are.",
     options:[
-      {label:"🙈 I don't want to look", value:'avoid', reply:"That's the most honest answer there is - and it's exactly why watching where it GOES is a gentler place to start than staring at what comes in. No income needed. When you're ready to look, I'll be right here."},
-      {label:'🎲 It is irregular / hard to pin', value:'irregular', reply:"Irregular income is genuinely harder - not a personal failing. When what comes in bounces around, tracking what goes out is the steadier anchor. Smart place to start, honestly."},
-      {label:'😰 It stresses me out', value:'stress', reply:"Money stress is real and I'm not going to add to it. We'll keep this to just watching your spending - small, calm, no big scary number staring back. You set the pace."},
-      {label:'👀 I just want to watch spending', value:'watch', reply:"Totally fair - and it might be the highest-leverage move there is. What you spend is the part you actually control, minute to minute."}
+      {label:"I don't want to look", value:'avoid', reply:"That's the most honest answer there is - and it's exactly why watching where it GOES is a gentler place to start than staring at what comes in. No income needed. When you're ready to look, I'll be right here."},
+      {label:'It is irregular / hard to pin', value:'irregular', reply:"Irregular income is genuinely harder - not a personal failing. When what comes in bounces around, tracking what goes out is the steadier anchor. Smart place to start, honestly."},
+      {label:'It stresses me out', value:'stress', reply:"Money stress is real and I'm not going to add to it. We'll keep this to just watching your spending - small, calm, no big scary number staring back. You set the pace."},
+      {label:'I just want to watch spending', value:'watch', reply:"Totally fair - and it might be the highest-leverage move there is. What you spend is the part you actually control, minute to minute."}
     ]},
   {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend',
     bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
-    chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig',hours:true},{label:'Benefits',name:'Benefits'},{label:'✎ Something else',custom:true}],
+    chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig',hours:true},{label:'Benefits',name:'Benefits'},{label:'✎Something else',custom:true}],
     namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
     amountPrompt:n=>`Roughly how much from ${n.toLowerCase()==='partner'?'your partner':n.toLowerCase()} a month, take-home?`,
     done:"Done - that's all my income →"},
@@ -6353,8 +6654,8 @@ const INTAKE=[
     showIf:a=>a.acct!=='spend' && (a.extraIncome||[]).some(x=>/partner/i.test(x.name)),
     bot:"You've got a partner bringing money in too - want the full couples view? It tags who earns what, prices purchases in your partner's life-hours as well, and splits the essentials income-fairly (not just 50/50).",
     options:[
-      {label:'👫 Yes, set up the couples view', value:'yes', reply:"Nice - I'll switch on Household mode and use your partner's income to estimate their wage. You can fine-tune the names and numbers in Settings anytime."},
-      {label:'💵 Just count it as income', value:'no', reply:"Cool - it's in your budget total either way. You can flip on the couples view later in Settings."}
+      {label:'Yes, set up the couples view', value:'yes', reply:"Nice - I'll switch on Household mode and use your partner's income to estimate their wage. You can fine-tune the names and numbers in Settings anytime."},
+      {label:'Just count it as income', value:'no', reply:"Cool - it's in your budget total either way. You can flip on the couples view later in Settings."}
     ]},
   {id:'wage',
     bot:a=> a.acct==='spend'
@@ -6364,7 +6665,7 @@ const INTAKE=[
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
     input:'money', key:'wage', optional:true, placeholder:'22', hint:'Dollars per hour, take-home. Type 22 for $22 an hour.', sum:'Your hourly rate',
     suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income, a.hoursPerWeek) : null,
-    help:{ cta:"🤔 Help me work it out",
+    help:{ cta:"Help me work it out",
       ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
       placeholder:"e.g. 52000",
       ask2:"And how many hours a week do you actually work? Count the real ones - the early starts, the late nights, the weekend that wasn't. Most people work more than they'd say.",
@@ -6385,50 +6686,50 @@ const INTAKE=[
         : `That side work actually lifts your real rate - nice. Either way, I now price everything against the whole truth, not just one paycheck.`;
       return `Here's the honest math${a.name?', '+a.name:''}: your main job runs about ${usd(mr)}/hr. But that side work is hours of your life too - roughly ${sh} ${sh===1?'hour':'hours'} a month for ${usd(sideAmt)}. Blend every hour you sell and your true take-home rate is ${usd(br)}/hr. ${swing} That's the number behind every "hours of your life" figure from here on.`; }},
   {id:'essIntro', bot:"Now the stuff you cover FIRST - your essentials. Four quick ones. Ballpark each; skip any that's $0.", input:'continue', showIf:a=>a.acct!=='spend'},
-  {id:'roof', bot:"🏠 Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
+  {id:'roof', bot:"Roof - rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
   {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
     bot:"Before we move on - honestly, how's the place you live actually treating you?",
     options:[
-      {label:'❤️ Love it, staying put', value:'love', reply:"Love that. A place that feels like home is worth protecting - that's the whole point of covering it first."},
-      {label:"🤷 It's fine for now", value:'fine', reply:"Fine works. We'll keep it funded so it never quietly turns into your biggest stress."},
-      {label:'😮‍💨 Outgrowing it', value:'outgrow', reply:"Heard you. When it's time to level up, these numbers will tell you exactly when it's doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
-      {label:'🏡 Dreaming of owning', value:'own', reply:"Owning is a big, real one. Hold that thought - the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
+      {label:'Love it, staying put', value:'love', reply:"Love that. A place that feels like home is worth protecting - that's the whole point of covering it first."},
+      {label:"It's fine for now", value:'fine', reply:"Fine works. We'll keep it funded so it never quietly turns into your biggest stress."},
+      {label:'Outgrowing it', value:'outgrow', reply:"Heard you. When it's time to level up, these numbers will tell you exactly when it's doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
+      {label:'Dreaming of owning', value:'own', reply:"Owning is a big, real one. Hold that thought - the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
     ]},
-  {id:'food', sum:'Food', bot:"🍽️ Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'food', sum:'Food', bot:"Food - groceries and eating, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
   {id:'foodStyle', input:'reflect', key:'foodStyle', optional:true, showIf:a=>a.acct!=='spend' && a.food>0,
     bot:"Quick one - what's your normal with food?",
     options:[
-      {label:'👩‍🍳 Mostly cook at home', value:'cook', reply:"Cooking's a quiet superpower for your wallet and your health. Respect."},
-      {label:'🥡 Eat out / takeout a lot', value:'out', reply:a=> iaTone(a)==='savage'
+      {label:'Mostly cook at home', value:'cook', reply:"Cooking's a quiet superpower for your wallet and your health. Respect."},
+      {label:'Eat out / takeout a lot', value:'out', reply:a=> iaTone(a)==='savage'
         ? "No judgment - but eating out is where money loves to fucking evaporate. We'll watch it together."
         : "No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
-      {label:'⚖️ A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
+      {label:'A bit of both', value:'both', reply:"Balanced. We'll just make sure the 'both' doesn't quietly drift into 'mostly out.'"}
     ]},
-  {id:'util', bot:"💡 Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
-  {id:'transport', sum:'Getting around', bot:"🚗 Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'util', bot:"Power & Wi-Fi - electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
+  {id:'transport', sum:'Getting around', bot:"Getting around - gas, transit, rideshare, car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
   {id:'commuteFeel', input:'reflect', key:'commuteFeel', optional:true, showIf:a=>a.acct!=='spend' && a.transport>0,
     bot:"How do you feel about getting around day to day?",
     options:[
-      {label:'😑 The commute drains me', value:'drain', reply:"That drain is real - and Freedom Mode will show you exactly how many hours of life it costs. Sometimes that number changes everything."},
-      {label:"🚗 It's fine", value:'fine', reply:"Good - one less thing weighing on you."},
-      {label:'🚲 Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
-      {label:'💸 Sick of the car payment', value:'payment', reply:a=> iaTone(a)==='savage'
+      {label:'The commute drains me', value:'drain', reply:"That drain is real - and Freedom Mode will show you exactly how many hours of life it costs. Sometimes that number changes everything."},
+      {label:"It's fine", value:'fine', reply:"Good - one less thing weighing on you."},
+      {label:'Love my setup', value:'love', reply:"Nice. A setup you actually enjoy is underrated."},
+      {label:'Sick of the car payment', value:'payment', reply:a=> iaTone(a)==='savage'
         ? "Car payments are the biggest silent freedom-killer there is. We're going to make that shit impossible to ignore."
         : "Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
   {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend',
     bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount - or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
-    chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎ Something else',custom:true}],
+    chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
     done:"Done - that's my spending →"},
-  {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free 🙌",value:'no'}]},
+  {id:'debt', bot:"Real talk - carrying any debt right now? No shame; it just helps me tell you the truth. ★", input:'choice', key:'hasDebt', showIf:a=>a.acct!=='spend', options:[{label:'Yes, some',value:'yes'},{label:"Debt-free ",value:'no'}]},
   {id:'debtAmt', bot:"Roughly how much, all in?", input:'money', key:'debtAmt', showIf:a=>a.hasDebt==='yes', placeholder:'e.g. 8000'},
   {id:'debtFeel', input:'reflect', key:'debtFeel', optional:true, showIf:a=>a.hasDebt==='yes' && a.debtAmt>0,
     bot:"And the debt - honestly, how does carrying it feel right now?",
     options:[
-      {label:'😮‍💨 Treading water', value:'treading', reply:"Treading water is exhausting - but you just named it, and that's the first real step. The Debt planner will show you the way out, priced in your life."},
-      {label:'📉 Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
-      {label:'🆕 Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
+      {label:'Treading water', value:'treading', reply:"Treading water is exhausting - but you just named it, and that's the first real step. The Debt planner will show you the way out, priced in your life."},
+      {label:'Slowly winning', value:'winning', reply:"Slowly winning is still winning. Let's find the levers to speed it up."},
+      {label:'Just getting started', value:'starting', reply:"Starting is the hardest part, and you're already here. That counts for more than you think."}
     ]},
   {id:'dream', sum:'Your dream',
     bot:a=>{
@@ -6447,15 +6748,15 @@ const INTAKE=[
         ? `Almost done - let's make it zero-based. About ${usd(inc)} comes in, and ${usd(asg)} has a job. That leaves ${usd(left)} sitting there with no damn job - and money without a job wanders off. Where's it going?`
         : `Almost done - let's make it zero-based. About ${usd(inc)} comes in, and we've given ${usd(asg)} a job so far. That leaves ${usd(left)} with nothing assigned yet. Where should it go?`;
       if(left<-1) return `One honest heads-up: we've assigned about ${usd(-left)} more than comes in. I'll flag it on your budget so you can trim - totally fixable.`;
-      return `And every dollar already has a job - that's zero-based budgeting, done right. 👏`; }},
+      return `And every dollar already has a job - that's zero-based budgeting, done right. `; }},
   {id:'deepOffer', input:'reflect', key:'deepDive', showIf:a=>a.acct==='spend',
     bot:a=>{ const t=iaTone(a);
       if(t==='savage') return `Here's where it gets real${a.name?', '+a.name:''}. You want to know where your money ACTUALLY goes - not where you tell yourself it goes. Pick the one you'd genuinely do, not the one that sounds impressive:`;
       return `Here's where it gets real${a.name?', '+a.name:''}. To see where your money actually goes, you've got a few ways in - pick the one you'd genuinely do, not the one that sounds impressive:`; },
     options:[
-      {label:'🔦 Map my averages now', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
-      {label:"📓 I'll track it for real (30 days)", value:'track', reply:"That's the one that doesn't lie. Jot every discretionary buy however's fastest for you - a notebook, the notes app, a receipt in your pocket - and punch it in when you sit down. 30 days and you'll see the truth in your own handwriting. I'll count the days with you."},
-      {label:'👀 Just track as I go', value:'light', reply:"Fair - watching it in real time works too. The quick map and the 30-day challenge are both here whenever you want them."}
+      {label:'Map my averages now', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
+      {label:"I'll track it for real (30 days)", value:'track', reply:"That's the one that doesn't lie. Jot every discretionary buy however's fastest for you - a notebook, the notes app, a receipt in your pocket - and punch it in when you sit down. 30 days and you'll see the truth in your own handwriting. I'll count the days with you."},
+      {label:'Just track as I go', value:'light', reply:"Fair - watching it in real time works too. The quick map and the 30-day challenge are both here whenever you want them."}
     ]},
   {id:'deepDive', input:'leak', showIf:a=>a.acct==='spend' && a.deepDive==='deep',
     bot:a=> iaTone(a)==='savage'
@@ -6700,7 +7001,7 @@ function renderIntakeDock(s){
   const sugg=(isMoney && !iaForceInput && typeof s.suggest==='function') ? s.suggest(iaAns) : null;
   if(sugg!=null){
     const hpwNow=+iaAns.hoursPerWeek||40;
-    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓ Yep, about ${usd(sugg)}/hr</button><button id="iaSuggHours">⏱ I work ${iaAns.hoursPerWeek>0?hpwNow+'':'different'} hours</button><button id="iaSuggNo">✎ Set my own rate</button></div>`
+    dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaSuggYes">✓Yep, about ${usd(sugg)}/hr</button><button id="iaSuggHours">I work ${iaAns.hoursPerWeek>0?hpwNow+'':'different'} hours</button><button id="iaSuggNo">✎Set my own rate</button></div>`
       +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSuggSkip">Skip this</button>':''}${backBtn}</div>`;
     document.getElementById('iaSuggYes').onclick=()=>{ iaStore(s.key,sugg); iaBub(usd(sugg)+'/hr','me'); iaAdvance(); };
     // the estimate assumes a 40-hour week; let them correct the hours, not just the rate
@@ -6802,7 +7103,7 @@ function renderComfortStep(s){
   const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const whyBtn = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
   const draw=()=>{
-    dock.innerHTML=`<div class="intake-chips">${COMFORT_SEEDS.map((c,i)=>`<button data-ci="${i}" class="${picked.has(c.toLowerCase())?'picked':''}">${picked.has(c.toLowerCase())?'✓ ':'+ '}${escapeHtml(c)}</button>`).join('')}</div>`
+    dock.innerHTML=`<div class="intake-chips">${COMFORT_SEEDS.map((c,i)=>`<button data-ci="${i}" class="${picked.has(c.toLowerCase())?'picked':''}">${picked.has(c.toLowerCase())?'✓':'+ '}${escapeHtml(c)}</button>`).join('')}</div>`
       +`<div class="intake-chips" style="margin-top:10px"><button class="go" id="iaCmDone">${picked.size?`Done - ${picked.size} on my list →`:'Continue →'}</button></div>`
       +`<div class="intake-underrow">${whyBtn}${picked.size?'':'<button class="intake-skip" id="iaCmSkip">Skip this</button>'}${back}</div>`;
     const wb=document.getElementById('iaWhy'); if(wb) wb.onclick=()=>{ iaBub(s.why,'bot'); wb.remove(); };
@@ -6969,8 +7270,8 @@ function leakFinder(s){
   dock.innerHTML=`<div class="leak-hint">Two quick passes: the big fixed bills first, then the little stuff that slips away. Ballpark is fine.</div>
     <div class="leak-total">Mapped so far: <b id="leakTotal">$0</b>/mo</div>
     <div class="leak-list">
-      <div class="leak-sub">🧾 Fixed bills - flat per month</div>${fixedRows}
-      <div class="leak-sub">🩸 Where it slips away - how often × how much</div>${varRows}
+      <div class="leak-sub">Fixed bills - flat per month</div>${fixedRows}
+      <div class="leak-sub">Where it slips away - how often × how much</div>${varRows}
     </div>
     <div class="intake-chips" style="margin-top:10px"><button class="go" id="leakGo">See where it's going →</button></div>
     <div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`;
@@ -7005,9 +7306,9 @@ function renderZeroClose(s){
   const inc=intakeIncomeTotal(iaAns), asg=intakeAssignedTotal(iaAns), left=Math.round(inc-asg);
   const back = '<button class="intake-skip" id="iaBack">← Back</button>';
   if(inc>0 && left>1){
-    const opts=[{label:'💰 Park it in Savings',v:'savings'}];
-    if(iaAns.dream) opts.push({label:`🎯 Toward "${iaAns.dream}"`,v:'goal'});
-    opts.push({label:'🍃 Leave it as buffer',v:'buffer'});
+    const opts=[{label:'Park it in Savings',v:'savings'}];
+    if(iaAns.dream) opts.push({label:`Toward "${iaAns.dream}"`,v:'goal'});
+    opts.push({label:'Leave it as buffer',v:'buffer'});
     dock.innerHTML=`<div class="intake-chips">${opts.map((o,i)=>`<button data-zi="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><div class="intake-underrow">${back}</div>`;
     dock.querySelectorAll('button[data-zi]').forEach(b=>b.onclick=()=>{ const o=opts[+b.dataset.zi]; iaAns.zeroChoice=o.v; iaBub(o.label,'me'); iaAdvance(); });
   } else {
@@ -7152,11 +7453,11 @@ function renderDataGuard(){
     ? 'Your data lives only in this browser - which means a cleared cache or a new phone wipes your budget, goals and history. Save an encrypted backup so you can restore it anywhere.'
     : 'You have logged more since then. A fresh encrypted backup takes a few seconds, and it is the only copy that survives a cleared cache or a lost phone.';
   el.innerHTML=`<div class="dataguard">
-    <span class="dg-ic">🛟</span>
+    <span class="dg-ic"></span>
     <div class="dg-body">
       <div class="dg-t">${escapeHtml(title)}</div>
       <div class="dg-s">${escapeHtml(body)}</div>
-      <div class="dg-actions"><button class="btn sm primary" id="dgBackup">🔒 Back up now</button><button class="btn sm ghost" id="dgPlain">Plain file</button></div>
+      <div class="dg-actions"><button class="btn sm primary" id="dgBackup">Back up now</button><button class="btn sm ghost" id="dgPlain">Plain file</button></div>
     </div>
     <button class="dg-x" id="dgX" title="Not now">✕</button>
   </div>`;
@@ -7206,9 +7507,9 @@ function renderHome(){
   snap.innerHTML=
     flipStat('Left to budget', ltb, ltbCls)+
     flipStat('Spent this month', spent, '')+
-    (hasAccts?flipStat('🏦 In the bank', bankTotal(), bankTotal()<0?'bad':'good'):'')+
-    (everInv>0?flipStat('🌱 Invested this month', invM, 'pos'):'')+
-    plainStat('Skip streak', skipStreak()+' 🔥', 'pos')+
+    (hasAccts?flipStat('In the bank', bankTotal(), bankTotal()<0?'bad':'good'):'')+
+    (everInv>0?flipStat('Invested this month', invM, 'pos'):'')+
+    plainStat('Skip streak', skipStreak()+' ', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome');
   if(lkh) lkh.innerHTML=ltbNoteHTML(income,assigned,ltb)+flipHintHTML();
@@ -7228,7 +7529,7 @@ function renderOffenseDefense(){
   const M=state.activeMonth, od=offenseDefense(M), total=od.offense+od.defense;
   const offW=total>0?od.offense/total*100:0, defW=total>0?od.defense/total*100:50;
   const indie=indieTotal();
-  const milesHTML=INDIE_MILES.map(m=>`<span class="m ${indie>=m?'hit':''}">${indie>=m?'✓ ':''}${money(m)}</span>`).join('');
+  const milesHTML=INDIE_MILES.map(m=>`<span class="m ${indie>=m?'hit':''}">${indie>=m?'✓':''}${money(m)}</span>`).join('');
   let prompt='';
   if(total===0) prompt='Log a side income or a skill investment to start building your Offense. Cutting has a floor; earning has no ceiling.';
   else if(od.offense===0) prompt=pickVoice(SCARCITY_COPY);
@@ -7236,10 +7537,10 @@ function renderOffenseDefense(){
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Balance</div><h2 class="ph-title">Offense vs. Defense</h2></div>
     <div class="od-card">
       <div class="od-bar"><div class="off" style="width:${offW}%"></div><div class="def" style="width:${defW}%"></div></div>
-      <div class="od-legend"><span class="k"><span class="sw" style="background:var(--accent)"></span>⚔️ Offense ${money(od.offense)}</span><span class="k"><span class="sw" style="background:#6b7d8f"></span>🛡️ Defense ${money(od.defense)}</span></div>
+      <div class="od-legend"><span class="k"><span class="sw" style="background:var(--accent)"></span>Offense ${money(od.offense)}</span><span class="k"><span class="sw" style="background:#6b7d8f"></span>Defense ${money(od.defense)}</span></div>
       <div class="mile">Independent income (all-time): <b>${money(indie)}</b></div>
       <div class="miles">${milesHTML}</div>
-      ${prompt?`<div class="od-prompt">💡 ${escapeHtml(prompt)}</div>`:''}
+      ${prompt?`<div class="od-prompt">${escapeHtml(prompt)}</div>`:''}
     </div>`;
 }
 /* The money story, put to work. The upbringing answer + a couple of reliable
@@ -7259,15 +7560,15 @@ function moneyStoryNote(){
   const streak=(typeof skipStreak==='function')?skipStreak():0;
   const chest=(typeof impulseSaved==='function')?impulseSaved():0;
   if(ms==='fear'){
-    if(streak>=5 && chest>0) return {ic:'🌤️', t:`You've held the line ${streak} gut-checks straight - that's real discipline. The old "never enough" voice says never let up. But one small, planned treat isn't slipping, it's how you keep this up without burning out.`};
-    return {ic:'🌤️', t:`A word from your own story: "never enough" is old wiring, not today's math. You're not behind - you're building. Trust the numbers over the fear.`};
+    if(streak>=5 && chest>0) return {ic:'', t:`You've held the line ${streak} gut-checks straight - that's real discipline. The old "never enough" voice says never let up. But one small, planned treat isn't slipping, it's how you keep this up without burning out.`};
+    return {ic:'', t:`A word from your own story: "never enough" is old wiring, not today's math. You're not behind - you're building. Trust the numbers over the fear.`};
   }
   if(ms==='chaos'){
-    if(avg>0 && inc>avg*1.2) return {ic:'⚓', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here - so let's give this surplus a job first, before it evaporates and future-you is the one scrambling.`};
-    return {ic:'⚓', t:`Your money's calmer with a plan than on the swing. Every dollar you assign now is one that won't vanish in the next "feast".`};
+    if(avg>0 && inc>avg*1.2) return {ic:'', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here - so let's give this surplus a job first, before it evaporates and future-you is the one scrambling.`};
+    return {ic:'', t:`Your money's calmer with a plan than on the swing. Every dollar you assign now is one that won't vanish in the next "feast".`};
   }
-  if(ms==='tight') return {ic:'💪', t:`You learned to stretch a dollar the hard way - that's a real edge most people never build. Point that resourcefulness at building now, not only surviving.`};
-  if(ms==='stable') return {ic:'🚀', t:`A steady start is a gift most don't get. The only trap is coasting on it - stability is the launchpad, not the finish line.`};
+  if(ms==='tight') return {ic:'', t:`You learned to stretch a dollar the hard way - that's a real edge most people never build. Point that resourcefulness at building now, not only surviving.`};
+  if(ms==='stable') return {ic:'', t:`A steady start is a gift most don't get. The only trap is coasting on it - stability is the launchpad, not the finish line.`};
   return null;
 }
 function renderMoneyStoryNote(){
@@ -7292,20 +7593,20 @@ function renderNextSteps(){
   const survival = sit==='survive'||sit==='treading';
   const hasCushion = state.goals.some(g=>/cushion|emergency|buffer|rainy|safety/i.test(g.name));
   const steps=[];
-  if(income<=0) steps.push(['🧾','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
-  else if(Math.abs(ltb)>=1) steps.push(['📋', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`, survival?'One small move at a time - assign what you can. No pressure to be perfect.':'Budget to zero: every dollar gets a job.','assign']);
+  if(income<=0) steps.push(['','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
+  else if(Math.abs(ltb)>=1) steps.push(['', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`, survival?'One small move at a time - assign what you can. No pressure to be perfect.':'Budget to zero: every dollar gets a job.','assign']);
   // Situation-aware: survival mode leads with one small, real win, not a full-budget lecture
-  if(survival && !hasCushion) steps.unshift(['🛟','Start a $100 cushion','In survival mode this is the whole game - one small buffer so a flat tire is an annoyance, not a crisis.','dream']);
-  if(wallsCovered<4) steps.push(['🏠',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
-  if(!state.hourlyWage) steps.push(['⚙️','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.','wage']);
-  if(unlocked>0) steps.push(['🔒',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.','tab:impulse']);
-  if(!state.goals.length) steps.push(['🎯','Name one dream','A budget with nothing behind it is just a spreadsheet.','dream']);
+  if(survival && !hasCushion) steps.unshift(['','Start a $100 cushion','In survival mode this is the whole game - one small buffer so a flat tire is an annoyance, not a crisis.','dream']);
+  if(wallsCovered<4) steps.push(['',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
+  if(!state.hourlyWage) steps.push(['','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.','wage']);
+  if(unlocked>0) steps.push(['',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.','tab:impulse']);
+  if(!state.goals.length) steps.push(['','Name one dream','A budget with nothing behind it is just a spreadsheet.','dream']);
   const givenM=(state.giving||[]).filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0);
   const giveTarget=(state.givingPct>0&&income>0)?income*state.givingPct/100:0;
   const giveReachable = !state.spendingMode && (typeof activeStage!=='function' || activeStage()>=2);   // the Giving panel is stage-2, full-mode UI
-  if(giveReachable && giveTarget>0 && givenM<giveTarget) steps.push(['🌊',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
-  else if(giveReachable && !state.giving.length && income>0) steps.push(['🌊','Give something forward','Even a small amount, on purpose, changes your relationship with money.','give']);
-  if(!steps.length) steps.push(['✅','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.','tab:tx']);
+  if(giveReachable && giveTarget>0 && givenM<giveTarget) steps.push(['',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
+  else if(giveReachable && !state.giving.length && income>0) steps.push(['','Give something forward','Even a small amount, on purpose, changes your relationship with money.','give']);
+  if(!steps.length) steps.push(['','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.','tab:tx']);
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
     steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`).join('');
 }
@@ -7348,10 +7649,10 @@ function renderEnough(income){
 
 /* ---------- Cover First (essentials) ---------- */
 const WALLS=[
-  {icon:'🍽️', name:'Food', sub:'Groceries & meals', cat:'Food', match:['food','grocer','meal','eat','dining']},
-  {icon:'💡', name:'Power & Wi-Fi', sub:'Utilities & connection', cat:'Power & Wi-Fi', match:['utilit','electric','power','water','internet','wifi','wi-fi','phone','cell','heat']},
-  {icon:'🏠', name:'Roof', sub:'Rent or mortgage', cat:'Roof', match:['rent','mortgage','housing','shelter','home','roof']},
-  {icon:'🚗', name:'Getting Around', sub:'Gas, transit, ride', cat:'Getting Around', match:['transport','car','fuel','bus','transit','uber','lyft','gas','commute','wheels','around']}
+  {icon:'', name:'Food', sub:'Groceries & meals', cat:'Food', match:['food','grocer','meal','eat','dining']},
+  {icon:'', name:'Power & Wi-Fi', sub:'Utilities & connection', cat:'Power & Wi-Fi', match:['utilit','electric','power','water','internet','wifi','wi-fi','phone','cell','heat']},
+  {icon:'', name:'Roof', sub:'Rent or mortgage', cat:'Roof', match:['rent','mortgage','housing','shelter','home','roof']},
+  {icon:'', name:'Getting Around', sub:'Gas, transit, ride', cat:'Getting Around', match:['transport','car','fuel','bus','transit','uber','lyft','gas','commute','wheels','around']}
 ];
 /* which essential wall (if any) a category name belongs to */
 function categoryWall(name){ const n=(name||'').toLowerCase(); return WALLS.find(w=>w.match.some(t=>n.includes(t)))||null; }
@@ -7405,7 +7706,7 @@ function renderWalls(){
   const covered=rows.filter(r=>r.isCovered).length;
   if(covered===WALLS.length){
     const nextDeep=deepenSteps().find(s=>!s.done&&!s.skipped);
-    grid.innerHTML=`<div class="walls-done">🎉 All four walls covered this month${rows.some(r=>r.assigned>0)?' - '+money(rows.reduce((s,r)=>s+r.assigned,0))+' set aside for the essentials':''}. They'll ask again next month.`
+    grid.innerHTML=`<div class="walls-done">All four walls covered this month${rows.some(r=>r.assigned>0)?' - '+money(rows.reduce((s,r)=>s+r.assigned,0))+' set aside for the essentials':''}. They'll ask again next month.`
       + (nextDeep?`<div class="wd-next">The floor is set. Next: <b>${escapeHtml(nextDeep.t)}</b> <button class="btn sm primary" data-deepen="${nextDeep.k}">${escapeHtml(nextDeep.cta)} →</button></div>`:'')
       + `</div>`;
     wireDeepen(grid);
@@ -7419,7 +7720,7 @@ function renderWalls(){
         <span class="wall-status">${status}</span>
       </button>`;
     }).join('')
-    + (covered ? `<div class="walls-donechips">${rows.filter(r=>r.isCovered).map(r=>`<button class="wall-chip" data-wall="${escapeHtml(r.w.cat)}" title="Adjust it">✓ ${r.w.icon} ${escapeHtml(r.w.name)} · ${money(r.assigned)}</button>`).join('')}</div>` : '');
+    + (covered ? `<div class="walls-donechips">${rows.filter(r=>r.isCovered).map(r=>`<button class="wall-chip" data-wall="${escapeHtml(r.w.cat)}" title="Adjust it">✓${r.w.icon} ${escapeHtml(r.w.name)} · ${money(r.assigned)}</button>`).join('')}</div>` : '');
   }
   const prog=document.getElementById('wallsProgress'); if(prog) prog.textContent=`${covered} of 4 covered this month`;
   const setup=document.getElementById('wallsSetup'); if(setup) setup.style.display = anyMissing ? '' : 'none';

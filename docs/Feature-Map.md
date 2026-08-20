@@ -10,6 +10,32 @@ and sync sends only ciphertext.
 
 ---
 
+## Visual language
+
+Two themes, both warm. **Quiet ink** (dark, the default) is warm charcoal rather
+than cold navy; **Ledger** (light) is paper rather than white, because a budget
+is a ledger and a ledger is paper. The `auto` theme setting picks per device.
+
+The **expression layer** at the end of the stylesheet lowers the voice of the
+whole interface in one place. Before it, the app carried 241 declarations at
+weight 700+ against 33 at 600 or below, 42 `text-transform:uppercase` rules and
+47 `letter-spacing` rules: nothing was quiet, so nothing had hierarchy, and every
+micro-label read as instrument telemetry. Headings and prose use a **system serif
+stack** (Iowan / Palatino / Georgia) - no font file, so "zero external requests"
+stays literally true.
+
+**Emoji are navigation only.** The app carried 116 distinct glyphs, which is the
+single strongest machine-made signal: a person picks eight icons and reuses them.
+336 decorative runs were removed; what remains is the tab bar and the theme
+toggle. Two glyphs that turned out to be functional rather than decorative were
+replaced with words or marks instead of restored - the Freedom Mode toggle now
+reads `$ / hrs`, and the action button is a `+`.
+
+Contrast is checked, not assumed: every foreground/background pair in both themes
+meets WCAG AA or better. The light accent was darkened from `#9a6b2f` to
+`#8a5f28` because the original sat at 4.06 on paper and 4.39 behind button text,
+both short of AA for normal-size text.
+
 ## The flow (primary nav + More)
 
 The bottom nav leads with the three core jobs and tucks the support surfaces behind
@@ -80,7 +106,22 @@ Skips are **month-scoped** (`deepenSkipMonth`): "Not now" sets a step aside for 
 
 **Cover First** (the Four Walls) - Roof / Food / Power & Wi-Fi / Getting Around, matched to categories by keyword (`WALLS`). Drives the Home grid, essential-runway, and sovereignty. Tapping a wall deep-links to its category on Plan and starts the **wall-to-wall guide** (`wallGuideCat`, `wallGuideHTML`): fund it and an inline banner hands you the next uncovered wall, ending in an all-covered close - no bouncing back to Home between essentials. On the Home grid, covered walls collapse to compact ✓ chips (still tappable to adjust) and the whole grid folds to one line when all four are covered; walls are per-month, so they return asking when the month turns. `renderWalls`, `goToWall`, `findOrCreateEssential`.
 
-**Silent Sovereignty Audit** - Sovereign Capital Ratio, Overhead Drag, Pure Freedom Runway, and a 4-tier classification (Encumbered → Tethered → Sovereign → Untouchable). `sovereignty`, `renderSovereignty`.
+**Money map** (`renderBreakdown`, `bdRows`, `bdDonutSVG`) - a donut of where money
+went and where it came from, over a **1 / 3 / 6 / 12 month** window. A single month
+is a snapshot and a snapshot lies: one car repair makes Getting Around look like a
+habit, so the interval is a first-class control rather than something faked by
+clicking the month arrows twelve times. Expenses drill into the category tree
+(Food → Groceries → Walmart) and money booked straight to a parent shows as
+"(direct)" so nothing vanishes on the way down. Income groups by source and does
+not drill. Slices are `stroke-dasharray` on one circle each: no library, no canvas.
+
+**Quick glance** (`renderGlance`, `glanceReady`) - an edge pull-tab opening money
+in, money out, and what that leaves for the active month, plus today's spend
+against the daily allowance in spending mode. Gated on `genuineTxDates`, the same
+predicate the calendar origin uses, so an auto-posted paycheck does not count as
+"tracking has started" and nobody meets a drawer reading $0 / $0 / $0 on day one.
+
+**Silent Sovereignty Audit** - Sovereign Capital Ratio, Overhead Drag, Pure Freedom Runway, and a 4-tier classification (Encumbered → Tethered → Unbound → Untouchable). The rank is deliberately NOT called "Sovereign": that name belongs to the paid sync tier, and a free rank sharing it reads as a paywall. `sovereignty`, `renderSovereignty`.
 
 **Anti-shame** - overspend shows a calm **Rebalance Banner** (never red errors); the **Blindspot Shield** rewards logging. Copy never says failed/bad/violated/ruined.
 
@@ -225,6 +266,20 @@ transaction. Approving writes it and records what it did on the entry, so the
 timeline shows "logged $340 - Getting Around" under the words that produced it.
 Declining leaves the budget untouched. Deleting an entry never removes what it
 already logged.
+
+**4. Diary echo (`diaryEcho`, `diaryEchoHTML`, inside the gut-check).** A diary
+only read on the day it is written is a notebook. The gut-check surfaces one
+entry, chosen by relevance, verbatim, while the cart is still open. Scoring is
+keyword overlap with what is being bought (dominant), then entry kind (a hard one
+outweighs a note), then recency; a funded plan nudges but does not decide - at a
+larger bonus it beat everything for every purchase and the same quote surfaced
+every time. Below a threshold it shows nothing: silence beats a non-sequitur.
+
+It is the one surface the register/intensity dial does **not** reach. These are
+the user's own words about their own hard weeks, and quoting somebody's grief
+back at them in the savage voice is the one place this app must not go. The
+framing is identical at clean, blunt and savage, and that is asserted in the
+tests.
 
 **3. Free comfort list (`state.comfortMenu`; collected in intake, editable in Settings,
 rendered by `comfortHTML`).** The user names, while calm, the no-cost things that actually
