@@ -151,6 +151,8 @@ trackStart                                // tracking origin (YYYY-MM-DD); calen
 comfortMenu                               // the free comfort list (strings, shown inside every gut-check)
 timeLog                                   // time ledger entries [{id, date, kind, hours}], kinds: health|learn|build|people|leak (90-day window)
 theme                                     // 'auto' (default, follows the OS) | 'light' | 'dark' explicit override
+autoBackup                                // backup reminder cadence: off | launch | weekly (default) | monthly
+backupNagDay                              // YYYY-MM-DD the reminder was answered or dismissed (day-scoped, not session)
 ```
 Transaction `type` is `income | expense | invest`. Invest reduces the cash balance but
 credits the auto-managed `Invested capital` asset (`asset.auto==='invest'`); deleting the
