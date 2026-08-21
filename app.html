@@ -2383,6 +2383,21 @@ function fmtLife(amount, rateOverride){
 }
 /* the app formats everything through money(): mode-aware */
 function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
+/* Life-hours mode converts every money() figure to time. That is right for a
+   figure you READ, and wrong for two kinds it kept catching:
+
+     1. A figure you ACT on. Every input in this app takes dollars ("you always
+        type dollars, only the display changes"), so "Assign 3.2 days" and
+        "Set it to at least 1.6 days" name a value the field will not accept -
+        the same fault as offering to bank ten minutes into a goal.
+     2. A figure that already has a life translation printed beside it, which
+        then prints the same amount twice in two different units: "Spent this
+        month 20.3 days / That's 162 hrs of life".
+
+   actMoney() is the escape hatch for both: dollars, whatever the mode. Use it
+   for button labels, typed-value instructions, and any headline whose own
+   caption already does the converting. */
+const actMoney = n => usd(n);
 /* Owner-aware pricing (household mode): a partner-owned dollar costs the PARTNER's
    life at THEIR wage, not yours. Only diverges when household is on and the partner
    has a wage set; otherwise everything prices at your own rate, exactly as before. */
@@ -2466,6 +2481,7 @@ function renderHousehold(){
   if(!state.householdOn){ box.innerHTML=''; return; }
   const M=state.activeMonth, inc=incomeByOwner(M);
   const nameA=escapeHtml(state.nameA||'You'), nameB=escapeHtml(state.nameB||'Partner');
+  const vA=(state.nameA||'You')==='You'?'cover':'covers';   // "You covers" read as broken English until someone typed a real name
   const base=inc.a+inc.b, rA=base>0?inc.a/base:.5, rB=base>0?inc.b/base:.5, pct=v=>Math.round(v*100);
   const ess=(typeof essentialMonthly==='function')?essentialMonthly():0;
   const wA=effectiveHourly(), wB=state.wageB||0;
@@ -2481,7 +2497,7 @@ function renderHousehold(){
     <div class="hh-bar"><span class="a" style="width:${pct(rA)}%"></span><span class="b" style="width:${pct(rB)}%"></span></div>
     ${ess>0&&base>0?`<div class="hh-fair">
       <div class="k">Fair split of the ${usd(ess)} in shared essentials</div>
-      <div class="hh-fairrow"><span>${nameA} covers <b>${usd(ess*rA)}</b> · ${pct(rA)}%${wA>0?` <span class="hh-life">${fmtLife(ess*rA,wA)}</span>`:''}</span><span>${nameB} covers <b>${usd(ess*rB)}</b> · ${pct(rB)}%${wB>0?` <span class="hh-life">${fmtLife(ess*rB,wB)}</span>`:''}</span></div>
+      <div class="hh-fairrow"><span>${nameA} ${vA} <b>${usd(ess*rA)}</b> · ${pct(rA)}%${wA>0?` <span class="hh-life">${fmtLife(ess*rA,wA)}</span>`:''}</span><span>${nameB} covers <b>${usd(ess*rB)}</b> · ${pct(rB)}%${wB>0?` <span class="hh-life">${fmtLife(ess*rB,wB)}</span>`:''}</span></div>
       <p class="sub" style="margin:8px 0 0">Proportional to what each of you earns - not a 50/50 that squeezes the lower earner. A guideline, not a rule.${wA>0&&wB>0&&Math.abs(wA-wB)>0.5?` The hours show the real cost: the lower earner pays for their share with more of their life.`:''}</p>
     </div>`:''}
     ${(wA>0||wB>0)?`<div class="hh-wage"><span>${nameA}: <b>${wA>0?usd(wA)+'/hr':'set wage'}</b></span><span>${nameB}: <b>${wB>0?usd(wB)+'/hr':'add in Settings'}</b></span></div>`:''}
@@ -2588,7 +2604,7 @@ function renderSpending(){
   </div>` : '';
   box.innerHTML=`<div class="panel spending">
     <div class="sp-top">
-      <div><div class="sp-k">Spent this month</div><div class="sp-spent">${money(spent)}</div></div>
+      <div><div class="sp-k">Spent this month</div><div class="sp-spent">${actMoney(spent)}</div></div>
       ${H>0?`<div style="text-align:right"><div class="sp-k">That's</div><div style="font-weight:800">${fmtHours(spent/H)} of life</div></div>`:''}
     </div>
     ${incHTML}
@@ -2817,7 +2833,7 @@ function renderRewardCalendar(){
   }
   box.innerHTML=`<div class="panel">
     <h2>Reward calendar</h2>
-    <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${money(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★. <b>Tap any day</b> for what you logged and saved.${orgNote}</p>
+    <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${actMoney(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★. <b>Tap any day</b> for what you logged and saved.${orgNote}</p>
     <div class="cal-grid">${['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}${cells}</div>
     ${weekHTML}
     <div class="cal-stats">
@@ -2864,6 +2880,15 @@ function simulateDebts(debts, monthly, strategy){
            order: ds.slice().sort((a,b)=>(a.paidMonth||9e9)-(b.paidMonth||9e9)).map(d=>({name:d.name, paidMonth:d.paidMonth, interest:d.interest})) };
 }
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
+/* The Debt planner promises one thing in its own intro: "the fastest, cheapest
+   way out - with THE INTEREST priced in hours of your life." So that is the
+   contract it keeps in life-hours mode. What you PAY and what you OWE are
+   dollars, because they are the values you typed into dollar fields and the
+   ones an instruction tells you to change. What the debt COSTS you - interest,
+   and the gap between two plans - carries the life framing, which is the whole
+   reason to look at debt this way. Mixing them inside one sentence produced
+   "Your monthly amount (4.2 hrs) is under your minimum payments (1.6 days).
+   Set it to at least $315" - three units and no way to act on any of them. */
 function renderDebt(){
   const rn=document.getElementById('debtReflectNote');
   if(rn){ const r=(state.intake&&state.intake.reflections)||{};
@@ -2898,7 +2923,7 @@ function renderDebtResults(){
   const budget=state.debtBudget||0;
   const totalMin=debts.reduce((s,d)=>s+(+d.minPayment||0),0), totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);
   if(budget < totalMin-0.01){
-    box.innerHTML=`<div class="imp-err" style="margin-top:12px">Your monthly amount (${money(budget)}) is under your minimum payments (${money(totalMin)}). Set it to at least ${money(totalMin)} to start making progress.</div>`;
+    box.innerHTML=`<div class="imp-err" style="margin-top:12px">Your monthly amount (${actMoney(budget)}) is under your minimum payments (${actMoney(totalMin)}). Set it to at least ${actMoney(totalMin)} to start making progress.</div>`;
     return;
   }
   const strat=state.debtStrategy||'avalanche';
@@ -2908,7 +2933,7 @@ function renderDebtResults(){
   if(plan.stalled){   // budget covers minimums but not the interest - honest math, not a fake 60-year date
     const monthlyInterest=debts.reduce((s,d)=>s+(+d.balance||0)*((+d.apr||0)/100/12),0);
     const need=Math.ceil((monthlyInterest+1)/10)*10;
-    box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${money(budget)}</b>/mo you're not outrunning the interest - about <b>${money(monthlyInterest)}</b> piles on every month, so the balance never shrinks. You need at least roughly <b>${money(need)}</b>/mo to start winning. Even $20 more a month changes the picture - try nudging it up.</div>`;
+    box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${actMoney(budget)}</b>/mo you're not outrunning the interest - about <b>${money(monthlyInterest)}</b> piles on every month, so the balance never shrinks. You need at least roughly <b>${actMoney(need)}</b>/mo to start winning. Even $20 more a month changes the picture - try nudging it up.</div>`;
     renderInvestCompare(); return;
   }
   const noApr=debts.some(d=>(+d.apr||0)<=0);
@@ -2933,14 +2958,14 @@ function renderDebtResults(){
   box.innerHTML=`
     <div class="debt-hero">
       <div><div class="sp-k">Debt-free by</div><div class="debt-date">${fmtMonth(freeMonth)}</div><div class="sub" style="margin:2px 0 0">${dur} from now</div></div>
-      <div style="text-align:right"><div class="sp-k">Total interest</div><div class="debt-int">${money(plan.totalInterest)}</div>${H>0?`<div class="sub" style="margin:2px 0 0">${fmtHours(plan.totalInterest/H)} of your life</div>`:''}</div>
+      <div style="text-align:right"><div class="sp-k">Total interest</div><div class="debt-int">${actMoney(plan.totalInterest)}</div>${H>0?`<div class="sub" style="margin:2px 0 0">${fmtHours(plan.totalInterest/H)} of your life</div>`:''}</div>
     </div>
     ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
     ${cmp?`<div class="debt-cmp">${cmp}</div>`:''}
     <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/></svg>
     <div class="po-head">Payoff order</div>
     <div class="po-list">${orderHTML}</div>
-    <p class="sub" style="margin-top:12px">You're putting <b>${money(budget)}</b>/mo at <b>${money(totalBal)}</b> of debt. Every extra dollar above your ${money(totalMin)} minimums is what buys back those months. Results are estimates.</p>`;
+    <p class="sub" style="margin-top:12px">You're putting <b>${actMoney(budget)}</b>/mo at <b>${actMoney(totalBal)}</b> of debt. Every extra dollar above your ${actMoney(totalMin)} minimums is what buys back those months. Results are estimates.</p>`;
   renderInvestCompare();
 }
 /* Plot twist: crush the debt vs. pay minimums and invest the rest, same money out */
@@ -2973,8 +2998,8 @@ function renderInvestCompare(){
   const flags=debts.map(d=>({name:d.name, apr:+d.apr||0, invest:(+d.apr||0)<ret}));
   box.innerHTML=`
     <div class="iv-compare">
-      <div class="iv-card ${diff<=0?'win':''}"><div class="sp-k">Crush the debt first</div><div class="iv-net">${money(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
-      <div class="iv-card ${diff>0?'win':''}"><div class="sp-k">Minimums + invest the rest</div><div class="iv-net">${money(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      <div class="iv-card ${diff<=0?'win':''}"><div class="sp-k">Crush the debt first</div><div class="iv-net">${actMoney(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      <div class="iv-card ${diff>0?'win':''}"><div class="sp-k">Minimums + invest the rest</div><div class="iv-net">${actMoney(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
     </div>
     <div class="iv-verdict">${diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years.` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years - your debt costs more than the market is likely to pay.` : `It's roughly a wash over ${yrs} years - the guaranteed route (crush the debt) is the safer call.`}</div>
     <div class="iv-flags">${flags.map(f=>`<div class="iv-flag ${f.invest?'inv':'crush'}"><b>${escapeHtml(f.name)} · ${f.apr}%</b> - ${f.invest?`below ${ret}%, so investing the extra likely beats rushing this one`:`beats ${ret}%; crushing it is a guaranteed ${f.apr}% return`}</div>`).join('')}</div>
@@ -3511,7 +3536,7 @@ function splitNoteHTML(id,M,label){
   const own=assignedFor(id,M), sum=kidsAssigned(id,M), extra=id&&label?'subsplit':'';
   // one tap writes the rolled-up total into the parent's own Assign field, so the
   // number the user is reading becomes the number actually on the books
-  if(sum>own) return `<div class="cat-split rolled ${extra}">↑ ${money(sum)} total, added up from your ${kids.length} sub${kids.length>1?'s':''}${own>0?` (you'd typed ${money(own)})`:''}. <button class="assign-now" data-assignnow="${id}">Assign ${money(sum)} →</button></div>`;
+  if(sum>own) return `<div class="cat-split rolled ${extra}">↑ ${money(sum)} total, added up from your ${kids.length} sub${kids.length>1?'s':''}${own>0?` (you'd typed ${money(own)})`:''}. <button class="assign-now" data-assignnow="${id}">Assign ${actMoney(sum)} →</button></div>`;
   const left=own-sum;
   if(left<=0.005) return `<div class="cat-split ${extra}">Fully split - every dollar of this pool has a home.</div>`;
   return `<div class="cat-split ${extra}">${money(left)}${label?' of '+escapeHtml(label):''} left to split into subs.</div>`;
@@ -5280,7 +5305,7 @@ function renderVault(){
     const rem=v.unlocksAt-now, unlocked=rem<=0, t=TRAPS.find(x=>x.v===v.trap)||TRAPS[0];
     const hrs=H>0?fmtHours(v.amount/H):null;
     return `<div class="vaultitem">
-      <div class="vi-top"><span class="vi-ic">${t.icon}</span><span class="vi-name">${escapeHtml(v.name)}</span><span class="vi-amt">${money(v.amount)}</span></div>
+      <div class="vi-top"><span class="vi-ic">${t.icon}</span><span class="vi-name">${escapeHtml(v.name)}</span><span class="vi-amt">${actMoney(v.amount)}</span></div>
       <div class="vi-meta"><span class="vi-timer ${unlocked?'unlocked':''}" data-unlock="${v.unlocksAt}">${unlocked?'Unlocked':'⏳'+fmtCountdown(rem)+' left'}</span>${hrs?`<span class="vi-hrs">${hrs} of life</span>`:''}<span class="vi-trap">${t.label}</span></div>
       <div class="vi-actions"><button class="btn sm income" data-vneut="${v.id}">Neutralize</button><button class="btn sm ghost" data-vrans="${v.id}"${unlocked?'':' disabled'} title="${unlocked?'':'Unlocks when the timer ends'}">Pay ransom</button></div>
     </div>`;
@@ -5467,7 +5492,7 @@ function renderNetWorth(){
   document.getElementById('avlL').textContent='Liabilities '+money(L);
   const cash=allTimeBalance(), dreams=state.goals.reduce((s,g)=>s+g.saved,0);
   document.getElementById('nwChips').innerHTML=
-    `<span class="chip">Tracked cash: <b>${money(cash)}</b></span>`+
+    `<span class="chip">Tracked cash: <b>${actMoney(cash)}</b></span>`+
     `<span class="chip">Saved in dreams: <b>${money(dreams)}</b></span>`+
     `<span class="chip" style="border-style:dashed">Already fueling your Freedom Runway below - no need to re-add them</span>`;
   // Freedom Runway - how long you could survive without working
@@ -5727,7 +5752,7 @@ function renderDrain(){
   if(drain<=0){ box.innerHTML=''; return; }
   const H=effectiveHourly();
   const hrs=H>0?' · '+fmtHours(drain/H)+' of work/mo':'';
-  box.innerHTML=`<div class="drainbox"><div class="db-k">The cost of keeping it all</div><div class="db-v">${money(drain)}/mo <span class="db-sub">· ${money(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month - before you buy a single new thing. That's the part nobody calls an "asset."</div></div>`;
+  box.innerHTML=`<div class="drainbox"><div class="db-k">The cost of keeping it all</div><div class="db-v">${actMoney(drain)}/mo <span class="db-sub">· ${actMoney(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month - before you buy a single new thing. That's the part nobody calls an "asset."</div></div>`;
 }
 document.getElementById('addAsset').addEventListener('click',()=>{
   const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
@@ -6373,7 +6398,7 @@ function renderCheckResult(){
     pendingCheck=null; clearScan();
     save(); renderImpulse(); renderBudget(); renderTx();
     const H2=effectiveHourly(); const hrTxt=H2>0?` That's about <b>${fmtHours(amt2/H2)}</b> of work to earn back.`:'';
-    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">Ransom paid. No shame - just truth.</div><p class="sub" style="margin:8px 0 0">${money(amt2)} logged under “Impulse / Wants.”${hrTxt} Streak reset. Next trap, you win.</p></div>`;
+    document.getElementById('impResult').innerHTML=`<div class="checkcard want"><div class="verdict">Ransom paid. No shame - just truth.</div><p class="sub" style="margin:8px 0 0">${actMoney(amt2)} logged under “Impulse / Wants.”${hrTxt} Streak reset. Next trap, you win.</p></div>`;
   });
 }
 
@@ -6383,7 +6408,7 @@ function renderImpulse(){
   const H=effectiveHourly();
   document.getElementById('impScore').innerHTML=`
     <div class="stat"><div class="k">Traps Dodged</div><div class="v good">${dodged}</div></div>
-    <div class="stat"><div class="k">War Chest</div><div class="v pos">${money(saved)}</div></div>
+    <div class="stat"><div class="k">War Chest</div><div class="v pos">${actMoney(saved)}</div></div>
     <div class="stat"><div class="k">Life Reclaimed</div><div class="v good">${H>0?fmtHours(saved/H):'-'}</div></div>
     <div class="stat"><div class="k">Active Streak</div><div class="v pos">${skipStreak()} </div></div>`;
   const hoursBox=document.getElementById('impHours');
@@ -8113,7 +8138,7 @@ function renderNextSteps(){
   const hasCushion = state.goals.some(g=>/cushion|emergency|buffer|rainy|safety/i.test(g.name));
   const steps=[];
   if(income<=0) steps.push(['','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
-  else if(Math.abs(ltb)>=1) steps.push(['', ltb>0?`Assign your last ${money(ltb)}`:`You're ${money(-ltb)} over - trim a category`, survival?'One small move at a time - assign what you can. No pressure to be perfect.':'Budget to zero: every dollar gets a job.','assign']);
+  else if(Math.abs(ltb)>=1) steps.push(['', ltb>0?`Assign your last ${actMoney(ltb)}`:`You're ${actMoney(-ltb)} over - trim a category`, survival?'One small move at a time - assign what you can. No pressure to be perfect.':'Budget to zero: every dollar gets a job.','assign']);
   // Situation-aware: survival mode leads with one small, real win, not a full-budget lecture
   if(survival && !hasCushion) steps.unshift(['','Start a $100 cushion','In survival mode this is the whole game - one small buffer so a flat tire is an annoyance, not a crisis.','dream']);
   if(wallsCovered<4) steps.push(['',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
@@ -8123,7 +8148,7 @@ function renderNextSteps(){
   const givenM=(state.giving||[]).filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0);
   const giveTarget=(state.givingPct>0&&income>0)?income*state.givingPct/100:0;
   const giveReachable = !state.spendingMode && (typeof activeStage!=='function' || activeStage()>=2);   // the Giving panel is stage-2, full-mode UI
-  if(giveReachable && giveTarget>0 && givenM<giveTarget) steps.push(['',`Give ${money(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
+  if(giveReachable && giveTarget>0 && givenM<giveTarget) steps.push(['',`Give ${actMoney(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
   else if(giveReachable && !state.giving.length && income>0) steps.push(['','Give something forward','Even a small amount, on purpose, changes your relationship with money.','give']);
   if(!steps.length) steps.push(['','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.','tab:tx']);
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+

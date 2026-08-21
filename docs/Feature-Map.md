@@ -126,6 +126,13 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Freedom Mode** (`$` / ⌛ header toggle) - converts every figure into **hours of your life** via `fmtLife` (minutes → hours → work-days → work-months). `money()` is mode-aware; `usd()` is always dollars. Needs an hourly wage. `renderFreedomToggle`, `renderAll`.
 
+**The unit rule.** `money()` converting everything is right for a figure you *read* and wrong for two kinds it does not own, so **`actMoney()`** (always dollars) marks the exceptions:
+
+1. **A figure you act on.** Every input takes dollars - the app says so itself, *"you always type dollars, only the display changes"* - so a button reading `Assign 3.2 days`, or an instruction reading `Set it to at least 1.6 days`, names a value the field will not accept. Same fault as offering to bank ten minutes into a goal: goals hold dollars, and nobody can deposit ten minutes.
+2. **A figure whose own caption already converts.** The headline converts too and the card prints one amount twice in two units: *"Spent this month 20.3 days / That's 162 hrs of life"*.
+
+Applies to button labels, typed-value instructions (`Set it to`, `Assign your last`, `You need at least`, `Give`), and any headline with a life aside beneath it. The **Debt planner** states its own version of the rule in its intro - *"the interest priced in hours of your life"* - so what you **pay** and what you **owe** stay dollars while what the debt **costs** carries the life framing. Locked by `tests/life_units.mjs`.
+
 **True Net Hourly Wage** (Settings) - `(take-home - overhead) / (your work month + commute hrs)`. The work month comes from `state.hoursPerWeek` when the user gave it (hours/week x 52 / 12), else the full-time default `WORKMONTH_HRS` (2,080/12 = 173.33) - the app asks for real hours rather than assuming 40, and hours/week is editable in Settings next to the wage. The same real month scales `fmtLife`'s day/month buckets and the no-wage income fallback (`effectiveHourly`), so a 60-hour-week person's month of pay reads as "1.0 mo" of THEIR life. Feeds every hours-of-life figure. Stored in `state.hourlyWage`.
 
 **Intake chat** - conversational onboarding; opens on first run or "Setup chat". Age-gate, then the tone dial (so the whole conversation speaks in the chosen voice), then the soul layer (situation / money story / budgeting history), then real data (income -> recurring, essentials -> Cover First, dream -> goal). See `docs/Budget-Intake.md`. `openIntake`, `INTAKE`, `commitIntake`.
