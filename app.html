@@ -2640,19 +2640,31 @@ function renderCalDay(M, allowance){
   const dd=M+'-'+String(d).padStart(2,'0');
   const swept=(state.sweptDays||{})[dd];
   let action='';
+  /* A goal holds DOLLARS: its target is dollars, its progress is dollars, and
+     nobody can put ten minutes into an emergency fund. In life-hours mode the
+     rest of this card rightly reads in time - that is the mode working - but the
+     banking copy was money language dropped into a time panel ("bank 10 min",
+     "money with no job"), which reads as nonsense. So: time for what the day
+     COST you, dollars for what actually MOVES, and a sentence that joins them. */
+  const fm=!!state.freedomMode;
+  const asMoney=n=>usd(n);                       // what lands in the goal, always dollars
+  const asLife=n=>fm?fmtLife(n):usd(n);          // what it cost you, in the active unit
   if(swept){
     const gs=state.goals.find(x=>x.id===swept.goalId);
-    action=`<div class="cal-swept"><span>✓You banked <b>${money(swept.amount)}</b>${gs?` toward "${escapeHtml(gs.name)}"`:''}.</span> <button class="cal-undo" data-calunsweep="${dd}">Undo</button></div>`;
+    action=`<div class="cal-swept"><span>✓You banked <b>${asMoney(swept.amount)}</b>${gs?` toward "${escapeHtml(gs.name)}"`:''}${fm?` - <b>${fmtLife(swept.amount)}</b> of your life, kept`:''}.</span> <button class="cal-undo" data-calunsweep="${dd}">Undo</button></div>`;
   } else if(saved>0){
     const g=(typeof topGoal==='function')?topGoal():null;
     if(g){
       const bankable=calBankable(M, allowance);                       // real month surplus still unbanked
       const canBank=Math.min(saved, bankable, Math.max(0, g.target-g.saved));
       if(bankable<=0.005){
-        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">A clean day - but across the whole month your real surplus so far is <b>${money(Math.max(0,calRealSurplus(M,allowance)))}</b> (a heavier day ate the rest). Nothing left to bank without banking money you didn't actually keep.</div>`;
+        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">A clean day - but across the whole month your real surplus so far is <b>${asLife(Math.max(0,calRealSurplus(M,allowance)))}</b> (a heavier day ate the rest). Nothing left to bank without banking money you didn't actually keep.</div>`;
       } else {
-        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(canBank)}</b> isn't a pot the app is holding - it's real money you kept this month. Give it a job: bank it toward your dream and watch it become progress, not just a good day.</div>
-          <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">Bank ${money(canBank)} toward "${escapeHtml(g.name)}"</button>`;
+        const lead = fm
+          ? `That's <b>${fmtLife(canBank)}</b> of your life you didn't hand over - <b>${asMoney(canBank)}</b> still sitting in your account. Goals are kept in dollars, so that is what goes in. Send it to your dream and the time you saved turns into something you keep.`
+          : `This <b>${asMoney(canBank)}</b> isn't a pot the app is holding - it's real money you kept this month. Give it a job: bank it toward your dream and watch it become progress, not just a good day.`;
+        action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">${lead}</div>
+          <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">Bank ${asMoney(canBank)} toward "${escapeHtml(g.name)}"</button>`;
       }
     } else {
       /* This button used to jump to the Goals tab and focus a blank four-field
@@ -2662,12 +2674,15 @@ function renderCalDay(M, allowance){
          one thing that is actually missing - a name - and do the whole thing
          here. The target defaults to something real and is editable after. */
       const bankable=Math.max(0, Math.min(saved, calBankable(M, allowance)));
-      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Name what it's for and this ${money(bankable)} goes straight in:</div>
+      const lead = fm
+        ? `That's <b>${fmtLife(bankable)}</b> of your life you kept - <b>${asMoney(bankable)}</b>, still in your account. A goal is measured in dollars, so that is the figure that goes in. Name what those minutes are for and they stop being a good day and start being a thing you own.`
+        : `This <b>${asMoney(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Name what it's for and this ${asMoney(bankable)} goes straight in:`;
+      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">${lead}</div>
         <div class="cal-newgoal">
           <input type="text" id="calGoalName" maxlength="60" placeholder="Emergency fund, trip, debt-free…">
           <span class="cg-t">Target $<input type="number" id="calGoalTarget" inputmode="decimal" min="1" step="0.01" placeholder="1000"></span>
         </div>
-        <button class="cal-bank" data-calgoal="${dd}" data-calamt="${bankable}">Create it and bank ${money(bankable)}</button>`;
+        <button class="cal-bank" data-calgoal="${dd}" data-calamt="${bankable}">Create it and bank ${asMoney(bankable)}</button>`;
     }
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
@@ -2737,7 +2752,7 @@ function calSweepDay(dd, amount){
   if(!state.sweptDays) state.sweptDays={};
   state.sweptDays[dd]={amount:add, goalId:g.id};
   save();
-  if(typeof toast==='function') toast(`Banked ${money(add)} toward "${g.name}".`);
+  if(typeof toast==='function') toast(state.freedomMode?`Banked ${usd(add)} toward "${g.name}" - ${fmtLife(add)} of your life.`:`Banked ${money(add)} toward "${g.name}".`);
   if(typeof renderGoals==='function') renderGoals();
   renderRewardCalendar();
 }
