@@ -20,6 +20,23 @@ has no answer (switching "just track spending" to the full budget), the flow goe
 there first instead of returning early. `renderReview`, `iaSummaryRows`,
 `iaEditStep`, `iaFirstUnanswered`; steps opt in by carrying a short `sum` label.
 
+**An unfinished setup survives.** `iaSaveDraft` writes `{ans, step}` to
+`state.intakeDraft` after every move; `iaResumeOffer` runs at `openIntake` and
+offers "Carry on" or "Start fresh" before asking anything. `commitIntake` clears
+it, so a deliberate re-run never meets a stale resume.
+
+The save fires **after** `runIntakeStep` lands, not before, so the draft records
+the question being asked rather than the one just answered - resume picks up
+where you stopped rather than repeating a step. Drafts with no meaningful answers
+are not written, so a visitor who opens and immediately closes is not offered a
+resume for nothing.
+
+**Extra income is available on both paths.** `moreIncome` used to be full-budget
+only, so a spender with a side gig could log exactly one income. It now shows for
+anyone who entered an income, and `commitIntake` no longer discards
+`extraIncome` in spending mode - it was collecting the answers and throwing them
+away.
+
 **Photograph the budget you already have.** Anyone who answers anything but
 "never really tried" at `budgetPast` is offered the camera (`budgetPhoto`,
 `renderBudgetPhoto`). The receipt reader is reused - `loadTesseract` plus

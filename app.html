@@ -2264,7 +2264,7 @@ function defaultState(){
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'auto',
-           autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural' };
+           autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -6824,7 +6824,7 @@ const INTAKE=[
       {label:'It stresses me out', value:'stress', reply:"Money stress is real, and I'm not going to add to it. We'll stay on just your spending. Small, calm, no big number staring back. You set the pace."},
       {label:'I just want to watch spending', value:'watch', reply:"Fair. It might also be the highest-leverage thing you could do. Spending is the part you actually control, minute to minute."}
     ]},
-  {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend',
+  {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend' || +a.income>0,
     bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
     chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig',hours:true},{label:'Benefits',name:'Benefits'},{label:'✎Something else',custom:true}],
     namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
@@ -7010,7 +7010,47 @@ function intakeBlendedHourly(a){
   return hrs>0 ? Math.round((amt/hrs)*100)/100 : mr;
 }
 let iaCommitted=false;
-function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }   // a re-run starts from the hours already on record, so the pill shows the live value
+function iaSaveDraft(){
+  // A long conversation with no draft is a trap: one stray back-swipe and you
+  // start over. Persist after every move, and drop it the moment setup commits.
+  try{
+    if(iaCommitted) return;
+    const meaningful=Object.keys(iaAns).filter(k=>k!=='hoursPerWeek').length;
+    if(!meaningful || iaStep<1) return;
+    state.intakeDraft={ans:JSON.parse(JSON.stringify(iaAns)), step:iaStep, at:Date.now()};
+    save();
+  }catch(e){}
+}
+function iaClearDraft(){ try{ state.intakeDraft=null; save(); }catch(e){} }
+function iaDraftAge(){
+  const d=state.intakeDraft; if(!d||!d.at) return null;
+  return Math.round((Date.now()-d.at)/60000);
+}
+function iaResumeOffer(){
+  const d=state.intakeDraft; if(!d) return false;
+  const mins=iaDraftAge();
+  const when = mins==null ? '' : mins<2 ? ' just now' : mins<60 ? ` about ${mins} minutes ago` : mins<1440 ? ` about ${Math.round(mins/60)} hours ago` : ` a while back`;
+  const answered=Object.keys(d.ans||{}).filter(k=>k!=='hoursPerWeek').length;
+  iaBub(`You were partway through setting up${when} - ${answered} answer${answered===1?'':'s'} in. Want to carry on, or start fresh?`,'bot');
+  const dock=document.getElementById('intakeDock');
+  dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaResume">Carry on</button><button id="iaFresh">Start fresh</button></div>`;
+  document.getElementById('iaResume').onclick=()=>{
+    iaAns=d.ans||{}; iaStep=Math.min(d.step||0, INTAKE.length-1);
+    iaBub('Carry on','me');
+    pruneStaleAnswers(); runIntakeStep();
+  };
+  document.getElementById('iaFresh').onclick=()=>{
+    iaClearDraft(); iaAns={}; iaStep=0;
+    if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek;
+    iaBub('Start fresh','me');
+    document.getElementById('intakeLog').innerHTML='';
+    runIntakeStep();
+  };
+  return true;
+}
+function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay();
+  if(!iaResumeOffer()) runIntakeStep();
+}   // a re-run starts from the hours already on record, so the pill shows the live value
 /* Answers whose gate no longer passes are lies waiting to be committed - e.g.
    full-path walls after switching to spend mode, or "dreaming of owning" after
    the roof amount was zeroed. Sweep them whenever the flow moves. */
@@ -7053,7 +7093,7 @@ function iaBack(){
   if(s.key){ delete iaAns[s.key]; delete iaAns[s.key+'Note']; }
   iaSayGen++;   // abandon any line mid-beat: the transcript is about to change
   iaStep=p; iaForceInput=false;
-  pruneStaleAnswers();
+  pruneStaleAnswers(); iaSaveDraft();
   runIntakeStep();   // re-emits the step's own bot bubble + dock, keeping transcript and state in lockstep
 }
 function iaBub(text,who){ const log=document.getElementById('intakeLog'); const d=document.createElement('div'); d.className='bub '+who; d.dataset.st=iaStep; d.textContent=text; log.appendChild(d); log.scrollTop=log.scrollHeight; setTimeout(()=>{log.scrollTop=log.scrollHeight;},40); }
@@ -7136,9 +7176,9 @@ function iaAdvance(){
     const back=iaEditReturn; iaEditReturn=null;
     const miss=iaFirstUnanswered();
     iaStep = (miss>=0 && miss<back) ? miss : back;
-    runIntakeStep(); return;
+    runIntakeStep(); iaSaveDraft(); return;
   }
-  iaStep++; runIntakeStep();
+  iaStep++; runIntakeStep(); iaSaveDraft();
 }
 /* Everything the user told us, in their own answers, before a single thing is written */
 function iaSummaryRows(){
@@ -7649,7 +7689,9 @@ function renderZeroClose(s){
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
 }
 function commitIntake(){
-  if(iaCommitted) return; iaCommitted=true;   // a double-tap on "Set me up" must not double everything
+  if(iaCommitted) return; iaCommitted=true;
+  iaClearDraft();               // setup is done; the draft has nothing left to protect
+  // a double-tap on "Set me up" must not double everything
   pruneStaleAnswers();                        // belt: nothing from an abandoned path gets committed
   const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
   // Re-running the setup chat REPLACES the previous intake's artifacts instead of stacking
@@ -7662,7 +7704,7 @@ function commitIntake(){
   const addIncome=(amount,source,owner,hours)=>{ const rec={id:uid(),type:'income',amount,day:1,source,src:'intake'}; if(owner) rec.owner=owner; if(hours>0) rec.hours=hours; state.recurring.push(rec); const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}; if(hours>0) tx.hours=hours; state.transactions.push(tx); };
   // main-job hours: the hours they TOLD us beat any figure derived from a rounded rate
   if(a.income>0) addIncome(a.income,'Paycheck','a', a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0));   // spend path too - otherwise any recurring edit later zeroes an auto wage
-  if(!spend) (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
+  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
   if(!spend && a.wantHousehold==='yes'){         // "set up the couples view" from intake
     state.householdOn=true;
     const partner=(a.extraIncome||[]).find(x=>/partner/i.test(x.name||''));
