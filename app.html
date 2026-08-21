@@ -1025,17 +1025,19 @@
   .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
   .rec.invest .am{color:var(--accent)}
   .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
-  .glance{position:fixed;right:0;top:38%;z-index:120;display:flex;align-items:flex-start}
-.gl-tab{background:var(--panel);border:1px solid var(--line);border-right:none;color:var(--accent);border-radius:12px 0 0 12px;width:34px;height:46px;font-size:17px;line-height:1;cursor:pointer;box-shadow:-3px 0 14px rgba(0,0,0,.28);flex:none;padding:0}
+  .glance{position:fixed;left:0;top:38%;z-index:120;display:flex;flex-direction:row-reverse;align-items:flex-start}
+.gl-tab{background:var(--panel);border:1px solid var(--line);border-left:none;color:var(--accent);border-radius:0 12px 12px 0;width:34px;height:46px;font-size:17px;line-height:1;cursor:pointer;box-shadow:3px 0 14px rgba(0,0,0,.28);flex:none;padding:0}
 .gl-tab:hover{border-color:var(--accent)}
-.gl-panel{width:0;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-right:none;border-radius:12px 0 0 12px;box-shadow:-6px 0 24px rgba(0,0,0,.35);transition:width .18s ease,padding .18s ease;padding:0;max-width:min(78vw,270px)}
-.glance.on .gl-panel{width:min(78vw,270px);padding:13px 15px}
-.glance.on .gl-tab{border-radius:12px 0 0 0}
+.gl-panel{width:0;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-left:none;border-radius:0 12px 12px 0;box-shadow:6px 0 24px rgba(0,0,0,.35);transition:width .18s ease,padding .18s ease;padding:0;max-width:min(78vw,272px)}
+.glance.on .gl-panel{width:min(78vw,272px);padding:13px 15px}
+.glance.on .gl-tab{border-radius:0 12px 12px 0}
 .gl-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:9px;white-space:nowrap}
 .gl-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:6px 0;font-size:13.5px;white-space:nowrap}
 .gl-row b{font-size:15px;font-weight:900}
 .gl-row.in b{color:var(--good)}
 .gl-row.out b{color:var(--accent-2)}
+.gl-row.inv b{color:var(--accent)}
+.gl-note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:7px}
 .gl-row.bal{border-top:1px solid var(--line);margin-top:5px;padding-top:9px}
 .gl-row.bal.pos b{color:var(--good)}
 .gl-row.bal.neg b{color:var(--bad)}
@@ -1588,6 +1590,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
       <div class="panel">
         <h2>Your way out</h2>
+        <p class="sub">Put in what you can throw at debt each month and this shows the payoff date, the interest it costs you, and which order to kill them in. Nothing here changes your budget; it is a projection you can argue with.</p>
         <div class="row">
           <label class="fld">Total you can pay toward debt each month $<input type="number" id="debtBudget" min="0" step="10" placeholder="e.g. 900" style="width:150px"></label>
         </div>
@@ -3274,7 +3277,7 @@ function renderRetro(){
     </div>`:''}
     ${delta!=null?`<div class="retro-delta ${delta>=0?'up':'down'}">${delta>=0?'▲':'▼'} ${nw(Math.abs(delta))} net worth ${delta>=0?'gained':'lost'} over this range.</div>`:''}
     ${chart}
-    ${series.length?`<div style="overflow-x:auto;margin-top:10px"><table class="retro-table"><thead><tr><th>${gran==='quarter'?'Quarter':'Month'}</th><th>Net worth</th><th>Runway</th><th>Stage</th></tr></thead><tbody>${rowsHTML}</tbody></table></div>`:'<div class="empty" style="margin-top:10px">No snapshots in this range yet.</div>'}
+    ${series.length?`<div style="overflow-x:auto;margin-top:10px"><table class="retro-table"><thead><tr><th>${gran==='quarter'?'Quarter':'Month'}</th><th>Net worth</th><th>Runway</th><th>Stage</th></tr></thead><tbody>${rowsHTML}</tbody></table></div>`:'<div class="empty" style="margin-top:10px">No snapshots in this range yet. The app takes one each month you use it, so this fills in as you go.</div>'}
   </div>`;
   // wiring
   el.querySelectorAll('#retroGran button').forEach(b=>b.addEventListener('click',()=>{ state.retroView.gran=b.dataset.gran; save(); renderRetro(); }));
@@ -5371,7 +5374,7 @@ function renderNetWorth(){
       <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'Works':'Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" min="0" step="1" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
       <div class="li-cost">Drains $<input type="number" min="0" step="1" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
     </div>`;
-  }).join(''):'<div class="empty" style="margin-top:8px">No assets yet.</div>';
+  }).join(''):'<div class="empty" style="margin-top:8px">No assets yet. An asset is anything that puts money in your pocket - savings, investments, a rental. Add one above.</div>';
   document.getElementById('liabList').innerHTML=state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>';
   renderDrain();
   if(typeof applyStage==='function') applyStage();
@@ -6046,7 +6049,9 @@ function renderGlance(){
   const show=glanceReady();
   g.style.display = show ? '' : 'none';
   if(!show){ if(glanceOpen) glanceSetOpen(false); return; }
-  const M=state.activeMonth, inc=monthIncome(M), out=monthExpense(M), bal=inc-out;
+  const M=state.activeMonth, inc=monthIncome(M), out=monthExpense(M);
+  const inv=(typeof monthInvested==='function')?monthInvested(M):0;
+  const bal=inc-out-inv;   // money put to work has left the account too, even though it is not spent
   const body=document.getElementById('glanceBody'); if(!body) return;
   const today=todayStr();
   const todaySpend=state.transactions.filter(t=>t.type==='expense'&&t.date===today).reduce((s,t)=>s+t.amount,0);
@@ -6057,7 +6062,9 @@ function renderGlance(){
     <div class="gl-h">${escapeHtml(fmtMonth(M))}</div>
     <div class="gl-row in"><span>Money in</span><b>${escapeHtml(money(inc))}</b></div>
     <div class="gl-row out"><span>Money out</span><b>${escapeHtml(money(out))}</b></div>
+    ${inv>0?`<div class="gl-row inv"><span>Invested</span><b>${escapeHtml(money(inv))}</b></div>`:''}
     <div class="gl-row bal ${bal<0?'neg':'pos'}"><span>${bal<0?'Short by':'Left over'}</span><b>${escapeHtml(money(Math.abs(bal)))}</b></div>
+    ${inv>0?`<div class="gl-note">Invested money is not spending, so it sits on its own line.</div>`:''}
     ${state.spendingMode&&allow>0?`<div class="gl-today ${todaySpend<=allow?'ok':'over'}">Today: ${escapeHtml(money(todaySpend))} of ${escapeHtml(money(allow))}</div>`:''}
     <button class="gl-go" id="glanceGo">Open Track →</button>`;
   const go=document.getElementById('glanceGo');
@@ -6696,7 +6703,7 @@ function renderBreakdown(){
             <span class="bd-v">${escapeHtml(money(r.val))}<i>${pct}%</i></span>
           </${can?'button':'div'}>`;
         }).join('')}</div></div>${per}`
-    : `<div class="empty">Nothing logged in this window yet.</div>`;
+    : `<div class="empty">Nothing logged in this window yet. Try a wider one above, or log something on Track.</div>`;
   box.innerHTML=`
     <div class="bd-ctl">
       <div class="bd-seg">${['out','in'].map(k=>`<button data-bdside="${k}" class="${bdSide===k?'on':''}">${k==='out'?'Where it went':'Where it came from'}</button>`).join('')}</div>
