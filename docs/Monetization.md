@@ -89,8 +89,9 @@ read a user's numbers. Honesty requirements before launch:
   and even then it's encrypted before it goes"). Done on both pages.
 - The entitlement (Stripe -> Supabase) must be server-side; a client-only lock is
   cosmetic and gets called out (see "What NOT to do").
-- Naming: do not ship it as "Sovereign tier" while the free Stage-3 UI is called
-  the "Sovereignty Console" - one of the two needs a different name.
+- Naming: resolved. Stage 3 was renamed "Autonomy & Leverage", so "Sovereign
+  tier" is now unambiguous - it names the paid tier and nothing else. The Silent
+  Sovereignty Audit keeps its name; it is a tool inside the stage, not the stage.
 
 ## What NOT to do
 

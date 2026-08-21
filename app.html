@@ -37,11 +37,12 @@
     --muted:#98a3b0;
     --accent:#cfa76a;
     --accent-rgb:207,167,106;
-    --accent-2:#cd7c59;
+    --accent-2:#d78868;
+    --accent-2-rgb:215,136,104;
     --good:#6fae83;
     --good-rgb:111,174,131;
-    --bad:#c9736b;
-    --bad-rgb:201,115,107;
+    --bad:#d38079;
+    --bad-rgb:211,128,121;
     --income:#6fae83;
     --shadow:0 12px 34px rgba(0,0,0,.45);
     --hero-grad:linear-gradient(135deg,#1a2532,#222e3d);
@@ -54,18 +55,19 @@
     --panel:#fbf8f3;
     --panel-2:#f0e9dd;
     --line:#e0d5c4;
-    --ink:#2c2620;
+    --ink:#e9e0ce;          /* recessed surface, NOT the text colour: this token is only ever a background */
     --on-accent:#fbf8f3;
     --text:#2c2620;
-    --muted:#7b6f60;
-    --accent:#8a5f28;
-    --accent-rgb:138,95,40;
+    --muted:#6d6254;
+    --accent:#835a24;
+    --accent-rgb:131,90,36;
     --accent-2:#a8452c;
-    --good:#3f7d53;
-    --good-rgb:63,125,83;
+    --accent-2-rgb:168,69,44;
+    --good:#316743;
+    --good-rgb:49,103,67;
     --bad:#a8452c;
     --bad-rgb:168,69,44;
-    --income:#3f7d53;
+    --income:#316743;
     --shadow:0 2px 10px rgba(60,45,25,.08);
     --hero-grad:linear-gradient(135deg,#fbf8f3,#f0e9dd);
   }
@@ -190,10 +192,20 @@
   .addsub-row.subsub{margin-left:26px}
   .cat-split.subsplit{margin-left:26px;font-size:11px}
   .sub-split-btn{background:none;border:none;color:var(--accent);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;padding:2px 4px}
-  .dupwarn{background:#1d1a10;border:1px solid #4a3d14;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .dupwarn{background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.38);border-radius:14px;padding:14px 16px;margin-bottom:14px}
   .dupwarn .dw-msg{font-size:13px;color:var(--text);line-height:1.5}
   .dupwarn .dw-msg b{color:var(--accent)}
   .dupwarn button{margin-top:10px}
+  .newmonth{background:rgba(var(--good-rgb),.09);border:1px solid rgba(var(--good-rgb),.34);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .newmonth .nm-msg{font-size:13px;color:var(--text);line-height:1.55}
+  .newmonth .nm-msg b{color:var(--accent)}
+  .newmonth .nm-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+  .cal-newgoal{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .cal-newgoal input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font:inherit;font-size:14px}
+  .cal-newgoal #calGoalName{flex:1;min-width:150px}
+  .cal-newgoal .cg-t{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}
+  .cal-newgoal .cg-t input{width:92px}
+  .cal-newgoal input.cg-need{border-color:var(--bad)}
 
   /* ---------- Section 2: Mindset & Flow ---------- */
   .goal-type{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:var(--ink);border:1px solid var(--line);border-radius:20px;padding:3px 10px;margin-top:6px}
@@ -204,8 +216,8 @@
   .netitem .amt{font-weight:900}
   .ror{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;white-space:nowrap}
   .ror.high{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
-  .ror.med{background:#241d08;color:var(--accent);border:1px solid #4a3d14}
-  .ror.low{background:#2a1410;color:var(--accent-2);border:1px solid #4a221e}
+  .ror.med{background:rgba(var(--accent-rgb),.13);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.38)}
+  .ror.low{background:rgba(var(--accent-2-rgb),.12);color:var(--accent-2);border:1px solid rgba(var(--accent-2-rgb),.38)}
   .enoughcard{background:linear-gradient(135deg,rgba(var(--good-rgb),.14),rgba(var(--good-rgb),.05));border:1px solid rgba(var(--good-rgb),.34);border-radius:16px;padding:18px;margin-top:16px}
   .enoughcard.creep{background:linear-gradient(135deg,#1d1a10,#231d10);border-color:#4a3d14}
   .enoughcard .ec-k{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--good)}
@@ -244,7 +256,7 @@
   .od-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
   .od-card .mile{font-size:13px;color:var(--text);margin-top:12px;font-weight:600}
   .od-card .mile b{color:var(--accent)}
-  .od-prompt{margin-top:12px;background:#1a2410;border:1px solid rgba(var(--good-rgb),.35);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--text);line-height:1.5;font-weight:600}
+  .od-prompt{margin-top:12px;background:rgba(var(--good-rgb),.11);border:1px solid rgba(var(--good-rgb),.35);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--text);line-height:1.5;font-weight:600}
   .miles{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .miles .m{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--ink);border:1px solid var(--line);color:var(--muted)}
   .miles .m.hit{background:rgba(var(--good-rgb),.12);border-color:rgba(var(--good-rgb),.34);color:var(--good)}
@@ -266,7 +278,7 @@
   .give-prog{height:12px;background:var(--ink);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px}
   .give-prog>span{display:block;height:100%;background:linear-gradient(90deg,rgba(var(--good-rgb),.34),var(--good));border-radius:6px;transition:width .4s ease}
   @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
-  .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
+  .rebalance{margin-top:12px;background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.38);border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:var(--text);line-height:1.45;font-weight:600}
   .rebalance .rb-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
   .rebalance .rb-over{font-weight:900;color:var(--accent)}
@@ -914,7 +926,7 @@
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
   /* ---------- Anti-Trap / Vault ---------- */
-  .trap-tag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent-2);background:#2a1410;border:1px solid #4a221e;border-radius:6px;padding:3px 9px;margin-bottom:10px}
+  .trap-tag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent-2);background:rgba(var(--accent-2-rgb),.12);border:1px solid rgba(var(--accent-2-rgb),.38);border-radius:6px;padding:3px 9px;margin-bottom:10px}
   .vaultitem{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
   .vi-top{display:flex;align-items:center;gap:10px}
   .vi-ic{font-size:20px;flex-shrink:0}
@@ -969,7 +981,7 @@
   .decision{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:9px}
   .decision .badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:4px 9px;border-radius:6px;flex-shrink:0}
   .decision.skip .badge{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
-  .decision.buy .badge{background:#2a1410;color:var(--accent-2);border:1px solid #4a221e}
+  .decision.buy .badge{background:rgba(var(--accent-2-rgb),.12);color:var(--accent-2);border:1px solid rgba(var(--accent-2-rgb),.38)}
   .decision .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .decision .am{font-weight:900}
   .decision.skip .am{color:var(--good)}
@@ -1153,7 +1165,7 @@
   .kindtoggle{display:inline-flex;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:3px;margin-top:10px;gap:3px}
   .kindtoggle button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 11px;border-radius:7px}
   .kindtoggle button.on[data-k=real]{background:var(--good);color:#08120d}
-  .kindtoggle button.on[data-k=stuff]{background:#caa53a;color:#1a1405}
+  .kindtoggle button.on[data-k=stuff]{background:var(--accent);color:var(--on-accent)}
   .nwbreak{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 12px;font-size:13px;font-weight:700}
   .nwbreak .wk{color:var(--muted)}
   .avl-bar .s{background:linear-gradient(90deg,#6b5a1e,#caa53a);min-width:0;transition:width .4s ease}
@@ -1170,7 +1182,7 @@
   .drainbox .db-note{font-size:13px;color:var(--text);margin-top:6px;line-height:1.5}
   .lineitem .kindtag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:5px;cursor:pointer;flex-shrink:0}
   .lineitem.asset .kindtag{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
-  .lineitem.stuff .kindtag{background:#241d08;color:var(--accent);border:1px solid #4a3d14}
+  .lineitem.stuff .kindtag{background:rgba(var(--accent-rgb),.13);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.38)}
   .challenge{background:linear-gradient(135deg,#2a1410,#1d1a10);border:1px solid #4a3d14;border-radius:14px;padding:18px;margin-top:12px;animation:fade .3s ease}
   .challenge .ttl{font-weight:900;font-size:17px;color:var(--accent);margin-bottom:6px}
   .challenge p{color:var(--text);font-size:14px;line-height:1.55}
@@ -1408,6 +1420,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
           <button class="btn ghost" id="mergeBtn" title="Merge duplicate essentials into one">Tidy duplicates</button>
         </div>
+        <div id="newMonthBanner"></div>
         <div id="dupBanner"></div>
         <div id="cats"></div>
       </div>
@@ -1588,9 +1601,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="debtReflectNote"></div>
         <div class="row">
           <label class="fld">Debt<input type="text" id="debtName" placeholder="Visa, car loan…" style="width:150px"></label>
-          <label class="fld">Balance $<input type="number" id="debtBal" min="0" step="1" placeholder="0" style="width:110px"></label>
+          <label class="fld">Balance $<input type="number" id="debtBal" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:110px"></label>
           <label class="fld">Rate APR %<input type="number" id="debtApr" min="0" step="0.1" placeholder="19.9" style="width:100px"></label>
-          <label class="fld">Min pay $<input type="number" id="debtMin" min="0" step="1" placeholder="0" style="width:100px"></label>
+          <label class="fld">Min pay $<input type="number" id="debtMin" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:100px"></label>
           <button class="btn primary" id="addDebt">Add</button>
         </div>
         <div style="margin-top:8px"><button class="btn sm ghost" id="importLiab">⤵ Import from my liabilities</button></div>
@@ -1654,7 +1667,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <div class="twocol" style="margin-top:18px">
             <div>
               <label class="fld" style="width:100%">Add asset
-                <div class="row" style="gap:8px"><input type="text" id="assetName" placeholder="Rental, stocks, savings…" style="flex:1;min-width:80px"><input type="number" id="assetVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addAsset">＋</button></div>
+                <div class="row" style="gap:8px"><input type="text" id="assetName" placeholder="Rental, stocks, savings…" style="flex:1;min-width:80px"><input type="number" id="assetVal" placeholder="$" inputmode="decimal" min="0" step="0.01" style="width:84px"><button class="btn sm primary" id="addAsset">＋</button></div>
               </label>
               <div id="assetKind" class="kindtoggle"><button data-k="real" class="on">Makes money</button><button data-k="stuff">Loses value</button></div>
               <div id="assetChallenge"></div>
@@ -1662,7 +1675,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             </div>
             <div>
               <label class="fld" style="width:100%">Add liability
-                <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" min="0" step="1" style="width:84px"><button class="btn sm primary" id="addLiab">＋</button></div>
+                <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" inputmode="decimal" min="0" step="0.01" style="width:84px"><button class="btn sm primary" id="addLiab">＋</button></div>
               </label>
               <div id="liabList"></div>
             </div>
@@ -1679,7 +1692,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <input type="text" id="goalName" placeholder="Debt-free · Emergency fund · Trip · Business">
             </label>
             <label class="fld">Target $
-              <input type="number" id="goalTarget" placeholder="0" min="1" step="1" style="width:120px">
+              <input type="number" id="goalTarget" placeholder="0" inputmode="decimal" min="0.01" step="0.01" style="width:120px">
             </label>
             <label class="fld">By when
               <input type="date" id="goalDate">
@@ -1702,7 +1715,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <input type="text" id="skillName" placeholder="Certification, course, tool…">
             </label>
             <label class="fld">Cost $
-              <input type="number" id="skillCost" min="0" step="1" placeholder="e.g. 200" style="width:110px">
+              <input type="number" id="skillCost" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 200" style="width:110px">
             </label>
             <label class="fld">Extra earned / hr $
               <input type="number" id="skillGain" min="0" step="0.5" placeholder="e.g. 2" style="width:120px">
@@ -1723,7 +1736,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <input type="text" id="giveName" placeholder="Tithe, mutual aid, a friend, a cause…">
             </label>
             <label class="fld">Amount $
-              <input type="number" id="giveAmt" min="0" step="1" placeholder="0" style="width:110px">
+              <input type="number" id="giveAmt" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:110px">
             </label>
             <button class="btn primary" id="addGive">Log giving</button>
           </div>
@@ -1741,7 +1754,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <input type="text" id="netName" placeholder="Lunch with mentor, conference ticket…">
             </label>
             <label class="fld">Cost $
-              <input type="number" id="netAmt" min="0" step="1" placeholder="0" style="width:110px">
+              <input type="number" id="netAmt" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:110px">
             </label>
             <label class="fld">Return on Relationship
               <select id="netRor"><option value="high">High return </option><option value="med">Medium return</option><option value="low">Low / noise</option></select>
@@ -2340,7 +2353,11 @@ if(!state.activeMonth) state.activeMonth = thisMonth();
 /* ---------- helpers ---------- */
 const uid = () => Math.random().toString(36).slice(2,9);
 /* pure dollars */
-const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+/* Whole dollars stay clean ($4,700, not $4,700.00) but anything with a fractional
+   part gets BOTH cents - a budgeting app printing forty cents as "$0.4" is just
+   wrong, and it showed up exactly where it matters most: "Left to budget $0.4". */
+const usd = n => { const v=Math.round((+n||0)*100)/100, a=Math.abs(v), cents=Math.round(a*100)%100!==0;
+  return (v<0?'-':'')+'$'+a.toLocaleString(undefined,{minimumFractionDigits:cents?2:0,maximumFractionDigits:2}); };
 /* Whole dollars, for estimates that were never precise to the cent. */
 const usd0 = n => usd(Math.round(+n||0));
 /* Pillar 2: dollars -> units of human effort. Magnitude-scaled.
@@ -2354,6 +2371,7 @@ function fmtLife(amount, rateOverride){
   const moHrs=(state.hoursPerWeek>0 ? monthHours(state.hoursPerWeek) : WORKMONTH_HRS);
   const dayHrs=moHrs/21.7;                    // ~21.7 workdays a month, whatever the week length
   const neg=amount<0, hrs=Math.abs(amount)/H;
+  if(!hrs) return '0 min';   // the 1-minute floor below is for TINY amounts; zero is zero, and "Hours Surrendered: 1 min" on an untouched month is a lie
   let out;
   if(hrs*60 < 60){ const m=Math.max(1,Math.round(hrs*60)); out=m+' min'; }
   else if(hrs < dayHrs){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
@@ -2375,8 +2393,14 @@ function moneyOwner(n, owner){ return state.freedomMode ? fmtLife(n, hourlyFor(o
    derived it - the "show your work", on demand, so the interface stays compact. */
 function flipBack(amt){
   const H=effectiveHourly(); const a=Math.abs(amt);
-  if(state.freedomMode) return `<div class="fbk">= ${usd(a)}</div><div class="fbs">your ${usd(H)}/hr take-home · ${usd(H*WORKDAY_HRS)} a work-day</div>`;
-  return `<div class="fbk">= ${fmtLife(a)}</div><div class="fbs">of your life · at your ${usd(H)}/hr take-home</div>`;
+  // The back shows THIS card's arithmetic, not the rate. The rate line was
+  // identical on every card, so five cards gave the same sentence five times and
+  // none of them explained the number you had just tapped.
+  const hrs=H>0?a/H:0;
+  const hTxt = hrs>=100 ? Math.round(hrs).toLocaleString() : (Math.round(hrs*10)/10);
+  if(a<=0) return `<div class="fbk">= ${state.freedomMode?usd(0):fmtLife(0)}</div><div class="fbs">nothing to convert yet</div>`;
+  if(state.freedomMode) return `<div class="fbk">= ${usd(a)}</div><div class="fbs">${hTxt} hrs &times; ${usd(H)}/hr</div>`;
+  return `<div class="fbk">= ${fmtLife(a)}</div><div class="fbs">${usd(a)} &divide; ${usd(H)}/hr = ${hTxt} hrs</div>`;
 }
 function flipStat(label, amt, cls){
   const H=effectiveHourly();
@@ -2631,8 +2655,19 @@ function renderCalDay(M, allowance){
           <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">Bank ${money(canBank)} toward "${escapeHtml(g.name)}"</button>`;
       }
     } else {
-      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Give it one:</div>
-        <button class="cal-bank" data-calgoal="1">Start a goal to bank it toward</button>`;
+      /* This button used to jump to the Goals tab and focus a blank four-field
+         form. It promised "bank it toward" and banked nothing: the form knew
+         nothing about the day, the amount, or the banking, so you had to name a
+         dream, come back to Home, find the day again and press Bank. Ask for the
+         one thing that is actually missing - a name - and do the whole thing
+         here. The target defaults to something real and is editable after. */
+      const bankable=Math.max(0, Math.min(saved, calBankable(M, allowance)));
+      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Name what it's for and this ${money(bankable)} goes straight in:</div>
+        <div class="cal-newgoal">
+          <input type="text" id="calGoalName" maxlength="60" placeholder="Emergency fund, trip, debt-free…">
+          <span class="cg-t">Target $<input type="number" id="calGoalTarget" inputmode="decimal" min="1" step="0.01" placeholder="1000"></span>
+        </div>
+        <button class="cal-bank" data-calgoal="${dd}" data-calamt="${bankable}">Create it and bank ${money(bankable)}</button>`;
     }
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
@@ -2646,7 +2681,20 @@ function renderCalDay(M, allowance){
   </div>`;
   const bank=el.querySelector('[data-calsweep]'); if(bank) bank.onclick=()=>calSweepDay(bank.dataset.calsweep, +bank.dataset.calamt);
   const undo=el.querySelector('[data-calunsweep]'); if(undo) undo.onclick=()=>calUnsweepDay(undo.dataset.calunsweep);
-  const mkg=el.querySelector('[data-calgoal]'); if(mkg) mkg.onclick=()=>{ if(typeof runNextStep==='function') runNextStep('dream'); else if(typeof activateTab==='function') activateTab('goals'); };
+  const mkg=el.querySelector('[data-calgoal]');
+  if(mkg) mkg.onclick=()=>{
+    const nameEl=document.getElementById('calGoalName'), tgtEl=document.getElementById('calGoalTarget');
+    const name=(nameEl&&nameEl.value.trim())||'';
+    if(!name){ if(nameEl){ nameEl.focus(); nameEl.classList.add('cg-need'); setTimeout(()=>nameEl.classList.remove('cg-need'),1400); }
+               if(typeof toast==='function') toast('Give it a name first - that is the part that makes it stick.'); return; }
+    const amt=+mkg.dataset.calamt||0;
+    let target=parseFloat(tgtEl&&tgtEl.value);
+    if(!(target>0)) target=Math.max(1000, Math.ceil(amt*20/100)*100);   // a placeholder they can edit, never smaller than what they are banking
+    if(target<amt) target=amt;
+    state.goals.push({id:uid(), name, target, saved:0, date:'', goalType:'foundation'});
+    save();
+    calSweepDay(mkg.dataset.calgoal, amt);          // banks it, renders goals and the calendar
+  };
 }
 /* Reward-calendar money math. A day's "saved" is notional (allowance - that day's
    spend); banking must never credit a goal with more than the month's REAL net
@@ -2813,9 +2861,9 @@ function renderDebt(){
   box.innerHTML = state.debts.length ? state.debts.map(d=>`
     <div class="debtrow">
       <span class="dr-name">${escapeHtml(d.name)}</span>
-      <label class="dr-f">$<input type="number" min="0" step="1" value="${d.balance||0}" data-debt="${d.id}" data-k="balance"></label>
+      <label class="dr-f">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.balance||0}" data-debt="${d.id}" data-k="balance"></label>
       <label class="dr-f"><input type="number" min="0" step="0.1" value="${d.apr||0}" data-debt="${d.id}" data-k="apr">%</label>
-      <label class="dr-f">min $<input type="number" min="0" step="1" value="${d.minPayment||0}" data-debt="${d.id}" data-k="minPayment"></label>
+      <label class="dr-f">min $<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.minPayment||0}" data-debt="${d.id}" data-k="minPayment"></label>
       <button class="btn sm danger ghost" data-deldebt="${d.id}">✕</button>
     </div>`).join('') : '<div class="empty" style="margin-top:10px">No debts yet. Add what you owe above, or import from your liabilities.</div>';
   box.querySelectorAll('input[data-debt]').forEach(inp=>inp.addEventListener('input',()=>{
@@ -3054,7 +3102,7 @@ window.addEventListener('popstate',e=>{
 
 /* ============================================================
    Progressive interface - the app unrolls depth as runway grows.
-   Stage 1 Defense (<3mo) -> 2 Expansion (3-12mo) -> 3 Sovereignty (12mo+).
+   Stage 1 Defense (<3mo) -> 2 Expansion (3-12mo) -> 3 Autonomy (12mo+).
    Tools only ever unroll; they never disappear once earned (one-way ratchet),
    except when the user forces "Show everything".
    ============================================================ */
@@ -3062,7 +3110,7 @@ const STAGE_META={
   1:{ic:'', name:'Defense & Survival', tag:'Lock in the essentials and dodge the traps.'},
   2:{ic:'', name:'Expansion & Flow', tag:'Breathing room secured. Time to build income.',
      unlocked:'Net worth & dreams, the Offense vs. Defense meter, Skill-investment payback, and your "Enough" anchor.'},
-  3:{ic:'', name:'Sovereignty Console', tag:'Real runway. The autonomy tools are open.',
+  3:{ic:'', name:'Autonomy & Leverage', tag:'Real runway. Money and people can work without you now.',
      unlocked:'The Sovereignty Audit (Sovereign Capital Ratio + Overhead Drag) and Network Capital.'}
 };
 /* stage implied by current runway alone */
@@ -3369,11 +3417,44 @@ document.getElementById('mergeBtn').addEventListener('click',()=>{
   if(n){ renderBudget(); renderTx(); renderNetWorth(); alert('Tidied up - merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into your essentials. Assignments and transactions were kept and combined.'); }
   else alert('No duplicates found - your categories are already clean.');
 });
-document.getElementById('copyBtn').addEventListener('click',()=>{
+function copyPrevPlan(){
   const prev=shiftMonth(state.activeMonth,-1), src=state.budgets[prev];
-  if(!src||!Object.keys(src).length){ alert('Nothing to copy - last month has no assignments.'); return; }
+  if(!src||!Object.keys(src).length) return false;
   state.budgets[state.activeMonth]=Object.assign({},src); save(); renderBudget();
+  return true;
+}
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  if(!copyPrevPlan()) alert('Nothing to copy - last month has no assignments.');
 });
+/* A new month used to open as twelve blank boxes with no hint that last month's
+   plan still existed - the Copy button sat in a toolbar nobody reads, so people
+   retyped a whole budget or quietly stopped budgeting. Most months are last month
+   with two things changed, so the month itself should offer that. It only appears
+   when this month is genuinely untouched and there IS a plan behind it, it names
+   the total and how it lands against the income logged so far, and dismissing it
+   is remembered for that month. */
+function newMonthPromptHTML(M){
+  if((state.planPromptSkip||'')===M) return '';
+  if(Object.keys(state.budgets[M]||{}).some(k=>+state.budgets[M][k]>0)) return '';   // already started
+  const prev=shiftMonth(M,-1), src=state.budgets[prev]||{};
+  const rows=Object.keys(src).filter(k=>+src[k]>0 && state.categories.some(c=>c.id===k));
+  if(!rows.length) return '';
+  const tops=topCats();
+  const prevTotal=tops.reduce((s,c)=>s+catAssigned(c.id,prev),0);
+  const income=monthIncome(M);
+  let landing;
+  if(income<=0) landing=`Nothing is logged as income for ${fmtMonth(M)} yet, so you'll be assigning against last month's shape until a paycheck lands.`;
+  else if(Math.abs(income-prevTotal)<0.005) landing=`Your income this month matches it to the dollar - copying gets you to zero-based in one tap.`;
+  else if(income>prevTotal) landing=`You've logged <b>${money(income)}</b> this month, so copying would leave <b>${money(income-prevTotal)}</b> still needing a job.`;
+  else landing=`You've logged <b>${money(income)}</b> this month, which is <b>${money(prevTotal-income)}</b> less than that plan - copying means trimming somewhere.`;
+  return `<div class="newmonth">
+    <div class="nm-msg"><b>${escapeHtml(fmtMonth(M))} is a blank plan.</b> Last month you gave <b>${money(prevTotal)}</b> a job across ${rows.length} categor${rows.length===1?'y':'ies'}. Most months are last month with two things changed. ${landing}</div>
+    <div class="nm-row">
+      <button class="btn sm primary" id="nmCopy">Copy ${escapeHtml(fmtMonth(prev))} and edit it</button>
+      <button class="btn sm ghost" id="nmFresh">Start from scratch</button>
+    </div>
+  </div>`;
+}
 
 /* ---------- category hierarchy (one level of subcategories) ---------- */
 let collapsedCats=new Set();
@@ -3653,12 +3734,8 @@ function runDeepen(k){
 function wallGuideHTML(c,M){
   if(!wallGuideCat || c.parentId) return '';
   const w=categoryWall(c.name); if(!w||w.cat!==wallGuideCat) return '';
-  if(!(assignedFor(c.id,M)>0)) return '';
-  const next=WALLS.find(x=>{
-    if(x.cat===w.cat) return false;
-    const cats=state.categories.filter(k=>!k.parentId && x.match.some(t=>k.name.toLowerCase().includes(t)));
-    return cats.reduce((s,k)=>s+assignedFor(k.id,M),0)<=0;
-  });
+  if(!(catAssigned(c.id,M)>0)) return '';                 // funded through its subs still counts as funded
+  const next=WALLS.find(x=>x.cat!==w.cat && wallAssigned(x,M)<=0);
   if(next) return `<div class="wall-next"><span class="wn-t">✓${escapeHtml(w.name)} set aside. Next wall: ${next.icon} ${escapeHtml(next.name)}</span><span class="wn-b"><button class="btn sm primary" data-wallnext="${escapeHtml(next.cat)}">Fund ${escapeHtml(next.name)} →</button><button class="btn sm ghost" data-walldone>Done for now</button></span></div>`;
   return deepenHTML();   // the walls are the floor, not the finish line
 }
@@ -3686,6 +3763,15 @@ function renderBudget(){
     flipStat('Left to spend', lts, lts<0?'bad':'good');
   const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb)}${flipHintHTML()}`;
 
+  const nmEl=document.getElementById('newMonthBanner');
+  if(nmEl){
+    nmEl.innerHTML=newMonthPromptHTML(M);
+    const nc=document.getElementById('nmCopy');
+    if(nc) nc.addEventListener('click',()=>{ copyPrevPlan(); if(typeof toast==='function') toast('Copied. Change what actually changed.'); });
+    const nf=document.getElementById('nmFresh');
+    if(nf) nf.addEventListener('click',()=>{ state.planPromptSkip=M; save(); renderBudget(); });
+  }
+
   const dupEl=document.getElementById('dupBanner');
   if(dupEl){
     const dups=duplicateGroups();
@@ -3712,9 +3798,9 @@ function renderBudget(){
         const gkids=childrenOf(k.id), kGroup=gkids.length>0;
         const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
         const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
-        let h=`<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" min="0" step="1" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        let h=`<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
         if(kGroup){
-          h+=gkids.map(g=>`<div class="subrow subsub"><span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" min="0" step="1" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span><span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
+          h+=gkids.map(g=>`<div class="subrow subsub"><span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span><span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
           h+=splitNoteHTML(k.id,M,k.name);
         }
         if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
@@ -3730,7 +3816,7 @@ function renderBudget(){
           ${c.id===catEditId
             ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
             : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${isGroup&&a>assignedFor(c.id,M)?`<span class="roll-tag" title="Added up from your subs">= ${money(a)}</span>`:''}</span>`}
-          <span class="cat-assign">Assign $ <input type="number" min="0" step="1" enterkeyhint="next" value="${assignedFor(c.id,M)||0}" data-cat="${c.id}" ${isGroup?`placeholder="or fill the subs"`:''}></span>
+          <span class="cat-assign">Assign $ <input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(c.id,M)||0}" data-cat="${c.id}" ${isGroup?`placeholder="or fill the subs"`:''}></span>
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
@@ -4376,7 +4462,7 @@ function renderGoals(){
       return `<div class="goal editing">
         <div class="goal-edit">
           <label>Name<input type="text" data-ename="${g.id}" value="${escapeHtml(g.name)}" placeholder="Dream name"></label>
-          <label>Target $<input type="number" data-etarget="${g.id}" value="${g.target||0}" min="1" step="1" placeholder="Target"></label>
+          <label>Target $<input type="number" data-etarget="${g.id}" value="${g.target||0}" inputmode="decimal" min="0.01" step="0.01" placeholder="Target"></label>
           <label>Target date<input type="date" data-edate="${g.id}" value="${g.date||''}"></label>
         </div>
         <div class="goal-actions"><button class="btn sm primary" data-savegoal="${g.id}">Save</button><button class="btn sm ghost" data-cancelgoal="${g.id}">Cancel</button></div>
@@ -4394,7 +4480,7 @@ function renderGoals(){
       <div class="goal-nums"><span><b>${money(g.saved)}</b> saved</span><span>of <b>${money(g.target)}</b> · ${money(Math.max(0,g.target-g.saved))} to go</span></div>
       <div class="goal-nudge">${nudge}</div>
       <div class="goal-actions">
-        <input type="number" placeholder="Add $" min="0" step="1" data-add="${g.id}" style="width:120px">
+        <input type="number" placeholder="Add $" inputmode="decimal" min="0" step="0.01" data-add="${g.id}" style="width:120px">
         <button class="btn sm primary" data-addbtn="${g.id}">Add to dream</button>
         ${typeSel}
         <button class="btn sm danger ghost" data-delgoal="${g.id}">Delete</button>
@@ -5280,12 +5366,11 @@ function fmtHours(h){ return (h>=10?Math.round(h):Math.round(h*10)/10)+' hrs'; }
 function essentialMonthly(){
   const M=thisMonth();   // "current state" metrics (runway, sovereignty, stage) must not shift with the browsed month
   const tops=state.categories.filter(c=>!c.parentId);
-  let sum=0;
-  // catAssigned, NOT assignedFor: a wall split into subcategories (Power & Wi-Fi ->
-  // Water + Electric) carries its money on the children. Counting only the parent's
-  // own figure under-stated essentials, which OVER-stated the Freedom Runway - it
-  // told people they were safer than they are. The one direction this must never err.
-  (typeof WALLS!=='undefined'?WALLS:[]).forEach(w=>{ tops.filter(c=>w.match.some(t=>c.name.toLowerCase().includes(t))).forEach(c=>{ sum+=catAssigned(c.id,M); }); });
+  // tree-aware, via the one helper - a wall split into subcategories carries its
+  // money on the children. Counting only the parent's own figure under-stated
+  // essentials, which OVER-stated the Freedom Runway: it told people they were
+  // safer than they are. The one direction this must never err.
+  let sum=(typeof WALLS!=='undefined'?WALLS:[]).reduce((s,w)=>s+wallAssigned(w,M),0);
   if(sum<=0) sum=tops.reduce((s,c)=>s+catAssigned(c.id,M),0);
   if(sum<=0) sum=monthExpense(M);
   return sum;
@@ -5354,7 +5439,7 @@ function ensureImpulseCategory(){
 }
 
 /* --- net worth panel --- */
-function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" min="0" step="1" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
+function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
 function renderNetWorth(){
   const realA=sumAssetsKind('real'), stuffA=sumAssetsKind('stuff'), A=realA+stuffA, L=sumLiab(), NW=A-L, working=realA-L, total=A+L;
   const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
@@ -5381,8 +5466,8 @@ function renderNetWorth(){
   document.getElementById('assetList').innerHTML=state.assets.length?state.assets.map(a=>{
     const k=a.kind||'real', yr=(a.cost||0)*12;
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
-      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'Works':'Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" min="0" step="1" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
-      <div class="li-cost">Drains $<input type="number" min="0" step="1" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
+      <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'Works':'Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
+      <div class="li-cost">Drains $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet. An asset is anything that puts money in your pocket - savings, investments, a rental. Add one above.</div>';
   document.getElementById('liabList').innerHTML=state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>';
@@ -7519,7 +7604,7 @@ function renderBudgetPhoto(s){
       <div class="bp-list">${bpRows.map((r,i)=>`<label class="bp-row">
         <input type="checkbox" data-bpu="${i}" ${r.use?'checked':''}>
         <input type="text" class="bp-nm" data-bpn="${i}" value="${escapeHtml(r.name)}">
-        <input type="number" class="bp-amt" data-bpa="${i}" value="${r.amount}" min="0" step="1">
+        <input type="number" class="bp-amt" data-bpa="${i}" value="${r.amount}" inputmode="decimal" min="0" step="0.01">
       </label>`).join('')}</div>
       <div class="intake-chips"><button class="go" id="bpUse">Use these →</button><button id="bpRedo">Another photo</button></div>`;
     dock.querySelectorAll('[data-bpu]').forEach(el=>el.onchange=()=>{ bpRows[+el.dataset.bpu].use=el.checked; });
@@ -8003,9 +8088,11 @@ function renderNextSteps(){
   const M=state.activeMonth, income=monthIncome(M);
   const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const ltb=income-assigned;
-  const wallsCovered=WALLS.filter(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)>0; }).length;
+  // catAssigned, NOT assignedFor - see wallAssigned(). A wall funded through its
+  // subs (Food -> Groceries + Eating out) is funded.
+  const wallsCovered=WALLS.filter(w=>wallAssigned(w,M)>0).length;
   const unlocked=state.vault.filter(v=>v.unlocksAt<=Date.now()).length;
-  const firstUncovered=WALLS.find(w=>{ const cats=state.categories.filter(c=>!c.parentId&&w.match.some(t=>c.name.toLowerCase().includes(t))); return cats.reduce((s,c)=>s+assignedFor(c.id,M),0)<=0; });
+  const firstUncovered=WALLS.find(w=>wallAssigned(w,M)<=0);
   const sit=(state.intake&&state.intake.reflections&&state.intake.reflections.situation)||'';
   const survival = sit==='survive'||sit==='treading';
   const hasCushion = state.goals.some(g=>/cushion|emergency|buffer|rainy|safety/i.test(g.name));
@@ -8071,6 +8158,18 @@ const WALLS=[
   {icon:'', name:'Roof', sub:'Rent or mortgage', cat:'Roof', match:['rent','mortgage','housing','shelter','home','roof']},
   {icon:'', name:'Getting Around', sub:'Gas, transit, ride', cat:'Getting Around', match:['transport','car','fuel','bus','transit','uber','lyft','gas','commute','wheels','around']}
 ];
+/* What a household has actually put behind one wall this month.
+   catAssigned, NOT assignedFor: the app's own "Split into subcategories" flow
+   parks the money on the CHILDREN and leaves the parent row blank (Food -> $400
+   Groceries + $220 Eating out, printed on the Budget screen as "= $620").
+   Reading only the parent's own figure called that wall unfunded and sent people
+   back to fund what they had already funded. Every "are your essentials covered?"
+   question goes through here so they cannot drift apart again. */
+function wallAssigned(w,M){
+  return state.categories
+    .filter(c=>!c.parentId && w.match.some(t=>c.name.toLowerCase().includes(t)))
+    .reduce((s,c)=>s+catAssigned(c.id,M),0);
+}
 /* which essential wall (if any) a category name belongs to */
 function categoryWall(name){ const n=(name||'').toLowerCase(); return WALLS.find(w=>w.match.some(t=>n.includes(t)))||null; }
 /* generic: reuse a top-level category by name, else create it */
@@ -8117,7 +8216,7 @@ function renderWalls(){
   const rows=WALLS.map(w=>{
     const matched=state.categories.filter(c=>!c.parentId && w.match.some(t=>c.name.toLowerCase().includes(t)));
     if(!matched.length) anyMissing=true;
-    const assigned=matched.reduce((s,c)=>s+assignedFor(c.id,M),0);
+    const assigned=matched.reduce((s,c)=>s+catAssigned(c.id,M),0);
     return {w, matched, assigned, isCovered:assigned>0};
   });
   const covered=rows.filter(r=>r.isCovered).length;
