@@ -10,6 +10,25 @@ and sync sends only ciphertext.
 
 ---
 
+## Plan vs Track
+
+Both tabs can end up creating transactions, which is what makes the boundary
+confusing. The rule is **tense**, not mechanism:
+
+- **Plan** is money that has not happened yet. Assigning, the four walls,
+  Recurring, the membership sweep. Deciding what repeats is a plan, even though
+  it eventually posts entries.
+- **Track** is money that already happened. Logging, CSV import, the time ledger.
+  Anything Recurring posts lands here like any other entry.
+
+Each view states this at the top (`.tab-intro`) and points at the other, because
+neither is guessable from the tab name alone.
+
+`refreshCatSelects()` keeps every category picker in sync from one place. Ten
+sites create categories and only some of them refreshed the Recurring picker, so
+it could sit there saying "Add a category first" with four funded walls directly
+above it. It preserves the current selection across a redraw.
+
 ## The ladder
 
 Three stages gated on **runway** (`runwayStage`), which never drops once earned

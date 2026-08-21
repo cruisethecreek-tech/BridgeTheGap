@@ -1065,6 +1065,8 @@
 .sm-bar span{display:block;height:100%;background:var(--accent);border-radius:6px}
 .sm-need{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
 .sm-foot{margin-top:14px;font-size:12.5px;line-height:1.6}
+.tab-intro{font-size:13px;line-height:1.55;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-bottom:14px}
+.tab-intro b{color:var(--text);font-weight:600}
 .bd-ctl{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin:10px 0}
 .bd-seg{display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px;flex-wrap:wrap}
 .bd-seg button{background:none;border:none;color:var(--muted);font:inherit;font-size:12.5px;font-weight:800;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
@@ -1376,6 +1378,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
     <!-- ============ BUDGET ============ -->
     <section class="view" id="view-budget">
+      <div class="tab-intro">Plan is money that <b>has not happened yet</b>. Give every dollar a job, and set up what repeats. What it posts shows up on Track.</div>
       <div class="panel">
         <div class="monthnav">
           <button id="mPrev" title="Previous month">‹</button>
@@ -1401,7 +1404,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel">
         <h2>Recurring</h2>
-        <p class="sub">Set your paycheck and fixed bills once. They post automatically each month so your plan and net worth stay current without you lifting a finger.</p>
+        <p class="sub">Set your paycheck and fixed bills once. They post automatically each month, and the entries they create appear on Track like anything else you log. This lives on Plan because deciding what repeats is a plan, not a record.</p>
         <div class="row">
           <label class="fld">Type
             <select id="recType"><option value="expense">Expense</option><option value="income">Income</option><option value="invest">Invest</option></select>
@@ -1432,6 +1435,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
     <!-- ============ TRACK ============ -->
     <section class="view" id="view-tx">
+      <div class="tab-intro">Track is money that <b>already happened</b>. The plan it gets measured against lives on <b>Plan</b>.</div>
       <div class="panel">
         <h2>Log money in &amp; money out</h2>
         <p class="sub">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
@@ -3646,6 +3650,7 @@ function wallGuideHTML(c,M){
   return deepenHTML();   // the walls are the floor, not the finish line
 }
 function renderBudget(){
+  if(typeof refreshCatSelects==='function') setTimeout(refreshCatSelects,0);
   document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth) + (state.activeMonth===thisMonth()?'<small>This month</small>':'<small>&nbsp;</small>');
   const M=state.activeMonth;
   const income=monthIncome(M);
@@ -6488,9 +6493,19 @@ document.getElementById('postRec').addEventListener('click',()=>{
     ? 'Everything due so far this month is already posted. The rest will post as each date arrives.'
     : 'Recurring items are already posted for '+fmtMonth(state.activeMonth)+'.');
 });
+/* Every select that lists categories, refreshed from one place. Adding a category
+   anywhere has to reach all of them, or a form sits there insisting you have none. */
+function refreshCatSelects(){
+  const opts=state.categories.length?categoryOptions():'<option value="">Add a category first</option>';
+  document.querySelectorAll('#recCat, #txCat, .ql-cat').forEach(sel=>{
+    if(!sel) return;
+    const keep=sel.value;
+    sel.innerHTML=opts;
+    if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;   // do not lose a chosen category on a redraw
+  });
+}
 function renderRecurring(){
-  const sel=document.getElementById('recCat');
-  if(sel) sel.innerHTML=state.categories.length?categoryOptions():'<option value="">Add a category first</option>';
+  refreshCatSelects();
   const pr=document.getElementById('postRec');
   if(pr) pr.textContent = state.activeMonth===thisMonth()
     ? 'Post recurring due so far this month'
