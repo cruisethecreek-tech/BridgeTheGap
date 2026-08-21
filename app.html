@@ -3774,8 +3774,15 @@ function renderBudget(){
   const addSubcat=(parentId,name)=>{
     name=(name||'').trim(); if(!name) return;
     if(catDepth(parentId)>=3){ if(typeof toast==='function') toast('Three levels is the limit - deeper than this stops being a plan and starts being filing.'); return; }
-    state.categories.push({id:uid(),name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
-    const inp=box.querySelector('input[data-addsub-input="'+parentId+'"]'); if(inp) inp.focus();   // ready for the next sub
+    const newId=uid();
+    state.categories.push({id:newId,name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
+    // Land on the NEW sub's amount, not the next name box. Naming a category and
+    // then having to hunt for its $0 to fill in is the wrong order: you named it
+    // because you know what it costs. Adding several at once is the rarer case,
+    // and Tab still gets there.
+    const amt=box.querySelector('input[data-cat="'+newId+'"]');
+    if(amt){ amt.focus(); amt.select&&amt.select(); amt.scrollIntoView({block:'center'}); }
+    else { const inp=box.querySelector('input[data-addsub-input="'+parentId+'"]'); if(inp) inp.focus(); }
   };
   box.querySelectorAll('button[data-addsub]').forEach(btn=>btn.addEventListener('click',()=>{
     const inp=box.querySelector('input[data-addsub-input="'+btn.dataset.addsub+'"]'); addSubcat(btn.dataset.addsub, inp&&inp.value);
