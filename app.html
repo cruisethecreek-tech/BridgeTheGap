@@ -875,6 +875,14 @@
   .leak-list{max-height:42vh;overflow-y:auto;max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:7px;padding-right:2px}
   .leak-row{display:flex;align-items:center;gap:6px;font-size:13px}
   .leak-row .leak-name{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* On a phone the name lost every pixel fight with the number boxes and read
+   "Coffe...", "Takeo...", "Fast f...". Give it its own line instead. */
+@media(max-width:560px){
+  .leak-row{flex-wrap:wrap;row-gap:4px;padding-bottom:4px}
+  .leak-row .leak-name{flex:0 0 100%;white-space:normal;overflow:visible;text-overflow:clip;font-size:13.5px}
+  .leak-row .leak-name-in{flex:0 0 100%}
+  .leak-row .leak-mo{margin-left:auto}
+}
   .leak-row .leak-name-in{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 9px;font-size:13px}
   .leak-row .leak-n{width:44px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 6px;font-size:13px;text-align:center;flex-shrink:0}
   .leak-row .leak-f{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 4px;font-size:12px;flex-shrink:0}
@@ -6974,7 +6982,7 @@ const INTAKE=[
   {id:'blindSpend', input:'continue', showIf:a=>a.acct==='spend' && a.deepDive==='deep' && (a.leaks||[]).length,
     bot:a=>{ const all=(a.leaks||[]); const known=all.reduce((s,x)=>s+(+x.monthly||0),0);
       const habits=all.filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
-      const inc=+a.income||0;
+      const inc=intakeIncomeTotal(a);   // every source, not just the main paycheck
       const lifeTxt = (a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
       const sav=iaTone(a)==='savage';
       if(inc>0){ const blind=Math.round(inc-known);
