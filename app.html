@@ -1090,6 +1090,13 @@
 .dy-echo-t{margin-top:9px;font-size:13.5px;font-weight:700;color:var(--accent)}
 .dy-echo-go{margin-top:9px;background:none;border:none;color:var(--muted);text-decoration:underline;font:inherit;font-size:12.5px;cursor:pointer;padding:0}
 .dy-echo-go:hover{color:var(--accent)}
+.bp-note{font-size:13.5px;line-height:1.55;color:var(--muted);margin-bottom:10px;max-width:640px;margin-left:auto;margin-right:auto}
+.bp-list{max-width:640px;margin:0 auto 10px;max-height:38vh;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.bp-row{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.bp-row input[type=checkbox]{flex:none;width:18px;height:18px}
+.bp-nm{flex:1;min-width:0;background:transparent;border:none;color:var(--text);font:inherit;font-size:14px}
+.bp-amt{width:82px;flex:none;background:transparent;border:none;color:var(--text);font:inherit;font-size:14px;font-weight:600;text-align:right}
+.bp-nm:focus,.bp-amt:focus{outline:1px solid var(--accent);border-radius:6px}
 .dy-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .dy-chip{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:11px;padding:9px 13px;font-weight:700;font-size:14px;cursor:pointer}
 .dy-chip.on{border-color:var(--accent);background:rgba(230,178,77,.14);color:var(--accent)}
@@ -2257,7 +2264,7 @@ function defaultState(){
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche',
            investReturn:7, investYears:10, theme:'auto',
-           autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural' };
+           autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -3767,8 +3774,15 @@ function renderBudget(){
   const addSubcat=(parentId,name)=>{
     name=(name||'').trim(); if(!name) return;
     if(catDepth(parentId)>=3){ if(typeof toast==='function') toast('Three levels is the limit - deeper than this stops being a plan and starts being filing.'); return; }
-    state.categories.push({id:uid(),name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
-    const inp=box.querySelector('input[data-addsub-input="'+parentId+'"]'); if(inp) inp.focus();   // ready for the next sub
+    const newId=uid();
+    state.categories.push({id:newId,name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
+    // Land on the NEW sub's amount, not the next name box. Naming a category and
+    // then having to hunt for its $0 to fill in is the wrong order: you named it
+    // because you know what it costs. Adding several at once is the rarer case,
+    // and Tab still gets there.
+    const amt=box.querySelector('input[data-cat="'+newId+'"]');
+    if(amt){ amt.focus(); amt.select&&amt.select(); amt.scrollIntoView({block:'center'}); }
+    else { const inp=box.querySelector('input[data-addsub-input="'+parentId+'"]'); if(inp) inp.focus(); }
   };
   box.querySelectorAll('button[data-addsub]').forEach(btn=>btn.addEventListener('click',()=>{
     const inp=box.querySelector('input[data-addsub-input="'+btn.dataset.addsub+'"]'); addSubcat(btn.dataset.addsub, inp&&inp.value);
@@ -4577,9 +4591,13 @@ document.getElementById('importFile').addEventListener('change',e=>{
     catch(err){ alert('That file could not be read.'); } };
   r.readAsText(f); e.target.value='';
 });
+var bootAfterReset=false;   // var on purpose: boot() reads it, and a let here would be in the TDZ if boot ever moved earlier
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(confirm('Wipe all budget, transactions, goals, and settings from this browser? No undo.')){
-    localStorage.removeItem(STORE_KEY); state=defaultState(); boot();
+    localStorage.removeItem(STORE_KEY); state=defaultState();
+    bootAfterReset=true; boot();
+    activateTab('home');
+    if(typeof toast==='function') toast('Wiped. Start the setup chat whenever you are ready.');
   }
 });
 
@@ -6791,6 +6809,12 @@ const INTAKE=[
       {label:'Did it a while, life happened', value:'lapsed', reply:"Then you already know it works when you work it. Life happens. What you need is something light enough to survive a bad week, not another system that needs you perfect."},
       {label:'I budget now', value:'current', reply:"You're ahead of most people then. We'll sharpen what you've got rather than start you over."}
     ]},
+  {id:'budgetPhoto', input:'photo', key:'photoFilled', optional:true,
+    showIf:a=>!!a.budgetPast && a.budgetPast!=='never',
+    bot:a=>{ const had = a.budgetPast==='current' ? "You've got one going right now"
+             : a.budgetPast==='lapsed' ? "You had one going for a while"
+             : "You've had a run at this before";
+      return `${had}, so it is written down somewhere. A notebook, a spreadsheet, another app. Photograph it and I will read it here on your phone, and we can skip most of the typing. The photo never leaves the device.`; }},
   {id:'acct', sum:'Setup type', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
     return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
@@ -6807,7 +6831,7 @@ const INTAKE=[
       {label:'It stresses me out', value:'stress', reply:"Money stress is real, and I'm not going to add to it. We'll stay on just your spending. Small, calm, no big number staring back. You set the pace."},
       {label:'I just want to watch spending', value:'watch', reply:"Fair. It might also be the highest-leverage thing you could do. Spending is the part you actually control, minute to minute."}
     ]},
-  {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend',
+  {id:'moreIncome', input:'loop', loopKey:'extraIncome', askHours:true, showIf:a=>a.acct!=='spend' || +a.income>0,
     bot:a=>`Does anything else land each month, ${a.name||'friend'}? A partner's pay, a side gig, benefits - I'll fold it into the budget total. Tap Done if it's just the one.`,
     chips:[{label:"Partner's pay",name:'Partner'},{label:'Side gig',name:'Side gig',hours:true},{label:'Benefits',name:'Benefits'},{label:'✎Something else',custom:true}],
     namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
@@ -6848,8 +6872,8 @@ const INTAKE=[
         ? `Because that side work pays less per hour than your main job, it quietly drags your real rate DOWN - so from here every purchase costs a little more of your life, priced honestly.`
         : `That side work actually lifts your real rate - nice. Either way, I now price everything against the whole truth, not just one paycheck.`;
       return `Here's the honest math${a.name?', '+a.name:''}: your main job runs about ${usd(mr)}/hr. But that side work is hours of your life too - roughly ${sh} ${sh===1?'hour':'hours'} a month for ${usd(sideAmt)}. Blend every hour you sell and your true take-home rate is ${usd(br)}/hr. ${swing} That's the number behind every "hours of your life" figure from here on.`; }},
-  {id:'essIntro', bot:"Now the stuff you cover first. Your essentials, four quick ones. Ballpark each, and skip any that's zero.", input:'continue', showIf:a=>a.acct!=='spend'},
-  {id:'roof', bot:"Roof. Rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend', placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
+  {id:'essIntro', bot:"Now the stuff you cover first. Your essentials, four quick ones. Ballpark each, and skip any that's zero.", input:'continue', showIf:a=>a.acct!=='spend' && !a.photoFilled},
+  {id:'roof', bot:"Roof. Rent or mortgage a month? ★", input:'money', key:'roof', optional:true, showIf:a=>a.acct!=='spend' && !a.photoFilled, placeholder:'1200', hint:'Dollars per month.', sum:'Roof (rent/mortgage)'},
   {id:'roofFeel', input:'reflect', key:'roofFeel', optional:true, showIf:a=>a.acct!=='spend' && a.roof>0,
     bot:"Honestly, how's the place you live actually treating you?",
     options:[
@@ -6858,7 +6882,7 @@ const INTAKE=[
       {label:'Outgrowing it', value:'outgrow', reply:"Noted. These numbers will tell you when the move is actually doable.", followup:"If the right place for your life existed, where would it be? (optional)"},
       {label:'Dreaming of owning', value:'own', reply:"Big one. Hold that thought, the dream step is coming.", followup:"Picture it - what does your ideal place look like? (optional)"}
     ]},
-  {id:'food', sum:'Food', bot:"Food. Groceries and eating out, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 500'},
+  {id:'food', sum:'Food', bot:"Food. Groceries and eating out, monthly? ★", input:'money', key:'food', optional:true, showIf:a=>a.acct!=='spend' && !a.photoFilled, placeholder:'e.g. 500'},
   {id:'foodStyle', input:'reflect', key:'foodStyle', optional:true, showIf:a=>a.acct!=='spend' && a.food>0,
     bot:"What's your normal with food?",
     options:[
@@ -6868,8 +6892,8 @@ const INTAKE=[
         : "No judgment - but eating out is where money loves to evaporate. We'll keep an eye on it together."},
       {label:'A bit of both', value:'both', reply:"Balanced. We'll just watch that the 'both' doesn't drift into 'mostly out.'"}
     ]},
-  {id:'util', bot:"Power and Wi-Fi. Electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend', placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
-  {id:'transport', sum:'Getting around', bot:"Getting around. Gas, transit, rideshare, the car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend', placeholder:'e.g. 200'},
+  {id:'util', bot:"Power and Wi-Fi. Electric, water, phone, internet. Monthly? ★", input:'money', key:'util', optional:true, showIf:a=>a.acct!=='spend' && !a.photoFilled, placeholder:'300', hint:'Dollars per month, all of them together.', sum:'Power & Wi-Fi'},
+  {id:'transport', sum:'Getting around', bot:"Getting around. Gas, transit, rideshare, the car. Monthly? ★", input:'money', key:'transport', optional:true, showIf:a=>a.acct!=='spend' && !a.photoFilled, placeholder:'e.g. 200'},
   {id:'commuteFeel', input:'reflect', key:'commuteFeel', optional:true, showIf:a=>a.acct!=='spend' && a.transport>0,
     bot:"How do you feel about getting around day to day?",
     options:[
@@ -6880,7 +6904,7 @@ const INTAKE=[
         ? "Car payments are the biggest silent freedom-killer there is. We're going to make that shit impossible to ignore."
         : "Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
-  {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend',
+  {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend' && !a.photoFilled,
     bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount, or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
     chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
@@ -6993,7 +7017,47 @@ function intakeBlendedHourly(a){
   return hrs>0 ? Math.round((amt/hrs)*100)/100 : mr;
 }
 let iaCommitted=false;
-function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay(); runIntakeStep(); }   // a re-run starts from the hours already on record, so the pill shows the live value
+function iaSaveDraft(){
+  // A long conversation with no draft is a trap: one stray back-swipe and you
+  // start over. Persist after every move, and drop it the moment setup commits.
+  try{
+    if(iaCommitted) return;
+    const meaningful=Object.keys(iaAns).filter(k=>k!=='hoursPerWeek').length;
+    if(!meaningful || iaStep<1) return;
+    state.intakeDraft={ans:JSON.parse(JSON.stringify(iaAns)), step:iaStep, at:Date.now()};
+    save();
+  }catch(e){}
+}
+function iaClearDraft(){ try{ state.intakeDraft=null; save(); }catch(e){} }
+function iaDraftAge(){
+  const d=state.intakeDraft; if(!d||!d.at) return null;
+  return Math.round((Date.now()-d.at)/60000);
+}
+function iaResumeOffer(){
+  const d=state.intakeDraft; if(!d) return false;
+  const mins=iaDraftAge();
+  const when = mins==null ? '' : mins<2 ? ' just now' : mins<60 ? ` about ${mins} minutes ago` : mins<1440 ? ` about ${Math.round(mins/60)} hours ago` : ` a while back`;
+  const answered=Object.keys(d.ans||{}).filter(k=>k!=='hoursPerWeek').length;
+  iaBub(`You were partway through setting up${when} - ${answered} answer${answered===1?'':'s'} in. Want to carry on, or start fresh?`,'bot');
+  const dock=document.getElementById('intakeDock');
+  dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaResume">Carry on</button><button id="iaFresh">Start fresh</button></div>`;
+  document.getElementById('iaResume').onclick=()=>{
+    iaAns=d.ans||{}; iaStep=Math.min(d.step||0, INTAKE.length-1);
+    iaBub('Carry on','me');
+    pruneStaleAnswers(); runIntakeStep();
+  };
+  document.getElementById('iaFresh').onclick=()=>{
+    iaClearDraft(); iaAns={}; iaStep=0;
+    if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek;
+    iaBub('Start fresh','me');
+    document.getElementById('intakeLog').innerHTML='';
+    runIntakeStep();
+  };
+  return true;
+}
+function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay();
+  if(!iaResumeOffer()) runIntakeStep();
+}   // a re-run starts from the hours already on record, so the pill shows the live value
 /* Answers whose gate no longer passes are lies waiting to be committed - e.g.
    full-path walls after switching to spend mode, or "dreaming of owning" after
    the roof amount was zeroed. Sweep them whenever the flow moves. */
@@ -7036,7 +7100,7 @@ function iaBack(){
   if(s.key){ delete iaAns[s.key]; delete iaAns[s.key+'Note']; }
   iaSayGen++;   // abandon any line mid-beat: the transcript is about to change
   iaStep=p; iaForceInput=false;
-  pruneStaleAnswers();
+  pruneStaleAnswers(); iaSaveDraft();
   runIntakeStep();   // re-emits the step's own bot bubble + dock, keeping transcript and state in lockstep
 }
 function iaBub(text,who){ const log=document.getElementById('intakeLog'); const d=document.createElement('div'); d.className='bub '+who; d.dataset.st=iaStep; d.textContent=text; log.appendChild(d); log.scrollTop=log.scrollHeight; setTimeout(()=>{log.scrollTop=log.scrollHeight;},40); }
@@ -7119,9 +7183,9 @@ function iaAdvance(){
     const back=iaEditReturn; iaEditReturn=null;
     const miss=iaFirstUnanswered();
     iaStep = (miss>=0 && miss<back) ? miss : back;
-    runIntakeStep(); return;
+    runIntakeStep(); iaSaveDraft(); return;
   }
-  iaStep++; runIntakeStep();
+  iaStep++; runIntakeStep(); iaSaveDraft();
 }
 /* Everything the user told us, in their own answers, before a single thing is written */
 function iaSummaryRows(){
@@ -7184,6 +7248,7 @@ function renderIntakeDock(s){
   if(s.input==='leak'){ leakFinder(s); return; }
   if(s.input==='reflect'){ renderReflect(s); return; }
   if(s.input==='comfort'){ renderComfortStep(s); return; }
+  if(s.input==='photo'){ renderBudgetPhoto(s); return; }
   if(s.input==='gate'){
     dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
@@ -7329,6 +7394,114 @@ function renderComfortStep(s){
     const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
   };
   draw();
+}
+/* ============================================================
+   PHOTOGRAPH THE BUDGET YOU ALREADY HAVE
+   Anyone who has budgeted before has it written down somewhere - a notebook, a
+   spreadsheet, another app. Asking them to retype all of it into a chat is
+   asking them to do work they already did. So: offer the camera, read it here on
+   the device, and let them approve the lines.
+
+   Only offered to people who said they have budgeted before. "Never really
+   tried" has nothing to photograph, and offering would just confuse.
+
+   The photo replaces the TYPING, not the conversation - the feeling questions
+   still run, because those are the part a spreadsheet cannot answer.
+   ============================================================ */
+const BP_WALL=[
+  {key:'roof',  re:/\b(rent|mortgage|housing|lease|landlord|hoa)\b/i},
+  {key:'food',  re:/\b(food|grocer\w*|meals?|dining|eating|restaurant|takeout)\b/i},
+  {key:'util',  re:/\b(electric\w*|water|utilit\w*|internet|wi-?fi|phone|cable|power|gas bill|natural gas|trash)\b/i},
+  {key:'transport', re:/\b(gas|fuel|car|auto|vehicle|transit|bus|train|transport\w*|commut\w*|parking|rideshare|uber|lyft)\b/i}
+];
+const BP_SKIP=/\b(total|subtotal|sum|balance|income|paycheck|salary|net|gross|remaining|left over|savings? rate|date|month|budget)\b/i;
+let bpRows=[], bpFile=null, bpGen=0;
+/* Reuses the receipt reader's line parser, then drops the rows a budget sheet
+   carries that are not spending lines: totals, headers, the income at the top. */
+function bpParse(text){
+  return (typeof qlParseOcr==='function'?qlParseOcr(text):[])
+    .filter(r=>!BP_SKIP.test(r.what))
+    .filter(r=>r.amt>0 && r.amt<100000 && /[a-z]{2}/i.test(r.what))
+    .slice(0,25)
+    .map(r=>({name:r.what, amount:r.amt, use:true}));
+}
+function bpWallFor(name){
+  for(const w of BP_WALL) if(w.re.test(name)) return w.key;
+  return null;
+}
+/* Everything the photo found becomes intake answers, so the rest of the chat
+   skips the number-typing it would otherwise ask for. */
+function bpApply(){
+  const picked=bpRows.filter(r=>r.use && +r.amount>0);
+  if(!picked.length) return 0;
+  const walls={};
+  const rest=[];
+  picked.forEach(r=>{
+    const w=bpWallFor(r.name);
+    if(w && !walls[w]) walls[w]=+r.amount;          // first match wins; the rest fall through
+    else rest.push({name:r.name, amount:+r.amount});
+  });
+  Object.keys(walls).forEach(k=>{ iaAns[k]=walls[k]; });
+  if(rest.length) iaAns.expenses=(iaAns.expenses||[]).concat(rest);
+  iaAns.photoFilled=true;
+  iaAns.photoCount=picked.length;
+  return picked.length;
+}
+function renderBudgetPhoto(s){
+  const dock=document.getElementById('intakeDock'); if(!dock) return;
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const chips=()=>{
+    dock.innerHTML=`<div class="intake-chips">
+        <button class="go" id="bpShoot">Photograph it</button>
+        <button id="bpType">I'll type it with you</button>
+      </div><div class="intake-underrow">${back}</div>
+      <input type="file" id="bpFile" accept="image/*" class="hide">`;
+    document.getElementById('bpType').onclick=()=>{ iaBub("I'll type it with you",'me'); iaAdvance(); };
+    document.getElementById('bpShoot').onclick=()=>document.getElementById('bpFile').click();
+    document.getElementById('bpFile').onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f){ bpFile=f; reading(); } };
+    const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+  };
+  const reading=async()=>{
+    const gen=++bpGen;
+    dock.innerHTML=`<div class="bp-note" id="bpNote">Fetching the on-device reader. Your photo never leaves this phone.</div>`;
+    const note=document.getElementById('bpNote');
+    try{
+      const T=await loadTesseract();
+      if(gen!==bpGen) return;
+      note.textContent='Reading it right here on the device...';
+      const r=await T.recognize(bpFile,'eng',{logger:m=>{ if(gen===bpGen && m.status==='recognizing text' && note) note.textContent='Reading... '+Math.round((m.progress||0)*100)+'%'; }});
+      if(gen!==bpGen) return;
+      bpRows=bpParse(r&&r.data&&r.data.text);
+      if(!bpRows.length){ failed("I couldn't make out clear lines. Handwriting is genuinely hard."); return; }
+      review();
+    }catch(err){ if(gen===bpGen) failed('The reader needs a connection the first time, and it could not load.'); }
+  };
+  const failed=(why)=>{
+    dock.innerHTML=`<div class="bp-note">${escapeHtml(why)} We can do it the slow way, it only takes a minute.</div>
+      <div class="intake-chips"><button class="go" id="bpFall">Type it with you</button><button id="bpRetry">Try another photo</button></div>`;
+    document.getElementById('bpFall').onclick=()=>{ iaBub("I'll type it with you",'me'); iaAdvance(); };
+    document.getElementById('bpRetry').onclick=chips;
+  };
+  const review=()=>{
+    dock.innerHTML=`<div class="bp-note">Read ${bpRows.length} line${bpRows.length>1?'s':''}. Untick anything wrong, fix a number, then use them. Nothing is saved until you say so.</div>
+      <div class="bp-list">${bpRows.map((r,i)=>`<label class="bp-row">
+        <input type="checkbox" data-bpu="${i}" ${r.use?'checked':''}>
+        <input type="text" class="bp-nm" data-bpn="${i}" value="${escapeHtml(r.name)}">
+        <input type="number" class="bp-amt" data-bpa="${i}" value="${r.amount}" min="0" step="1">
+      </label>`).join('')}</div>
+      <div class="intake-chips"><button class="go" id="bpUse">Use these →</button><button id="bpRedo">Another photo</button></div>`;
+    dock.querySelectorAll('[data-bpu]').forEach(el=>el.onchange=()=>{ bpRows[+el.dataset.bpu].use=el.checked; });
+    dock.querySelectorAll('[data-bpn]').forEach(el=>el.oninput=()=>{ bpRows[+el.dataset.bpn].name=el.value; });
+    dock.querySelectorAll('[data-bpa]').forEach(el=>el.oninput=()=>{ bpRows[+el.dataset.bpa].amount=parseFloat(el.value)||0; });
+    document.getElementById('bpRedo').onclick=chips;
+    document.getElementById('bpUse').onclick=()=>{
+      const n=bpApply();
+      if(!n){ iaBub('None of those were right','me'); iaAdvance(); return; }
+      iaBub(n+' line'+(n>1?'s':'')+' from my budget','me');
+      iaBotSay("Got it. That saves us the whole middle of this - I'll skip straight past the number questions and just check how a few of them feel.", iaAdvance);
+    };
+  };
+  chips();
 }
 function renderReflect(s){
   const dock=document.getElementById('intakeDock');
@@ -7523,7 +7696,9 @@ function renderZeroClose(s){
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
 }
 function commitIntake(){
-  if(iaCommitted) return; iaCommitted=true;   // a double-tap on "Set me up" must not double everything
+  if(iaCommitted) return; iaCommitted=true;
+  iaClearDraft();               // setup is done; the draft has nothing left to protect
+  // a double-tap on "Set me up" must not double everything
   pruneStaleAnswers();                        // belt: nothing from an abandoned path gets committed
   const M=state.activeMonth, a=iaAns, spend=a.acct==='spend';
   // Re-running the setup chat REPLACES the previous intake's artifacts instead of stacking
@@ -7536,7 +7711,7 @@ function commitIntake(){
   const addIncome=(amount,source,owner,hours)=>{ const rec={id:uid(),type:'income',amount,day:1,source,src:'intake'}; if(owner) rec.owner=owner; if(hours>0) rec.hours=hours; state.recurring.push(rec); const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}; if(hours>0) tx.hours=hours; state.transactions.push(tx); };
   // main-job hours: the hours they TOLD us beat any figure derived from a rounded rate
   if(a.income>0) addIncome(a.income,'Paycheck','a', a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0));   // spend path too - otherwise any recurring edit later zeroes an auto wage
-  if(!spend) (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
+  (a.extraIncome||[]).forEach(x=>{ if(+x.amount>0){ const isPartner=/partner/i.test(x.name||''); addIncome(+x.amount, x.name||'Income', isPartner?'b':'a', isPartner?0:(+x.hours||0)); } });
   if(!spend && a.wantHousehold==='yes'){         // "set up the couples view" from intake
     state.householdOn=true;
     const partner=(a.extraIncome||[]).find(x=>/partner/i.test(x.name||''));
@@ -7614,7 +7789,12 @@ function boot(){
   // the home-screen shortcut only skips straight to the scan for a user who is
   // already set up - a first run still gets the intake, shortcut or not
   if((location.hash==='#gutcheck'||location.hash==='#check') && state.onboarded) setTimeout(openModal,250);
-  else if(!state.onboarded) setTimeout(openIntake,350);
+  // A first visit opens the setup chat; a RESET does not. Someone who just wiped
+  // their data is deciding what to do next, and dropping them straight back into
+  // the same questionnaire they just walked away from reads as the app refusing
+  // to let go. Home has a Start budgeting button; let them press it.
+  else if(!state.onboarded && !bootAfterReset) setTimeout(openIntake,350);
+  bootAfterReset=false;
 }
 const HOME_COPY={
   genz:{ eye:"Zero-based budgeting · no cap", title:"Tell every dollar to lock in.", sub:"Budget to zero, gut-check every purchase, and watch the bag grow - no filter, no cap.", cta:"Secure the bag →", wallsTag:"Food. Power & Wi-Fi. Roof. Getting around. Fund these before anything fun - that's the non-negotiable four." },
