@@ -37,11 +37,11 @@
     --muted:#98a3b0;
     --accent:#cfa76a;
     --accent-rgb:207,167,106;
-    --accent-2:#cd7c59;
+    --accent-2:#d78868;
     --good:#6fae83;
     --good-rgb:111,174,131;
-    --bad:#c9736b;
-    --bad-rgb:201,115,107;
+    --bad:#d38079;
+    --bad-rgb:211,128,121;
     --income:#6fae83;
     --shadow:0 12px 34px rgba(0,0,0,.45);
     --hero-grad:linear-gradient(135deg,#1a2532,#222e3d);
@@ -54,18 +54,18 @@
     --panel:#fbf8f3;
     --panel-2:#f0e9dd;
     --line:#e0d5c4;
-    --ink:#2c2620;
+    --ink:#e9e0ce;          /* recessed surface, NOT the text colour: this token is only ever a background */
     --on-accent:#fbf8f3;
     --text:#2c2620;
-    --muted:#7b6f60;
-    --accent:#8a5f28;
-    --accent-rgb:138,95,40;
+    --muted:#6d6254;
+    --accent:#835a24;
+    --accent-rgb:131,90,36;
     --accent-2:#a8452c;
-    --good:#3f7d53;
-    --good-rgb:63,125,83;
+    --good:#316743;
+    --good-rgb:49,103,67;
     --bad:#a8452c;
     --bad-rgb:168,69,44;
-    --income:#3f7d53;
+    --income:#316743;
     --shadow:0 2px 10px rgba(60,45,25,.08);
     --hero-grad:linear-gradient(135deg,#fbf8f3,#f0e9dd);
   }
@@ -2354,6 +2354,7 @@ function fmtLife(amount, rateOverride){
   const moHrs=(state.hoursPerWeek>0 ? monthHours(state.hoursPerWeek) : WORKMONTH_HRS);
   const dayHrs=moHrs/21.7;                    // ~21.7 workdays a month, whatever the week length
   const neg=amount<0, hrs=Math.abs(amount)/H;
+  if(!hrs) return '0 min';   // the 1-minute floor below is for TINY amounts; zero is zero, and "Hours Surrendered: 1 min" on an untouched month is a lie
   let out;
   if(hrs*60 < 60){ const m=Math.max(1,Math.round(hrs*60)); out=m+' min'; }
   else if(hrs < dayHrs){ const v=Math.round(hrs*10)/10; out=v+(v===1?' hr':' hrs'); }
@@ -2375,8 +2376,14 @@ function moneyOwner(n, owner){ return state.freedomMode ? fmtLife(n, hourlyFor(o
    derived it - the "show your work", on demand, so the interface stays compact. */
 function flipBack(amt){
   const H=effectiveHourly(); const a=Math.abs(amt);
-  if(state.freedomMode) return `<div class="fbk">= ${usd(a)}</div><div class="fbs">your ${usd(H)}/hr take-home · ${usd(H*WORKDAY_HRS)} a work-day</div>`;
-  return `<div class="fbk">= ${fmtLife(a)}</div><div class="fbs">of your life · at your ${usd(H)}/hr take-home</div>`;
+  // The back shows THIS card's arithmetic, not the rate. The rate line was
+  // identical on every card, so five cards gave the same sentence five times and
+  // none of them explained the number you had just tapped.
+  const hrs=H>0?a/H:0;
+  const hTxt = hrs>=100 ? Math.round(hrs).toLocaleString() : (Math.round(hrs*10)/10);
+  if(a<=0) return `<div class="fbk">= ${state.freedomMode?usd(0):fmtLife(0)}</div><div class="fbs">nothing to convert yet</div>`;
+  if(state.freedomMode) return `<div class="fbk">= ${usd(a)}</div><div class="fbs">${hTxt} hrs &times; ${usd(H)}/hr</div>`;
+  return `<div class="fbk">= ${fmtLife(a)}</div><div class="fbs">${usd(a)} &divide; ${usd(H)}/hr = ${hTxt} hrs</div>`;
 }
 function flipStat(label, amt, cls){
   const H=effectiveHourly();
