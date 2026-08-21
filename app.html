@@ -38,6 +38,7 @@
     --accent:#cfa76a;
     --accent-rgb:207,167,106;
     --accent-2:#d78868;
+    --accent-2-rgb:215,136,104;
     --good:#6fae83;
     --good-rgb:111,174,131;
     --bad:#d38079;
@@ -61,6 +62,7 @@
     --accent:#835a24;
     --accent-rgb:131,90,36;
     --accent-2:#a8452c;
+    --accent-2-rgb:168,69,44;
     --good:#316743;
     --good-rgb:49,103,67;
     --bad:#a8452c;
@@ -190,10 +192,20 @@
   .addsub-row.subsub{margin-left:26px}
   .cat-split.subsplit{margin-left:26px;font-size:11px}
   .sub-split-btn{background:none;border:none;color:var(--accent);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;padding:2px 4px}
-  .dupwarn{background:#1d1a10;border:1px solid #4a3d14;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .dupwarn{background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.38);border-radius:14px;padding:14px 16px;margin-bottom:14px}
   .dupwarn .dw-msg{font-size:13px;color:var(--text);line-height:1.5}
   .dupwarn .dw-msg b{color:var(--accent)}
   .dupwarn button{margin-top:10px}
+  .newmonth{background:rgba(var(--good-rgb),.09);border:1px solid rgba(var(--good-rgb),.34);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .newmonth .nm-msg{font-size:13px;color:var(--text);line-height:1.55}
+  .newmonth .nm-msg b{color:var(--accent)}
+  .newmonth .nm-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+  .cal-newgoal{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .cal-newgoal input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font:inherit;font-size:14px}
+  .cal-newgoal #calGoalName{flex:1;min-width:150px}
+  .cal-newgoal .cg-t{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}
+  .cal-newgoal .cg-t input{width:92px}
+  .cal-newgoal input.cg-need{border-color:var(--bad)}
 
   /* ---------- Section 2: Mindset & Flow ---------- */
   .goal-type{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:var(--ink);border:1px solid var(--line);border-radius:20px;padding:3px 10px;margin-top:6px}
@@ -204,8 +216,8 @@
   .netitem .amt{font-weight:900}
   .ror{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;white-space:nowrap}
   .ror.high{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
-  .ror.med{background:#241d08;color:var(--accent);border:1px solid #4a3d14}
-  .ror.low{background:#2a1410;color:var(--accent-2);border:1px solid #4a221e}
+  .ror.med{background:rgba(var(--accent-rgb),.13);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.38)}
+  .ror.low{background:rgba(var(--accent-2-rgb),.12);color:var(--accent-2);border:1px solid rgba(var(--accent-2-rgb),.38)}
   .enoughcard{background:linear-gradient(135deg,rgba(var(--good-rgb),.14),rgba(var(--good-rgb),.05));border:1px solid rgba(var(--good-rgb),.34);border-radius:16px;padding:18px;margin-top:16px}
   .enoughcard.creep{background:linear-gradient(135deg,#1d1a10,#231d10);border-color:#4a3d14}
   .enoughcard .ec-k{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--good)}
@@ -244,7 +256,7 @@
   .od-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
   .od-card .mile{font-size:13px;color:var(--text);margin-top:12px;font-weight:600}
   .od-card .mile b{color:var(--accent)}
-  .od-prompt{margin-top:12px;background:#1a2410;border:1px solid rgba(var(--good-rgb),.35);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--text);line-height:1.5;font-weight:600}
+  .od-prompt{margin-top:12px;background:rgba(var(--good-rgb),.11);border:1px solid rgba(var(--good-rgb),.35);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--text);line-height:1.5;font-weight:600}
   .miles{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .miles .m{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--ink);border:1px solid var(--line);color:var(--muted)}
   .miles .m.hit{background:rgba(var(--good-rgb),.12);border-color:rgba(var(--good-rgb),.34);color:var(--good)}
@@ -266,7 +278,7 @@
   .give-prog{height:12px;background:var(--ink);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px}
   .give-prog>span{display:block;height:100%;background:linear-gradient(90deg,rgba(var(--good-rgb),.34),var(--good));border-radius:6px;transition:width .4s ease}
   @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
-  .rebalance{margin-top:12px;background:#1d1a10;border:1px solid #4a3d14;border-radius:12px;padding:12px 14px}
+  .rebalance{margin-top:12px;background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.38);border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:var(--text);line-height:1.45;font-weight:600}
   .rebalance .rb-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
   .rebalance .rb-over{font-weight:900;color:var(--accent)}
@@ -914,7 +926,7 @@
   .intake-help:hover{background:rgba(230,178,77,.2)}
 
   /* ---------- Anti-Trap / Vault ---------- */
-  .trap-tag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent-2);background:#2a1410;border:1px solid #4a221e;border-radius:6px;padding:3px 9px;margin-bottom:10px}
+  .trap-tag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent-2);background:rgba(var(--accent-2-rgb),.12);border:1px solid rgba(var(--accent-2-rgb),.38);border-radius:6px;padding:3px 9px;margin-bottom:10px}
   .vaultitem{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
   .vi-top{display:flex;align-items:center;gap:10px}
   .vi-ic{font-size:20px;flex-shrink:0}
@@ -969,7 +981,7 @@
   .decision{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:9px}
   .decision .badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:4px 9px;border-radius:6px;flex-shrink:0}
   .decision.skip .badge{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
-  .decision.buy .badge{background:#2a1410;color:var(--accent-2);border:1px solid #4a221e}
+  .decision.buy .badge{background:rgba(var(--accent-2-rgb),.12);color:var(--accent-2);border:1px solid rgba(var(--accent-2-rgb),.38)}
   .decision .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .decision .am{font-weight:900}
   .decision.skip .am{color:var(--good)}
@@ -1153,7 +1165,7 @@
   .kindtoggle{display:inline-flex;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:3px;margin-top:10px;gap:3px}
   .kindtoggle button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 11px;border-radius:7px}
   .kindtoggle button.on[data-k=real]{background:var(--good);color:#08120d}
-  .kindtoggle button.on[data-k=stuff]{background:#caa53a;color:#1a1405}
+  .kindtoggle button.on[data-k=stuff]{background:var(--accent);color:var(--on-accent)}
   .nwbreak{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 12px;font-size:13px;font-weight:700}
   .nwbreak .wk{color:var(--muted)}
   .avl-bar .s{background:linear-gradient(90deg,#6b5a1e,#caa53a);min-width:0;transition:width .4s ease}
@@ -1170,7 +1182,7 @@
   .drainbox .db-note{font-size:13px;color:var(--text);margin-top:6px;line-height:1.5}
   .lineitem .kindtag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:5px;cursor:pointer;flex-shrink:0}
   .lineitem.asset .kindtag{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
-  .lineitem.stuff .kindtag{background:#241d08;color:var(--accent);border:1px solid #4a3d14}
+  .lineitem.stuff .kindtag{background:rgba(var(--accent-rgb),.13);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.38)}
   .challenge{background:linear-gradient(135deg,#2a1410,#1d1a10);border:1px solid #4a3d14;border-radius:14px;padding:18px;margin-top:12px;animation:fade .3s ease}
   .challenge .ttl{font-weight:900;font-size:17px;color:var(--accent);margin-bottom:6px}
   .challenge p{color:var(--text);font-size:14px;line-height:1.55}
@@ -1408,6 +1420,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
           <button class="btn ghost" id="mergeBtn" title="Merge duplicate essentials into one">Tidy duplicates</button>
         </div>
+        <div id="newMonthBanner"></div>
         <div id="dupBanner"></div>
         <div id="cats"></div>
       </div>
@@ -2642,8 +2655,19 @@ function renderCalDay(M, allowance){
           <button class="cal-bank" data-calsweep="${dd}" data-calamt="${canBank}">Bank ${money(canBank)} toward "${escapeHtml(g.name)}"</button>`;
       }
     } else {
-      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Give it one:</div>
-        <button class="cal-bank" data-calgoal="1">Start a goal to bank it toward</button>`;
+      /* This button used to jump to the Goals tab and focus a blank four-field
+         form. It promised "bank it toward" and banked nothing: the form knew
+         nothing about the day, the amount, or the banking, so you had to name a
+         dream, come back to Home, find the day again and press Bank. Ask for the
+         one thing that is actually missing - a name - and do the whole thing
+         here. The target defaults to something real and is editable after. */
+      const bankable=Math.max(0, Math.min(saved, calBankable(M, allowance)));
+      action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">This <b>${money(saved)}</b> isn't a pot the app holds - it just stays in your account. Money with no job tends to wander off. Name what it's for and this ${money(bankable)} goes straight in:</div>
+        <div class="cal-newgoal">
+          <input type="text" id="calGoalName" maxlength="60" placeholder="Emergency fund, trip, debt-free…">
+          <span class="cg-t">Target $<input type="number" id="calGoalTarget" inputmode="decimal" min="1" step="0.01" placeholder="1000"></span>
+        </div>
+        <button class="cal-bank" data-calgoal="${dd}" data-calamt="${bankable}">Create it and bank ${money(bankable)}</button>`;
     }
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
@@ -2657,7 +2681,20 @@ function renderCalDay(M, allowance){
   </div>`;
   const bank=el.querySelector('[data-calsweep]'); if(bank) bank.onclick=()=>calSweepDay(bank.dataset.calsweep, +bank.dataset.calamt);
   const undo=el.querySelector('[data-calunsweep]'); if(undo) undo.onclick=()=>calUnsweepDay(undo.dataset.calunsweep);
-  const mkg=el.querySelector('[data-calgoal]'); if(mkg) mkg.onclick=()=>{ if(typeof runNextStep==='function') runNextStep('dream'); else if(typeof activateTab==='function') activateTab('goals'); };
+  const mkg=el.querySelector('[data-calgoal]');
+  if(mkg) mkg.onclick=()=>{
+    const nameEl=document.getElementById('calGoalName'), tgtEl=document.getElementById('calGoalTarget');
+    const name=(nameEl&&nameEl.value.trim())||'';
+    if(!name){ if(nameEl){ nameEl.focus(); nameEl.classList.add('cg-need'); setTimeout(()=>nameEl.classList.remove('cg-need'),1400); }
+               if(typeof toast==='function') toast('Give it a name first - that is the part that makes it stick.'); return; }
+    const amt=+mkg.dataset.calamt||0;
+    let target=parseFloat(tgtEl&&tgtEl.value);
+    if(!(target>0)) target=Math.max(1000, Math.ceil(amt*20/100)*100);   // a placeholder they can edit, never smaller than what they are banking
+    if(target<amt) target=amt;
+    state.goals.push({id:uid(), name, target, saved:0, date:'', goalType:'foundation'});
+    save();
+    calSweepDay(mkg.dataset.calgoal, amt);          // banks it, renders goals and the calendar
+  };
 }
 /* Reward-calendar money math. A day's "saved" is notional (allowance - that day's
    spend); banking must never credit a goal with more than the month's REAL net
@@ -3065,7 +3102,7 @@ window.addEventListener('popstate',e=>{
 
 /* ============================================================
    Progressive interface - the app unrolls depth as runway grows.
-   Stage 1 Defense (<3mo) -> 2 Expansion (3-12mo) -> 3 Sovereignty (12mo+).
+   Stage 1 Defense (<3mo) -> 2 Expansion (3-12mo) -> 3 Autonomy (12mo+).
    Tools only ever unroll; they never disappear once earned (one-way ratchet),
    except when the user forces "Show everything".
    ============================================================ */
@@ -3073,7 +3110,7 @@ const STAGE_META={
   1:{ic:'', name:'Defense & Survival', tag:'Lock in the essentials and dodge the traps.'},
   2:{ic:'', name:'Expansion & Flow', tag:'Breathing room secured. Time to build income.',
      unlocked:'Net worth & dreams, the Offense vs. Defense meter, Skill-investment payback, and your "Enough" anchor.'},
-  3:{ic:'', name:'Sovereignty Console', tag:'Real runway. The autonomy tools are open.',
+  3:{ic:'', name:'Autonomy & Leverage', tag:'Real runway. Money and people can work without you now.',
      unlocked:'The Sovereignty Audit (Sovereign Capital Ratio + Overhead Drag) and Network Capital.'}
 };
 /* stage implied by current runway alone */
@@ -3380,11 +3417,44 @@ document.getElementById('mergeBtn').addEventListener('click',()=>{
   if(n){ renderBudget(); renderTx(); renderNetWorth(); alert('Tidied up - merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into your essentials. Assignments and transactions were kept and combined.'); }
   else alert('No duplicates found - your categories are already clean.');
 });
-document.getElementById('copyBtn').addEventListener('click',()=>{
+function copyPrevPlan(){
   const prev=shiftMonth(state.activeMonth,-1), src=state.budgets[prev];
-  if(!src||!Object.keys(src).length){ alert('Nothing to copy - last month has no assignments.'); return; }
+  if(!src||!Object.keys(src).length) return false;
   state.budgets[state.activeMonth]=Object.assign({},src); save(); renderBudget();
+  return true;
+}
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  if(!copyPrevPlan()) alert('Nothing to copy - last month has no assignments.');
 });
+/* A new month used to open as twelve blank boxes with no hint that last month's
+   plan still existed - the Copy button sat in a toolbar nobody reads, so people
+   retyped a whole budget or quietly stopped budgeting. Most months are last month
+   with two things changed, so the month itself should offer that. It only appears
+   when this month is genuinely untouched and there IS a plan behind it, it names
+   the total and how it lands against the income logged so far, and dismissing it
+   is remembered for that month. */
+function newMonthPromptHTML(M){
+  if((state.planPromptSkip||'')===M) return '';
+  if(Object.keys(state.budgets[M]||{}).some(k=>+state.budgets[M][k]>0)) return '';   // already started
+  const prev=shiftMonth(M,-1), src=state.budgets[prev]||{};
+  const rows=Object.keys(src).filter(k=>+src[k]>0 && state.categories.some(c=>c.id===k));
+  if(!rows.length) return '';
+  const tops=topCats();
+  const prevTotal=tops.reduce((s,c)=>s+catAssigned(c.id,prev),0);
+  const income=monthIncome(M);
+  let landing;
+  if(income<=0) landing=`Nothing is logged as income for ${fmtMonth(M)} yet, so you'll be assigning against last month's shape until a paycheck lands.`;
+  else if(Math.abs(income-prevTotal)<0.005) landing=`Your income this month matches it to the dollar - copying gets you to zero-based in one tap.`;
+  else if(income>prevTotal) landing=`You've logged <b>${money(income)}</b> this month, so copying would leave <b>${money(income-prevTotal)}</b> still needing a job.`;
+  else landing=`You've logged <b>${money(income)}</b> this month, which is <b>${money(prevTotal-income)}</b> less than that plan - copying means trimming somewhere.`;
+  return `<div class="newmonth">
+    <div class="nm-msg"><b>${escapeHtml(fmtMonth(M))} is a blank plan.</b> Last month you gave <b>${money(prevTotal)}</b> a job across ${rows.length} categor${rows.length===1?'y':'ies'}. Most months are last month with two things changed. ${landing}</div>
+    <div class="nm-row">
+      <button class="btn sm primary" id="nmCopy">Copy ${escapeHtml(fmtMonth(prev))} and edit it</button>
+      <button class="btn sm ghost" id="nmFresh">Start from scratch</button>
+    </div>
+  </div>`;
+}
 
 /* ---------- category hierarchy (one level of subcategories) ---------- */
 let collapsedCats=new Set();
@@ -3692,6 +3762,15 @@ function renderBudget(){
     flipStat(lifeLabel('spent','Spent'), spent, '')+
     flipStat('Left to spend', lts, lts<0?'bad':'good');
   const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb)}${flipHintHTML()}`;
+
+  const nmEl=document.getElementById('newMonthBanner');
+  if(nmEl){
+    nmEl.innerHTML=newMonthPromptHTML(M);
+    const nc=document.getElementById('nmCopy');
+    if(nc) nc.addEventListener('click',()=>{ copyPrevPlan(); if(typeof toast==='function') toast('Copied. Change what actually changed.'); });
+    const nf=document.getElementById('nmFresh');
+    if(nf) nf.addEventListener('click',()=>{ state.planPromptSkip=M; save(); renderBudget(); });
+  }
 
   const dupEl=document.getElementById('dupBanner');
   if(dupEl){
