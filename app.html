@@ -2341,6 +2341,8 @@ if(!state.activeMonth) state.activeMonth = thisMonth();
 const uid = () => Math.random().toString(36).slice(2,9);
 /* pure dollars */
 const usd = n => (n<0?'-':'')+'$'+Math.abs(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+/* Whole dollars, for estimates that were never precise to the cent. */
+const usd0 = n => usd(Math.round(+n||0));
 /* Pillar 2: dollars -> units of human effort. Magnitude-scaled.
    WORKMONTH_HRS (2,080 hrs/yr / 12 = 173.33) is only the 40-hour DEFAULT: when the
    user told us their real week, the day/month buckets scale to it - so one month of
@@ -6987,13 +6989,13 @@ const INTAKE=[
       const sav=iaTone(a)==='savage';
       if(inc>0){ const blind=Math.round(inc-known);
         if(blind>50) return sav
-          ? `Here's the part that hits${a.name?', '+a.name:''}: about ${usd(inc)} comes in, and we just accounted for ${usd(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd(blind)} a month you couldn't name. Not gone - invisible. Bleeding out while nobody watched. That's YOUR damn money. From now on you see every dollar of it leave. That's the whole game.`
-          : `Here's the part that hits${a.name?', '+a.name:''}: about ${usd(inc)} comes in, and we just accounted for ${usd(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched. That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
+          ? `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name. Not gone - invisible. Bleeding out while nobody watched. That's YOUR damn money. From now on you see every dollar of it leave. That's the whole game.`
+          : `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched. That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
         if(blind<-50) return sav
-          ? `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd(known)}) is MORE than the ${usd(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step, and you just took it.`
-          : `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd(known)}) is MORE than the ${usd(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
-        return `You mapped ${usd(known)} against about ${usd(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
-      return `That's ${usd(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
+          ? `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step, and you just took it.`
+          : `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
+        return `You mapped ${usd0(known)} against about ${usd0(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
+      return `That's ${usd0(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
   {id:'comfort', sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
@@ -7692,9 +7694,9 @@ function leakFinder(s){
   });
   const varIds=LEAKS.map((_,i)=>i).concat(['c0','c1']);
   const recalc=()=>{ let tot=0;
-    FIXED_BILLS.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="'+i+'"]').value||0; dock.querySelector('[data-fm="'+i+'"]').textContent=v>0?usd(v):''; tot+=v; });
-    varIds.forEach(id=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+id+'"]').value, dock.querySelector('[data-lf="'+id+'"]').value, dock.querySelector('[data-lc="'+id+'"]').value); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd(mo):''; tot+=mo; });
-    document.getElementById('leakTotal').textContent=usd(tot); };
+    FIXED_BILLS.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="'+i+'"]').value||0; dock.querySelector('[data-fm="'+i+'"]').textContent=v>0?usd0(v):''; tot+=v; });
+    varIds.forEach(id=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+id+'"]').value, dock.querySelector('[data-lf="'+id+'"]').value, dock.querySelector('[data-lc="'+id+'"]').value); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd0(mo):''; tot+=mo; });
+    document.getElementById('leakTotal').textContent=usd0(tot); };
   dock.querySelectorAll('input,select').forEach(el=>{ el.addEventListener('input',recalc); el.addEventListener('change',recalc); });   // change too: 'input' on <select> is unreliable on older WebKit
   recalc();   // reflect any seeded values immediately
   const lb=document.getElementById('iaBack'); if(lb) lb.onclick=iaBack;
