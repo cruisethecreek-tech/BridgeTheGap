@@ -119,6 +119,26 @@ dollar manually, which is the #1 churn risk for a manual app, so most people sta
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
 Full zero-based is one tap away for anyone who runs the household budget.
 
+**Savings are not a leak, and the leftover is not waste.** The finder asked about
+bills and habits and treated *everything else* as unaccounted, so a household
+putting $8,000 of $13,400 away was told it was "bleeding out while nobody
+watched" - the exact opposite of the truth, aimed at the person doing the best
+job of anyone. Two fixes:
+
+1. An **`ON_PURPOSE`** group (Savings, Investing / retirement, Extra debt
+   payments) sits under the fixed bills, labelled *"Not leaks. Counted so the
+   leftover below is honest."* Those rows carry `purpose:true` **and**
+   `fixed:true`, so they land in `known` (the blind figure shrinks by exactly
+   them) but stay out of `habits` (the spending limit is not inflated by money
+   that was never spending). They become real budget categories on commit, same
+   as every other row.
+2. **The leftover stopped claiming to be waste.** It never was evidence of it -
+   the finder asks about a fixed list, and groceries, childcare, medical, fuel
+   and the dog are not on it, so all of it counted as invisible. What the number
+   honestly measures is *what this screen did not ask about*, and that is what
+   `blindSpend` now says. The punch stays on the habits, which were actually
+   named and actually are discretionary.
+
 **The leak rows show their working.** `2 /wk x $50 -> $433` is the most
 surprising number on that screen: everybody computes $400 in their head, because
 a month feels like four weeks and is actually **4.33** (52/12). Handing someone a

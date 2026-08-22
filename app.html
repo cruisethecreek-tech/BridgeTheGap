@@ -206,6 +206,7 @@
   .leak-bills>summary::before{content:'+ ';font-weight:900}
   .leak-bills[open]>summary::before{content:'- '}
   .leak-bills .lb-why{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
+  .leak-note{font-size:11.5px;color:var(--muted);margin:-2px 0 4px}
   .cal-newgoal{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
   .cal-newgoal input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font:inherit;font-size:14px}
   .cal-newgoal #calGoalName{flex:1;min-width:150px}
@@ -7188,27 +7189,46 @@ const INTAKE=[
       ? "Alright - let's follow the money. Tap in the ones that are real for you: how often, and about how much each time. Don't bullshit the numbers - this only works if it's the truth."
       : "Alright - let's follow it. Tap in the ones that are real for you: how often, and about how much each time. Be honest - this only works if it's the truth."},
   {id:'blindSpend', input:'continue', showIf:a=>a.acct==='spend' && a.deepDive==='deep' && (a.leaks||[]).length,
-    bot:a=>{ const all=(a.leaks||[]); const known=all.reduce((s,x)=>s+(+x.monthly||0),0);
+    /* This verdict used to compute income minus (bills + habits) and call the
+       remainder money you "couldn't name", "bleeding out while nobody watched".
+       Two things were wrong with that.
+
+       It never asked about savings or investing, so a household putting $8,000
+       of $13,400 away was accused of leaking $10,556 - the exact opposite of the
+       truth, aimed at the person doing the best job of anyone. Those rows exist
+       now and land in `known`.
+
+       And the leftover was never evidence of waste in the first place. The
+       finder asks about a FIXED LIST. Groceries, childcare, medical, fuel, the
+       dog - none of it is on that list, so all of it counted as invisible. What
+       the number honestly measures is what this screen did not ask about, and
+       that is what it now says. The punch stays on the habits, which were
+       actually named and actually are discretionary. */
+    bot:a=>{
+      const all=(a.leaks||[]);
+      const known=all.reduce((s,x)=>s+(+x.monthly||0),0);
       const habits=all.filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
-      const inc=intakeIncomeTotal(a);   // every source, not just the main paycheck
-      const lifeTxt = (a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
+      const saved=all.filter(x=>x.purpose).reduce((s,x)=>s+(+x.monthly||0),0);
+      const inc=intakeIncomeTotal(a);
+      const nm=a.name?', '+a.name:'';
       const sav=iaTone(a)==='savage';
-      /* The fixed bills are optional now, so "we accounted for X - bills and
-         habits together" would be a lie for anyone who left them folded away,
-         and the blind-spot figure would be their rent masquerading as a
-         mystery. Name what was actually counted, and say what is missing. */
+      const lifeTxt=(a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
       const gotBills=!!a.billsMapped;
-      const countedTxt = gotBills ? 'bills and habits together' : 'just the day-to-day, since you skipped the fixed bills';
-      const billsCaveat = gotBills ? '' : ' Your rent and bills are in there too, so the real unaccounted number is smaller - add them any time and this sharpens up.';
-      if(inc>0){ const blind=Math.round(inc-known);
-        if(blind>50) return sav
-          ? `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - ${countedTxt}.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name.${billsCaveat} Not gone - invisible. Bleeding out while nobody watched. That's YOUR damn money. From now on you see every dollar of it leave. That's the whole game.`
-          : `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - ${countedTxt}.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched.${billsCaveat} That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
-        if(blind<-50) return sav
-          ? `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step, and you just took it.`
-          : `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
-        return `You mapped ${usd0(known)} against about ${usd0(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
-      return `That's ${usd0(known)} a month, mapped - ${gotBills?'the bills and the little stuff that usually vanishes without a trace':'the little stuff that usually vanishes without a trace'}.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
+      const bits=[]; if(gotBills) bits.push('bills'); if(habits>0) bits.push('habits'); if(saved>0) bits.push('what you already put away');
+      const countedTxt = bits.length>1 ? bits.slice(0,-1).join(', ')+' and '+bits[bits.length-1] : (bits[0]||'the day-to-day');
+      const savedTxt = saved>0 ? ` **${usd0(saved)}** of that is money you're deliberately sending somewhere - that's not a leak, that's the whole point.` : '';
+      const billsCaveat = gotBills ? '' : ' Your rent and bills are in there too, so the real unmapped number is smaller - add them any time and this sharpens up.';
+      if(inc>0){
+        const rest=Math.round(inc-known);
+        if(rest>50) return sav
+          ? `Here's where it stands${nm}: about ${usd0(inc)} comes in, and we just put ${usd0(known)} of it on the table - ${countedTxt}.${savedTxt}${lifeTxt} The other ${usd0(rest)} is everything I didn't ask about: groceries, fuel, the kids, whatever else. Not waste - just unmapped, and unmapped is where money goes to die quietly.${billsCaveat} Track a month and you'll know exactly what it is instead of guessing.`
+          : `Here's where it stands${nm}: about ${usd0(inc)} comes in, and we just put ${usd0(known)} of it on the table - ${countedTxt}.${savedTxt}${lifeTxt} The other ${usd0(rest)} is everything this screen didn't ask about - groceries, fuel, the kids, whatever else is yours. Not waste, just unmapped.${billsCaveat} Track a month and you'll know what it actually is.`;
+        if(rest<-50) return sav
+          ? `Real talk${nm}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${savedTxt}${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can work it, instead of hiding from it. That's the first honest step, and you just took it.`
+          : `Real talk${nm}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${savedTxt}${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can work it, instead of hiding from it. That's the first honest step.`;
+        return `You mapped ${usd0(known)} against about ${usd0(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${savedTxt}${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`;
+      }
+      return `That's ${usd0(known)} a month, mapped.${savedTxt}${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
   {id:'comfort', sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
@@ -7930,6 +7950,14 @@ function askLoopHours(s,name,amount,ph){
    ~$274). Mapping BOTH is what makes the leftover an honest "spending blind"
    number - income minus everything accounted for, not income minus a few habits. */
 const FIXED_BILLS=['Rent / mortgage','Utilities (power, water)','Phone / internet','Insurance','Car payment','Loan / debt payment'];
+/* Money that already has a job. The finder asked about bills and habits and
+   called EVERYTHING else unaccounted, so a household putting $8,000 of $13,400
+   into savings was told it was "bleeding out while nobody watched" - the exact
+   opposite of the truth, aimed at the person doing the best job of anyone. This
+   is not a leak and is never counted as one: it lands in `known` so the blind
+   figure is honest, and stays out of `habits` so the spending limit is not
+   inflated by money that was never spending. */
+const ON_PURPOSE=['Savings','Investing / retirement','Extra debt payments'];
 const LEAKS=[
   {name:'Coffee / drinks out', f:'week'},
   {name:'Takeout / delivery', f:'week'},
@@ -7974,6 +8002,7 @@ function leakFinder(s){
   const fixedRow=(id,nameHTML)=>`<div class="leak-row"><span class="leak-name">${nameHTML}</span><span class="leak-x">$</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-fx="${id}" placeholder="0"><span class="leak-fxu">/mo</span><span class="leak-mo" data-fm="${id}"></span></div>`;
   const varRow=(id,nameHTML,f)=>`<div class="leak-rowwrap"><div class="leak-row">${nameHTML}<input class="leak-n" type="number" inputmode="decimal" min="0" step="any" data-ln="${id}" placeholder="0">${freqSel(id,f)}<span class="leak-x">× $</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-lc="${id}" placeholder="0"><span class="leak-mo" data-lm="${id}"></span></div><div class="leak-work" data-lw="${id}"></div></div>`;
   const fixedRows=FIXED_BILLS.map((n,i)=>fixedRow(i, escapeHtml(n))).join('');
+  const purposeRows=ON_PURPOSE.map((n,i)=>fixedRow('p'+i, escapeHtml(n))).join('');
   const varRows=LEAKS.map((l,i)=>varRow(i, `<span class="leak-name">${escapeHtml(l.name)}</span>`, l.f)).join('')
     + [0,1].map(i=>varRow('c'+i, `<input class="leak-name-in" type="text" data-lname="${i}" placeholder="Something else">`, 'week')).join('');
   /* This step opened with seven fixed-bill fields - rent, utilities, phone,
@@ -7994,12 +8023,15 @@ function leakFinder(s){
       <details class="leak-bills"${billsOpen?' open':''}>
         <summary>Add your fixed bills too <span class="lb-why">optional - it sharpens the number</span></summary>
         <div class="leak-sub">Fixed bills - flat per month</div>${fixedRows}
+        <div class="leak-sub">Already going somewhere on purpose</div>
+        <div class="leak-note">Not leaks. Counted so the leftover below is honest.</div>${purposeRows}
       </details>
     </div>
     <div class="intake-chips" style="margin-top:10px"><button class="go" id="leakGo">See where it's going →</button></div>
     <div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`;
   // seed from a previous pass so Back never wipes what was already entered
   (iaAns.leaks||[]).forEach(x=>{
+    if(x.purpose){ const i=ON_PURPOSE.indexOf(x.name); if(i>=0) dock.querySelector('[data-fx="p'+i+'"]').value=x.monthly; return; }
     if(x.fixed){ const i=FIXED_BILLS.indexOf(x.name); if(i>=0) dock.querySelector('[data-fx="'+i+'"]').value=x.monthly; return; }
     const i=LEAKS.findIndex(l=>l.name===x.name);
     if(i>=0){ dock.querySelector('[data-ln="'+i+'"]').value=1; dock.querySelector('[data-lf="'+i+'"]').value='month'; dock.querySelector('[data-lc="'+i+'"]').value=x.monthly; }
@@ -8008,6 +8040,7 @@ function leakFinder(s){
   const varIds=LEAKS.map((_,i)=>i).concat(['c0','c1']);
   const recalc=()=>{ let tot=0;
     FIXED_BILLS.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="'+i+'"]').value||0; dock.querySelector('[data-fm="'+i+'"]').textContent=v>0?usd0(v):''; tot+=v; });
+    ON_PURPOSE.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="p'+i+'"]').value||0; dock.querySelector('[data-fm="p'+i+'"]').textContent=v>0?usd0(v):''; tot+=v; });
     varIds.forEach(id=>{ const n=dock.querySelector('[data-ln="'+id+'"]').value, f=dock.querySelector('[data-lf="'+id+'"]').value, c=dock.querySelector('[data-lc="'+id+'"]').value;
       const w=dock.querySelector('[data-lw="'+id+'"]'); if(w) w.innerHTML=leakWorkings(n,f,c);
       const mo=leakMonthly(n, f, c); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd0(mo):''; tot+=mo; });
@@ -8018,6 +8051,7 @@ function leakFinder(s){
   document.getElementById('leakGo').onclick=()=>{
     const leaks=[], fixed=[];
     FIXED_BILLS.forEach((n,i)=>{ const v=Math.round(+dock.querySelector('[data-fx="'+i+'"]').value||0); if(v>0){ leaks.push({name:n, monthly:v, fixed:true}); fixed.push(v); } });
+    ON_PURPOSE.forEach((n,i)=>{ const v=Math.round(+dock.querySelector('[data-fx="p'+i+'"]').value||0); if(v>0) leaks.push({name:n, monthly:v, fixed:true, purpose:true}); });
     LEAKS.forEach((l,i)=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+i+'"]').value, dock.querySelector('[data-lf="'+i+'"]').value, dock.querySelector('[data-lc="'+i+'"]').value); if(mo>0) leaks.push({name:l.name, monthly:Math.round(mo)}); });
     [0,1].forEach(i=>{ const nm=(dock.querySelector('[data-lname="'+i+'"]').value||'').trim(); const mo=leakMonthly(dock.querySelector('[data-ln="c'+i+'"]').value, dock.querySelector('[data-lf="c'+i+'"]').value, dock.querySelector('[data-lc="c'+i+'"]').value); if(nm && mo>0) leaks.push({name:nm, monthly:Math.round(mo)}); });
     iaAns.leaks=leaks;
