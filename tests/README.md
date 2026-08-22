@@ -10,6 +10,7 @@ node tests/math_golden.mjs           # hand-computed scenario
 node tests/math_claims.mjs           # every money claim, hand-verified
 node tests/budget_sim.mjs            # can a household actually budget with this?
 node tests/palette.mjs               # every colour readable in both themes
+node tests/life_units.mjs            # Freedom Mode says things that make sense
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
@@ -97,6 +98,39 @@ and the app's arithmetic was right - it was the *budgeting* that was wrong:
 2. The plan boxes were `step="1"` while the spend boxes were `step="0.01"`. You
    could spend $47.83 but never assign $1,047.83, so a household paid $3,247.83
    could not reach zero-based at all. And forty cents printed as `$0.4`.
+
+## 6. `life_units.mjs` - does Freedom Mode still make sense?
+
+Freedom Mode reprices the whole app in hours of your life: `money()` quietly
+becomes `fmtLife()`. That is right for a figure you **read**, and it silently
+corrupts two kinds of figure it does not own:
+
+1. **A figure you act on.** Every input in this app takes dollars - the app says
+   so itself, "you always type dollars, only the display changes". So a button
+   reading `Assign 3.2 days`, or an instruction reading `Set it to at least
+   1.6 days`, names a value the field will not accept. Same fault as offering to
+   bank ten minutes into an emergency fund: goals hold dollars.
+2. **A figure that already has a life caption beside it.** The headline converts
+   too, and the card prints one amount twice in two units:
+   `Spent this month 20.3 days / That's 162 hrs of life`.
+
+Neither breaks any arithmetic. Every math suite passes straight through both,
+because the numbers were right the whole time - it was the *words* that were
+wrong. Only reading the screen in Freedom Mode catches them, so this suite reads
+the screen: it walks every tab with a household rich enough to light up each
+panel, plus the branches a normal household never reaches (money left
+unassigned, a debt whose interest outruns the payment), and asserts
+
+- no button label names a time value you cannot type (the week-in-hours ledger's
+  `+1 hr` controls are the one legitimate exception - those are real hours)
+- no life caption sits under a second life figure
+- no imperative (`Set it to`, `Assign your last`, `You need at least`, `Give`)
+  names a value in minutes, checking the **value** rather than the sentence,
+  since a sentence can mix
+- the sibling stat pairs (`War Chest` / `Life Reclaimed`) keep one of each
+
+Verified by reintroducing all fourteen original faults and confirming each is
+caught.
 
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
