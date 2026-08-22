@@ -209,6 +209,12 @@ tabs while the stage ladder hid six. Panels that need data now wait for it, keep
 their heading so no tool is a secret, say what will bring them back, and reopen
 the moment data arrives. Panels you *input* through are never gated.
 
+It also holds the **first-time guides** (every area introduces itself once, names
+itself rather than another screen, says *why* it exists, names one thing to do
+first, sits at the top, and no two share a description; dismissal is per area,
+survives reload, can be turned off wholesale and replayed) and the **map** (lists
+every area, counts how many you have used, marks used ones done, and navigates).
+
 It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.

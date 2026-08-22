@@ -170,6 +170,85 @@ const nav = await p.evaluate(views => {
 check('every view has a tab', nav.missing.length===0, nav.missing.join(','));
 check('...and every tab has a view', nav.orphanTabs.length===0, nav.orphanTabs.join(','));
 
+/* ---- 9. every area introduces itself, once ----
+        The premise is that a first-time budgeter and a ten-year veteran can both
+        move without hesitating. The audit found the second half fine and the
+        first half missing: every screen said what to DO ("No debts yet. Add what
+        you owe") and no screen said what it IS or why it exists. ---- */
+await seed(EMPTY); await p.reload(); await p.waitForTimeout(900);
+const guides = await p.evaluate(async views => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const out={};
+  for(const v of views){ activateTab(v); await wait(120);
+    const el=document.querySelector('#view-'+v+' .areaguide');
+    out[v]= el ? { title:(el.querySelector('.ag-t')||{}).textContent||'',
+                   why:((el.querySelector('.ag-w')||{}).textContent||'').length,
+                   first:((el.querySelector('.ag-first')||{}).textContent||''),
+                   atTop:el===document.querySelector('#view-'+v).firstElementChild } : null;
+  }
+  return out;
+}, VIEWS);
+const missingG=VIEWS.filter(v=>!guides[v]);
+check(`every area introduces itself (${VIEWS.length-missingG.length} of ${VIEWS.length})`, missingG.length===0, missingG.join(','));
+check('...each naming itself, not another screen', VIEWS.every(v=>!guides[v]||guides[v].title.length>10),
+      VIEWS.map(v=>guides[v]&&guides[v].title.slice(0,24)).join(' | '));
+check('...each saying WHY the screen exists', VIEWS.every(v=>!guides[v]||guides[v].why>60));
+check('...each naming one thing to do first', VIEWS.every(v=>!guides[v]||/Start with:/.test(guides[v].first)));
+check('...and sitting at the top where it is read first', VIEWS.every(v=>!guides[v]||guides[v].atTop));
+const gTitles=VIEWS.map(v=>guides[v]&&guides[v].title);
+check('...with no two areas sharing a description', new Set(gTitles).size===gTitles.length);
+
+/* ---- 10. dismissal is per area, sticks, and is reversible ---- */
+const dismiss = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(120);
+  document.querySelector('#view-budget [data-agok]').click(); await wait(120);
+  const planGone=!document.querySelector('#view-budget .areaguide');
+  activateTab('tx'); await wait(120);
+  const trackStill=!!document.querySelector('#view-tx .areaguide');
+  document.querySelector('#view-tx [data-agoff]').click(); await wait(120);
+  activateTab('goals'); await wait(120);
+  const allOff=!document.querySelector('#view-goals .areaguide');
+  openAppMap(); await wait(120);
+  document.getElementById('mapReplay').click(); await wait(150);
+  activateTab('goals'); await wait(120);
+  return { planGone, trackStill, allOff, back:!!document.querySelector('#view-goals .areaguide') };
+});
+check('dismissing one area does not dismiss the others', dismiss.planGone && dismiss.trackStill,
+      `plan gone ${dismiss.planGone}, track still shown ${dismiss.trackStill}`);
+check('"I know my way around" turns them all off at once', dismiss.allOff===true);
+check('...and the map brings every one of them back', dismiss.back===true);
+
+await p.evaluate(async()=>{ activateTab('budget'); await new Promise(r=>setTimeout(r,120));
+  const btn=document.querySelector('#view-budget [data-agok]'); if(btn) btn.click(); });
+await p.waitForTimeout(200); await p.reload(); await p.waitForTimeout(900);
+check('a dismissed guide stays dismissed across a reload',
+      await p.evaluate(async()=>{ activateTab('budget'); await new Promise(r=>setTimeout(r,150));
+        return !document.querySelector('#view-budget .areaguide'); }));
+
+/* ---- 11. the map answers "where am I, and what have I not touched" ---- */
+const map = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  openAppMap(); await wait(150);
+  const rows=[...document.querySelectorAll('.map-row')].map(r=>({v:r.dataset.mapgo, used:r.classList.contains('used')}));
+  const prog=(document.querySelector('.map-prog')||{}).innerText||'';
+  document.querySelector('.map-row').click(); await wait(220);
+  return { rows, prog, closed:!document.getElementById('appMap').classList.contains('on'),
+           went:document.querySelector('.view.on').id };
+});
+check(`the map lists every area (${map.rows.length})`, map.rows.length===9, map.rows.map(r=>r.v).join(','));
+check('...says how many you have actually used', /of \d+ areas used/.test(map.prog), map.prog.replace(/\n/g,' '));
+check('...marks an untouched app as untouched', map.rows.every(r=>!r.used), map.rows.filter(r=>r.used).map(r=>r.v).join(','));
+check('...and a row takes you there, closing behind it', map.closed && map.went==='view-budget', map.went);
+
+await seed(FULL); await p.reload(); await p.waitForTimeout(900);
+const litUp = await p.evaluate(async () => {
+  await new Promise(r=>setTimeout(r,120)); openAppMap();
+  await new Promise(r=>setTimeout(r,180));
+  return [...document.querySelectorAll('.map-row')].filter(r=>r.classList.contains('used')).map(r=>r.dataset.mapgo);
+});
+check('areas you have used are marked done, so it reads as progress', litUp.length>=4, litUp.join(','));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

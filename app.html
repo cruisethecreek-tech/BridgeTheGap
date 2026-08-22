@@ -212,6 +212,26 @@
   .panel-waiting{opacity:.72}
   .panel-waiting>*:not(h2):not(.sub):not(.pw-note){display:none!important}
   .panel-waiting .pw-note{display:block;margin-top:10px;font-size:12.5px;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-radius:10px;padding:9px 12px}
+  .areaguide{background:rgba(var(--accent-rgb),.09);border:1px solid rgba(var(--accent-rgb),.34);border-radius:16px;padding:16px 18px;margin-bottom:16px}
+  .areaguide .ag-k{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent)}
+  .areaguide .ag-t{font-weight:800;font-size:16px;margin:4px 0 6px;color:var(--text)}
+  .areaguide .ag-w{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 10px}
+  .areaguide .ag-first{font-size:13.5px;line-height:1.55;color:var(--text);background:var(--panel-2);border-radius:10px;padding:10px 12px}
+  .areaguide .ag-first b{color:var(--accent)}
+  .areaguide .ag-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+  .areaguide .ag-off{background:none;border:none;color:var(--muted);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer;padding:6px 0}
+  .map-prog{font-size:13px;color:var(--muted);margin:10px 0 4px}
+  .map-prog b{color:var(--accent);font-size:15px}
+  .map-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .map-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font:inherit;color:var(--text);cursor:pointer}
+  .map-row:hover{border-color:var(--accent)}
+  .map-row .mr-n{flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12.5px;background:var(--ink);color:var(--muted);border:1px solid var(--line)}
+  .map-row.used .mr-n{background:var(--good);color:var(--on-accent);border-color:transparent}
+  .map-row .mr-b{flex:1;min-width:0}
+  .map-row .mr-t{display:block;font-weight:800;font-size:14px}
+  .map-row .mr-w{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+  .map-row .mr-go{color:var(--muted);flex-shrink:0}
+  .map-foot{margin-top:14px;text-align:center}
   .rf-tabs{display:flex;gap:4px;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:4px;margin:12px 0 10px;overflow-x:auto}
   .rf-tab{flex:1;white-space:nowrap;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:9px 10px;border-radius:9px;cursor:pointer}
   .rf-tab.on{background:var(--accent);color:var(--on-accent)}
@@ -1992,6 +2012,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Setup &amp; data</h2>
         <p class="sub">Everything lives on this device. Nothing leaves it unless you turn on sync - and sync is encrypted before it goes.</p>
         <div class="row">
+          <button class="btn" id="appMapBtn">How it all fits →</button>
           <button class="btn" id="intakeBtn2">Re-run setup chat</button>
           <button class="btn ghost" id="installBtn2">Install app</button>
           <button class="btn ghost" id="exportBtn2">Export data</button>
@@ -2087,6 +2108,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <button class="x" id="talkX">✕</button>
       <h3>Let's talk it through</h3>
       <div id="talkBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="appMap">
+    <div class="modal">
+      <button class="x" id="appMapX">✕</button>
+      <h3>How this app fits together</h3>
+      <div id="appMapBody"></div>
     </div>
   </div>
 
@@ -2373,7 +2402,7 @@ const LESSONS=[
 function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
-           assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[],
+           assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[], seenGuide:{}, guidesOff:false,
            onboarded:false, intake:{}, register:'middle', vault:[],
            freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
@@ -2420,6 +2449,8 @@ function normalizeState(s){
   // backup) is forced to a finite number here. One string in a money field would
   // otherwise turn addition into concatenation everywhere downstream.
   const num=(v)=>{ const n=+v; return isFinite(n)?n:0; };
+  if(!s.seenGuide || typeof s.seenGuide!=='object') s.seenGuide={};
+  s.guidesOff=!!s.guidesOff;
   if(!Array.isArray(s.lessons)) s.lessons=[];
   s.lessons.forEach(l=>{ l.amount=num(l.amount); });
   Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=num(b[k]); }); });
@@ -3174,6 +3205,7 @@ function activateTab(name,fromHistory){
   positionFab();
   if(name==='learn') renderCharts();
   if(name==='reflect') renderReflectTab();
+  renderAreaGuide(name);   // introduces the area once, then never again
   if(name==='home') renderHome();
   if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
@@ -7230,6 +7262,118 @@ function bdDonutSVG(rows,total){
     <text x="70" y="82" text-anchor="middle" font-size="14" fill="var(--text)" font-weight="800">${escapeHtml(money(total))}</text></svg>`;
 }
 /* ============================================================
+   FIRST TIME HERE
+   The premise of this app is that someone who has never budgeted and someone who
+   has run a zero-based budget for ten years can both move through it without
+   hesitating. The audit said the second half was fine and the first half was
+   not: every screen tells you what to DO ("No debts yet. Add what you owe") and
+   no screen tells you what it IS or why it exists. Build had no heading at all,
+   Learn had nine hundred words and nothing to press, Settings had three thousand
+   characters and no orientation.
+
+   So each area introduces itself once. What this is, why it matters, the one
+   thing to do first, and what it opens up next - then it gets out of the way and
+   never comes back unless asked. Experienced budgeters can turn the whole thing
+   off in one tap; someone lost can bring them all back the same way.
+   ============================================================ */
+const AREA_GUIDE={
+  home:    {t:'Home', what:'Your standing, in one screen.', why:"Where you are right now - what is left to budget, what you have spent, and the next thing worth doing. When you are not sure what to do, this screen decides for you.",
+            first:'Read the "Do this next" list. It only ever shows what is actually your next move.', next:'Plan'},
+  budget:  {t:'Plan', what:'Where you decide what your money is for - before you spend it.', why:"Zero-based means every dollar gets a job, so you are choosing on purpose instead of finding out afterwards. This is the screen the whole app is built around.",
+            first:'Give your biggest bill a category and a number. One is enough to start.', next:'Track'},
+  tx:      {t:'Track', what:'What actually happened.', why:"A plan is a guess until it meets reality. Logging is the part that turns it into the truth - and it is the only screen here that cannot be automated for you.",
+            first:'Log one purchase. Any one. The habit matters more than the completeness.', next:'Reflect'},
+  impulse: {t:'Shield', what:'The screen you open BEFORE you buy something.', why:"Every purchase you talk yourself out of is money you never had to earn twice. It prices the thing in hours of your life and asks whether it is worth them.",
+            first:'Scan the next thing you are tempted by - or if something just happened to you, talk it through instead.', next:'Reflect'},
+  debt:    {t:'Debt', what:'The fastest, cheapest way out of what you owe.', why:"Debt has a payoff date and a price, and both are knowable. Seeing them beats guessing, and the interest is priced in hours of your life so you feel what it actually costs.",
+            first:'Add one debt - name, balance, rate, minimum. The plan appears as soon as there is something to plan.', next:'Build'},
+  goals:   {t:'Build', what:'What the money is FOR.', why:"A budget with nothing behind it is just a spreadsheet. Accounts, dreams, skills and net worth live here - the reasons the discipline is worth it.",
+            first:'Add your checking account, then name one thing you are actually chasing.', next:'Reflect'},
+  reflect: {t:'Reflect', what:'What actually happened, in four views.', why:"Patterns are invisible one month at a time. Widen the window and a one-off separates itself from a habit - which is the only way to know what to change.",
+            first:'Start on Breakdown and tap the biggest slice.', next:'Plan'},
+  learn:   {t:'Learn', what:'The things the financially comfortable already know.', why:"Plain English, no gatekeeping. Two minutes each, one idea you can use the same day.",
+            first:'Open one lesson. Just one.', next:'Shield'},
+  diary:   {t:'Diary', what:'Money in your own words.', why:"Numbers record what happened; they never record why. Write the win or the hard fall and the app can cross-reference it against the budget later - including handing it back to you at the moment you are about to repeat it.",
+            first:'Write one line about the last money decision you made.', next:'Home'},
+  settings:{t:'Settings', what:'How the app speaks to you, and where your data lives.', why:"The voice, the hourly rate everything is priced against, household mode, and your backups. Nothing here leaves the device.",
+            first:'Set your true hourly rate - it powers every hours-of-your-life figure in the app.', next:'Home'}
+};
+function guideSeen(v){ return !!(state.seenGuide&&state.seenGuide[v]); }
+function guidesOff(){ return state.guidesOff===true; }
+function renderAreaGuide(view){
+  const sec=document.getElementById('view-'+view); if(!sec) return;
+  const old=sec.querySelector('.areaguide'); if(old) old.remove();
+  const g=AREA_GUIDE[view];
+  if(!g || guidesOff() || guideSeen(view)) return;
+  const el=document.createElement('div');
+  el.className='areaguide';
+  el.innerHTML=`<div class="ag-k">First time here</div>
+    <div class="ag-t">${escapeHtml(g.t)} - ${escapeHtml(g.what)}</div>
+    <p class="ag-w">${escapeHtml(g.why)}</p>
+    <div class="ag-first"><b>Start with:</b> ${escapeHtml(g.first)}</div>
+    <div class="ag-row">
+      <button class="btn sm primary" data-agok>Got it</button>
+      <button class="btn sm ghost" data-agmap>See how it all fits →</button>
+      <button class="ag-off" data-agoff>I know my way around - turn these off</button>
+    </div>`;
+  sec.insertBefore(el, sec.firstChild);
+  el.querySelector('[data-agok]').onclick=()=>{ state.seenGuide=state.seenGuide||{}; state.seenGuide[view]=true; save(); renderAreaGuide(view); };
+  el.querySelector('[data-agmap]').onclick=()=>openAppMap();
+  el.querySelector('[data-agoff]').onclick=()=>{ state.guidesOff=true; save();
+    Object.keys(AREA_GUIDE).forEach(renderAreaGuide);
+    if(typeof toast==='function') toast('Guides off. Bring them back any time in Settings.'); };
+}
+/* ============================================================
+   HOW IT ALL FITS
+   A map, because "where am I and what have I not touched" is a question no
+   individual screen can answer. Every area, in the order the app intends, with
+   what each is for and whether you have actually used it yet.
+   ============================================================ */
+const MAP_ORDER=[
+  {v:'budget', step:'1'}, {v:'tx', step:'2'}, {v:'reflect', step:'3'},
+  {v:'impulse', step:'4'}, {v:'goals', step:'5'}, {v:'debt', step:'6'},
+  {v:'diary', step:'·'}, {v:'learn', step:'·'}, {v:'settings', step:'·'}
+];
+function areaUsed(v){
+  switch(v){
+    case 'budget':  return Object.keys(state.budgets||{}).some(m=>Object.keys(state.budgets[m]||{}).length>0);
+    case 'tx':      return (state.transactions||[]).length>0;
+    case 'reflect': return (state.transactions||[]).length>0;
+    case 'impulse': return (state.impulse||[]).length>0 || (state.lessons||[]).length>0;
+    case 'goals':   return (state.goals||[]).length>0 || (state.accounts||[]).length>0;
+    case 'debt':    return (state.debts||[]).length>0;
+    case 'diary':   return (state.diary||[]).length>0;
+    case 'learn':   return !!state.lessonSeen;
+    case 'settings':return (state.hourlyWage||0)>0;
+    default: return false;
+  }
+}
+function appMapHTML(){
+  const rows=MAP_ORDER.map(({v,step})=>{
+    const g=AREA_GUIDE[v]; const used=areaUsed(v);
+    return `<button class="map-row${used?' used':''}" data-mapgo="${v}">
+      <span class="mr-n">${used?'✓':escapeHtml(step)}</span>
+      <span class="mr-b"><span class="mr-t">${escapeHtml(g.t)}</span><span class="mr-w">${escapeHtml(g.what)}</span></span>
+      <span class="mr-go">→</span></button>`; }).join('');
+  const done=MAP_ORDER.filter(m=>areaUsed(m.v)).length;
+  return `<p class="sub">The six numbered areas are the loop: decide, record, look, defend, build, clear. The rest are there when you want them. Tap any one to go.</p>
+    <div class="map-prog"><b>${done}</b> of ${MAP_ORDER.length} areas used so far</div>
+    <div class="map-list">${rows}</div>
+    <div class="map-foot"><button class="btn sm ghost" id="mapReplay">Replay the first-time guides</button></div>`;
+}
+function openAppMap(){
+  const body=document.getElementById('appMapBody'); if(!body) return;
+  body.innerHTML=appMapHTML();
+  document.getElementById('appMap').classList.add('on');
+  body.querySelectorAll('[data-mapgo]').forEach(b=>b.onclick=()=>{
+    document.getElementById('appMap').classList.remove('on'); activateTab(b.dataset.mapgo); });
+  const rp=document.getElementById('mapReplay');
+  if(rp) rp.onclick=()=>{ state.seenGuide={}; state.guidesOff=false; save();
+    Object.keys(AREA_GUIDE).forEach(renderAreaGuide);
+    document.getElementById('appMap').classList.remove('on');
+    if(typeof toast==='function') toast('Guides are back. They show once per area.'); };
+}
+/* ============================================================
    REFLECT
    One destination for the four reports, each on its own sub-tab, with a period
    control that belongs to them. The chart renderers are unchanged - they were
@@ -7283,7 +7427,9 @@ function applyPanelGates(){
 function renderReflectTab(){
   const body=document.getElementById('rfBody'), bar=document.getElementById('rfBar');
   if(!body||!bar) return;
-  document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on', b.dataset.rf===rfTab));
+  document.getElementById('appMapX').addEventListener('click',()=>document.getElementById('appMap').classList.remove('on'));
+document.getElementById('appMap').addEventListener('click',e=>{ if(e.target.id==='appMap') document.getElementById('appMap').classList.remove('on'); });
+document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on', b.dataset.rf===rfTab));
 
   if(!rfHasData()){
     bar.innerHTML='';
@@ -8911,6 +9057,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.addEventListener('clic
 document.getElementById('openTalkBtn').addEventListener('click',()=>openTalk());
 document.getElementById('talkX').addEventListener('click',closeTalk);
 document.getElementById('talkSheet').addEventListener('click',e=>{ if(e.target.id==='talkSheet') closeTalk(); });
+document.getElementById('appMapBtn').addEventListener('click',openAppMap);
 document.getElementById('intakeBtn2').addEventListener('click',()=>openIntake());
 document.getElementById('installBtn2').addEventListener('click',()=>document.getElementById('installBtn').click());
 document.getElementById('exportBtn2').addEventListener('click',()=>document.getElementById('exportBtn').click());
