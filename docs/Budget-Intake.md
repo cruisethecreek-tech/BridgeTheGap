@@ -119,6 +119,31 @@ dollar manually, which is the #1 churn risk for a manual app, so most people sta
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
 Full zero-based is one tap away for anyone who runs the household budget.
 
+**No step may claim a position it does not hold.** The wage step opened *"Last
+setup question"* - true when it was written, false the moment it moved up so each
+income could get its own rate. Seven questions still followed it on the spend
+path, twelve on the full one. `moneyStory` had the same shape: *"One more that
+shapes more than most people admit"* at question 6 of 17. Copy that describes its
+own **position** rots whenever anything is reordered, so both now describe their
+**job** instead, which cannot: *"Now the one that gives the gut-check its teeth"*
+and *"Here's one that shapes more than most people admit"*. `tests/intake_cost.mjs`
+walks every path and tone, counts the questions that actually follow each
+positional claim, and holds it to what it says - "last" means none follow, "one
+more" at most two, "almost done" at most four. The surviving claims (`comfort`,
+`zeroClose`) pass because they are true.
+
+**An opener has to be earned.** The `intro` step used to lead with a canned
+affirmation keyed to the **generation dial** - `Bet.` / `Great.` / `Wonderful.` -
+and blind to the `situation` answered one question earlier. So somebody who said
+*"Treading water"* and was told *"Exhausting, that one"* got **"Great."** in the
+very next bubble: the app talking over the person instead of listening. The
+affirmation now appears only for `situation:'build'` (stable, ready to build);
+every other answer, including a skipped one, simply begins. The situation step's
+own reply has already done the emotional work, so silence there is warmer than
+the wrong word. `tests/intake_cost.mjs` sweeps every step's copy across
+survive/treading/stuck x three registers x three tones x both paths - 1,998 lines
+- and fails on any congratulation, while asserting the earned one survives.
+
 **Savings are not a leak, and the leftover is not waste.** The finder asked about
 bills and habits and treated *everything else* as unaccounted, so a household
 putting $8,000 of $13,400 away was told it was "bleeding out while nobody
