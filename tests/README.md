@@ -13,6 +13,7 @@ node tests/palette.mjs               # every colour readable in both themes
 node tests/life_units.mjs            # Freedom Mode says things that make sense
 node tests/intake_cost.mjs           # the setup chat tells the truth about itself
 node tests/talk_through.mjs          # understanding before labelling
+node tests/structure.mjs             # one place to reflect, nothing shown too early
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
@@ -190,6 +191,33 @@ partly-covered event is never described as "nothing set aside", and that the
 lessons panel paints **on a cold boot** - which caught a real bug, since `boot()`
 maintains its own list of renderers and never calls `renderAll()`, so a surface
 added to `renderAll` alone never appears until something forces a repaint.
+
+## 9. `structure.mjs` - navigation and disclosure
+
+Two things it exists to stop.
+
+**Reports scattered across tabs.** The four charts lived inside Learn, between a
+school and a philosophy panel, and one of them told you to go to the **Plan** tab
+to change the period it was showing. A report you cannot steer from where you are
+reading it is a poster. They are one Reflect destination now, with sub-tabs and a
+period control that belongs to them, and the suite asserts each sub-tab actually
+draws, that the arrows move both Reflect and Plan, and that no copy points at
+another tab.
+
+**Everything visible on day one.** A brand-new guided user saw 27 panels across 8
+tabs while the stage ladder hid six. Panels that need data now wait for it, keep
+their heading so no tool is a secret, say what will bring them back, and reopen
+the moment data arrives. Panels you *input* through are never gated.
+
+It also holds the **first-time guides** (every area introduces itself once, names
+itself rather than another screen, says *why* it exists, names one thing to do
+first, sits at the top, and no two share a description; dismissal is per area,
+survives reload, can be turned off wholesale and replayed) and the **map** (lists
+every area, counts how many you have used, marks used ones done, and navigates).
+
+It also checks **id uniqueness in the live dom**, which building this earned: a
+panel ended up carrying two `id` attributes, the browser kept the first, and the
+code that had been hiding it silently stopped finding it.
 
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
