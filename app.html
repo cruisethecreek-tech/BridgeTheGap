@@ -207,6 +207,28 @@
   .leak-bills[open]>summary::before{content:'- '}
   .leak-bills .lb-why{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
   .leak-note{font-size:11.5px;color:var(--muted);margin:-2px 0 4px}
+  /* a waiting panel keeps its heading and intro so the tool is never a secret -
+     it just folds away its controls and says what will bring them back */
+  .panel-waiting{opacity:.72}
+  .panel-waiting>*:not(h2):not(.sub):not(.pw-note){display:none!important}
+  .panel-waiting .pw-note{display:block;margin-top:10px;font-size:12.5px;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-radius:10px;padding:9px 12px}
+  .rf-tabs{display:flex;gap:4px;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:4px;margin:12px 0 10px;overflow-x:auto}
+  .rf-tab{flex:1;white-space:nowrap;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:9px 10px;border-radius:9px;cursor:pointer}
+  .rf-tab.on{background:var(--accent);color:var(--on-accent)}
+  .rf-lead{margin:8px 0 12px}
+  .rf-period{display:flex;align-items:center;justify-content:center;gap:12px;margin:4px 0 2px}
+  .rf-arrow{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;width:38px;height:34px;font-size:18px;line-height:1;cursor:pointer}
+  .rf-arrow:hover{border-color:var(--accent);color:var(--accent)}
+  .rf-m{font-weight:800;font-size:15px}
+  .rf-m small{display:block;font-size:11px;font-weight:600;color:var(--muted);text-align:center}
+  .rf-empty{text-align:center}
+  .rf-cta{margin-top:12px}
+  .rf-nw{text-align:center;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .rf-nwv{font-size:30px;font-weight:900;letter-spacing:-.5px}
+  .rf-nwv.good{color:var(--good)} .rf-nwv.bad{color:var(--bad)}
+  .rf-nwk{font-size:12px;color:var(--muted);margin-top:2px}
+  .rf-nwsplit{display:flex;justify-content:center;gap:18px;margin:10px 0 12px;font-size:13px;color:var(--muted)}
+  .rf-nwsplit b{color:var(--text)}
   .lesson-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
   .lesson-row{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 34px 11px 13px}
   .lesson-row .lr-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
@@ -1387,6 +1409,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <button class="tab" data-view="impulse"><span class="t-ic">🛡️</span><span class="t-l">Shield</span></button>
         <button class="tab" data-view="tx"><span class="t-ic">🧾</span><span class="t-l">Track</span></button>
         <button class="tab" data-view="debt"><span class="t-ic">💳</span><span class="t-l">Debt</span></button>
+        <button class="tab" data-view="reflect"><span class="t-ic">📊</span><span class="t-l">Reflect</span></button>
         <button class="tab" data-view="learn"><span class="t-ic">📖</span><span class="t-l">Learn</span></button>
         <button class="tab" data-view="diary"><span class="t-ic">📔</span><span class="t-l">Diary</span></button>
         <button class="tab" data-view="settings"><span class="t-ic">⚙️</span><span class="t-l">Settings</span></button>
@@ -1553,7 +1576,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="logWin"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="gate-csv">
         <h2>Import from a bank CSV</h2>
         <p class="sub">Drop in a statement export and skip the manual typing. It is parsed entirely on your device - nothing is uploaded, nothing leaves the browser.</p>
         <div class="import-drop" id="importDrop">
@@ -1653,7 +1676,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div style="margin-top:8px"><button class="btn sm ghost" id="importLiab">⤵ Import from my liabilities</button></div>
         <div id="debtList"></div>
       </div>
-      <div class="panel">
+      <div class="panel" id="gate-debtplan">
         <h2>Your way out</h2>
         <p class="sub">Put in what you can throw at debt each month and this shows the payoff date, the interest it costs you, and which order to kill them in. Nothing here changes your budget; it is a projection you can argue with.</p>
         <div class="row">
@@ -1830,31 +1853,36 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <div class="swipe-hint">Swipe for the next one</div>
         </div>
       </div>
-      <div class="panel">
-        <h2>Money map</h2>
-        <p class="sub">Where it went and where it came from. Widen the window to tell a one-off from a habit, and tap a slice to break it down further.</p>
-        <div id="bdBox"></div>
-      </div>
-      <div class="panel">
-        <h2>Spending by category</h2>
-        <p class="sub">Where your money actually went in <span id="chartMonth">this month</span>. Use the month arrows on the Plan tab to change the period.</p>
-        <div id="catChart"></div>
-      </div>
-      <div class="panel">
-        <h2>Income vs. spending</h2>
-        <p class="sub">Last 6 months. Green should be taller than red. Every single time.</p>
-        <div id="monthChart" class="months"></div>
-        <div class="legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Income</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Spending</span></div>
-      </div>
-      <div class="panel">
-        <h2>Cash balance trend</h2>
-        <p class="sub">Your running balance across everything you've tracked. The dream is up and to the right.</p>
-        <div id="trendChart"></div>
-      </div>
-      <div class="panel">
+      <div class="panel" id="gate-circ">
         <h2>Abundance &amp; Circulation</h2>
         <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. Tag spends as you log them on the Track tab.</p>
         <div id="circChart"></div>
+      </div>
+    </section>
+
+    <!-- ============ REFLECT ============
+         Four reports that were buried inside Learn, between a school and a
+         philosophy panel, each with its own heading and no shared controls - and
+         one of them told you to go to a DIFFERENT TAB to change the period it
+         was showing. A report you cannot steer is a poster.
+
+         They are one destination now, with sub-tabs and a period control that
+         belongs to the reports rather than to the Plan screen. Learn went back
+         to teaching. Net worth is assembled here in one place instead of half in
+         Build and half in a chart; the EDITING stays in Build, because moving
+         where people add an asset would be churn for its own sake. -->
+    <section class="view" id="view-reflect">
+      <div class="panel">
+        <h2>Reflect</h2>
+        <p class="sub">What actually happened, in four views. The numbers here are only as good as what you have logged - they are a mirror, not a verdict.</p>
+        <div class="rf-tabs" id="rfTabs" role="tablist">
+          <button class="rf-tab on" data-rf="breakdown" role="tab">Breakdown</button>
+          <button class="rf-tab" data-rf="trends" role="tab">Trends</button>
+          <button class="rf-tab" data-rf="worth" role="tab">Net worth</button>
+          <button class="rf-tab" data-rf="inout" role="tab">In vs out</button>
+        </div>
+        <div class="rf-bar" id="rfBar"></div>
+        <div id="rfBody"></div>
       </div>
     </section>
 
@@ -3145,6 +3173,7 @@ function activateTab(name,fromHistory){
     document.body.classList.toggle('more-open',inMore); }
   positionFab();
   if(name==='learn') renderCharts();
+  if(name==='reflect') renderReflectTab();
   if(name==='home') renderHome();
   if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
@@ -6162,7 +6191,8 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons(); renderReflectTab();
+  applyPanelGates();   // panels with nothing to show fold away, and say what brings them back
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 /* Theme: 'auto' follows the phone; 'light'/'dark' are explicit overrides. Auto is
@@ -7198,6 +7228,101 @@ function bdDonutSVG(rows,total){
   return `<svg viewBox="0 0 140 140" class="bd-donut" role="img" aria-label="${bdSide==='in'?'Income':'Spending'} breakdown">${arcs}
     <text x="70" y="66" text-anchor="middle" font-size="11" fill="var(--muted)" font-weight="700">${bdSide==='in'?'IN':'OUT'}</text>
     <text x="70" y="82" text-anchor="middle" font-size="14" fill="var(--text)" font-weight="800">${escapeHtml(money(total))}</text></svg>`;
+}
+/* ============================================================
+   REFLECT
+   One destination for the four reports, each on its own sub-tab, with a period
+   control that belongs to them. The chart renderers are unchanged - they were
+   already container-driven and no-op when their box is absent - so this only
+   decides WHICH box exists and what steers it.
+
+   The month arrows are the point. "Spending by category" used to carry the line
+   "use the month arrows on the Plan tab to change the period", which is a report
+   telling you to go somewhere else to operate it. They live on the report now,
+   and they move state.activeMonth, so Plan and Reflect stay one truth rather
+   than two.
+   ============================================================ */
+let rfTab='breakdown';
+function rfHasData(){ return (state.transactions||[]).length>0; }
+/* ============================================================
+   HIDE UNTIL IT MEANS SOMETHING
+   A brand-new user in GUIDED mode was shown 27 panels across 8 tabs, and the
+   stage ladder - the whole mechanism for not overwhelming people - was hiding
+   six of them. Charts with nothing to chart, a debt planner for someone with no
+   debts, a membership sweep with no memberships.
+
+   Nothing is removed. Each of these simply waits until it has something to say,
+   and says in one line what will bring it back, so the app never feels like it
+   is hiding tools from you. Panels that are an INPUT (log a transaction, add a
+   debt, scan a purchase) always stay - you cannot get data without them.
+   ============================================================ */
+function panelGates(){
+  const tx=(state.transactions||[]).length;
+  return [
+    /* no gate-sweep: #subSweepPanel already hides itself in CSS until opened.
+       Adding a second mechanism on top of an existing one broke the first - the
+       duplicate id meant getElementById('subSweepPanel') stopped resolving and
+       the panel became permanently visible. Check for a gate before building one. */
+    ['gate-csv',      tx>0 || (state.accounts||[]).length>0, 'Log a few transactions by hand first - then bulk import makes sense.'],
+    ['gate-circ',     (state.transactions||[]).some(t=>t.energy), 'Tag a few spends as you log them on Track, and the growth-vs-fear ratio appears here.'],
+    ['vaultPanel',    (state.vault||[]).length>0,            'Vault a tempting purchase from the scan above and it waits here for 24 hours.'],
+    ['gate-debtplan', (state.debts||[]).length>0,            'Add a debt above and the payoff order, date and interest appear here.'],
+    ['investPanel',   (state.debts||[]).length>0,            'Add a debt above to compare crushing it against investing the difference.'],
+  ];
+}
+function applyPanelGates(){
+  panelGates().forEach(([id,ready,note])=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.classList.toggle('panel-waiting', !ready);
+    let n=el.querySelector('.pw-note');
+    if(ready){ if(n) n.remove(); return; }
+    if(!n){ n=document.createElement('div'); n.className='pw-note'; el.appendChild(n); }
+    n.textContent=note;
+  });
+}
+function renderReflectTab(){
+  const body=document.getElementById('rfBody'), bar=document.getElementById('rfBar');
+  if(!body||!bar) return;
+  document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on', b.dataset.rf===rfTab));
+
+  if(!rfHasData()){
+    bar.innerHTML='';
+    body.innerHTML=`<div class="empty rf-empty">Nothing to reflect on yet - these fill in as you log money in and out.<div class="rf-cta"><button class="btn sm primary" id="rfLog">Log something →</button></div></div>`;
+    const g=document.getElementById('rfLog'); if(g) g.onclick=()=>activateTab('tx');
+    return;
+  }
+
+  const M=state.activeMonth;
+  const monthBar = `<div class="rf-period"><button class="rf-arrow" id="rfPrev" title="Previous month">‹</button><span class="rf-m">${escapeHtml(fmtMonth(M))}${M===thisMonth()?' <small>this month</small>':''}</span><button class="rf-arrow" id="rfNext" title="Next month">›</button></div>`;
+
+  if(rfTab==='breakdown'){
+    bar.innerHTML=`<p class="sub rf-lead">Where it went and where it came from. Widen the window to tell a one-off from a habit, and tap a slice to break it down further.</p>`;
+    body.innerHTML=`<div id="bdBox"></div>`;
+    renderBreakdown();   // carries its own 1/3/6/12 control, which IS the period here
+  } else if(rfTab==='trends'){
+    bar.innerHTML=monthBar+`<p class="sub rf-lead">Every category you spent in during <span id="chartMonth">this month</span>, biggest first. Use the arrows to walk back through the months.</p>`;
+    body.innerHTML=`<div id="catChart"></div>`;
+    renderCharts();
+  } else if(rfTab==='worth'){
+    const nw=netWorth(), a=sumAssets()+bankTotal(), l=sumLiab();   // the same three the netWorth() identity uses, so the split always adds up to the headline
+    bar.innerHTML=`<p class="sub rf-lead">What you own minus what you owe, and the running balance of everything you have tracked.</p>`;
+    body.innerHTML=`<div class="rf-nw"><div class="rf-nwv ${nw<0?'bad':'good'}">${money(nw)}</div><div class="rf-nwk">Net worth today</div>
+        <div class="rf-nwsplit"><span>Assets <b>${money(a)}</b></span><span>Owed <b>${money(l)}</b></span></div>
+        <button class="btn sm ghost" id="rfEditNW">Edit what you own and owe →</button></div>
+      <div id="trendChart"></div>`;
+    renderCharts();
+    const e=document.getElementById('rfEditNW');
+    if(e) e.onclick=()=>{ activateTab('goals'); setTimeout(()=>{ const d=[...document.querySelectorAll('#view-goals details')].find(x=>/assets/i.test(x.innerText.slice(0,40))); if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'}); } },180); };
+  } else {
+    bar.innerHTML=`<p class="sub rf-lead">Last 6 months. Green should be taller than red. Every single time.</p>`;
+    body.innerHTML=`<div id="monthChart" class="months"></div>
+      <div class="legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Income</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Spending</span></div>`;
+    renderCharts();
+  }
+
+  const prev=document.getElementById('rfPrev'), next=document.getElementById('rfNext');
+  if(prev) prev.onclick=()=>{ state.activeMonth=shiftMonth(state.activeMonth,-1); save(); renderBudget(); renderReflectTab(); };
+  if(next) next.onclick=()=>{ state.activeMonth=shiftMonth(state.activeMonth,1); save(); renderBudget(); renderReflectTab(); };
 }
 function renderBreakdown(){
   const box=document.getElementById('bdBox'); if(!box) return;
@@ -8546,13 +8671,14 @@ function boot(){
   // last month first (in full), then this month up to today - nothing slips through
   if(postRecurring(shiftMonth(thisMonth(),-1))+postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
-  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderLessons(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
+  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderLessons(); renderRecurring(); renderCharts(); renderReflectTab(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
   renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
   renderBackupNote(); renderAutoBackup();
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
+  applyPanelGates();
   ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
   applyHousehold(); applySpending();
   if(state.householdOn && typeof refreshSyncState==='function') refreshSyncState();
@@ -8781,6 +8907,7 @@ function runNextStep(act){
   setTimeout(()=>{ const el=document.getElementById(t[1]); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'smooth',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },140);   // open the accordion the target lives in
 }
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
+document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.addEventListener('click',()=>{ rfTab=b.dataset.rf; renderReflectTab(); }));
 document.getElementById('openTalkBtn').addEventListener('click',()=>openTalk());
 document.getElementById('talkX').addEventListener('click',closeTalk);
 document.getElementById('talkSheet').addEventListener('click',e=>{ if(e.target.id==='talkSheet') closeTalk(); });
