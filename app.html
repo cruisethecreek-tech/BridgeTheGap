@@ -4278,7 +4278,7 @@ function renderQuickLog(){
   if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPhotoFile=null; return; }
   box.innerHTML=`<div class="ql-panel">
     <div class="ql-head"><span>One line per purchase, then log them all. The little stuff is where it hides.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
-    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Snap my notepad</button><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
+    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Snap my notepad</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
     <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
@@ -4286,18 +4286,24 @@ function renderQuickLog(){
   </div>`;
   document.getElementById('qlDate').value=todayStr();
   // --- photo capture + on-device read ---
-  const snap=document.getElementById('qlSnap'), photo=document.getElementById('qlPhoto'), readBtn=document.getElementById('qlRead'), prev=document.getElementById('qlPhotoPrev'), note=document.getElementById('qlOcrNote');
-  snap.onclick=()=>photo.click();
+  // camera and gallery need separate inputs - see renderBudgetPhoto for why
+  const snap=document.getElementById('qlSnap'), pick=document.getElementById('qlPick'), cam=document.getElementById('qlCam'),
+        photo=document.getElementById('qlPhoto'), readBtn=document.getElementById('qlRead'), prev=document.getElementById('qlPhotoPrev'), note=document.getElementById('qlOcrNote');
+  snap.onclick=()=>cam.click();
+  pick.onclick=()=>photo.click();
+  cam.onchange=()=>{ const f=cam.files&&cam.files[0]; cam.value=''; if(f){ photoTaken(f); } };
   photo.onchange=()=>{
-    const f=photo.files&&photo.files[0]; if(!f) return;
+    const f=photo.files&&photo.files[0]; photo.value=''; if(f) photoTaken(f);
+  };
+  function photoTaken(f){
+    if(!f) return;
     if(qlPhotoURL) URL.revokeObjectURL(qlPhotoURL);
     qlPhotoFile=f;   // hand the File itself to the OCR pass - a blob: URL dies if the panel closes mid-read
     qlPhotoURL=URL.createObjectURL(f);
-    photo.value='';  // so re-picking the SAME photo (retry after a bad read) still fires change
     prev.innerHTML=`<img class="ql-photo-img" src="${qlPhotoURL}" alt="Your notepad">`;
     readBtn.classList.remove('hide');
     note.textContent='Your photo stays on this phone. Use it as a reference while you type - or tap "Read it for me" and I\'ll take a first pass. You review every line before anything logs.';
-  };
+  }
   readBtn.onclick=async()=>{
     if(!qlPhotoFile&&!qlPhotoURL) return;
     const gen=qlGen;   // if the panel closes or rebuilds mid-read, drop the result on the floor
@@ -7608,14 +7614,26 @@ function renderBudgetPhoto(s){
   const dock=document.getElementById('intakeDock'); if(!dock) return;
   const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const chips=()=>{
+    /* TWO inputs, not one. accept="image/*" on its own leaves the choice to the
+       browser, and an in-app browser (a link opened inside Instagram, Messenger,
+       a Custom Tab) commonly answers with the gallery alone - so "Photograph it"
+       offered no camera to anyone who had not already taken the photo. capture
+       forces the camera, but it also REMOVES the gallery, so neither input can
+       serve both jobs and each button gets its own. On desktop capture is
+       ignored and both simply open a file dialog. */
     dock.innerHTML=`<div class="intake-chips">
-        <button class="go" id="bpShoot">Photograph it</button>
+        <button class="go" id="bpShoot">Take a photo</button>
+        <button id="bpPick">Pick from my photos</button>
         <button id="bpType">I'll type it with you</button>
       </div><div class="intake-underrow">${back}</div>
+      <input type="file" id="bpCam" accept="image/*" capture="environment" class="hide">
       <input type="file" id="bpFile" accept="image/*" class="hide">`;
     document.getElementById('bpType').onclick=()=>{ iaBub("I'll type it with you",'me'); iaAdvance(); };
-    document.getElementById('bpShoot').onclick=()=>document.getElementById('bpFile').click();
-    document.getElementById('bpFile').onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f){ bpFile=f; reading(); } };
+    const took=e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=''; if(f){ bpFile=f; reading(); } };   // clearing lets a retry of the SAME photo fire change again
+    document.getElementById('bpShoot').onclick=()=>document.getElementById('bpCam').click();
+    document.getElementById('bpPick').onclick=()=>document.getElementById('bpFile').click();
+    document.getElementById('bpCam').onchange=took;
+    document.getElementById('bpFile').onchange=took;
     const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
   };
   const reading=async()=>{
