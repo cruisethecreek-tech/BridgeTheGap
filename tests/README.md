@@ -11,6 +11,7 @@ node tests/math_claims.mjs           # every money claim, hand-verified
 node tests/budget_sim.mjs            # can a household actually budget with this?
 node tests/palette.mjs               # every colour readable in both themes
 node tests/life_units.mjs            # Freedom Mode says things that make sense
+node tests/intake_cost.mjs           # the setup chat tells the truth about itself
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
@@ -131,6 +132,39 @@ unassigned, a debt whose interest outruns the payment), and asserts
 
 Verified by reintroducing all fourteen original faults and confirming each is
 caught.
+
+## 7. `intake_cost.mjs` - does the setup chat tell the truth about itself?
+
+The chooser tells people what setup will cost before they commit: *"about 6
+minutes and 16 questions"*, *"about 10 minutes and 22 questions"*,
+*"Map my averages now · ~3 min"*. Those are promises, and a promise about length
+rots the moment somebody adds a step. That is exactly what had happened - the
+spend path advertised **~2 min** while running seventeen steps, and the same
+screen promised *"no full-budget homework"* one question before handing over
+seven fixed-bill fields.
+
+No other suite can catch it. Nothing is a bug, no arithmetic is wrong, and every
+math layer passes straight through. So this one counts both paths and holds the
+copy to what it says:
+
+- the advertised chips exist **word for word**
+- the question count is **exact** - a tolerance here is how "~2 min" came to sit
+  on a seventeen-step path, so adding a question forces whoever added it to
+  update the promise
+- the modelled minutes never **exceed** the claim (under-stating is the
+  dishonest direction), and the claim is never padded past double the real cost
+- "Map my averages" states its own cost, and the free option says it is free
+- **the stance is actually in the conversation**, in all three tones: the real
+  minutes, the real question counts, and the app saying the quiet part instead
+  of apologising for asking
+- ...but never at someone drowning. `iaTone()` floors survival to `clean`, and
+  that version carries the honest number without the door
+
+The time model is stated in the file rather than hidden: reading at 200 wpm, ~5s
+to decide and tap an answer, ~11s to type one, with the bulk screens (leak
+finder, expenses grid, income/debt loops) carrying their own weight since each
+is one "answer" but many fields. Arguable on purpose - argue with the constants,
+not with a magic number.
 
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -

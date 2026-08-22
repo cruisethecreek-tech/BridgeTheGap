@@ -6984,8 +6984,35 @@ const INTAKE=[
              : a.budgetPast==='lapsed' ? "You had one going for a while"
              : "You've had a run at this before";
       return `${had}, so it is written down somewhere. A notebook, a spreadsheet, another app. Photograph it and I will read it here on your phone, and we can skip most of the typing. The photo never leaves the device.`; }},
-  {id:'acct', sum:'Setup type', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
-    return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~4 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
+  /* The advertised cost has to be TRUE. It said "~2 min" for a 17-step path and
+     "no full-budget homework" one step before the homework. Numbers below are
+     counted, not guessed - tests/intake_cost.mjs recounts both paths and fails
+     if either drifts from what this screen claims.
+
+     And the app says the quiet part instead of apologising for asking. Nothing
+     here works in under a minute, so promising that would only buy a setup
+     nobody finishes. The hard version of that line is for the tones that asked
+     for it: iaTone() already floors anyone in survival to 'clean', so someone
+     drowning gets the honest number without being told to leave. Not committing
+     and not being able to are different things, and only one of them is a
+     reason to go. */
+  {id:'acct', sum:'Setup type', bot:a=>{
+    const surv=a.situation==='survive'||a.situation==='treading';
+    const nm=a.name?', '+a.name:'';
+    const light=surv
+      ? `Given where you're at, I'd start light: keep your own spending honest against a daily allowance, small wins you can feel, no full-budget homework.`
+      : `<b>Just track my spending</b> - keep your spending honest against a daily allowance, and see every dollar that leaves.`;
+    const cost=`That's about <b>6 minutes</b> and 16 questions. The whole budget is about <b>10 minutes</b> and 22 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
+    switch(iaTone(a)){
+      case 'savage':
+        return `Two ways in${nm}. Real numbers, no pitch. ${light} ${cost} Neither one is padded. And if six minutes is too much to spend on the thing that decides where your life actually goes, stop here - you won't do the hard part either, and I'd rather you keep the six minutes. Still in? Pick one.`;
+      case 'blunt':
+        return `Two ways in${nm}, and I'll give you the real numbers instead of a pitch. ${light} ${cost} No padding in either. If six minutes is more than this is worth to you that's genuinely fine - but then this isn't your app, because nothing here works in less. Which one?`;
+      default:
+        return `Two ways in${nm}, and I'd rather you know the real cost up front than find out halfway. ${light} ${cost} Money doesn't get sorted in thirty seconds, and I'm not going to pretend otherwise. Take the one you'll actually finish. Which fits?`;
+    }},
+    input:'choice', key:'acct',
+    options:[{label:'Just track my spending · ~6 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
@@ -7110,7 +7137,7 @@ const INTAKE=[
       if(t==='savage') return `Here's where it gets real${a.name?', '+a.name:''}. You want to know where your money ACTUALLY goes - not where you tell yourself it goes. Pick the one you'd genuinely do, not the one that sounds impressive:`;
       return `Here's where it gets real${a.name?', '+a.name:''}. To see where your money actually goes, you've got a few ways in - pick the one you'd genuinely do, not the one that sounds impressive:`; },
     options:[
-      {label:'Map my averages now · ~5 min', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
+      {label:'Map my averages now · ~3 min', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
       {label:"I'll track it for real (30 days)", value:'track', reply:"That's the one that doesn't lie. Jot every discretionary buy however's fastest for you - a notebook, the notes app, a receipt in your pocket - and punch it in when you sit down. 30 days and you'll see the truth in your own handwriting. I'll count the days with you."},
       {label:'Just track as I go · nothing to fill in', value:'light', reply:"Works too. The map and the 30-day challenge are both here when you want them."}
     ]},
@@ -7665,7 +7692,7 @@ function renderBudgetPhoto(s){
     }catch(err){ if(gen===bpGen) failed('The reader needs a connection the first time, and it could not load.'); }
   };
   const failed=(why)=>{
-    dock.innerHTML=`<div class="bp-note">${escapeHtml(why)} We can do it the slow way, it only takes a minute.</div>
+    dock.innerHTML=`<div class="bp-note">${escapeHtml(why)} We'll do it the way that always works - I ask, you answer. Same questions either way; the photo was only ever a shortcut.</div>
       <div class="intake-chips"><button class="go" id="bpFall">Type it with you</button><button id="bpRetry">Try another photo</button></div>`;
     document.getElementById('bpFall').onclick=()=>{ iaBub("I'll type it with you",'me'); iaAdvance(); };
     document.getElementById('bpRetry').onclick=chips;

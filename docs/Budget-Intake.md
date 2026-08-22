@@ -117,7 +117,23 @@ want to track their own spending (`acct`: full | spend). **The lighter "just my 
 path is presented first and gently recommended** - full zero-based means logging every
 dollar manually, which is the #1 churn risk for a manual app, so most people start light
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
-Full zero-based is one tap away for anyone who runs the household budget. The **spender**
+Full zero-based is one tap away for anyone who runs the household budget.
+
+**The chooser states the real cost, and owns it.** It used to advertise "~2 min"
+for a path that runs 17 steps and 16 questions, then hand over seven fixed-bill
+fields one screen after promising "no full-budget homework". Both chips now carry
+counted numbers - `~6 min` / `~10 min` - and the bot names the question counts
+aloud (16 and 22). It does not apologise for asking, either: *"Money doesn't get
+sorted in thirty seconds, and I'm not going to pretend otherwise"* in the
+forgiving voice, up to *"if six minutes is too much to spend on the thing that
+decides where your life actually goes, stop here"* in savage. Nothing in this app
+works in under a minute, and pretending otherwise only buys a setup nobody
+finishes. **The one exception is `situation:'survive'`** - `iaTone()` already
+floors it to `clean`, so someone drowning gets the honest number without being
+shown the door. Not committing and not being able to are different things.
+`tests/intake_cost.mjs` recounts both paths on every run and fails if either
+drifts from what the screen claims, so the promise cannot rot as steps are
+added. The **spender**
 path skips the Four Walls, debt, and dream; income is asked but optional (skipping it
 triggers the `incomeAvoid` follow-up), and the path ends with the deep-dive offer and an
 optional spending limit before landing in "Just my spending" mode. The engine skips steps
