@@ -108,6 +108,74 @@ check('...and you land on the plan to see it', funded.tab==='view-budget', funde
 await p.reload(); await p.waitForTimeout(700);
 check('lessons survive a reload', await p.evaluate(()=>(state.lessons||[]).length)===3);
 
+/* ---- 7. the history changes what the Radar says and offers ----
+        Keeping the events was only half of it. A Radar that has watched three
+        things break with nothing set aside, and still opens with a lecture about
+        scroll traps, has learned nothing about the person in front of it. ---- */
+const scan = async (name, amount) => {
+  await p.evaluate(()=>activateTab('impulse'));
+  await p.fill('#impName', name); await p.fill('#impAmt', String(amount));
+  await p.click('#impRun'); await p.waitForTimeout(350);
+  return p.evaluate(()=>({ note:(document.querySelector('.lesson-note')||{}).innerText||'',
+    dests:[...document.querySelectorAll('#impGoal option')].map(o=>({v:o.value,t:o.textContent})) }));
+};
+await seed([]); await p.reload(); await p.waitForTimeout(800);
+const cold = await scan('Limited sneakers', 220);
+check('with no history the Radar says nothing extra', cold.note==='', cold.note);
+/* with no goals and no history there is nothing to choose between, so the app
+   shows no picker at all - what matters is that the buffer is never the default */
+check('...and the buffer is not pushed to the front',
+      cold.dests.length===0 || cold.dests[0].v!=='__buffer', cold.dests.map(d=>d.t).join(' | ')||'(no picker, correctly)');
+
+await seed([{id:'a',date:'2026-06-14',name:'Alternator',amount:640,cause:'broke',covered:'none'},
+            {id:'b',date:'2026-07-02',name:'Vet bill',amount:410,cause:'someone',covered:'none'},
+            {id:'c',date:'2026-08-05',name:'Phone in the ocean',amount:900,cause:'broke',covered:'none'}]);
+await p.reload(); await p.waitForTimeout(800);
+const warm = await scan('Limited sneakers', 220);
+check('with a history it names what it knows', /3 things went wrong/.test(warm.note), warm.note.replace(/\n/g,' ').slice(0,120));
+check('...using the figures the user gave it ($1,950)', /\$1,950/.test(warm.note));
+check('...and says what skipping this would buy', /Skipping this would put \$220 there/.test(warm.note), warm.note.slice(-90));
+check('...and puts the buffer first among the destinations', warm.dests[0].v==='__buffer', warm.dests.map(d=>d.t).join(' | '));
+
+/* the skip has to actually land in the buffer, not just be offered */
+await p.selectOption('#impGoal','__buffer');
+await p.click('#impNeutralize'); await p.waitForTimeout(500);
+const landed = await p.evaluate(()=>{ const M=state.activeMonth;
+  const c=topCats().find(x=>/life happens/i.test(x.name));
+  return { buffer:c?catAssigned(c.id,M):0, chest:state.impulse.filter(x=>x.type==='skip').reduce((s,x)=>s+x.amount,0) }; });
+check('skipping it raises the buffer by the amount skipped', landed.buffer===220, String(landed.buffer));
+check('...and still counts on the War Chest scoreboard', landed.chest===220, String(landed.chest));
+
+/* ---- 8. a partly-covered event is not called "nothing set aside" ---- */
+await seed([{id:'a',date:'2026-06-14',name:'Alternator',amount:640,cause:'broke',covered:'none'},
+            {id:'c',date:'2026-08-05',name:'Phone',amount:900,cause:'broke',covered:'some'}]);
+await p.reload(); await p.waitForTimeout(800);
+const mixed = await scan('Sneakers', 100);
+check('a partly-covered event is not described as nothing set aside',
+      !/with nothing set aside/.test(mixed.note) && /didn't fully cover/.test(mixed.note), mixed.note.replace(/\n/g,' ').slice(0,130));
+
+/* ---- 9. the history is VISIBLE, not just quoted at you ----
+        It is built entirely out of things the user said, so a number they cannot
+        see, check or correct is the wrong shape. This also caught a real bug:
+        boot() paints its own list of renderers and never calls renderAll(), so a
+        new surface added to renderAll alone never appeared until something else
+        forced a repaint. ---- */
+const panel = await p.evaluate(()=>{
+  activateTab('impulse');
+  const el=document.getElementById('lessonsPanel');
+  return { shown:getComputedStyle(el).display!=='none',
+           text:document.getElementById('lessonsBody').innerText,
+           rows:document.querySelectorAll('.lesson-row').length };
+});
+check('the lessons panel is painted on a cold boot', panel.shown===true, 'display:'+String(panel.shown));
+check('...listing every event', panel.rows===2, String(panel.rows));
+check('...with the standing at the top', /The standing/i.test(panel.text), panel.text.split('\n')[0]);
+
+/* an empty history hides the panel entirely rather than showing a bare heading */
+await seed([]); await p.reload(); await p.waitForTimeout(800);
+check('...and hidden entirely when there is nothing to show',
+      await p.evaluate(()=>{ activateTab('impulse'); return getComputedStyle(document.getElementById('lessonsPanel')).display==='none'; }));
+
 console.log("LET'S TALK IT THROUGH - understanding before labelling\n");
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,150):''}`); }

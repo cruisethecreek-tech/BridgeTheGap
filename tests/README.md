@@ -183,6 +183,14 @@ a bug - that **the figure the verdict quotes is the figure the button funds**.
 They were computed from different lists, so the screen said $180/mo and the
 button set aside $115.
 
+It also covers the **feedback loop**: that a cold history changes nothing, that a
+run of unfunded accidents makes the gut-check name what it knows and promote the
+buffer to first destination, that skipping actually raises the buffer, that a
+partly-covered event is never described as "nothing set aside", and that the
+lessons panel paints **on a cold boot** - which caught a real bug, since `boot()`
+maintains its own list of renderers and never calls `renderAll()`, so a surface
+added to `renderAll` alone never appears until something forces a repaint.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

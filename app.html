@@ -207,6 +207,17 @@
   .leak-bills[open]>summary::before{content:'- '}
   .leak-bills .lb-why{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
   .leak-note{font-size:11.5px;color:var(--muted);margin:-2px 0 4px}
+  .lesson-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .lesson-row{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 34px 11px 13px}
+  .lesson-row .lr-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .lesson-row .lr-n{font-weight:700;font-size:14px}
+  .lesson-row .lr-a{font-weight:800;color:var(--accent);flex-shrink:0}
+  .lesson-row .lr-meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .lesson-row .lr-note{font-size:12.5px;color:var(--text);margin-top:6px;font-style:italic}
+  .lesson-row .lr-x{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:3px 5px}
+  .lesson-row .lr-x:hover{color:var(--bad)}
+  .lesson-note{background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.34);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .lesson-note .ln-k{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
   .tk-entry{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:rgba(var(--good-rgb),.08);border:1px solid rgba(var(--good-rgb),.32);border-radius:14px;padding:12px 14px;margin:10px 0 14px;font-size:13px;line-height:1.5}
   .tk-entry>span{flex:1;min-width:180px;color:var(--text)}
   .tk-say{font-size:15px;line-height:1.6;color:var(--text);margin-bottom:14px}
@@ -1607,6 +1618,12 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>24-Hour Cooling Vault</h2>
         <p class="sub">Not sure? Lock the target in for 24 hours. The urge fades, the trap dies, and the ransom option only unlocks once the timer runs out. Most traps don't survive the wait.</p>
         <div id="vaultList"></div>
+      </div>
+
+      <div class="panel" id="lessonsPanel" style="display:none">
+        <h2>What you've told me</h2>
+        <p class="sub">The times money left because something <b>happened</b> - not because you were tempted. Kept so the pattern can be seen, and so nothing here gets mistaken for a trap again.</p>
+        <div id="lessonsBody"></div>
       </div>
 
       <div class="panel">
@@ -3131,7 +3148,7 @@ function activateTab(name,fromHistory){
   if(name==='home') renderHome();
   if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
-  if(name==='impulse') renderVault();
+  if(name==='impulse'){ renderVault(); renderLessons(); }
   if(name==='diary') renderDiary();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -5449,6 +5466,94 @@ function saveLesson(alsoFund){
   renderAll(); closeTalk();
   if(typeof toast==='function') toast('Kept. I will bring it up when it matters.');
 }
+/* ============================================================
+   WHAT THE HISTORY CHANGES
+   Keeping the events was only half of it. A Radar that has watched three things
+   break with nothing set aside, and still opens with a lecture about scroll
+   traps, has learned nothing about the person in front of it.
+
+   Two things the history earns:
+     - the buffer becomes a DESTINATION. Skipping a $220 want when $1,380 of
+       accidents went unfunded should be able to go where the next one will land,
+       instead of only to a goal or a generic War Chest.
+     - the card says what it knows, in numbers the user gave it, so the skip has
+       a reason attached rather than a scolding.
+   ============================================================ */
+const BUFFER_CAT='Life happens';
+function bufferCat(){ return (state.categories||[]).find(c=>!c.parentId && c.name.toLowerCase()===BUFFER_CAT.toLowerCase())||null; }
+/* the unfunded risk picture: what has actually happened, against what is set aside */
+function riskStanding(){
+  const risky=(state.lessons||[]).filter(l=>((CAUSES.find(c=>c.v===l.cause)||{}).kind)==='risk');
+  if(!risky.length) return null;
+  const uncovered=risky.filter(l=>l.covered!=='all');
+  const cat=bufferCat();
+  const M=state.activeMonth;
+  /* "uncovered" means the set-aside did not fully cover it, which INCLUDES the
+     partly-covered ones - the gap is real either way. But saying "nothing set
+     aside" about an event the user told us was partly covered is calling them a
+     liar with their own data, so the two are tracked apart for the wording. */
+  const none=uncovered.filter(l=>l.covered!=='some');
+  return { n:risky.length, uncovered:uncovered.length, none:none.length,
+           allNone: none.length===uncovered.length,
+           total:risky.reduce((s,l)=>s+(+l.amount||0),0),
+           unfunded:uncovered.reduce((s,l)=>s+(+l.amount||0),0),
+           months:monthsSpanned(risky.map(l=>l.date)),
+           setAside: cat?assignedFor(cat.id,M):0, cat };
+}
+/* the line the gut-check shows when there IS a history worth naming */
+function lessonNoteHTML(amt){
+  const r=riskStanding(); if(!r||!r.uncovered) return '';
+  const perMonth=Math.round(r.unfunded/Math.max(1,r.months));
+  const covers=amt>0?Math.round(amt/Math.max(1,perMonth)*10)/10:0;
+  const short=Math.max(0, perMonth-r.setAside);
+  const gap = r.allNone ? 'with nothing set aside' : "your set-aside didn't fully cover";
+  const lead=`<b>${r.uncovered}</b> thing${r.uncovered>1?'s':''} went wrong on you in the last ${r.months} month${r.months>1?'s':''} ${gap} - <b>${usd0(r.unfunded)}</b> of it.`;
+  const tail = r.setAside>0
+    ? (short>0
+        ? ` You've got <b>${usd0(r.setAside)}</b>/mo behind "${escapeHtml(BUFFER_CAT)}" now, about <b>${usd0(short)}</b>/mo short of that run rate.`
+        : ` You've got <b>${usd0(r.setAside)}</b>/mo behind "${escapeHtml(BUFFER_CAT)}" now, which covers it.`)
+    : ` There is nothing set aside for the next one yet.`;
+  const use = (amt>0 && perMonth>0)
+    ? ` Skipping this would put <b>${usd0(amt)}</b> there - about <b>${covers}</b> month${covers===1?'':'s'} of cover.`
+    : '';
+  return `<div class="lesson-note"><div class="ln-k">What you've told me</div><div>${lead}${tail}${use}</div></div>`;
+}
+/* The history has to be visible, not just consulted. A number the app quotes at
+   you in a popup and never shows anywhere is something you cannot check, correct
+   or argue with - and this one is built entirely out of things the user said. */
+function renderLessons(){
+  const panel=document.getElementById('lessonsPanel'), box=document.getElementById('lessonsBody');
+  if(!panel||!box) return;
+  const list=(state.lessons||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(!list.length){ panel.style.display='none'; box.innerHTML=''; return; }
+  panel.style.display='';
+  const r=riskStanding();
+  let head='';
+  if(r && r.uncovered){
+    const perMonth=Math.round(r.unfunded/Math.max(1,r.months));
+    const short=Math.max(0, perMonth-r.setAside);
+    const gap = r.allNone ? 'with nothing set aside' : "that your set-aside didn't fully cover";
+    head=`<div class="lesson-note"><div class="ln-k">The standing</div><div><b>${usd0(r.unfunded)}</b> across <b>${r.uncovered}</b> event${r.uncovered>1?'s':''} in ${r.months} month${r.months>1?'s':''} ${gap} - about <b>${usd0(perMonth)}/mo</b>.`
+      + (r.setAside>0
+          ? ` "${escapeHtml(BUFFER_CAT)}" holds <b>${usd0(r.setAside)}</b>/mo against it${short>0?`, about <b>${usd0(short)}</b>/mo short`:`, which covers it`}.`
+          : ` Nothing is set aside for the next one.`)
+      + (r.months<6 ? ` Short stretch to judge by - treat it as the high end.` : '')
+      + `</div></div>`;
+  }
+  box.innerHTML=head+`<div class="lesson-list">${list.map(l=>{
+    const c=CAUSES.find(x=>x.v===l.cause)||{};
+    const cov=(COVERS.find(x=>x.v===l.covered)||{}).label||'';
+    const when=l.date?new Date(l.date+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+    return `<div class="lesson-row">
+      <div class="lr-top"><span class="lr-n">${escapeHtml(l.name)}</span><span class="lr-a">${money(+l.amount||0)}</span></div>
+      <div class="lr-meta">${escapeHtml(when)}${c.label?' · '+escapeHtml(c.label):''}${cov?' · '+escapeHtml(cov):''}</div>
+      ${l.note?`<div class="lr-note">“${escapeHtml(l.note)}”</div>`:''}
+      <button class="lr-x" data-lesdel="${l.id}" title="Remove">✕</button>
+    </div>`; }).join('')}</div>`;
+  box.querySelectorAll('[data-lesdel]').forEach(b=>b.onclick=()=>{
+    state.lessons=(state.lessons||[]).filter(x=>x.id!==b.dataset.lesdel); save(); renderLessons();
+    if(typeof pendingCheck!=='undefined' && pendingCheck) renderCheckResult(); });
+}
 function lessonsOf(cause){ return (state.lessons||[]).filter(l=>!cause||l.cause===cause); }
 function lessonTotal(list){ return list.reduce((s,l)=>s+(+l.amount||0),0); }
 /* The pattern across everything of this kind, which one moment cannot show.
@@ -6057,7 +6162,7 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 /* Theme: 'auto' follows the phone; 'light'/'dark' are explicit overrides. Auto is
@@ -6602,7 +6707,14 @@ function renderCheckResult(){
   const hook=H>0?` That's <b>${fmtHours(amt/H)}</b> of your life.`:'';
   const q=pickReg(IMP_QUESTIONS);
   const open=state.goals.filter(x=>x.saved<x.target);
-  const goalSelect=open.length?`<select id="impGoal"><option value="">Bank to War Chest</option>${open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('')}</select>`:'';
+  /* the buffer is offered FIRST when the history says it is the gap - skipping a
+     want should be able to fund the thing that actually keeps hurting */
+  const rs=riskStanding();
+  const bufFirst = !!(rs && rs.uncovered);
+  const bufOpt = `<option value="__buffer">Put it behind “${escapeHtml(BUFFER_CAT)}”</option>`;
+  const goalOpts = open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('');
+  const goalSelect=(open.length||bufFirst)
+    ? `<select id="impGoal">${bufFirst?bufOpt:''}<option value="">Bank to War Chest</option>${goalOpts}${bufFirst?'':bufOpt}</select>` : '';
 
   document.getElementById('impResult').innerHTML=`
     <div class="checkcard want">
@@ -6614,6 +6726,7 @@ function renderCheckResult(){
       <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
       <div class="qline">${escapeHtml(q)}</div>
       ${whyReminderHTML()}
+      ${lessonNoteHTML(amt)}
       ${altHTML(name)}
       ${triggerSwapHTML(trap)}
       ${diaryEchoHTML(name)}
@@ -6628,8 +6741,17 @@ function renderCheckResult(){
   wireWhyEdit(); wireComfortLinks(); wireDiaryEcho();
 
   document.getElementById('impNeutralize').addEventListener('click',()=>{
-    const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';
+    const sel=document.getElementById('impGoal'); let goalId=sel?sel.value:'';
     const total=pendingCheck.amt;
+    // "__buffer" is not a goal - it raises this month's assignment on the buffer
+    // category, so the money lands where the next accident will actually hit
+    let toBuffer=0;
+    if(goalId==='__buffer'){
+      const cat=bufferCat()||findOrCreateCat(BUFFER_CAT);
+      const M=state.activeMonth;
+      budgetFor(M)[cat.id]=assignedFor(cat.id,M)+total;
+      toBuffer=total; goalId='';
+    }
     const ev=logNeutralize(pendingCheck.name,total,pendingCheck.trap,goalId);
     const toGoal=ev.goalId?ev.amount:0, toChest=total-toGoal, H2=effectiveHourly();
     pendingCheck=null; clearScan();
@@ -8406,7 +8528,7 @@ function boot(){
   // last month first (in full), then this month up to today - nothing slips through
   if(postRecurring(shiftMonth(thisMonth(),-1))+postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
-  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
+  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderLessons(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
   renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
