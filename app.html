@@ -200,6 +200,12 @@
   .newmonth .nm-msg{font-size:13px;color:var(--text);line-height:1.55}
   .newmonth .nm-msg b{color:var(--accent)}
   .newmonth .nm-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+  .leak-bills{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .leak-bills>summary{cursor:pointer;font-size:13.5px;font-weight:800;color:var(--accent);list-style:none;padding:4px 0}
+  .leak-bills>summary::-webkit-details-marker{display:none}
+  .leak-bills>summary::before{content:'+ ';font-weight:900}
+  .leak-bills[open]>summary::before{content:'- '}
+  .leak-bills .lb-why{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
   .cal-newgoal{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
   .cal-newgoal input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font:inherit;font-size:14px}
   .cal-newgoal #calGoalName{flex:1;min-width:150px}
@@ -6979,7 +6985,7 @@ const INTAKE=[
              : "You've had a run at this before";
       return `${had}, so it is written down somewhere. A notebook, a spreadsheet, another app. Photograph it and I will read it here on your phone, and we can skip most of the typing. The photo never leaves the device.`; }},
   {id:'acct', sum:'Setup type', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
-    return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~2 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
+    return `Quick one so I build the right thing, ${a.name||'friend'}: ${surv?"given where you're at, I'd start light - just keep your own spending honest against a daily allowance, small wins you can feel. About two minutes, and no full-budget homework unless you want it.":"most people start light - just keep your own spending honest against a daily allowance. About two minutes, and it's the version people actually stick with."} If you run the whole household budget, I'll build the entire thing with you here - closer to ten minutes, but you walk out with a finished, zero-based budget instead of a blank page. Which fits?`; }, input:'choice', key:'acct', options:[{label:'Just track my spending · ~4 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
@@ -7104,9 +7110,9 @@ const INTAKE=[
       if(t==='savage') return `Here's where it gets real${a.name?', '+a.name:''}. You want to know where your money ACTUALLY goes - not where you tell yourself it goes. Pick the one you'd genuinely do, not the one that sounds impressive:`;
       return `Here's where it gets real${a.name?', '+a.name:''}. To see where your money actually goes, you've got a few ways in - pick the one you'd genuinely do, not the one that sounds impressive:`; },
     options:[
-      {label:'Map my averages now', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
+      {label:'Map my averages now · ~5 min', value:'deep', reply:"Good - let's ballpark it from memory. Fast, and usually eye-opening on its own. Fair warning though: the REAL number only shows up when you track it for real."},
       {label:"I'll track it for real (30 days)", value:'track', reply:"That's the one that doesn't lie. Jot every discretionary buy however's fastest for you - a notebook, the notes app, a receipt in your pocket - and punch it in when you sit down. 30 days and you'll see the truth in your own handwriting. I'll count the days with you."},
-      {label:'Just track as I go', value:'light', reply:"Works too. The map and the 30-day challenge are both here when you want them."}
+      {label:'Just track as I go · nothing to fill in', value:'light', reply:"Works too. The map and the 30-day challenge are both here when you want them."}
     ]},
   {id:'deepDive', input:'leak', showIf:a=>a.acct==='spend' && a.deepDive==='deep',
     bot:a=> iaTone(a)==='savage'
@@ -7118,17 +7124,24 @@ const INTAKE=[
       const inc=intakeIncomeTotal(a);   // every source, not just the main paycheck
       const lifeTxt = (a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
       const sav=iaTone(a)==='savage';
+      /* The fixed bills are optional now, so "we accounted for X - bills and
+         habits together" would be a lie for anyone who left them folded away,
+         and the blind-spot figure would be their rent masquerading as a
+         mystery. Name what was actually counted, and say what is missing. */
+      const gotBills=!!a.billsMapped;
+      const countedTxt = gotBills ? 'bills and habits together' : 'just the day-to-day, since you skipped the fixed bills';
+      const billsCaveat = gotBills ? '' : ' Your rent and bills are in there too, so the real unaccounted number is smaller - add them any time and this sharpens up.';
       if(inc>0){ const blind=Math.round(inc-known);
         if(blind>50) return sav
-          ? `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name. Not gone - invisible. Bleeding out while nobody watched. That's YOUR damn money. From now on you see every dollar of it leave. That's the whole game.`
-          : `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - bills and habits together.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched. That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
+          ? `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - ${countedTxt}.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name.${billsCaveat} Not gone - invisible. Bleeding out while nobody watched. That's YOUR damn money. From now on you see every dollar of it leave. That's the whole game.`
+          : `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - ${countedTxt}.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched.${billsCaveat} That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
         if(blind<-50) return sav
           ? `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step, and you just took it.`
           : `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
         return `You mapped ${usd0(known)} against about ${usd0(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
-      return `That's ${usd0(known)} a month, mapped - the bills and the little stuff that usually vanishes without a trace.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
+      return `That's ${usd0(known)} a month, mapped - ${gotBills?'the bills and the little stuff that usually vanishes without a trace':'the little stuff that usually vanishes without a trace'}.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
-      return habits>0 ? `Your day-to-day spending (outside the fixed bills) mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
+      return habits>0 ? `Your day-to-day spending mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
   {id:'comfort', sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
     why:"Because a lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button you can reach. If you name what else helps while you're calm, I can hand the list back to you when the urge is loud and you can't think of a single thing.",
     bot:a=>{ const t=iaTone(a);
@@ -7233,7 +7246,7 @@ function pruneStaleAnswers(){
       if(s.key && ((s.key+'Note') in iaAns)){ delete iaAns[s.key+'Note']; changed=true; }
       if(s.loopKey && (s.loopKey in iaAns)){ delete iaAns[s.loopKey]; changed=true; }
     });
-    if(iaAns.leaks && iaAns.deepDive!=='deep'){ delete iaAns.leaks; changed=true; }   // covers the acct switch too, where deepDive itself was just pruned
+    if(iaAns.leaks && iaAns.deepDive!=='deep'){ delete iaAns.leaks; delete iaAns.billsMapped; changed=true; }   // covers the acct switch too, where deepDive itself was just pruned
     if(!changed) break;
   }
 }
@@ -7820,11 +7833,25 @@ function leakFinder(s){
   const fixedRows=FIXED_BILLS.map((n,i)=>fixedRow(i, escapeHtml(n))).join('');
   const varRows=LEAKS.map((l,i)=>varRow(i, `<span class="leak-name">${escapeHtml(l.name)}</span>`, l.f)).join('')
     + [0,1].map(i=>varRow('c'+i, `<input class="leak-name-in" type="text" data-lname="${i}" placeholder="Something else">`, 'week')).join('');
-  dock.innerHTML=`<div class="leak-hint">Two quick passes: the big fixed bills first, then the little stuff that slips away. Ballpark is fine.</div>
+  /* This step opened with seven fixed-bill fields - rent, utilities, phone,
+     insurance, car payment - on a path whose own chooser promises "no
+     full-budget homework unless you want it". Someone who picked "just track my
+     spending" is asking about the little stuff, not their mortgage, and 57
+     fields is not what "~2 min" bought them.
+
+     So the little stuff leads, because that is the question they asked. The
+     bills fold away behind a summary they can open, worded so the trade is
+     plain: they sharpen the blind-spot number, and blindSpend says so honestly
+     when they are left closed. */
+  const billsOpen = (iaAns.leaks||[]).some(x=>x.fixed);   // reopened if they already filled some in
+  dock.innerHTML=`<div class="leak-hint">The little stuff first - that's where it actually hides. Ballpark is fine, and skip any that aren't you.</div>
     <div class="leak-total">Mapped so far: <b id="leakTotal">$0</b>/mo</div>
     <div class="leak-list">
-      <div class="leak-sub">Fixed bills - flat per month</div>${fixedRows}
       <div class="leak-sub">Where it slips away - how often × how much</div>${varRows}
+      <details class="leak-bills"${billsOpen?' open':''}>
+        <summary>Add your fixed bills too <span class="lb-why">optional - it sharpens the number</span></summary>
+        <div class="leak-sub">Fixed bills - flat per month</div>${fixedRows}
+      </details>
     </div>
     <div class="intake-chips" style="margin-top:10px"><button class="go" id="leakGo">See where it's going →</button></div>
     <div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`;
@@ -7849,6 +7876,7 @@ function leakFinder(s){
     LEAKS.forEach((l,i)=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+i+'"]').value, dock.querySelector('[data-lf="'+i+'"]').value, dock.querySelector('[data-lc="'+i+'"]').value); if(mo>0) leaks.push({name:l.name, monthly:Math.round(mo)}); });
     [0,1].forEach(i=>{ const nm=(dock.querySelector('[data-lname="'+i+'"]').value||'').trim(); const mo=leakMonthly(dock.querySelector('[data-ln="c'+i+'"]').value, dock.querySelector('[data-lf="c'+i+'"]').value, dock.querySelector('[data-lc="c'+i+'"]').value); if(nm && mo>0) leaks.push({name:nm, monthly:Math.round(mo)}); });
     iaAns.leaks=leaks;
+    iaAns.billsMapped=fixed.length>0;   // blindSpend must not call bills "accounted for" when they were skipped
     if(leaks.length) iaBub(leaks.map(x=>x.name+' '+usd(x.monthly)+'/mo').join(', '),'me');
     else iaBub('Nothing to map right now','me');
     iaAdvance();

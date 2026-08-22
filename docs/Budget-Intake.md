@@ -174,14 +174,25 @@ The **spender** path skips the three full-path engines but is no longer a dead e
   reply. (The full-path income is required; this only fires for spenders who skip.)
 - **The wage question is reframed for spend mode** - it's the gut-check engine here (every
   purchase priced in hours of your life), not a leftover from the budget path, and it says so.
-- **Three ways to see where it goes** (`deepOffer`, reflect): "map my averages now" (the
-  leak finder), "I'll track it for real (30 days)" - the notebook-friendly honest path - or
-  "just track as I go." The 30-day choice sets `state.trackChallenge` and lights a **Money Map**
+- **Three ways to see where it goes** (`deepOffer`, reflect): "map my averages now · ~5 min"
+  (the leak finder), "I'll track it for real (30 days)" - the notebook-friendly honest path -
+  or "just track as I go · nothing to fill in." **Every option that costs time says so**, because
+  the leak finder is the heaviest form in the app and it used to be the unlabelled first choice,
+  offered one step after a chooser promising "~2 min". The 30-day choice sets `state.trackChallenge` and lights a **Money Map**
   on the spend Home (day X of 30, days logged, dismissible); the leak finder still recommends
   the real track because estimates undercount.
 - **The "map my averages" leak finder** (`deepDive`, `input:'leak'`, `leakFinder`).
-  One screen in two passes - **fixed bills** as flat monthly amounts (rent, utilities, phone,
-  insurance, car, debt) then **variable leaks** as frequency x cost (`leakMonthly`: coffee
+  **The little stuff leads and the fixed bills fold away** behind an optional `<details>`.
+  It used to open with seven bill fields - rent, utilities, phone, insurance, car payment - on
+  a path whose own chooser promises *"no full-budget homework unless you want it"*, which is
+  exactly what those fields are. Someone who picked "just track my spending" is asking about
+  the coffee and the takeout, not their mortgage. The bills reopen automatically if any were
+  already entered, so Back never hides work. Skipping them sets no `billsMapped` flag, and
+  **`blindSpend` then says what it actually counted** ("just the day-to-day, since you skipped
+  the fixed bills") and warns that the unaccounted figure is inflated by the rent sitting
+  inside it - otherwise the headline number is somebody's mortgage dressed up as a mystery.
+  One screen - **fixed bills** as flat monthly amounts (rent, utilities, phone,
+  insurance, car, debt) and **variable leaks** as frequency x cost (`leakMonthly`: coffee
   4x/wk @ $6 = ~$104; a pack a day @ $9 = ~$274). Live running total.
 - **The gateway to budgeting.** Spend tracking is the on-ramp, not the destination. Once
   there's tracked spend, the spend Home shows a quiet bridge: "seeing it is sometimes enough
