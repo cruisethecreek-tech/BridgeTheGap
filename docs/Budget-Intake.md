@@ -119,6 +119,18 @@ dollar manually, which is the #1 churn risk for a manual app, so most people sta
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
 Full zero-based is one tap away for anyone who runs the household budget.
 
+**An opener has to be earned.** The `intro` step used to lead with a canned
+affirmation keyed to the **generation dial** - `Bet.` / `Great.` / `Wonderful.` -
+and blind to the `situation` answered one question earlier. So somebody who said
+*"Treading water"* and was told *"Exhausting, that one"* got **"Great."** in the
+very next bubble: the app talking over the person instead of listening. The
+affirmation now appears only for `situation:'build'` (stable, ready to build);
+every other answer, including a skipped one, simply begins. The situation step's
+own reply has already done the emotional work, so silence there is warmer than
+the wrong word. `tests/intake_cost.mjs` sweeps every step's copy across
+survive/treading/stuck x three registers x three tones x both paths - 1,998 lines
+- and fails on any congratulation, while asserting the earned one survives.
+
 **Savings are not a leak, and the leftover is not waste.** The finder asked about
 bills and habits and treated *everything else* as unaccounted, so a household
 putting $8,000 of $13,400 away was told it was "bleeding out while nobody

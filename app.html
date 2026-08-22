@@ -7316,11 +7316,22 @@ const INTAKE=[
       {label:'Stable, ready to build', value:'build', reply:"Good place to be. Let's put that steadiness to work."}
     ]},
   {id:'intro', bot:a=>{
-      const hi=a.register==='genz'?"Bet.":a.register==='mature'?"Wonderful.":"Great.";
+      /* "Great." landed one bubble after someone answered "Treading water" and
+         was told "Exhausting, that one." Nothing about that is great, and an
+         affirmation keyed to the GENERATION dial while blind to what was just
+         disclosed is the app talking over the person instead of listening.
+
+         The situation step already did the emotional work, so this one's job is
+         only to start. Congratulate what is actually good news - someone stable
+         and ready to build - and otherwise begin without a verdict on their
+         life. Silence is warmer than the wrong word. */
+      const hi=a.situation==='build'
+        ? (a.register==='genz'?"Bet. ":a.register==='mature'?"Wonderful. ":"Great. ")
+        : '';
       const t=iaTone(a);
-      if(t==='savage') return `${hi} One thing before we start, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. The ability. Nobody hands you that, and I damn sure can't do it for you. It's a muscle. You build it by seeing through your own bullshit and deciding what stays and what dies. No secret sauce. Ready?`;
-      if(t==='blunt') return `${hi} One thing before we start, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. The ability. I can't hold you accountable; nobody can. What I can do is help you see clearly enough to decide what stays and what goes. It gets easier every time you do it. Ready?`;
-      return `${hi} One thing before we start, because it's the whole point. Accountability is the ability to hold yourself accountable. The ability. Nobody can do that part for you, me included. What I can do is help you see clearly enough to decide what stays and what goes. It gets easier every time. No shame, no lecture. Ready?`;
+      if(t==='savage') return `${hi}One thing before we start, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. The ability. Nobody hands you that, and I damn sure can't do it for you. It's a muscle. You build it by seeing through your own bullshit and deciding what stays and what dies. No secret sauce. Ready?`;
+      if(t==='blunt') return `${hi}One thing before we start, because it's the whole point. Accountability is the ABILITY to hold yourself accountable. The ability. I can't hold you accountable; nobody can. What I can do is help you see clearly enough to decide what stays and what goes. It gets easier every time you do it. Ready?`;
+      return `${hi}One thing before we start, because it's the whole point. Accountability is the ability to hold yourself accountable. The ability. Nobody can do that part for you, me included. What I can do is help you see clearly enough to decide what stays and what goes. It gets easier every time. No shame, no lecture. Ready?`;
     }, input:'start', cta:"I'm ready →", skip:"I'll set it up myself"},
   {id:'name', bot:"What should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name', sum:'Name'},
   {id:'moneyStory', sum:'Money growing up', input:'reflect', key:'moneyStory', optional:true,

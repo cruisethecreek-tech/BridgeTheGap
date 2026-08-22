@@ -304,6 +304,35 @@ check('nobody is told they are bleeding out', !/bleeding out|couldn't name/i.tes
 check('the leftover is named as unasked-about, not as waste',
       /didn't ask about/.test(fair.without) && /Not waste/.test(fair.without), fair.without.slice(-140));
 
+/* ---- 4f. nothing congratulates someone who just said they are struggling ----
+        The intro opened with "Great." one bubble after a user answered "Treading
+        water" and was told "Exhausting, that one." The affirmation was keyed to
+        the GENERATION dial and blind to what had just been disclosed - the app
+        talking over the person instead of listening. Silence is warmer than the
+        wrong word, so an opener now has to be earned. ---- */
+const kind = await p.evaluate(() => {
+  const CONGRATS=/^\s*(great|wonderful|bet|nice|perfect|awesome|amazing|excellent|brilliant|love (that|it)|beautiful|fantastic)\b/i;
+  const bad=[]; let checked=0;
+  const base={name:'Pat',wage:24,hoursPerWeek:40,budgetPast:'lapsed',income:3300};
+  for(const situation of ['survive','treading','stuck'])
+    for(const register of ['genz','middle','mature'])
+      for(const tone of ['clean','blunt','savage'])
+        for(const acct of ['spend','full'])
+          for(const s of INTAKE){
+            let t=''; try{ t = typeof s.bot==='function' ? String(s.bot({...base, situation, register, tone, acct})) : String(s.bot||''); }catch(e){ continue; }
+            if(!t) continue; checked++;
+            if(CONGRATS.test(t.replace(/\*\*/g,''))) bad.push(`${s.id} [${situation}/${register}]: ${t.slice(0,60)}`);
+          }
+  /* ...and the one place it IS earned still says it */
+  const intro=INTAKE.find(s=>s.id==='intro');
+  const built=['genz','middle','mature'].map(register=>String(intro.bot({...base, situation:'build', register, tone:'blunt'})));
+  return { bad, checked, built:built.map(t=>t.slice(0,12)) };
+});
+check(`nothing congratulates a struggling user (${kind.checked} lines across every situation, register, tone and path)`,
+      kind.bad.length===0, kind.bad.slice(0,3).join('\n        '));
+check('...but "stable, ready to build" still gets one, in its own voice',
+      kind.built.every(t=>/^(Bet|Great|Wonderful)\./.test(t)), kind.built.join(' | '));
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
   check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));
