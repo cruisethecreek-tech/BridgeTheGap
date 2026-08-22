@@ -333,6 +333,38 @@ check(`nothing congratulates a struggling user (${kind.checked} lines across eve
 check('...but "stable, ready to build" still gets one, in its own voice',
       kind.built.every(t=>/^(Bet|Great|Wonderful)\./.test(t)), kind.built.join(' | '));
 
+/* ---- 4g. no step may claim a position it does not hold ----
+        The wage step opened "Last setup question" - true when it was written,
+        false the moment it moved up so each income could get its own rate. Seven
+        questions still followed it on the spend path, twelve on the full one.
+        Copy that describes its own POSITION rots whenever anything is reordered,
+        which is precisely why it needs a test rather than care. ---- */
+const position = await p.evaluate(() => {
+  const NO_ANSWER=new Set(['continue','zeroClose','photo','start']);
+  const CLAIMS=[
+    {re:/\b(last (setup )?question|final question|last one)\b/i, max:0,  what:'claims to be the last question'},
+    {re:/\b(one more|one last|just one more)\b/i,                max:2,  what:'claims one question remains'},
+    {re:/\b(almost done|nearly there|nearly done)\b/i,           max:4,  what:'claims the end is near'},
+  ];
+  const base={name:'Pat',register:'middle',situation:'ok',wage:22,hoursPerWeek:40,budgetPast:'lapsed',income:3300};
+  const paths=[{acct:'spend',deepDive:'deep'},{acct:'spend',deepDive:'light'},{acct:'full'}];
+  const bad=[]; let checked=0;
+  for(const extra of paths) for(const tone of ['clean','blunt','savage']){
+    const a={...base,...extra,tone};
+    const vis=INTAKE.filter(s=>{ try{ return !s.showIf||s.showIf(a); }catch(e){ return false; } });
+    vis.forEach((s,i)=>{
+      let t=''; try{ t = typeof s.bot==='function' ? String(s.bot(a)) : String(s.bot||''); }catch(e){ return; }
+      if(!t) return;
+      const after=vis.slice(i+1).filter(x=>!NO_ANSWER.has(x.input)).length;
+      for(const c of CLAIMS){ if(!c.re.test(t)) continue; checked++;
+        if(after>c.max) bad.push(`${s.id} [${extra.acct}/${tone}] ${c.what} but ${after} follow`); }
+    });
+  }
+  return { bad:[...new Set(bad)], checked };
+});
+check(`no step claims a position it does not hold (${position.checked} positional claims across every path and tone)`,
+      position.bad.length===0, position.bad.slice(0,4).join('\n        '));
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
   check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));

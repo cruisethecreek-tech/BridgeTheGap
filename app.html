@@ -7336,7 +7336,9 @@ const INTAKE=[
   {id:'name', bot:"What should I call you?", input:'text', key:'name', optional:true, placeholder:'Your name', sum:'Name'},
   {id:'moneyStory', sum:'Money growing up', input:'reflect', key:'moneyStory', optional:true,
     why:"Because the way money felt when you were a kid still drives how you spend today - grip it tight, or blow it before it's gone. If I know the pattern, I can catch it for you instead of letting it run quietly in the background.",
-    bot:"One more that shapes more than most people admit: what did money feel like growing up?",
+    /* was "One more that shapes..." at question 6 of 17 - it reads as a count,
+       and the count was wrong. Describe the question, not its place in the queue. */
+    bot:"Here's one that shapes more than most people admit: what did money feel like growing up?",
     options:[
       {label:'Never enough, kind of scary', value:'fear', reply:"That leaves a mark. Some people come out gripping every dollar. Others spend it before it can disappear. Same fear underneath, and naming it is how it stops quietly running things.", followup:"Say a bit more, if you want (optional)"},
       {label:'Tight, but we managed', value:'tight', reply:"That teaches you a resourcefulness most people never build. Same muscle works for building, not just surviving."},
@@ -7407,7 +7409,12 @@ const INTAKE=[
     ]},
   {id:'wage',
     bot:a=> a.acct==='spend'
-      ? `Last setup question${a.name?', '+a.name:''} - and it's the one that gives the gut-check its teeth: what do you make per hour, take-home? In spend mode I price every purchase in HOURS OF YOUR LIFE, not just dollars - that's what makes you feel it before the card comes out. ${a.income>0?`Since about ${usd(a.income)} lands a month, that's roughly ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr ${a.hoursPerWeek>0?`on a ${a.hoursPerWeek}-hour week`:`if you work a standard 40-hour week`} - sound right?`:`Not sure? Tap “Help me work it out” below.`} Skip if you'd rather just watch the numbers. ★`
+      /* This said "Last setup question" - written when the wage step really was
+         near the end. Moving it up so each income gets its own rate left the
+         claim behind, asserting the finish line seven questions early. Copy that
+         describes its own POSITION rots the moment anything moves, so this now
+         describes its JOB instead, which cannot. */
+      ? `Now the one that gives the gut-check its teeth${a.name?', '+a.name:''}: what do you make per hour, take-home? In spend mode I price every purchase in HOURS OF YOUR LIFE, not just dollars - that's what makes you feel it before the card comes out. ${a.income>0?`Since about ${usd(a.income)} lands a month, that's roughly ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr ${a.hoursPerWeek>0?`on a ${a.hoursPerWeek}-hour week`:`if you work a standard 40-hour week`} - sound right?`:`Not sure? Tap “Help me work it out” below.`} Skip if you'd rather just watch the numbers. ★`
       : a.income>0
       ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; ${a.hoursPerWeek>0?`at the ${a.hoursPerWeek} hours a week you actually work, that's`:`assuming a standard 40-hour week, that works out to`} about ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr. Sound right?${a.hoursPerWeek>0?'':` (If your week isn't 40 hours, tell me - guessing your hours is the one thing this app shouldn't do.)`}${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
