@@ -7001,8 +7001,8 @@ const INTAKE=[
     const nm=a.name?', '+a.name:'';
     const light=surv
       ? `Given where you're at, I'd start light: keep your own spending honest against a daily allowance, small wins you can feel, no full-budget homework.`
-      : `<b>Just track my spending</b> - keep your spending honest against a daily allowance, and see every dollar that leaves.`;
-    const cost=`That's about <b>6 minutes</b> and 16 questions. The whole budget is about <b>10 minutes</b> and 22 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
+      : `**Just track my spending** - keep your spending honest against a daily allowance, and see every dollar that leaves.`;
+    const cost=`That's about **6 minutes** and 16 questions. The whole budget is about **10 minutes** and 22 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
     switch(iaTone(a)){
       case 'savage':
         return `Two ways in${nm}. Real numbers, no pitch. ${light} ${cost} Neither one is padded. And if six minutes is too much to spend on the thing that decides where your life actually goes, stop here - you won't do the hard part either, and I'd rather you keep the six minutes. Still in? Pick one.`;
@@ -7306,7 +7306,26 @@ function iaBack(){
   pruneStaleAnswers(); iaSaveDraft();
   runIntakeStep();   // re-emits the step's own bot bubble + dock, keeping transcript and state in lockstep
 }
-function iaBub(text,who){ const log=document.getElementById('intakeLog'); const d=document.createElement('div'); d.className='bub '+who; d.dataset.st=iaStep; d.textContent=text; log.appendChild(d); log.scrollTop=log.scrollHeight; setTimeout(()=>{log.scrollTop=log.scrollHeight;},40); }
+/* Bot copy is dense - a chooser that names two costs and two question counts is
+   a wall of text, and the figures are the part people scan for. But iaBub also
+   echoes what the USER typed and what OCR pulled off a photograph, so innerHTML
+   here would be an injection hole with a camera pointed at it. So bot lines get
+   a tiny marker instead - **like this** - BUILT AS DOM NODES, never parsed as
+   HTML. Anything that is not the marker stays literal text, which is also why a
+   stray "<b>" in copy shows up as "<b>" rather than silently bolding: the
+   escape hatch does not exist. User bubbles skip the parse entirely. */
+function iaRich(text){
+  const frag=document.createDocumentFragment();
+  String(text==null?'':text).split(/(\*\*[^*\n]+\*\*)/).forEach(part=>{
+    if(!part) return;
+    if(/^\*\*[^*\n]+\*\*$/.test(part)){ const b=document.createElement('b'); b.textContent=part.slice(2,-2); frag.appendChild(b); }
+    else frag.appendChild(document.createTextNode(part));
+  });
+  return frag;
+}
+function iaBub(text,who){ const log=document.getElementById('intakeLog'); const d=document.createElement('div'); d.className='bub '+who; d.dataset.st=iaStep;
+  if(who==='bot') d.appendChild(iaRich(text)); else d.textContent=text;   // only the app's own copy may emphasise; anything a person typed stays literal
+  log.appendChild(d); log.scrollTop=log.scrollHeight; setTimeout(()=>{log.scrollTop=log.scrollHeight;},40); }
 function iaStore(key,val){ if(key) iaAns[key]=val; }
 function nextIntakeIndex(from){ let i=from; while(i<INTAKE.length){ const s=INTAKE[i]; if(s.showIf && !s.showIf(iaAns)){ i++; continue; } return i; } return -1; }
 /* progress = share of the steps this user will actually SEE, not raw array index -
@@ -7351,7 +7370,8 @@ function iaBotSay(text, done){
     if(gen!==iaSayGen){ return; }
     if(!d.isConnected){ if(done) done(); return; }
     d.classList.remove('typing'); d.removeAttribute('aria-label');
-    d.textContent=text; log.scrollTop=log.scrollHeight;
+    d.textContent=''; d.appendChild(iaRich(text));   // same marker parse as iaBub - this is the path that actually runs at normal pace
+    log.scrollTop=log.scrollHeight;
     if(done) done();
   }, wait);
 }

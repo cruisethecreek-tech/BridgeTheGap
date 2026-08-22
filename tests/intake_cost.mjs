@@ -101,9 +101,54 @@ const mapCost=measured.spendDeep.minutes-measured.spend.minutes;
 const mapClaim=+((mapChip||'').match(/~(\d+) min/)||[0,0])[1];
 check(`the map claims ~${mapClaim} min, adds ${Math.round(mapCost*10)/10} min`, mapCost <= mapClaim*(1+MINUTE_BAND));
 
+/* ---- 4b. bot copy renders as copy, not as source ----
+        iaBub/iaBotSay build DOM nodes and never parse HTML, so a raw "<b>" in a
+        step's text renders literally: "<b>Just track my spending</b>". The
+        emphasis marker is **like this**. This walks every step in every tone
+        and every path, because a tag in a branch nobody rendered is invisible
+        until a real person hits that branch on their phone. ---- */
+const copy = await p.evaluate(() => {
+  const bad=[], base={name:'Pat',age:'middle',register:'middle',situation:'ok',wage:24,hoursPerWeek:40,budgetPast:'lapsed',income:3300};
+  const variants=[];
+  for(const tone of ['clean','blunt','savage'])
+    for(const reg of ['genz','middle','mature'])
+      for(const acct of ['spend','full'])
+        for(const dd of ['deep','light','track'])
+          variants.push({...base, tone, register:reg, acct, deepDive:dd});
+  variants.push({...base, tone:'savage', situation:'survive'}, {...base, tone:'savage', situation:'treading'});
+  let checked=0;
+  for(const a of variants) for(const s of INTAKE){
+    for(const [what,val] of [['bot',s.bot],['hint',s.hint],['why',s.why]]){
+      let t=''; try{ t = typeof val==='function' ? String(val(a)) : (val==null?'':String(val)); }catch(e){ continue; }
+      if(!t) continue; checked++;
+      if(/<\/?[a-zA-Z][^>]*>/.test(t)) bad.push(`${s.id}.${what}: ${t.slice(0,90)}`);
+    }
+    for(const o of (s.options||[])){
+      for(const [what,val] of [['label',o.label],['reply',o.reply]]){
+        const t=String(val==null?'':val); if(!t) continue; checked++;
+        if(/<\/?[a-zA-Z][^>]*>/.test(t)) bad.push(`${s.id}.option.${what}: ${t.slice(0,90)}`);
+      }
+    }
+  }
+  /* and the renderer really must not parse markup, whatever it is handed */
+  const log=document.getElementById('intakeLog'); log.innerHTML='';
+  iaBub('<img src=x onerror=alert(1)><b>x</b>','me');
+  iaBub('a **bold** bit and a literal <b>tag</b>','bot');
+  const bubs=[...log.querySelectorAll('.bub')];
+  return { bad, checked,
+    userTagsRendered: bubs[0].querySelectorAll('*').length,
+    botBolds: [...bubs[1].querySelectorAll('b')].map(x=>x.textContent),
+    botKeepsTagLiteral: bubs[1].textContent.includes('<b>tag</b>') };
+});
+check(`no step's copy contains raw HTML (${copy.checked} strings across every tone and path)`,
+      copy.bad.length===0, copy.bad.slice(0,4).join('\n        '));
+check('a user bubble renders no elements at all', copy.userTagsRendered===0, String(copy.userTagsRendered));
+check('the ** marker still bolds in bot copy', copy.botBolds.length===1 && copy.botBolds[0]==='bold', JSON.stringify(copy.botBolds));
+check('a stray tag in bot copy stays literal rather than silently working', copy.botKeepsTagLiteral);
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
-  check(`${t}: names the real minutes`, /6 minutes/.test(text) && /10 minutes/.test(text));
+  check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));
   check(`${t}: names the question counts`, /16 questions/.test(text) && /22 questions/.test(text));
   check(`${t}: says the quiet part rather than apologising for asking`,
         /isn't your app|keep the six minutes|not going to pretend otherwise/.test(text));

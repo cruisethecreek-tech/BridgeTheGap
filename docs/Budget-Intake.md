@@ -119,6 +119,16 @@ dollar manually, which is the #1 churn risk for a manual app, so most people sta
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
 Full zero-based is one tap away for anyone who runs the household budget.
 
+**Bot copy is plain text with one marker.** `iaBub`/`iaBotSay` build the bubble
+from DOM nodes and never parse HTML, because the same function echoes what the
+user typed and what OCR pulled off a photograph - `innerHTML` there would be an
+injection hole with a camera pointed at it. Bot lines may emphasise with
+`**double asterisks**` (`iaRich` builds a real `<b>` node); a literal `<b>` in
+copy renders as the characters `<b>`, which is exactly what happened when the
+chooser copy was first written. User bubbles skip the parse entirely and stay
+literal. `tests/intake_cost.mjs` walks every step's bot/hint/why/options across
+all three tones, three registers and every path and fails on any raw tag.
+
 **The chooser states the real cost, and owns it.** It used to advertise "~2 min"
 for a path that runs 17 steps and 16 questions, then hand over seven fixed-bill
 fields one screen after promising "no full-budget homework". Both chips now carry
