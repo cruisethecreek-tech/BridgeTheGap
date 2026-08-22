@@ -206,6 +206,31 @@
   .leak-bills>summary::before{content:'+ ';font-weight:900}
   .leak-bills[open]>summary::before{content:'- '}
   .leak-bills .lb-why{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
+  .leak-note{font-size:11.5px;color:var(--muted);margin:-2px 0 4px}
+  .lesson-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .lesson-row{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 34px 11px 13px}
+  .lesson-row .lr-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .lesson-row .lr-n{font-weight:700;font-size:14px}
+  .lesson-row .lr-a{font-weight:800;color:var(--accent);flex-shrink:0}
+  .lesson-row .lr-meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .lesson-row .lr-note{font-size:12.5px;color:var(--text);margin-top:6px;font-style:italic}
+  .lesson-row .lr-x{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:3px 5px}
+  .lesson-row .lr-x:hover{color:var(--bad)}
+  .lesson-note{background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.34);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .lesson-note .ln-k{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+  .tk-entry{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:rgba(var(--good-rgb),.08);border:1px solid rgba(var(--good-rgb),.32);border-radius:14px;padding:12px 14px;margin:10px 0 14px;font-size:13px;line-height:1.5}
+  .tk-entry>span{flex:1;min-width:180px;color:var(--text)}
+  .tk-say{font-size:15px;line-height:1.6;color:var(--text);margin-bottom:14px}
+  .tk-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .tk-opt{text-align:left;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+  .tk-opt:hover{border-color:var(--accent);color:var(--accent)}
+  .tk-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+  .tk-back{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:6px 2px}
+  .tk-pat{background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.34);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.55;margin-bottom:14px}
+  .startover{margin-top:14px;border:1px solid rgba(var(--bad-rgb),.34);background:rgba(var(--bad-rgb),.07);border-radius:14px;padding:14px 16px}
+  .startover .so-head{font-weight:800;color:var(--bad);font-size:14px}
+  .startover.so-flash{animation:soFlash 1.5s ease}
+  @keyframes soFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 3px rgba(var(--bad-rgb),.35)}}
   .cal-newgoal{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
   .cal-newgoal input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font:inherit;font-size:14px}
   .cal-newgoal #calGoalName{flex:1;min-width:150px}
@@ -908,6 +933,9 @@
   .leak-row .leak-c{width:54px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 6px;font-size:13px;flex-shrink:0}
   .leak-row .leak-mo{width:56px;text-align:right;font-weight:800;color:var(--good);flex-shrink:0}
   .leak-row .leak-fxu{color:var(--muted);font-size:12px;flex-shrink:0}
+  .leak-rowwrap{padding-bottom:2px}
+  .leak-work{font-size:11.5px;color:var(--muted);text-align:right;margin:-2px 0 4px;min-height:0}
+  .leak-work:empty{display:none}
   .leak-sub{font-size:12px;font-weight:800;letter-spacing:.3px;color:var(--accent);margin:6px 0 2px;text-transform:uppercase}
   .leak-sub:first-child{margin-top:0}
   .leak-row input:focus,.leak-row select:focus{outline:none;border-color:var(--accent)}
@@ -1564,6 +1592,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div class="panel">
         <h2>Trap Radar - scan the target</h2>
         <p class="sub">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life. <span class="sub" style="margin:0">Set your wage in <b>Settings</b> for exact hours.</span></p>
+        <div class="tk-entry">
+          <span>Not tempted - something <b>happened</b>? A thing broke, someone needed you, a bill landed. That is not a trap, and calling it one helps nobody.</span>
+          <button class="btn sm" id="openTalkBtn">Let's talk it through →</button>
+        </div>
         <div class="row">
           <label class="fld" style="flex:1">Target
             <input type="text" id="impName" placeholder="Sneakers, gadget, another coffee…">
@@ -1586,6 +1618,12 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>24-Hour Cooling Vault</h2>
         <p class="sub">Not sure? Lock the target in for 24 hours. The urge fades, the trap dies, and the ransom option only unlocks once the timer runs out. Most traps don't survive the wait.</p>
         <div id="vaultList"></div>
+      </div>
+
+      <div class="panel" id="lessonsPanel" style="display:none">
+        <h2>What you've told me</h2>
+        <p class="sub">The times money left because something <b>happened</b> - not because you were tempted. Kept so the pattern can be seen, and so nothing here gets mistaken for a trap again.</p>
+        <div id="lessonsBody"></div>
       </div>
 
       <div class="panel">
@@ -1930,7 +1968,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="btn ghost" id="installBtn2">Install app</button>
           <button class="btn ghost" id="exportBtn2">Export data</button>
           <button class="btn ghost" id="importBtn2">Import</button>
-          <button class="btn ghost danger" id="resetBtn2">Reset all</button>
+        </div>
+        <div class="startover" id="startOver">
+          <div class="so-head">Start over</div>
+          <p class="sub" style="margin:6px 0 10px">Wipes the budget, every transaction, your goals and your settings from this browser. There is no server copy and no undo - so save a backup first if there is any chance you will want this back.</p>
+          <div class="row">
+            <button class="btn ghost" id="resetBackupFirst">Back it up first</button>
+            <button class="btn ghost danger" id="resetBtn2">Erase everything</button>
+          </div>
         </div>
         <div class="databox">
           <div class="db-head">Keep a safe backup</div>
@@ -1978,14 +2023,19 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     </section>
   </div>
 
+  <!-- This footer sits under EVERY screen, and "Reset all" sat in it as a plain
+       link one space from "Export data" - a permanent wipe, on a browser-only
+       store with no server copy, a mistap away on every tab. What belongs here
+       is the constructive half: backing up and restoring can only ever help, so
+       they stay one tap from anywhere. Starting over and re-running setup moved
+       into Settings > Setup & data, where you go on purpose. -->
   <div class="foot">
     <span>Accountability · a working prototype. Everything saves to this browser only - nothing leaves your device.</span>
     <div class="actions">
-      <button class="linkbtn" id="intakeBtn">Setup chat</button>
       <button class="linkbtn" id="installBtn">Install app</button>
       <button class="linkbtn" id="exportBtn">Export data</button>
       <button class="linkbtn" id="importBtn">Import</button>
-      <button class="linkbtn" id="resetBtn">Reset all</button>
+      <button class="linkbtn" id="footSettings">Start over</button>
       <input type="file" id="importFile" accept="application/json" class="hide">
     </div>
   </div>
@@ -2002,6 +2052,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
   <div class="glance" id="glance" style="display:none">
     <button class="gl-tab" id="glanceTab" aria-expanded="false" aria-controls="glanceBody" title="Quick glance"><span>☰</span></button>
     <div class="gl-panel" id="glanceBody"></div>
+  </div>
+
+  <div class="modal-overlay" id="talkSheet">
+    <div class="modal">
+      <button class="x" id="talkX">✕</button>
+      <h3>Let's talk it through</h3>
+      <div id="talkBody"></div>
+    </div>
   </div>
 
   <div class="modal-overlay" id="stageMap">
@@ -2287,7 +2345,7 @@ const LESSONS=[
 function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
-           assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[],
+           assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[],
            onboarded:false, intake:{}, register:'middle', vault:[],
            freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
@@ -2334,6 +2392,8 @@ function normalizeState(s){
   // backup) is forced to a finite number here. One string in a money field would
   // otherwise turn addition into concatenation everywhere downstream.
   const num=(v)=>{ const n=+v; return isFinite(n)?n:0; };
+  if(!Array.isArray(s.lessons)) s.lessons=[];
+  s.lessons.forEach(l=>{ l.amount=num(l.amount); });
   Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=num(b[k]); }); });
   (s.transactions||[]).forEach(t=>{ t.amount=num(t.amount); if(t.hours!=null) t.hours=num(t.hours); });
   (s.accounts||[]).forEach(a=>{ a.balance=num(a.balance); });
@@ -3088,7 +3148,7 @@ function activateTab(name,fromHistory){
   if(name==='home') renderHome();
   if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
-  if(name==='impulse') renderVault();
+  if(name==='impulse'){ renderVault(); renderLessons(); }
   if(name==='diary') renderDiary();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -4748,14 +4808,26 @@ document.getElementById('importFile').addEventListener('change',e=>{
   r.readAsText(f); e.target.value='';
 });
 var bootAfterReset=false;   // var on purpose: boot() reads it, and a let here would be in the TDZ if boot ever moved earlier
-document.getElementById('resetBtn').addEventListener('click',()=>{
-  if(confirm('Wipe all budget, transactions, goals, and settings from this browser? No undo.')){
-    localStorage.removeItem(STORE_KEY); state=defaultState();
-    bootAfterReset=true; boot();
-    activateTab('home');
-    if(typeof toast==='function') toast('Wiped. Start the setup chat whenever you are ready.');
-  }
-});
+/* Two confirmations, deliberately. The first is the ordinary "are you sure"; the
+   second names what is actually being destroyed, because a browser-only store
+   has no server copy to fall back on and nobody gets a second chance at this. */
+function resetEverything(){
+  if(!confirm('Wipe all budget, transactions, goals, and settings from this browser? No undo.')) return;
+  const M=(typeof thisMonth==='function')?thisMonth():'';
+  const bits=[];
+  try{
+    const cats=(state.categories||[]).length, tx=(state.transactions||[]).length, goals=(state.goals||[]).length;
+    if(cats) bits.push(cats+' categor'+(cats>1?'ies':'y'));
+    if(tx) bits.push(tx+' transaction'+(tx>1?'s':''));
+    if(goals) bits.push(goals+' goal'+(goals>1?'s':''));
+  }catch(_){}
+  const what = bits.length ? bits.join(', ') : 'everything in this browser';
+  if(!confirm('Last check: this erases '+what+'. It cannot be undone and there is no copy anywhere else.\n\nErase it?')) return;
+  localStorage.removeItem(STORE_KEY); state=defaultState();
+  bootAfterReset=true; boot();
+  activateTab('home');
+  if(typeof toast==='function') toast('Wiped. Start the setup chat whenever you are ready.');
+}
 
 /* ---------- encrypted backup (WebCrypto AES-GCM, on-device only) ---------- */
 const cryptoOK=()=>!!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
@@ -5226,6 +5298,284 @@ function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDa
 /* The four traps are the app's own vocabulary, so every place that ASKS the user
    to pick one has to define it in the same breath - naming a thing you have never
    explained is just jargon. `pick` is the plain-words version used in the dropdowns. */
+/* ============================================================
+   LET'S TALK IT THROUGH
+   The Trap Radar makes you pick one of four traps before it will say anything -
+   scroll, friction, status, leak. All four assume you were tempted. So when your
+   phone goes in the ocean, the only honest answer is missing, and the app calls
+   a genuine accident a character flaw. That teaches nothing except that it does
+   not understand you.
+
+   This asks WHY IT HAPPENED before deciding what it was. Some causes are not
+   discipline problems at all - they are uninsured risks, and the fix is money set
+   aside, not willpower. Some are somebody else's need, which is not a trap
+   either. And some genuinely are temptation, which is what the Radar is for, so
+   those get handed straight to it.
+
+   Every one is kept. Three repairs in a year with nothing set aside is a pattern
+   no single moment can show you, and the pattern is the thing worth acting on.
+   ============================================================ */
+const CAUSES=[
+  {v:'broke',  label:'Something broke, got lost, or an accident',
+   kind:'risk',   verdict:"That is not a spending problem. Things break - the only question a budget can answer is whether it hurts when they do."},
+  {v:'someone',label:'Someone else needed it - a kid, a partner, a parent',
+   kind:'risk',   verdict:"Taking care of someone is not a leak. But it lands on the same money as everything else, so it deserves a place in the plan instead of a surprise every time."},
+  {v:'bill',   label:'A bill came in bigger than I expected',
+   kind:'risk',   verdict:"An underestimated bill is a planning gap, not a willpower gap. The fix is a truer number, not more discipline."},
+  {v:'chance', label:"A one-off chance I didn't want to miss",
+   kind:'grey',   verdict:"Sometimes real, sometimes the oldest trick there is - scarcity. Worth looking at honestly rather than deciding now."},
+  {v:'dunno',  label:"I don't know - it just kind of happened",
+   kind:'grey',   verdict:"That is the most honest answer on the list, and the one worth digging into. Things that 'just happen' usually have a trigger."},
+  {v:'wanted', label:'Honestly? I just wanted it',
+   kind:'want',   verdict:"Straight answer. That is exactly what the Trap Radar is built for - let's run it properly instead of guessing."}
+];
+/* Was there money behind it? This is the whole difference between a crisis and
+   an inconvenience, and it is the question the app never asked. */
+const COVERS=[
+  {v:'none', label:'Nothing set aside'},
+  {v:'some', label:'Some, not enough'},
+  {v:'all',  label:'Yes - it was covered'}
+];
+/* --- the conversation. One question on screen at a time, and it never labels
+   anything until it has heard why it happened. --- */
+let talk=null;
+function openTalk(seed){
+  talk = Object.assign({step:'what', name:'', amount:0, cause:'', covered:'', note:''}, seed||{});
+  document.getElementById('talkSheet').classList.add('on');
+  renderTalk();
+}
+function closeTalk(){ document.getElementById('talkSheet').classList.remove('on'); talk=null; }
+function talkSay(html){ return `<div class="tk-say">${html}</div>`; }
+function renderTalk(){
+  const box=document.getElementById('talkBody'); if(!box||!talk) return;
+  const nm=(state.intake&&state.intake.name)?', '+escapeHtml(state.intake.name):'';
+  const back=(to)=>`<button class="tk-back" data-tkback="${to}">← Back</button>`;
+
+  if(talk.step==='what'){
+    box.innerHTML=talkSay(`Tell me what happened${nm}, in your own words. Not what you bought - what <b>happened</b>.`)
+      +`<label class="fld">What happened<input type="text" id="tkName" placeholder="My phone went in the ocean" value="${escapeHtml(talk.name)}"></label>
+        <label class="fld">What it cost $<input type="number" id="tkAmt" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="${talk.amount||''}"></label>
+        <div class="tk-row"><button class="btn primary" id="tkNext">Next →</button></div>`;
+    const go=()=>{ const n=document.getElementById('tkName').value.trim(); const a=parseFloat(document.getElementById('tkAmt').value);
+      if(!n){ document.getElementById('tkName').focus(); return; }
+      talk.name=n; talk.amount=a>0?a:0; talk.step='cause'; renderTalk(); };
+    document.getElementById('tkNext').onclick=go;
+    box.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }));
+    setTimeout(()=>{ const el=document.getElementById('tkName'); if(el) el.focus(); },60);
+    return;
+  }
+
+  if(talk.step==='cause'){
+    box.innerHTML=talkSay(`Before anyone calls it anything - how did <b>${escapeHtml(talk.name)}</b> land on you?`)
+      +`<div class="tk-opts">${CAUSES.map(c=>`<button class="tk-opt" data-cause="${c.v}">${escapeHtml(c.label)}</button>`).join('')}</div>`
+      +`<div class="tk-row">${back('what')}</div>`;
+    box.querySelectorAll('[data-cause]').forEach(b=>b.onclick=()=>{
+      talk.cause=b.dataset.cause;
+      const c=CAUSES.find(x=>x.v===talk.cause);
+      talk.step = c.kind==='want' ? 'handoff' : (c.kind==='risk' ? 'covered' : 'trigger');
+      renderTalk(); });
+    wireTalkBack(box); return;
+  }
+
+  if(talk.step==='covered'){
+    const c=CAUSES.find(x=>x.v===talk.cause);
+    box.innerHTML=talkSay(`${escapeHtml(c.verdict)}<br><br>So the real question: <b>was there money set aside for this kind of thing?</b>`)
+      +`<div class="tk-opts">${COVERS.map(v=>`<button class="tk-opt" data-cov="${v.v}">${escapeHtml(v.label)}</button>`).join('')}</div>`
+      +`<div class="tk-row">${back('cause')}</div>`;
+    box.querySelectorAll('[data-cov]').forEach(b=>b.onclick=()=>{ talk.covered=b.dataset.cov; talk.step='verdict'; renderTalk(); });
+    wireTalkBack(box); return;
+  }
+
+  if(talk.step==='trigger'){
+    box.innerHTML=talkSay(`What were you doing right before it happened? Scrolling, tired, out with people, celebrating, putting off something else? No wrong answer - I am not scoring you.`)
+      +`<label class="fld">Right before<input type="text" id="tkTrig" placeholder="Scrolling in bed after a long shift" value="${escapeHtml(talk.note)}"></label>
+        <div class="tk-row"><button class="btn primary" id="tkNext">Next →</button>${back('cause')}</div>`;
+    const go=()=>{ talk.note=document.getElementById('tkTrig').value.trim(); talk.step='verdict'; renderTalk(); };
+    document.getElementById('tkNext').onclick=go;
+    document.getElementById('tkTrig').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
+    wireTalkBack(box); setTimeout(()=>document.getElementById('tkTrig').focus(),60); return;
+  }
+
+  if(talk.step==='handoff'){
+    box.innerHTML=talkSay(`${escapeHtml((CAUSES.find(x=>x.v==='wanted')||{}).verdict)}`)
+      +`<div class="tk-row"><button class="btn primary" id="tkToRadar">Run the Trap Radar →</button>${back('cause')}</div>`;
+    document.getElementById('tkToRadar').onclick=()=>{
+      const n=talk.name, a=talk.amount; closeTalk(); activateTab('impulse');
+      setTimeout(()=>{ const nEl=document.getElementById('impName'), aEl=document.getElementById('impAmt');
+        if(nEl) nEl.value=n; if(aEl&&a>0) aEl.value=a;
+        if(nEl) nEl.scrollIntoView({behavior:'smooth',block:'center'}); },160); };
+    wireTalkBack(box); return;
+  }
+
+  if(talk.step==='verdict'){
+    const c=CAUSES.find(x=>x.v===talk.cause)||{};
+    const pat=lessonPattern(talk.cause, talk);   // the one on screen counts
+    const H=effectiveHourly();
+    let lead = c.kind==='risk'
+      ? (talk.covered==='all'
+          ? `Then this was an <b>inconvenience, not a crisis</b> - which is exactly what the money was for. That is the system working.`
+          : talk.covered==='some'
+          ? `Partly covered means it stung instead of wrecking you. The gap is the number worth closing.`
+          : `Nothing set aside, so it came out of everything else. That is what made it hurt - <b>not the thing itself</b>.`)
+      : `Naming what you were doing right before is most of the work. That is the thing to watch for, not the purchase.`;
+    if(talk.amount>0 && H>0) lead += ` It cost <b>${fmtLife(talk.amount)}</b> of your life either way.`;
+    let patTxt='';
+    /* Averaging three events over the three months you happened to see them is a
+       ceiling, not a forecast - a short window makes any run-rate look worse than
+       it is. Say so, rather than handing someone a scary number as if it were
+       settled. The window widens on its own as more gets kept. */
+    if(pat) patTxt = `<div class="tk-pat"><b>This is not the first one.</b> ${pat.n} like it over ${pat.months} month${pat.months>1?'s':''}, <b>${usd0(pat.total)}</b> in total - about <b>${usd0(pat.perMonth)}/mo</b> averaged out.`
+      + (pat.months<6
+          ? ` That is a short stretch to judge by, so treat it as the high end rather than a forecast - a smaller number set aside every month still beats nothing.</div>`
+          : ` Over ${pat.months} months that is a real pattern, not bad luck.</div>`);
+    const suggest = (c.kind==='risk' && talk.covered!=='all');
+    box.innerHTML=talkSay(lead)+patTxt
+      +`<label class="fld">Anything you want to remember about this?<input type="text" id="tkNote" placeholder="Optional - a line to your future self" value="${escapeHtml(c.kind==='risk'?'':talk.note)}"></label>`
+      +`<div class="tk-row">
+          ${suggest?`<button class="btn primary" id="tkFund">Set money aside for this →</button>`:''}
+          <button class="btn ${suggest?'ghost':'primary'}" id="tkSave">Save what I learned</button>
+          ${back(c.kind==='risk'?'covered':'trigger')}
+        </div>`;
+    document.getElementById('tkSave').onclick=()=>saveLesson(false);
+    const f=document.getElementById('tkFund'); if(f) f.onclick=()=>saveLesson(true);
+    wireTalkBack(box); return;
+  }
+}
+function wireTalkBack(box){ box.querySelectorAll('[data-tkback]').forEach(b=>b.onclick=()=>{ talk.step=b.dataset.tkback; renderTalk(); }); }
+/* Keeping it is the point - one accident is bad luck, three is a line item. */
+function saveLesson(alsoFund){
+  const noteEl=document.getElementById('tkNote'); if(noteEl) talk.note=noteEl.value.trim()||talk.note;
+  state.lessons=state.lessons||[];
+  // derived BEFORE the push, with the pending event folded in - so it is the same
+  // figure the verdict just showed, not a different one computed after the fact
+  const pat=lessonPattern(talk.cause, talk);
+  const suggested = pat ? pat.perMonth : Math.max(10, Math.round((+talk.amount||0)/12));
+  state.lessons.push({ id:uid(), date:todayStr(), name:talk.name, amount:+talk.amount||0,
+                       cause:talk.cause, covered:talk.covered||'', note:talk.note||'' });
+  save();
+  if(alsoFund){
+    const cat=findOrCreateCat('Life happens');
+    const M=state.activeMonth, cur=assignedFor(cat.id,M);
+    budgetFor(M)[cat.id]=Math.max(cur, suggested);
+    save(); renderAll(); closeTalk(); activateTab('budget');
+    setTimeout(()=>{ const inp=document.querySelector('#cats input[data-cat="'+cat.id+'"]');
+      if(inp){ const row=inp.closest('.cat'); if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('cat-flash'); setTimeout(()=>row.classList.remove('cat-flash'),1600); } } },200);
+    if(typeof toast==='function') toast(`"Life happens" set to ${usd0(Math.max(cur,suggested))}. Change it to whatever is real.`);
+    return;
+  }
+  renderAll(); closeTalk();
+  if(typeof toast==='function') toast('Kept. I will bring it up when it matters.');
+}
+/* ============================================================
+   WHAT THE HISTORY CHANGES
+   Keeping the events was only half of it. A Radar that has watched three things
+   break with nothing set aside, and still opens with a lecture about scroll
+   traps, has learned nothing about the person in front of it.
+
+   Two things the history earns:
+     - the buffer becomes a DESTINATION. Skipping a $220 want when $1,380 of
+       accidents went unfunded should be able to go where the next one will land,
+       instead of only to a goal or a generic War Chest.
+     - the card says what it knows, in numbers the user gave it, so the skip has
+       a reason attached rather than a scolding.
+   ============================================================ */
+const BUFFER_CAT='Life happens';
+function bufferCat(){ return (state.categories||[]).find(c=>!c.parentId && c.name.toLowerCase()===BUFFER_CAT.toLowerCase())||null; }
+/* the unfunded risk picture: what has actually happened, against what is set aside */
+function riskStanding(){
+  const risky=(state.lessons||[]).filter(l=>((CAUSES.find(c=>c.v===l.cause)||{}).kind)==='risk');
+  if(!risky.length) return null;
+  const uncovered=risky.filter(l=>l.covered!=='all');
+  const cat=bufferCat();
+  const M=state.activeMonth;
+  /* "uncovered" means the set-aside did not fully cover it, which INCLUDES the
+     partly-covered ones - the gap is real either way. But saying "nothing set
+     aside" about an event the user told us was partly covered is calling them a
+     liar with their own data, so the two are tracked apart for the wording. */
+  const none=uncovered.filter(l=>l.covered!=='some');
+  return { n:risky.length, uncovered:uncovered.length, none:none.length,
+           allNone: none.length===uncovered.length,
+           total:risky.reduce((s,l)=>s+(+l.amount||0),0),
+           unfunded:uncovered.reduce((s,l)=>s+(+l.amount||0),0),
+           months:monthsSpanned(risky.map(l=>l.date)),
+           setAside: cat?assignedFor(cat.id,M):0, cat };
+}
+/* the line the gut-check shows when there IS a history worth naming */
+function lessonNoteHTML(amt){
+  const r=riskStanding(); if(!r||!r.uncovered) return '';
+  const perMonth=Math.round(r.unfunded/Math.max(1,r.months));
+  const covers=amt>0?Math.round(amt/Math.max(1,perMonth)*10)/10:0;
+  const short=Math.max(0, perMonth-r.setAside);
+  const gap = r.allNone ? 'with nothing set aside' : "your set-aside didn't fully cover";
+  const lead=`<b>${r.uncovered}</b> thing${r.uncovered>1?'s':''} went wrong on you in the last ${r.months} month${r.months>1?'s':''} ${gap} - <b>${usd0(r.unfunded)}</b> of it.`;
+  const tail = r.setAside>0
+    ? (short>0
+        ? ` You've got <b>${usd0(r.setAside)}</b>/mo behind "${escapeHtml(BUFFER_CAT)}" now, about <b>${usd0(short)}</b>/mo short of that run rate.`
+        : ` You've got <b>${usd0(r.setAside)}</b>/mo behind "${escapeHtml(BUFFER_CAT)}" now, which covers it.`)
+    : ` There is nothing set aside for the next one yet.`;
+  const use = (amt>0 && perMonth>0)
+    ? ` Skipping this would put <b>${usd0(amt)}</b> there - about <b>${covers}</b> month${covers===1?'':'s'} of cover.`
+    : '';
+  return `<div class="lesson-note"><div class="ln-k">What you've told me</div><div>${lead}${tail}${use}</div></div>`;
+}
+/* The history has to be visible, not just consulted. A number the app quotes at
+   you in a popup and never shows anywhere is something you cannot check, correct
+   or argue with - and this one is built entirely out of things the user said. */
+function renderLessons(){
+  const panel=document.getElementById('lessonsPanel'), box=document.getElementById('lessonsBody');
+  if(!panel||!box) return;
+  const list=(state.lessons||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(!list.length){ panel.style.display='none'; box.innerHTML=''; return; }
+  panel.style.display='';
+  const r=riskStanding();
+  let head='';
+  if(r && r.uncovered){
+    const perMonth=Math.round(r.unfunded/Math.max(1,r.months));
+    const short=Math.max(0, perMonth-r.setAside);
+    const gap = r.allNone ? 'with nothing set aside' : "that your set-aside didn't fully cover";
+    head=`<div class="lesson-note"><div class="ln-k">The standing</div><div><b>${usd0(r.unfunded)}</b> across <b>${r.uncovered}</b> event${r.uncovered>1?'s':''} in ${r.months} month${r.months>1?'s':''} ${gap} - about <b>${usd0(perMonth)}/mo</b>.`
+      + (r.setAside>0
+          ? ` "${escapeHtml(BUFFER_CAT)}" holds <b>${usd0(r.setAside)}</b>/mo against it${short>0?`, about <b>${usd0(short)}</b>/mo short`:`, which covers it`}.`
+          : ` Nothing is set aside for the next one.`)
+      + (r.months<6 ? ` Short stretch to judge by - treat it as the high end.` : '')
+      + `</div></div>`;
+  }
+  box.innerHTML=head+`<div class="lesson-list">${list.map(l=>{
+    const c=CAUSES.find(x=>x.v===l.cause)||{};
+    const cov=(COVERS.find(x=>x.v===l.covered)||{}).label||'';
+    const when=l.date?new Date(l.date+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';
+    return `<div class="lesson-row">
+      <div class="lr-top"><span class="lr-n">${escapeHtml(l.name)}</span><span class="lr-a">${money(+l.amount||0)}</span></div>
+      <div class="lr-meta">${escapeHtml(when)}${c.label?' · '+escapeHtml(c.label):''}${cov?' · '+escapeHtml(cov):''}</div>
+      ${l.note?`<div class="lr-note">“${escapeHtml(l.note)}”</div>`:''}
+      <button class="lr-x" data-lesdel="${l.id}" title="Remove">✕</button>
+    </div>`; }).join('')}</div>`;
+  box.querySelectorAll('[data-lesdel]').forEach(b=>b.onclick=()=>{
+    state.lessons=(state.lessons||[]).filter(x=>x.id!==b.dataset.lesdel); save(); renderLessons();
+    if(typeof pendingCheck!=='undefined' && pendingCheck) renderCheckResult(); });
+}
+function lessonsOf(cause){ return (state.lessons||[]).filter(l=>!cause||l.cause===cause); }
+function lessonTotal(list){ return list.reduce((s,l)=>s+(+l.amount||0),0); }
+/* The pattern across everything of this kind, which one moment cannot show.
+   `pending` is the event being discussed right now: it counts, because "this is
+   not the first one - 2 like it" while looking at the third is wrong, and
+   because the verdict and the amount it then offers to set aside have to be
+   derived from the same list. They were not, so the screen said $180/mo and the
+   button funded $115. */
+function lessonPattern(cause, pending){
+  const kind=(CAUSES.find(c=>c.v===cause)||{}).kind;
+  const same=(state.lessons||[]).filter(l=>{ const k=(CAUSES.find(c=>c.v===l.cause)||{}).kind; return k===kind; })
+    .concat(pending && +pending.amount>0 ? [{date:todayStr(), amount:+pending.amount, cause}] : []);
+  if(same.length<2) return null;
+  const total=lessonTotal(same);
+  const months=Math.max(1, monthsSpanned(same.map(l=>l.date)));
+  return { n:same.length, total, months, perMonth:Math.round(total/months) };
+}
+function monthsSpanned(dates){
+  const ms=dates.filter(Boolean).map(d=>d.slice(0,7)).sort();
+  if(!ms.length) return 1;
+  return Math.max(1, monIdx(ms[ms.length-1])-monIdx(ms[0])+1);
+}
 const TRAPS=[
   {v:'scroll', icon:'', label:'Scroll Trap', sub:'An ad or feed served it to you',
    pick:'an ad or a feed put it in front of me'},
@@ -5812,7 +6162,7 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons();
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
 /* Theme: 'auto' follows the phone; 'light'/'dark' are explicit overrides. Auto is
@@ -6357,7 +6707,14 @@ function renderCheckResult(){
   const hook=H>0?` That's <b>${fmtHours(amt/H)}</b> of your life.`:'';
   const q=pickReg(IMP_QUESTIONS);
   const open=state.goals.filter(x=>x.saved<x.target);
-  const goalSelect=open.length?`<select id="impGoal"><option value="">Bank to War Chest</option>${open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('')}</select>`:'';
+  /* the buffer is offered FIRST when the history says it is the gap - skipping a
+     want should be able to fund the thing that actually keeps hurting */
+  const rs=riskStanding();
+  const bufFirst = !!(rs && rs.uncovered);
+  const bufOpt = `<option value="__buffer">Put it behind “${escapeHtml(BUFFER_CAT)}”</option>`;
+  const goalOpts = open.map(x=>`<option value="${x.id}">Send it to: ${escapeHtml(x.name)}</option>`).join('');
+  const goalSelect=(open.length||bufFirst)
+    ? `<select id="impGoal">${bufFirst?bufOpt:''}<option value="">Bank to War Chest</option>${goalOpts}${bufFirst?'':bufOpt}</select>` : '';
 
   document.getElementById('impResult').innerHTML=`
     <div class="checkcard want">
@@ -6369,6 +6726,7 @@ function renderCheckResult(){
       <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
       <div class="qline">${escapeHtml(q)}</div>
       ${whyReminderHTML()}
+      ${lessonNoteHTML(amt)}
       ${altHTML(name)}
       ${triggerSwapHTML(trap)}
       ${diaryEchoHTML(name)}
@@ -6383,8 +6741,17 @@ function renderCheckResult(){
   wireWhyEdit(); wireComfortLinks(); wireDiaryEcho();
 
   document.getElementById('impNeutralize').addEventListener('click',()=>{
-    const sel=document.getElementById('impGoal'), goalId=sel?sel.value:'';
+    const sel=document.getElementById('impGoal'); let goalId=sel?sel.value:'';
     const total=pendingCheck.amt;
+    // "__buffer" is not a goal - it raises this month's assignment on the buffer
+    // category, so the money lands where the next accident will actually hit
+    let toBuffer=0;
+    if(goalId==='__buffer'){
+      const cat=bufferCat()||findOrCreateCat(BUFFER_CAT);
+      const M=state.activeMonth;
+      budgetFor(M)[cat.id]=assignedFor(cat.id,M)+total;
+      toBuffer=total; goalId='';
+    }
     const ev=logNeutralize(pendingCheck.name,total,pendingCheck.trap,goalId);
     const toGoal=ev.goalId?ev.amount:0, toChest=total-toGoal, H2=effectiveHourly();
     pendingCheck=null; clearScan();
@@ -7185,27 +7552,46 @@ const INTAKE=[
       ? "Alright - let's follow the money. Tap in the ones that are real for you: how often, and about how much each time. Don't bullshit the numbers - this only works if it's the truth."
       : "Alright - let's follow it. Tap in the ones that are real for you: how often, and about how much each time. Be honest - this only works if it's the truth."},
   {id:'blindSpend', input:'continue', showIf:a=>a.acct==='spend' && a.deepDive==='deep' && (a.leaks||[]).length,
-    bot:a=>{ const all=(a.leaks||[]); const known=all.reduce((s,x)=>s+(+x.monthly||0),0);
+    /* This verdict used to compute income minus (bills + habits) and call the
+       remainder money you "couldn't name", "bleeding out while nobody watched".
+       Two things were wrong with that.
+
+       It never asked about savings or investing, so a household putting $8,000
+       of $13,400 away was accused of leaking $10,556 - the exact opposite of the
+       truth, aimed at the person doing the best job of anyone. Those rows exist
+       now and land in `known`.
+
+       And the leftover was never evidence of waste in the first place. The
+       finder asks about a FIXED LIST. Groceries, childcare, medical, fuel, the
+       dog - none of it is on that list, so all of it counted as invisible. What
+       the number honestly measures is what this screen did not ask about, and
+       that is what it now says. The punch stays on the habits, which were
+       actually named and actually are discretionary. */
+    bot:a=>{
+      const all=(a.leaks||[]);
+      const known=all.reduce((s,x)=>s+(+x.monthly||0),0);
       const habits=all.filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
-      const inc=intakeIncomeTotal(a);   // every source, not just the main paycheck
-      const lifeTxt = (a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
+      const saved=all.filter(x=>x.purpose).reduce((s,x)=>s+(+x.monthly||0),0);
+      const inc=intakeIncomeTotal(a);
+      const nm=a.name?', '+a.name:'';
       const sav=iaTone(a)==='savage';
-      /* The fixed bills are optional now, so "we accounted for X - bills and
-         habits together" would be a lie for anyone who left them folded away,
-         and the blind-spot figure would be their rent masquerading as a
-         mystery. Name what was actually counted, and say what is missing. */
+      const lifeTxt=(a.wage>0 && habits>0) ? ` The habits alone - the coffee, the takeout, the little stuff - are about ${fmtLife(habits, a.wage)} of your life every single month.` : '';
       const gotBills=!!a.billsMapped;
-      const countedTxt = gotBills ? 'bills and habits together' : 'just the day-to-day, since you skipped the fixed bills';
-      const billsCaveat = gotBills ? '' : ' Your rent and bills are in there too, so the real unaccounted number is smaller - add them any time and this sharpens up.';
-      if(inc>0){ const blind=Math.round(inc-known);
-        if(blind>50) return sav
-          ? `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - ${countedTxt}.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name.${billsCaveat} Not gone - invisible. Bleeding out while nobody watched. That's YOUR damn money. From now on you see every dollar of it leave. That's the whole game.`
-          : `Here's the part that hits${a.name?', '+a.name:''}: about ${usd0(inc)} comes in, and we just accounted for ${usd0(known)} of it - ${countedTxt}.${lifeTxt} That leaves roughly ${usd0(blind)} a month you couldn't name - not gone, just invisible, slipping out unwatched.${billsCaveat} That's YOUR money. Now you'll see every dollar of it. That's the whole game.`;
-        if(blind<-50) return sav
-          ? `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step, and you just took it.`
-          : `Real talk${a.name?', '+a.name:''}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can actually work it, instead of hiding from it. That's the first honest step.`;
-        return `You mapped ${usd0(known)} against about ${usd0(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`; }
-      return `That's ${usd0(known)} a month, mapped - ${gotBills?'the bills and the little stuff that usually vanishes without a trace':'the little stuff that usually vanishes without a trace'}.${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
+      const bits=[]; if(gotBills) bits.push('bills'); if(habits>0) bits.push('habits'); if(saved>0) bits.push('what you already put away');
+      const countedTxt = bits.length>1 ? bits.slice(0,-1).join(', ')+' and '+bits[bits.length-1] : (bits[0]||'the day-to-day');
+      const savedTxt = saved>0 ? ` **${usd0(saved)}** of that is money you're deliberately sending somewhere - that's not a leak, that's the whole point.` : '';
+      const billsCaveat = gotBills ? '' : ' Your rent and bills are in there too, so the real unmapped number is smaller - add them any time and this sharpens up.';
+      if(inc>0){
+        const rest=Math.round(inc-known);
+        if(rest>50) return sav
+          ? `Here's where it stands${nm}: about ${usd0(inc)} comes in, and we just put ${usd0(known)} of it on the table - ${countedTxt}.${savedTxt}${lifeTxt} The other ${usd0(rest)} is everything I didn't ask about: groceries, fuel, the kids, whatever else. Not waste - just unmapped, and unmapped is where money goes to die quietly.${billsCaveat} Track a month and you'll know exactly what it is instead of guessing.`
+          : `Here's where it stands${nm}: about ${usd0(inc)} comes in, and we just put ${usd0(known)} of it on the table - ${countedTxt}.${savedTxt}${lifeTxt} The other ${usd0(rest)} is everything this screen didn't ask about - groceries, fuel, the kids, whatever else is yours. Not waste, just unmapped.${billsCaveat} Track a month and you'll know what it actually is.`;
+        if(rest<-50) return sav
+          ? `Real talk${nm}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${savedTxt}${lifeTxt} That gap is the debt, the stress, the "where the hell does it all go" - and now it's on the table where we can work it, instead of hiding from it. That's the first honest step, and you just took it.`
+          : `Real talk${nm}: what you just mapped (${usd0(known)}) is MORE than the ${usd0(inc)} you said comes in.${savedTxt}${lifeTxt} That gap is the debt, the stress, the "where does it all go" you've been feeling - and now it's on the table where we can work it, instead of hiding from it. That's the first honest step.`;
+        return `You mapped ${usd0(known)} against about ${usd0(inc)} coming in - you're accounting for nearly all of it, which almost nobody can do.${savedTxt}${lifeTxt} Now the job is simple: watch each one, and decide every time whether it's worth it.`;
+      }
+      return `That's ${usd0(known)} a month, mapped.${savedTxt}${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
   {id:'comfort', sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
@@ -7927,6 +8313,14 @@ function askLoopHours(s,name,amount,ph){
    ~$274). Mapping BOTH is what makes the leftover an honest "spending blind"
    number - income minus everything accounted for, not income minus a few habits. */
 const FIXED_BILLS=['Rent / mortgage','Utilities (power, water)','Phone / internet','Insurance','Car payment','Loan / debt payment'];
+/* Money that already has a job. The finder asked about bills and habits and
+   called EVERYTHING else unaccounted, so a household putting $8,000 of $13,400
+   into savings was told it was "bleeding out while nobody watched" - the exact
+   opposite of the truth, aimed at the person doing the best job of anyone. This
+   is not a leak and is never counted as one: it lands in `known` so the blind
+   figure is honest, and stays out of `habits` so the spending limit is not
+   inflated by money that was never spending. */
+const ON_PURPOSE=['Savings','Investing / retirement','Extra debt payments'];
 const LEAKS=[
   {name:'Coffee / drinks out', f:'week'},
   {name:'Takeout / delivery', f:'week'},
@@ -7943,13 +8337,35 @@ const LEAKS=[
   {name:'Personal care', f:'month'},
   {name:'Pets', f:'month'}
 ];
-function leakMonthly(count,f,cost){ const mult=f==='day'?30.4:(f==='week'?4.33:1); return (+count||0)*mult*(+cost||0); }
+/* A month is 4.33 weeks, not 4 - which is why $50 twice a week is $433 a month
+   and not the $400 anybody works out in their head. That gap is the single most
+   surprising number in this screen, so the row shows its own working rather than
+   producing $433 out of nowhere.
+   The constants are the ones the rest of the app already uses (WEEKS_PER_YEAR/12
+   is what recMonthly and monthHours run on). This function had a rounded 4.33
+   and 30.4 hardcoded, so the same $100/wk read as $433.00 here and $433.33 as a
+   recurring item - a small disagreement, but this app's whole claim is that its
+   arithmetic agrees with itself. */
+const WEEKS_PER_MONTH = WEEKS_PER_YEAR/12;      // 4.333...
+const DAYS_PER_MONTH  = 365/12;                 // 30.416...
+function leakFreqMult(f){ return f==='day'?DAYS_PER_MONTH:(f==='week'?WEEKS_PER_MONTH:1); }
+function leakMonthly(count,f,cost){ return (+count||0)*leakFreqMult(f)*(+cost||0); }
+/* the line under a variable row: what it costs per week/day, and the multiplier
+   that turns that into a month. Only shown once there is something to explain. */
+function leakWorkings(count,f,cost){
+  const n=+count||0, c=+cost||0;
+  if(!(n>0&&c>0) || f==='month') return '';
+  const each=n*c, unit=f==='day'?'day':'wk';
+  const mult=Math.round(leakFreqMult(f)*100)/100;
+  return `${usd0(each)}/${unit} &times; ${mult} ${f==='day'?'days':'wks'} a month`;
+}
 function leakFinder(s){
   const dock=document.getElementById('intakeDock');
   const freqSel=(id,sel)=>`<select class="leak-f" data-lf="${id}"><option value="day"${sel==='day'?' selected':''}>/day</option><option value="week"${sel==='week'?' selected':''}>/wk</option><option value="month"${sel==='month'?' selected':''}>/mo</option></select>`;
   const fixedRow=(id,nameHTML)=>`<div class="leak-row"><span class="leak-name">${nameHTML}</span><span class="leak-x">$</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-fx="${id}" placeholder="0"><span class="leak-fxu">/mo</span><span class="leak-mo" data-fm="${id}"></span></div>`;
-  const varRow=(id,nameHTML,f)=>`<div class="leak-row">${nameHTML}<input class="leak-n" type="number" inputmode="decimal" min="0" step="any" data-ln="${id}" placeholder="0">${freqSel(id,f)}<span class="leak-x">× $</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-lc="${id}" placeholder="0"><span class="leak-mo" data-lm="${id}"></span></div>`;
+  const varRow=(id,nameHTML,f)=>`<div class="leak-rowwrap"><div class="leak-row">${nameHTML}<input class="leak-n" type="number" inputmode="decimal" min="0" step="any" data-ln="${id}" placeholder="0">${freqSel(id,f)}<span class="leak-x">× $</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-lc="${id}" placeholder="0"><span class="leak-mo" data-lm="${id}"></span></div><div class="leak-work" data-lw="${id}"></div></div>`;
   const fixedRows=FIXED_BILLS.map((n,i)=>fixedRow(i, escapeHtml(n))).join('');
+  const purposeRows=ON_PURPOSE.map((n,i)=>fixedRow('p'+i, escapeHtml(n))).join('');
   const varRows=LEAKS.map((l,i)=>varRow(i, `<span class="leak-name">${escapeHtml(l.name)}</span>`, l.f)).join('')
     + [0,1].map(i=>varRow('c'+i, `<input class="leak-name-in" type="text" data-lname="${i}" placeholder="Something else">`, 'week')).join('');
   /* This step opened with seven fixed-bill fields - rent, utilities, phone,
@@ -7970,12 +8386,15 @@ function leakFinder(s){
       <details class="leak-bills"${billsOpen?' open':''}>
         <summary>Add your fixed bills too <span class="lb-why">optional - it sharpens the number</span></summary>
         <div class="leak-sub">Fixed bills - flat per month</div>${fixedRows}
+        <div class="leak-sub">Already going somewhere on purpose</div>
+        <div class="leak-note">Not leaks. Counted so the leftover below is honest.</div>${purposeRows}
       </details>
     </div>
     <div class="intake-chips" style="margin-top:10px"><button class="go" id="leakGo">See where it's going →</button></div>
     <div class="intake-underrow"><button class="intake-skip" id="iaBack">← Back</button></div>`;
   // seed from a previous pass so Back never wipes what was already entered
   (iaAns.leaks||[]).forEach(x=>{
+    if(x.purpose){ const i=ON_PURPOSE.indexOf(x.name); if(i>=0) dock.querySelector('[data-fx="p'+i+'"]').value=x.monthly; return; }
     if(x.fixed){ const i=FIXED_BILLS.indexOf(x.name); if(i>=0) dock.querySelector('[data-fx="'+i+'"]').value=x.monthly; return; }
     const i=LEAKS.findIndex(l=>l.name===x.name);
     if(i>=0){ dock.querySelector('[data-ln="'+i+'"]').value=1; dock.querySelector('[data-lf="'+i+'"]').value='month'; dock.querySelector('[data-lc="'+i+'"]').value=x.monthly; }
@@ -7984,7 +8403,10 @@ function leakFinder(s){
   const varIds=LEAKS.map((_,i)=>i).concat(['c0','c1']);
   const recalc=()=>{ let tot=0;
     FIXED_BILLS.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="'+i+'"]').value||0; dock.querySelector('[data-fm="'+i+'"]').textContent=v>0?usd0(v):''; tot+=v; });
-    varIds.forEach(id=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+id+'"]').value, dock.querySelector('[data-lf="'+id+'"]').value, dock.querySelector('[data-lc="'+id+'"]').value); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd0(mo):''; tot+=mo; });
+    ON_PURPOSE.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="p'+i+'"]').value||0; dock.querySelector('[data-fm="p'+i+'"]').textContent=v>0?usd0(v):''; tot+=v; });
+    varIds.forEach(id=>{ const n=dock.querySelector('[data-ln="'+id+'"]').value, f=dock.querySelector('[data-lf="'+id+'"]').value, c=dock.querySelector('[data-lc="'+id+'"]').value;
+      const w=dock.querySelector('[data-lw="'+id+'"]'); if(w) w.innerHTML=leakWorkings(n,f,c);
+      const mo=leakMonthly(n, f, c); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd0(mo):''; tot+=mo; });
     document.getElementById('leakTotal').textContent=usd0(tot); };
   dock.querySelectorAll('input,select').forEach(el=>{ el.addEventListener('input',recalc); el.addEventListener('change',recalc); });   // change too: 'input' on <select> is unreliable on older WebKit
   recalc();   // reflect any seeded values immediately
@@ -7992,6 +8414,7 @@ function leakFinder(s){
   document.getElementById('leakGo').onclick=()=>{
     const leaks=[], fixed=[];
     FIXED_BILLS.forEach((n,i)=>{ const v=Math.round(+dock.querySelector('[data-fx="'+i+'"]').value||0); if(v>0){ leaks.push({name:n, monthly:v, fixed:true}); fixed.push(v); } });
+    ON_PURPOSE.forEach((n,i)=>{ const v=Math.round(+dock.querySelector('[data-fx="p'+i+'"]').value||0); if(v>0) leaks.push({name:n, monthly:v, fixed:true, purpose:true}); });
     LEAKS.forEach((l,i)=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+i+'"]').value, dock.querySelector('[data-lf="'+i+'"]').value, dock.querySelector('[data-lc="'+i+'"]').value); if(mo>0) leaks.push({name:l.name, monthly:Math.round(mo)}); });
     [0,1].forEach(i=>{ const nm=(dock.querySelector('[data-lname="'+i+'"]').value||'').trim(); const mo=leakMonthly(dock.querySelector('[data-ln="c'+i+'"]').value, dock.querySelector('[data-lf="c'+i+'"]').value, dock.querySelector('[data-lc="c'+i+'"]').value); if(nm && mo>0) leaks.push({name:nm, monthly:Math.round(mo)}); });
     iaAns.leaks=leaks;
@@ -8092,7 +8515,9 @@ function commitIntake(){
   applyHousehold(); applySpending();
   closeOverlayThenTab('home');
 }
-document.getElementById('intakeBtn').addEventListener('click',openIntake);
+// "Setup chat" left the global footer for Settings > Setup & data ("Re-run setup
+// chat"), so this listener has nothing to bind to; intakeBtn2 carries it now.
+(function(){ const b=document.getElementById('intakeBtn'); if(b) b.addEventListener('click',openIntake); })();
 document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); dismissOverlay(); });
 
 /* ---------- boot ---------- */
@@ -8103,7 +8528,7 @@ function boot(){
   // last month first (in full), then this month up to today - nothing slips through
   if(postRecurring(shiftMonth(thisMonth(),-1))+postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
-  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
+  renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderLessons(); renderRecurring(); renderCharts(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
   renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
@@ -8338,11 +8763,25 @@ function runNextStep(act){
   setTimeout(()=>{ const el=document.getElementById(t[1]); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'smooth',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },140);   // open the accordion the target lives in
 }
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
+document.getElementById('openTalkBtn').addEventListener('click',()=>openTalk());
+document.getElementById('talkX').addEventListener('click',closeTalk);
+document.getElementById('talkSheet').addEventListener('click',e=>{ if(e.target.id==='talkSheet') closeTalk(); });
 document.getElementById('intakeBtn2').addEventListener('click',()=>openIntake());
 document.getElementById('installBtn2').addEventListener('click',()=>document.getElementById('installBtn').click());
 document.getElementById('exportBtn2').addEventListener('click',()=>document.getElementById('exportBtn').click());
 document.getElementById('importBtn2').addEventListener('click',()=>document.getElementById('importBtn').click());
-document.getElementById('resetBtn2').addEventListener('click',()=>document.getElementById('resetBtn').click());
+document.getElementById('resetBtn2').addEventListener('click',()=>resetEverything());
+// the footer's "Start over" is a signpost, not the trigger - it walks you to the
+// panel that explains what erasing costs and offers the backup first
+document.getElementById('footSettings').addEventListener('click',()=>{
+  activateTab('settings');
+  setTimeout(()=>{ const el=document.getElementById('startOver');
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('so-flash'); setTimeout(()=>el.classList.remove('so-flash'),1600); } },160);
+});
+document.getElementById('resetBackupFirst').addEventListener('click',()=>{
+  const b=document.getElementById('encBackupBtn') || document.getElementById('exportBtn');
+  if(b){ b.scrollIntoView({behavior:'smooth',block:'center'}); b.click(); }
+});
 /* 2C: the "Enough" anchor + margin-of-safety prompt */
 function renderEnough(income){
   const box=document.getElementById('enoughCard'); if(!box) return;

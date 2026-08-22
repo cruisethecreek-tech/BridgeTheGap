@@ -215,6 +215,95 @@ check('the recap separates what is yours from the household total', /\$5,500 of 
 check('the recap rate ignores passive income, like the wage engine does',
       /\$24\.31 an hour/.test(income.recap||''), income.recap);
 
+/* ---- 4d. the leak finder shows its working ----
+        "2 /wk x $50" producing "$433" is the most surprising number on that
+        screen: everybody computes $400 in their head, because a month feels
+        like 4 weeks and is actually 4.33. A budgeting app cannot hand someone a
+        figure they think is wrong and say nothing. ---- */
+const leaks = await p.evaluate(() => {
+  document.getElementById('intake').classList.add('on');
+  document.getElementById('intakeLog').innerHTML='';
+  iaAns={name:'Pat',age:'middle',register:'middle',tone:'blunt',situation:'ok',acct:'spend',income:3200,wage:18.5,deepDive:'deep',leaks:[]};
+  leakFinder({});
+  const dock=document.getElementById('intakeDock');
+  const set=(sel,v)=>{const e=dock.querySelector(sel); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true}));};
+  set('[data-ln="1"]',2); set('[data-lc="1"]',50);                 // 2/wk x $50
+  const f=dock.querySelector('[data-lf="5"]'); f.value='day'; f.dispatchEvent(new Event('change',{bubbles:true}));
+  set('[data-ln="5"]',1); set('[data-lc="5"]',9);                  // 1/day x $9
+  return {
+    weekly:  dock.querySelector('[data-lm="1"]').textContent,
+    weeklyWork: dock.querySelector('[data-lw="1"]').textContent,
+    daily:   dock.querySelector('[data-lm="5"]').textContent,
+    dailyWork: dock.querySelector('[data-lw="5"]').textContent,
+    /* the same $100/wk as a RECURRING item must land on the same number - one
+       rounded 4.33 here against recMonthly's exact 52/12 was a real mismatch */
+    viaRecurring: recMonthly({amount:100, freq:'weekly'}),
+    viaLeak: leakMonthly(2,'week',50),
+    monthUnchanged: leakMonthly(3,'month',20),
+  };
+});
+check('2/wk x $50 is $433, not $400', /\$433/.test(leaks.weekly), leaks.weekly);
+check('...and the row says why', /\$100\/wk × 4\.33 wks a month/.test(leaks.weeklyWork), leaks.weeklyWork);
+check('1/day x $9 is $274', /\$274/.test(leaks.daily), leaks.daily);
+check('...with the daily multiplier shown', /\$9\/day × 30\.42 days a month/.test(leaks.dailyWork), leaks.dailyWork);
+check(`$100/wk agrees with the recurring engine (${Math.round(leaks.viaLeak*100)/100} vs ${Math.round(leaks.viaRecurring*100)/100})`,
+      Math.abs(leaks.viaLeak-leaks.viaRecurring)<0.005,
+      'a rounded 4.33 here against recMonthly\'s exact 52/12 disagreed by a third of a dollar');
+check('a monthly amount is left alone', Math.abs(leaks.monthUnchanged-60)<0.005, String(leaks.monthUnchanged));
+
+/* ---- 4e. savings are not a leak ----
+        The finder asked about bills and habits and called EVERYTHING else
+        unaccounted, so a household putting $8,000 of $13,400 away was told it
+        was "bleeding out while nobody watched" - the exact opposite of the
+        truth, aimed at the person doing the best job of anyone. ---- */
+const fair = await p.evaluate(() => {
+  const step=INTAKE.find(s=>s.id==='blindSpend');
+  const base={name:'Pat',age:'middle',register:'middle',situation:'ok',acct:'spend',deepDive:'deep',
+              wage:18.5,income:13400,billsMapped:true,tone:'savage'};
+  const bills=[{name:'Rent / mortgage',monthly:850,fixed:true},{name:'Insurance',monthly:360,fixed:true}];
+  const habits=[{name:'Takeout / delivery',monthly:433}];
+  const saving=[{name:'Savings',monthly:4000,fixed:true,purpose:true},
+                {name:'Investing / retirement',monthly:4000,fixed:true,purpose:true}];
+  const strip=t=>String(t).replace(/\*\*/g,'');
+  // the finder offers the rows at all
+  document.getElementById('intake').classList.add('on');
+  document.getElementById('intakeLog').innerHTML='';
+  iaAns={...base, leaks:[]}; leakFinder({});
+  const dock=document.getElementById('intakeDock');
+  const rowFor=i=>dock.querySelector('[data-fx="p'+i+'"]');
+  const set=(sel,v)=>{const e=dock.querySelector(sel); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true}));};
+  set('[data-fx="p0"]',4000); set('[data-fx="p1"]',4000); set('[data-ln="1"]',2); set('[data-lc="1"]',50);
+  const stripTotal=document.getElementById('leakTotal').textContent;
+  /* read the DOM BEFORE Go - it advances the intake and replaces the dock */
+  const offersRows = ON_PURPOSE.length===3 && !!rowFor(0) && !!rowFor(1) && !!rowFor(2);
+  document.getElementById('leakGo').click();
+  const collected=iaAns.leaks;
+  return {
+    offersRows, stripTotal,
+    /* hand-check the arithmetic the verdict must land on:
+       in 850 + 360 bills, 433 habits, 8,000 put away = 9,643 mapped
+       of 13,400 income, so 3,757 is what the screen never asked about */
+    wantMapped: 850+360+433+8000, wantRest: 13400-(850+360+433+8000),
+    taggedPurpose: collected.filter(x=>x.purpose).map(x=>x.name),
+    habitsOnly: collected.filter(x=>!x.fixed).reduce((s,x)=>s+x.monthly,0),
+    withSaving: strip(step.bot({...base, leaks:bills.concat(habits,saving)})),
+    without:    strip(step.bot({...base, leaks:bills.concat(habits)})),
+  };
+});
+check('the finder asks what you already put away', fair.offersRows===true);
+check('...and counts it in the running total ($8,000 + $433 = $8,433)', /\$8,433/.test(fair.stripTotal), fair.stripTotal);
+check('savings are tagged as on-purpose, not as leaks', fair.taggedPurpose.length===2, fair.taggedPurpose.join(', '));
+check('...and stay out of the habits the spending limit is built on', Math.abs(fair.habitsOnly-433)<0.005, String(fair.habitsOnly));
+check('the verdict names the money going somewhere on purpose', /\$8,000 of that is money you're deliberately sending somewhere/.test(fair.withSaving), fair.withSaving.slice(0,150));
+check(`...so the leftover is ${fair.wantRest} (income minus everything mapped), not income minus bills+habits`,
+      money(fair.withSaving).includes(fair.wantRest) && money(fair.withSaving).includes(fair.wantMapped),
+      fair.withSaving.slice(-180));
+check('...and without the savings rows the leftover is bigger by exactly them',
+      money(fair.without).includes(fair.wantRest+8000), fair.without.slice(-160));
+check('nobody is told they are bleeding out', !/bleeding out|couldn't name/i.test(fair.withSaving+fair.without), fair.without.slice(-170));
+check('the leftover is named as unasked-about, not as waste',
+      /didn't ask about/.test(fair.without) && /Not waste/.test(fair.without), fair.without.slice(-140));
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
   check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));

@@ -12,6 +12,7 @@ node tests/budget_sim.mjs            # can a household actually budget with this
 node tests/palette.mjs               # every colour readable in both themes
 node tests/life_units.mjs            # Freedom Mode says things that make sense
 node tests/intake_cost.mjs           # the setup chat tells the truth about itself
+node tests/talk_through.mjs          # understanding before labelling
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
@@ -165,6 +166,30 @@ to decide and tap an answer, ~11s to type one, with the bulk screens (leak
 finder, expenses grid, income/debt loops) carrying their own weight since each
 is one "answer" but many fields. Arguable on purpose - argue with the constants,
 not with a magic number.
+
+## 8. `talk_through.mjs` - understanding before labelling
+
+The Trap Radar makes you pick one of four traps before it will say anything:
+scroll, friction, status, leak. All four assume you were tempted. So when a phone
+goes in the ocean the only honest answer is missing, and a genuine accident gets
+filed as a character flaw.
+
+This suite holds the "Let's talk it through" lane to what makes it worth having:
+that a cause is asked **before** anything is labelled, that a non-temptation
+cause is never called a trap, that a **covered** event is called the system
+working and offered nothing to fix, that real temptation is handed to the Radar
+prefilled, that events are kept across reloads, and - the one that already caught
+a bug - that **the figure the verdict quotes is the figure the button funds**.
+They were computed from different lists, so the screen said $180/mo and the
+button set aside $115.
+
+It also covers the **feedback loop**: that a cold history changes nothing, that a
+run of unfunded accidents makes the gut-check name what it knows and promote the
+buffer to first destination, that skipping actually raises the buffer, that a
+partly-covered event is never described as "nothing set aside", and that the
+lessons panel paints **on a cold boot** - which caught a real bug, since `boot()`
+maintains its own list of renderers and never calls `renderAll()`, so a surface
+added to `renderAll` alone never appears until something forces a repaint.
 
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
