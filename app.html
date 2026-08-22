@@ -207,6 +207,15 @@
   .leak-bills[open]>summary::before{content:'- '}
   .leak-bills .lb-why{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
   .leak-note{font-size:11.5px;color:var(--muted);margin:-2px 0 4px}
+  .tk-entry{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:rgba(var(--good-rgb),.08);border:1px solid rgba(var(--good-rgb),.32);border-radius:14px;padding:12px 14px;margin:10px 0 14px;font-size:13px;line-height:1.5}
+  .tk-entry>span{flex:1;min-width:180px;color:var(--text)}
+  .tk-say{font-size:15px;line-height:1.6;color:var(--text);margin-bottom:14px}
+  .tk-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .tk-opt{text-align:left;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+  .tk-opt:hover{border-color:var(--accent);color:var(--accent)}
+  .tk-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+  .tk-back{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:6px 2px}
+  .tk-pat{background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.34);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.55;margin-bottom:14px}
   .startover{margin-top:14px;border:1px solid rgba(var(--bad-rgb),.34);background:rgba(var(--bad-rgb),.07);border-radius:14px;padding:14px 16px}
   .startover .so-head{font-weight:800;color:var(--bad);font-size:14px}
   .startover.so-flash{animation:soFlash 1.5s ease}
@@ -1572,6 +1581,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div class="panel">
         <h2>Trap Radar - scan the target</h2>
         <p class="sub">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life. <span class="sub" style="margin:0">Set your wage in <b>Settings</b> for exact hours.</span></p>
+        <div class="tk-entry">
+          <span>Not tempted - something <b>happened</b>? A thing broke, someone needed you, a bill landed. That is not a trap, and calling it one helps nobody.</span>
+          <button class="btn sm" id="openTalkBtn">Let's talk it through →</button>
+        </div>
         <div class="row">
           <label class="fld" style="flex:1">Target
             <input type="text" id="impName" placeholder="Sneakers, gadget, another coffee…">
@@ -2024,6 +2037,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <div class="gl-panel" id="glanceBody"></div>
   </div>
 
+  <div class="modal-overlay" id="talkSheet">
+    <div class="modal">
+      <button class="x" id="talkX">✕</button>
+      <h3>Let's talk it through</h3>
+      <div id="talkBody"></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="stageMap">
     <div class="modal">
       <button class="x" id="stageMapX">✕</button>
@@ -2307,7 +2328,7 @@ const LESSONS=[
 function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
-           assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[],
+           assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[],
            onboarded:false, intake:{}, register:'middle', vault:[],
            freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
@@ -2354,6 +2375,8 @@ function normalizeState(s){
   // backup) is forced to a finite number here. One string in a money field would
   // otherwise turn addition into concatenation everywhere downstream.
   const num=(v)=>{ const n=+v; return isFinite(n)?n:0; };
+  if(!Array.isArray(s.lessons)) s.lessons=[];
+  s.lessons.forEach(l=>{ l.amount=num(l.amount); });
   Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=num(b[k]); }); });
   (s.transactions||[]).forEach(t=>{ t.amount=num(t.amount); if(t.hours!=null) t.hours=num(t.hours); });
   (s.accounts||[]).forEach(a=>{ a.balance=num(a.balance); });
@@ -5258,6 +5281,196 @@ function shiftDay(dateStr,delta){ const d=new Date(dateStr+'T00:00:00'); d.setDa
 /* The four traps are the app's own vocabulary, so every place that ASKS the user
    to pick one has to define it in the same breath - naming a thing you have never
    explained is just jargon. `pick` is the plain-words version used in the dropdowns. */
+/* ============================================================
+   LET'S TALK IT THROUGH
+   The Trap Radar makes you pick one of four traps before it will say anything -
+   scroll, friction, status, leak. All four assume you were tempted. So when your
+   phone goes in the ocean, the only honest answer is missing, and the app calls
+   a genuine accident a character flaw. That teaches nothing except that it does
+   not understand you.
+
+   This asks WHY IT HAPPENED before deciding what it was. Some causes are not
+   discipline problems at all - they are uninsured risks, and the fix is money set
+   aside, not willpower. Some are somebody else's need, which is not a trap
+   either. And some genuinely are temptation, which is what the Radar is for, so
+   those get handed straight to it.
+
+   Every one is kept. Three repairs in a year with nothing set aside is a pattern
+   no single moment can show you, and the pattern is the thing worth acting on.
+   ============================================================ */
+const CAUSES=[
+  {v:'broke',  label:'Something broke, got lost, or an accident',
+   kind:'risk',   verdict:"That is not a spending problem. Things break - the only question a budget can answer is whether it hurts when they do."},
+  {v:'someone',label:'Someone else needed it - a kid, a partner, a parent',
+   kind:'risk',   verdict:"Taking care of someone is not a leak. But it lands on the same money as everything else, so it deserves a place in the plan instead of a surprise every time."},
+  {v:'bill',   label:'A bill came in bigger than I expected',
+   kind:'risk',   verdict:"An underestimated bill is a planning gap, not a willpower gap. The fix is a truer number, not more discipline."},
+  {v:'chance', label:"A one-off chance I didn't want to miss",
+   kind:'grey',   verdict:"Sometimes real, sometimes the oldest trick there is - scarcity. Worth looking at honestly rather than deciding now."},
+  {v:'dunno',  label:"I don't know - it just kind of happened",
+   kind:'grey',   verdict:"That is the most honest answer on the list, and the one worth digging into. Things that 'just happen' usually have a trigger."},
+  {v:'wanted', label:'Honestly? I just wanted it',
+   kind:'want',   verdict:"Straight answer. That is exactly what the Trap Radar is built for - let's run it properly instead of guessing."}
+];
+/* Was there money behind it? This is the whole difference between a crisis and
+   an inconvenience, and it is the question the app never asked. */
+const COVERS=[
+  {v:'none', label:'Nothing set aside'},
+  {v:'some', label:'Some, not enough'},
+  {v:'all',  label:'Yes - it was covered'}
+];
+/* --- the conversation. One question on screen at a time, and it never labels
+   anything until it has heard why it happened. --- */
+let talk=null;
+function openTalk(seed){
+  talk = Object.assign({step:'what', name:'', amount:0, cause:'', covered:'', note:''}, seed||{});
+  document.getElementById('talkSheet').classList.add('on');
+  renderTalk();
+}
+function closeTalk(){ document.getElementById('talkSheet').classList.remove('on'); talk=null; }
+function talkSay(html){ return `<div class="tk-say">${html}</div>`; }
+function renderTalk(){
+  const box=document.getElementById('talkBody'); if(!box||!talk) return;
+  const nm=(state.intake&&state.intake.name)?', '+escapeHtml(state.intake.name):'';
+  const back=(to)=>`<button class="tk-back" data-tkback="${to}">← Back</button>`;
+
+  if(talk.step==='what'){
+    box.innerHTML=talkSay(`Tell me what happened${nm}, in your own words. Not what you bought - what <b>happened</b>.`)
+      +`<label class="fld">What happened<input type="text" id="tkName" placeholder="My phone went in the ocean" value="${escapeHtml(talk.name)}"></label>
+        <label class="fld">What it cost $<input type="number" id="tkAmt" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="${talk.amount||''}"></label>
+        <div class="tk-row"><button class="btn primary" id="tkNext">Next →</button></div>`;
+    const go=()=>{ const n=document.getElementById('tkName').value.trim(); const a=parseFloat(document.getElementById('tkAmt').value);
+      if(!n){ document.getElementById('tkName').focus(); return; }
+      talk.name=n; talk.amount=a>0?a:0; talk.step='cause'; renderTalk(); };
+    document.getElementById('tkNext').onclick=go;
+    box.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }));
+    setTimeout(()=>{ const el=document.getElementById('tkName'); if(el) el.focus(); },60);
+    return;
+  }
+
+  if(talk.step==='cause'){
+    box.innerHTML=talkSay(`Before anyone calls it anything - how did <b>${escapeHtml(talk.name)}</b> land on you?`)
+      +`<div class="tk-opts">${CAUSES.map(c=>`<button class="tk-opt" data-cause="${c.v}">${escapeHtml(c.label)}</button>`).join('')}</div>`
+      +`<div class="tk-row">${back('what')}</div>`;
+    box.querySelectorAll('[data-cause]').forEach(b=>b.onclick=()=>{
+      talk.cause=b.dataset.cause;
+      const c=CAUSES.find(x=>x.v===talk.cause);
+      talk.step = c.kind==='want' ? 'handoff' : (c.kind==='risk' ? 'covered' : 'trigger');
+      renderTalk(); });
+    wireTalkBack(box); return;
+  }
+
+  if(talk.step==='covered'){
+    const c=CAUSES.find(x=>x.v===talk.cause);
+    box.innerHTML=talkSay(`${escapeHtml(c.verdict)}<br><br>So the real question: <b>was there money set aside for this kind of thing?</b>`)
+      +`<div class="tk-opts">${COVERS.map(v=>`<button class="tk-opt" data-cov="${v.v}">${escapeHtml(v.label)}</button>`).join('')}</div>`
+      +`<div class="tk-row">${back('cause')}</div>`;
+    box.querySelectorAll('[data-cov]').forEach(b=>b.onclick=()=>{ talk.covered=b.dataset.cov; talk.step='verdict'; renderTalk(); });
+    wireTalkBack(box); return;
+  }
+
+  if(talk.step==='trigger'){
+    box.innerHTML=talkSay(`What were you doing right before it happened? Scrolling, tired, out with people, celebrating, putting off something else? No wrong answer - I am not scoring you.`)
+      +`<label class="fld">Right before<input type="text" id="tkTrig" placeholder="Scrolling in bed after a long shift" value="${escapeHtml(talk.note)}"></label>
+        <div class="tk-row"><button class="btn primary" id="tkNext">Next →</button>${back('cause')}</div>`;
+    const go=()=>{ talk.note=document.getElementById('tkTrig').value.trim(); talk.step='verdict'; renderTalk(); };
+    document.getElementById('tkNext').onclick=go;
+    document.getElementById('tkTrig').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } });
+    wireTalkBack(box); setTimeout(()=>document.getElementById('tkTrig').focus(),60); return;
+  }
+
+  if(talk.step==='handoff'){
+    box.innerHTML=talkSay(`${escapeHtml((CAUSES.find(x=>x.v==='wanted')||{}).verdict)}`)
+      +`<div class="tk-row"><button class="btn primary" id="tkToRadar">Run the Trap Radar →</button>${back('cause')}</div>`;
+    document.getElementById('tkToRadar').onclick=()=>{
+      const n=talk.name, a=talk.amount; closeTalk(); activateTab('impulse');
+      setTimeout(()=>{ const nEl=document.getElementById('impName'), aEl=document.getElementById('impAmt');
+        if(nEl) nEl.value=n; if(aEl&&a>0) aEl.value=a;
+        if(nEl) nEl.scrollIntoView({behavior:'smooth',block:'center'}); },160); };
+    wireTalkBack(box); return;
+  }
+
+  if(talk.step==='verdict'){
+    const c=CAUSES.find(x=>x.v===talk.cause)||{};
+    const pat=lessonPattern(talk.cause, talk);   // the one on screen counts
+    const H=effectiveHourly();
+    let lead = c.kind==='risk'
+      ? (talk.covered==='all'
+          ? `Then this was an <b>inconvenience, not a crisis</b> - which is exactly what the money was for. That is the system working.`
+          : talk.covered==='some'
+          ? `Partly covered means it stung instead of wrecking you. The gap is the number worth closing.`
+          : `Nothing set aside, so it came out of everything else. That is what made it hurt - <b>not the thing itself</b>.`)
+      : `Naming what you were doing right before is most of the work. That is the thing to watch for, not the purchase.`;
+    if(talk.amount>0 && H>0) lead += ` It cost <b>${fmtLife(talk.amount)}</b> of your life either way.`;
+    let patTxt='';
+    /* Averaging three events over the three months you happened to see them is a
+       ceiling, not a forecast - a short window makes any run-rate look worse than
+       it is. Say so, rather than handing someone a scary number as if it were
+       settled. The window widens on its own as more gets kept. */
+    if(pat) patTxt = `<div class="tk-pat"><b>This is not the first one.</b> ${pat.n} like it over ${pat.months} month${pat.months>1?'s':''}, <b>${usd0(pat.total)}</b> in total - about <b>${usd0(pat.perMonth)}/mo</b> averaged out.`
+      + (pat.months<6
+          ? ` That is a short stretch to judge by, so treat it as the high end rather than a forecast - a smaller number set aside every month still beats nothing.</div>`
+          : ` Over ${pat.months} months that is a real pattern, not bad luck.</div>`);
+    const suggest = (c.kind==='risk' && talk.covered!=='all');
+    box.innerHTML=talkSay(lead)+patTxt
+      +`<label class="fld">Anything you want to remember about this?<input type="text" id="tkNote" placeholder="Optional - a line to your future self" value="${escapeHtml(c.kind==='risk'?'':talk.note)}"></label>`
+      +`<div class="tk-row">
+          ${suggest?`<button class="btn primary" id="tkFund">Set money aside for this →</button>`:''}
+          <button class="btn ${suggest?'ghost':'primary'}" id="tkSave">Save what I learned</button>
+          ${back(c.kind==='risk'?'covered':'trigger')}
+        </div>`;
+    document.getElementById('tkSave').onclick=()=>saveLesson(false);
+    const f=document.getElementById('tkFund'); if(f) f.onclick=()=>saveLesson(true);
+    wireTalkBack(box); return;
+  }
+}
+function wireTalkBack(box){ box.querySelectorAll('[data-tkback]').forEach(b=>b.onclick=()=>{ talk.step=b.dataset.tkback; renderTalk(); }); }
+/* Keeping it is the point - one accident is bad luck, three is a line item. */
+function saveLesson(alsoFund){
+  const noteEl=document.getElementById('tkNote'); if(noteEl) talk.note=noteEl.value.trim()||talk.note;
+  state.lessons=state.lessons||[];
+  // derived BEFORE the push, with the pending event folded in - so it is the same
+  // figure the verdict just showed, not a different one computed after the fact
+  const pat=lessonPattern(talk.cause, talk);
+  const suggested = pat ? pat.perMonth : Math.max(10, Math.round((+talk.amount||0)/12));
+  state.lessons.push({ id:uid(), date:todayStr(), name:talk.name, amount:+talk.amount||0,
+                       cause:talk.cause, covered:talk.covered||'', note:talk.note||'' });
+  save();
+  if(alsoFund){
+    const cat=findOrCreateCat('Life happens');
+    const M=state.activeMonth, cur=assignedFor(cat.id,M);
+    budgetFor(M)[cat.id]=Math.max(cur, suggested);
+    save(); renderAll(); closeTalk(); activateTab('budget');
+    setTimeout(()=>{ const inp=document.querySelector('#cats input[data-cat="'+cat.id+'"]');
+      if(inp){ const row=inp.closest('.cat'); if(row){ row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('cat-flash'); setTimeout(()=>row.classList.remove('cat-flash'),1600); } } },200);
+    if(typeof toast==='function') toast(`"Life happens" set to ${usd0(Math.max(cur,suggested))}. Change it to whatever is real.`);
+    return;
+  }
+  renderAll(); closeTalk();
+  if(typeof toast==='function') toast('Kept. I will bring it up when it matters.');
+}
+function lessonsOf(cause){ return (state.lessons||[]).filter(l=>!cause||l.cause===cause); }
+function lessonTotal(list){ return list.reduce((s,l)=>s+(+l.amount||0),0); }
+/* The pattern across everything of this kind, which one moment cannot show.
+   `pending` is the event being discussed right now: it counts, because "this is
+   not the first one - 2 like it" while looking at the third is wrong, and
+   because the verdict and the amount it then offers to set aside have to be
+   derived from the same list. They were not, so the screen said $180/mo and the
+   button funded $115. */
+function lessonPattern(cause, pending){
+  const kind=(CAUSES.find(c=>c.v===cause)||{}).kind;
+  const same=(state.lessons||[]).filter(l=>{ const k=(CAUSES.find(c=>c.v===l.cause)||{}).kind; return k===kind; })
+    .concat(pending && +pending.amount>0 ? [{date:todayStr(), amount:+pending.amount, cause}] : []);
+  if(same.length<2) return null;
+  const total=lessonTotal(same);
+  const months=Math.max(1, monthsSpanned(same.map(l=>l.date)));
+  return { n:same.length, total, months, perMonth:Math.round(total/months) };
+}
+function monthsSpanned(dates){
+  const ms=dates.filter(Boolean).map(d=>d.slice(0,7)).sort();
+  if(!ms.length) return 1;
+  return Math.max(1, monIdx(ms[ms.length-1])-monIdx(ms[0])+1);
+}
 const TRAPS=[
   {v:'scroll', icon:'', label:'Scroll Trap', sub:'An ad or feed served it to you',
    pick:'an ad or a feed put it in front of me'},
@@ -8428,6 +8641,9 @@ function runNextStep(act){
   setTimeout(()=>{ const el=document.getElementById(t[1]); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'smooth',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },140);   // open the accordion the target lives in
 }
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
+document.getElementById('openTalkBtn').addEventListener('click',()=>openTalk());
+document.getElementById('talkX').addEventListener('click',closeTalk);
+document.getElementById('talkSheet').addEventListener('click',e=>{ if(e.target.id==='talkSheet') closeTalk(); });
 document.getElementById('intakeBtn2').addEventListener('click',()=>openIntake());
 document.getElementById('installBtn2').addEventListener('click',()=>document.getElementById('installBtn').click());
 document.getElementById('exportBtn2').addEventListener('click',()=>document.getElementById('exportBtn').click());
