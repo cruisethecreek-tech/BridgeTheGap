@@ -146,6 +146,75 @@ check('a user bubble renders no elements at all', copy.userTagsRendered===0, Str
 check('the ** marker still bolds in bot copy', copy.botBolds.length===1 && copy.botBolds[0]==='bold', JSON.stringify(copy.botBolds));
 check('a stray tag in bot copy stays literal rather than silently working', copy.botKeepsTagLiteral);
 
+/* ---- 4c. the income questions add up ----
+        The running strip summed only the EXTRA sources, so a $3,200 paycheck
+        plus a $1,500 side gig plus a $6,000 partner displayed "= $7,500" while
+        the household actually brings in $10,700 - a wrong total shown at the
+        exact moment somebody is checking their numbers. And "Done - that's all
+        my income" moved straight on without ever reading the picture back. ---- */
+const income = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  document.getElementById('intake').classList.add('on');
+  document.getElementById('intakeLog').innerHTML='';
+  state.chatPace='instant';
+  iaAns={name:'Pat',age:'middle',register:'middle',tone:'blunt',situation:'ok',acct:'spend',
+         income:3200, hoursPerWeek:40, wage:18.50};
+  const step=INTAKE.find(s=>s.id==='moreIncome'); iaStep=INTAKE.indexOf(step);
+  const dock=()=>document.getElementById('intakeDock');
+  const chip=t=>[...dock().querySelectorAll('button[data-ci]')].find(b=>b.innerText.includes(t));
+  const strip=()=>{const e=dock().querySelector('.loop-sum');return e?e.innerText:'';};
+  renderLoop(step);
+  const out={ stripWithNoExtras:strip(), amountPlaceholders:{} };
+  chip('Side gig').click(); await wait(50);
+  out.amountPlaceholders['Side gig']=document.getElementById('iaLoopAmt').placeholder;
+  document.getElementById('iaLoopAmt').value=1500; document.getElementById('iaLoopAmtGo').click(); await wait(60);
+  out.gigAsksHours=!!document.getElementById('iaLoopHrs');
+  document.getElementById('iaLoopHrs').value=20; document.getElementById('iaLoopHrsGo').click(); await wait(200);
+  chip("Partner's pay").click(); await wait(50);
+  out.amountPlaceholders['Partner']=document.getElementById('iaLoopAmt').placeholder;
+  document.getElementById('iaLoopAmt').value=6000; document.getElementById('iaLoopAmtGo').click(); await wait(60);
+  out.partnerAsksHours=!!document.getElementById('iaLoopHrs');
+  document.getElementById('iaLoopHrs').value=160; document.getElementById('iaLoopHrsGo').click(); await wait(200);
+  out.strip=strip();
+  chip('Benefits').click(); await wait(50);
+  document.getElementById('iaLoopAmt').value=800; document.getElementById('iaLoopAmtGo').click(); await wait(150);
+  out.benefitsAsksHours=!!document.getElementById('iaLoopHrs');
+  out.stripAll=strip();
+  const bubs=()=>[...document.querySelectorAll('#intakeLog .bub.bot')].map(b=>b.textContent);
+  out.rates=bubs().filter(t=>/an hour\b/.test(t));
+  const adv=window.iaAdvance; window.iaAdvance=()=>{};
+  document.getElementById('iaLoopDone').click(); await wait(300);
+  window.iaAdvance=adv;
+  out.recap=bubs().pop();
+  return out;
+});
+const money=t=>[...String(t).matchAll(/\$([\d,]+(?:\.\d+)?)/g)].map(m=>+m[1].replace(/,/g,''));
+const eq=(a,b)=>Math.abs(a-b)<0.005;
+const baseOnly=money(income.stripWithNoExtras).pop();
+const stripTotal=money(income.stripAll).pop();
+check(`the running total counts income 1 as income (got ${baseOnly})`, eq(baseOnly,3200), income.stripWithNoExtras);
+check(`...and every source after it (got ${stripTotal}, want 11500)`, eq(stripTotal,11500), income.stripAll);
+check('a monthly side-gig amount is not suggested as "$40"', /e\.g\. 500/.test(income.amountPlaceholders['Side gig']||''),
+      income.amountPlaceholders['Side gig']);
+check("a partner's amount gets its own realistic example", /e\.g\. 2400/.test(income.amountPlaceholders['Partner']||''),
+      income.amountPlaceholders['Partner']);
+check('a side gig is asked for its hours', income.gigAsksHours===true);
+check("a partner's pay is asked for theirs", income.partnerAsksHours===true);
+check('passive benefits are not', income.benefitsAsksHours===false);
+check(`every worked source reports its own rate (${income.rates.length} of 2)`, income.rates.length===2, income.rates.join('  //  '));
+check('the side gig rate is right ($1,500 / 20 hrs = $75)', /\$75 an hour/.test(income.rates[0]||''), income.rates[0]);
+check("the partner's rate is right ($6,000 / 160 hrs = $37.50)", /\$37\.50 an hour/.test(income.rates[1]||''), income.rates[1]);
+check('Done reads the whole picture back instead of moving on', /landing each month/.test(income.recap||''),
+      (income.recap||'(nothing said)').slice(0,110));
+check('the recap names every dollar, not just the extras', /\$11,500/.test(income.recap||''), income.recap);
+/* $3,200 pay + $1,500 gig + $800 benefits = $5,500 is yours; the $6,000 is theirs. */
+check('the recap separates what is yours from the household total', /\$5,500 of it is yours/.test(income.recap||''), income.recap);
+/* ...but the RATE counts only what you sold hours for: ($3,200 + $1,500) / (173.3 + 20)
+   = $24.31. Folding the passive $800 in would quote $28.45 - a rate the app never
+   prices with, because recomputeBlendedWage ignores income with no hours. */
+check('the recap rate ignores passive income, like the wage engine does',
+      /\$24\.31 an hour/.test(income.recap||''), income.recap);
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
   check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));
