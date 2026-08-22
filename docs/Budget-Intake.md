@@ -119,6 +119,17 @@ dollar manually, which is the #1 churn risk for a manual app, so most people sta
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
 Full zero-based is one tap away for anyone who runs the household budget.
 
+**The leak rows show their working.** `2 /wk x $50 -> $433` is the most
+surprising number on that screen: everybody computes $400 in their head, because
+a month feels like four weeks and is actually **4.33** (52/12). Handing someone a
+figure they believe is wrong, with no explanation, is the opposite of what this
+app is for - so each variable row prints the bridge underneath
+(`$100/wk x 4.33 wks a month`, `$9/day x 30.42 days a month`), shown only once
+there is something to explain. `leakMonthly` also had a rounded `4.33` and `30.4`
+hardcoded while `recMonthly` and `monthHours` use exact `WEEKS_PER_YEAR/12`, so
+the same $100/wk read as $433.00 in the leak finder and $433.33 as a recurring
+item. Both now run on the same constants.
+
 **One income at a time, each with its own rate.** The hourly-rate question used
 to sit *after* the whole income loop, so you listed a paycheck, a partner's pay
 and a side gig and only then got asked "what do you make per hour" - about which

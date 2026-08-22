@@ -215,6 +215,42 @@ check('the recap separates what is yours from the household total', /\$5,500 of 
 check('the recap rate ignores passive income, like the wage engine does',
       /\$24\.31 an hour/.test(income.recap||''), income.recap);
 
+/* ---- 4d. the leak finder shows its working ----
+        "2 /wk x $50" producing "$433" is the most surprising number on that
+        screen: everybody computes $400 in their head, because a month feels
+        like 4 weeks and is actually 4.33. A budgeting app cannot hand someone a
+        figure they think is wrong and say nothing. ---- */
+const leaks = await p.evaluate(() => {
+  document.getElementById('intake').classList.add('on');
+  document.getElementById('intakeLog').innerHTML='';
+  iaAns={name:'Pat',age:'middle',register:'middle',tone:'blunt',situation:'ok',acct:'spend',income:3200,wage:18.5,deepDive:'deep',leaks:[]};
+  leakFinder({});
+  const dock=document.getElementById('intakeDock');
+  const set=(sel,v)=>{const e=dock.querySelector(sel); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true}));};
+  set('[data-ln="1"]',2); set('[data-lc="1"]',50);                 // 2/wk x $50
+  const f=dock.querySelector('[data-lf="5"]'); f.value='day'; f.dispatchEvent(new Event('change',{bubbles:true}));
+  set('[data-ln="5"]',1); set('[data-lc="5"]',9);                  // 1/day x $9
+  return {
+    weekly:  dock.querySelector('[data-lm="1"]').textContent,
+    weeklyWork: dock.querySelector('[data-lw="1"]').textContent,
+    daily:   dock.querySelector('[data-lm="5"]').textContent,
+    dailyWork: dock.querySelector('[data-lw="5"]').textContent,
+    /* the same $100/wk as a RECURRING item must land on the same number - one
+       rounded 4.33 here against recMonthly's exact 52/12 was a real mismatch */
+    viaRecurring: recMonthly({amount:100, freq:'weekly'}),
+    viaLeak: leakMonthly(2,'week',50),
+    monthUnchanged: leakMonthly(3,'month',20),
+  };
+});
+check('2/wk x $50 is $433, not $400', /\$433/.test(leaks.weekly), leaks.weekly);
+check('...and the row says why', /\$100\/wk × 4\.33 wks a month/.test(leaks.weeklyWork), leaks.weeklyWork);
+check('1/day x $9 is $274', /\$274/.test(leaks.daily), leaks.daily);
+check('...with the daily multiplier shown', /\$9\/day × 30\.42 days a month/.test(leaks.dailyWork), leaks.dailyWork);
+check(`$100/wk agrees with the recurring engine (${Math.round(leaks.viaLeak*100)/100} vs ${Math.round(leaks.viaRecurring*100)/100})`,
+      Math.abs(leaks.viaLeak-leaks.viaRecurring)<0.005,
+      'a rounded 4.33 here against recMonthly\'s exact 52/12 disagreed by a third of a dollar');
+check('a monthly amount is left alone', Math.abs(leaks.monthUnchanged-60)<0.005, String(leaks.monthUnchanged));
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
   check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));

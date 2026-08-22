@@ -908,6 +908,9 @@
   .leak-row .leak-c{width:54px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 6px;font-size:13px;flex-shrink:0}
   .leak-row .leak-mo{width:56px;text-align:right;font-weight:800;color:var(--good);flex-shrink:0}
   .leak-row .leak-fxu{color:var(--muted);font-size:12px;flex-shrink:0}
+  .leak-rowwrap{padding-bottom:2px}
+  .leak-work{font-size:11.5px;color:var(--muted);text-align:right;margin:-2px 0 4px;min-height:0}
+  .leak-work:empty{display:none}
   .leak-sub{font-size:12px;font-weight:800;letter-spacing:.3px;color:var(--accent);margin:6px 0 2px;text-transform:uppercase}
   .leak-sub:first-child{margin-top:0}
   .leak-row input:focus,.leak-row select:focus{outline:none;border-color:var(--accent)}
@@ -7943,12 +7946,33 @@ const LEAKS=[
   {name:'Personal care', f:'month'},
   {name:'Pets', f:'month'}
 ];
-function leakMonthly(count,f,cost){ const mult=f==='day'?30.4:(f==='week'?4.33:1); return (+count||0)*mult*(+cost||0); }
+/* A month is 4.33 weeks, not 4 - which is why $50 twice a week is $433 a month
+   and not the $400 anybody works out in their head. That gap is the single most
+   surprising number in this screen, so the row shows its own working rather than
+   producing $433 out of nowhere.
+   The constants are the ones the rest of the app already uses (WEEKS_PER_YEAR/12
+   is what recMonthly and monthHours run on). This function had a rounded 4.33
+   and 30.4 hardcoded, so the same $100/wk read as $433.00 here and $433.33 as a
+   recurring item - a small disagreement, but this app's whole claim is that its
+   arithmetic agrees with itself. */
+const WEEKS_PER_MONTH = WEEKS_PER_YEAR/12;      // 4.333...
+const DAYS_PER_MONTH  = 365/12;                 // 30.416...
+function leakFreqMult(f){ return f==='day'?DAYS_PER_MONTH:(f==='week'?WEEKS_PER_MONTH:1); }
+function leakMonthly(count,f,cost){ return (+count||0)*leakFreqMult(f)*(+cost||0); }
+/* the line under a variable row: what it costs per week/day, and the multiplier
+   that turns that into a month. Only shown once there is something to explain. */
+function leakWorkings(count,f,cost){
+  const n=+count||0, c=+cost||0;
+  if(!(n>0&&c>0) || f==='month') return '';
+  const each=n*c, unit=f==='day'?'day':'wk';
+  const mult=Math.round(leakFreqMult(f)*100)/100;
+  return `${usd0(each)}/${unit} &times; ${mult} ${f==='day'?'days':'wks'} a month`;
+}
 function leakFinder(s){
   const dock=document.getElementById('intakeDock');
   const freqSel=(id,sel)=>`<select class="leak-f" data-lf="${id}"><option value="day"${sel==='day'?' selected':''}>/day</option><option value="week"${sel==='week'?' selected':''}>/wk</option><option value="month"${sel==='month'?' selected':''}>/mo</option></select>`;
   const fixedRow=(id,nameHTML)=>`<div class="leak-row"><span class="leak-name">${nameHTML}</span><span class="leak-x">$</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-fx="${id}" placeholder="0"><span class="leak-fxu">/mo</span><span class="leak-mo" data-fm="${id}"></span></div>`;
-  const varRow=(id,nameHTML,f)=>`<div class="leak-row">${nameHTML}<input class="leak-n" type="number" inputmode="decimal" min="0" step="any" data-ln="${id}" placeholder="0">${freqSel(id,f)}<span class="leak-x">× $</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-lc="${id}" placeholder="0"><span class="leak-mo" data-lm="${id}"></span></div>`;
+  const varRow=(id,nameHTML,f)=>`<div class="leak-rowwrap"><div class="leak-row">${nameHTML}<input class="leak-n" type="number" inputmode="decimal" min="0" step="any" data-ln="${id}" placeholder="0">${freqSel(id,f)}<span class="leak-x">× $</span><input class="leak-c" type="number" inputmode="decimal" min="0" step="any" data-lc="${id}" placeholder="0"><span class="leak-mo" data-lm="${id}"></span></div><div class="leak-work" data-lw="${id}"></div></div>`;
   const fixedRows=FIXED_BILLS.map((n,i)=>fixedRow(i, escapeHtml(n))).join('');
   const varRows=LEAKS.map((l,i)=>varRow(i, `<span class="leak-name">${escapeHtml(l.name)}</span>`, l.f)).join('')
     + [0,1].map(i=>varRow('c'+i, `<input class="leak-name-in" type="text" data-lname="${i}" placeholder="Something else">`, 'week')).join('');
@@ -7984,7 +8008,9 @@ function leakFinder(s){
   const varIds=LEAKS.map((_,i)=>i).concat(['c0','c1']);
   const recalc=()=>{ let tot=0;
     FIXED_BILLS.forEach((_,i)=>{ const v=+dock.querySelector('[data-fx="'+i+'"]').value||0; dock.querySelector('[data-fm="'+i+'"]').textContent=v>0?usd0(v):''; tot+=v; });
-    varIds.forEach(id=>{ const mo=leakMonthly(dock.querySelector('[data-ln="'+id+'"]').value, dock.querySelector('[data-lf="'+id+'"]').value, dock.querySelector('[data-lc="'+id+'"]').value); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd0(mo):''; tot+=mo; });
+    varIds.forEach(id=>{ const n=dock.querySelector('[data-ln="'+id+'"]').value, f=dock.querySelector('[data-lf="'+id+'"]').value, c=dock.querySelector('[data-lc="'+id+'"]').value;
+      const w=dock.querySelector('[data-lw="'+id+'"]'); if(w) w.innerHTML=leakWorkings(n,f,c);
+      const mo=leakMonthly(n, f, c); dock.querySelector('[data-lm="'+id+'"]').textContent=mo>0?usd0(mo):''; tot+=mo; });
     document.getElementById('leakTotal').textContent=usd0(tot); };
   dock.querySelectorAll('input,select').forEach(el=>{ el.addEventListener('input',recalc); el.addEventListener('change',recalc); });   // change too: 'input' on <select> is unreliable on older WebKit
   recalc();   // reflect any seeded values immediately
