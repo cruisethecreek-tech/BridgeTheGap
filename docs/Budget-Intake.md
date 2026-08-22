@@ -119,6 +119,42 @@ dollar manually, which is the #1 churn risk for a manual app, so most people sta
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
 Full zero-based is one tap away for anyone who runs the household budget.
 
+**One income at a time, each with its own rate.** The hourly-rate question used
+to sit *after* the whole income loop, so you listed a paycheck, a partner's pay
+and a side gig and only then got asked "what do you make per hour" - about which
+of them? `wage` now runs immediately after `income`, so income 1's rate is
+settled before income 2 is even mentioned, and every extra source is asked the
+same way: **amount, hours, rate**. Each one reports its own figure as you enter
+it (*"$1,500 for ~20 hours is $75 an hour. That beats your main job's $18.50/hr."*)
+and compares against the main job, which is what tells someone their side gig
+pays half what their job does. A partner's pay is asked for hours too - those
+feed `state.wageB`, which `commitIntake` used to **guess** from a 40-hour week
+even when the real hours were sitting right there, and which it also **discarded**
+(`isPartner?0:hours`) so the answer went nowhere. Per-source placeholders replace
+one shared `e.g. 40`, which read as hours and suggested a $40/month side gig.
+
+**The loop counts income 1, and Done reads it back.** The running strip summed
+only the *extra* sources, so $3,200 + $1,500 + $6,000 displayed as **"= $7,500"**
+against a real household total of $10,700 - a wrong number shown at exactly the
+moment somebody is checking their numbers. `moreIncome` now declares a
+`base:a=>({label,amount})` that the shared `renderLoop` folds into the strip (the
+`expenses` loop declares none and is unchanged), and a `recap:a=>...` that fires
+on **Done**: the full list, the household total, what is yours versus theirs, and
+the blended rate. **The recap's rate matches `recomputeBlendedWage` exactly** -
+worked income over worked hours, passive income excluded from the numerator -
+because quoting $28.45 when the app prices at $24.31 is the same cross-surface
+lie as any other.
+
+**Bot copy is plain text with one marker.** `iaBub`/`iaBotSay` build the bubble
+from DOM nodes and never parse HTML, because the same function echoes what the
+user typed and what OCR pulled off a photograph - `innerHTML` there would be an
+injection hole with a camera pointed at it. Bot lines may emphasise with
+`**double asterisks**` (`iaRich` builds a real `<b>` node); a literal `<b>` in
+copy renders as the characters `<b>`, which is exactly what happened when the
+chooser copy was first written. User bubbles skip the parse entirely and stay
+literal. `tests/intake_cost.mjs` walks every step's bot/hint/why/options across
+all three tones, three registers and every path and fails on any raw tag.
+
 **The chooser states the real cost, and owns it.** It used to advertise "~2 min"
 for a path that runs 17 steps and 16 questions, then hand over seven fixed-bill
 fields one screen after promising "no full-budget homework". Both chips now carry

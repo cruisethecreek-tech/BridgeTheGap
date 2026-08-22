@@ -101,9 +101,123 @@ const mapCost=measured.spendDeep.minutes-measured.spend.minutes;
 const mapClaim=+((mapChip||'').match(/~(\d+) min/)||[0,0])[1];
 check(`the map claims ~${mapClaim} min, adds ${Math.round(mapCost*10)/10} min`, mapCost <= mapClaim*(1+MINUTE_BAND));
 
+/* ---- 4b. bot copy renders as copy, not as source ----
+        iaBub/iaBotSay build DOM nodes and never parse HTML, so a raw "<b>" in a
+        step's text renders literally: "<b>Just track my spending</b>". The
+        emphasis marker is **like this**. This walks every step in every tone
+        and every path, because a tag in a branch nobody rendered is invisible
+        until a real person hits that branch on their phone. ---- */
+const copy = await p.evaluate(() => {
+  const bad=[], base={name:'Pat',age:'middle',register:'middle',situation:'ok',wage:24,hoursPerWeek:40,budgetPast:'lapsed',income:3300};
+  const variants=[];
+  for(const tone of ['clean','blunt','savage'])
+    for(const reg of ['genz','middle','mature'])
+      for(const acct of ['spend','full'])
+        for(const dd of ['deep','light','track'])
+          variants.push({...base, tone, register:reg, acct, deepDive:dd});
+  variants.push({...base, tone:'savage', situation:'survive'}, {...base, tone:'savage', situation:'treading'});
+  let checked=0;
+  for(const a of variants) for(const s of INTAKE){
+    for(const [what,val] of [['bot',s.bot],['hint',s.hint],['why',s.why]]){
+      let t=''; try{ t = typeof val==='function' ? String(val(a)) : (val==null?'':String(val)); }catch(e){ continue; }
+      if(!t) continue; checked++;
+      if(/<\/?[a-zA-Z][^>]*>/.test(t)) bad.push(`${s.id}.${what}: ${t.slice(0,90)}`);
+    }
+    for(const o of (s.options||[])){
+      for(const [what,val] of [['label',o.label],['reply',o.reply]]){
+        const t=String(val==null?'':val); if(!t) continue; checked++;
+        if(/<\/?[a-zA-Z][^>]*>/.test(t)) bad.push(`${s.id}.option.${what}: ${t.slice(0,90)}`);
+      }
+    }
+  }
+  /* and the renderer really must not parse markup, whatever it is handed */
+  const log=document.getElementById('intakeLog'); log.innerHTML='';
+  iaBub('<img src=x onerror=alert(1)><b>x</b>','me');
+  iaBub('a **bold** bit and a literal <b>tag</b>','bot');
+  const bubs=[...log.querySelectorAll('.bub')];
+  return { bad, checked,
+    userTagsRendered: bubs[0].querySelectorAll('*').length,
+    botBolds: [...bubs[1].querySelectorAll('b')].map(x=>x.textContent),
+    botKeepsTagLiteral: bubs[1].textContent.includes('<b>tag</b>') };
+});
+check(`no step's copy contains raw HTML (${copy.checked} strings across every tone and path)`,
+      copy.bad.length===0, copy.bad.slice(0,4).join('\n        '));
+check('a user bubble renders no elements at all', copy.userTagsRendered===0, String(copy.userTagsRendered));
+check('the ** marker still bolds in bot copy', copy.botBolds.length===1 && copy.botBolds[0]==='bold', JSON.stringify(copy.botBolds));
+check('a stray tag in bot copy stays literal rather than silently working', copy.botKeepsTagLiteral);
+
+/* ---- 4c. the income questions add up ----
+        The running strip summed only the EXTRA sources, so a $3,200 paycheck
+        plus a $1,500 side gig plus a $6,000 partner displayed "= $7,500" while
+        the household actually brings in $10,700 - a wrong total shown at the
+        exact moment somebody is checking their numbers. And "Done - that's all
+        my income" moved straight on without ever reading the picture back. ---- */
+const income = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  document.getElementById('intake').classList.add('on');
+  document.getElementById('intakeLog').innerHTML='';
+  state.chatPace='instant';
+  iaAns={name:'Pat',age:'middle',register:'middle',tone:'blunt',situation:'ok',acct:'spend',
+         income:3200, hoursPerWeek:40, wage:18.50};
+  const step=INTAKE.find(s=>s.id==='moreIncome'); iaStep=INTAKE.indexOf(step);
+  const dock=()=>document.getElementById('intakeDock');
+  const chip=t=>[...dock().querySelectorAll('button[data-ci]')].find(b=>b.innerText.includes(t));
+  const strip=()=>{const e=dock().querySelector('.loop-sum');return e?e.innerText:'';};
+  renderLoop(step);
+  const out={ stripWithNoExtras:strip(), amountPlaceholders:{} };
+  chip('Side gig').click(); await wait(50);
+  out.amountPlaceholders['Side gig']=document.getElementById('iaLoopAmt').placeholder;
+  document.getElementById('iaLoopAmt').value=1500; document.getElementById('iaLoopAmtGo').click(); await wait(60);
+  out.gigAsksHours=!!document.getElementById('iaLoopHrs');
+  document.getElementById('iaLoopHrs').value=20; document.getElementById('iaLoopHrsGo').click(); await wait(200);
+  chip("Partner's pay").click(); await wait(50);
+  out.amountPlaceholders['Partner']=document.getElementById('iaLoopAmt').placeholder;
+  document.getElementById('iaLoopAmt').value=6000; document.getElementById('iaLoopAmtGo').click(); await wait(60);
+  out.partnerAsksHours=!!document.getElementById('iaLoopHrs');
+  document.getElementById('iaLoopHrs').value=160; document.getElementById('iaLoopHrsGo').click(); await wait(200);
+  out.strip=strip();
+  chip('Benefits').click(); await wait(50);
+  document.getElementById('iaLoopAmt').value=800; document.getElementById('iaLoopAmtGo').click(); await wait(150);
+  out.benefitsAsksHours=!!document.getElementById('iaLoopHrs');
+  out.stripAll=strip();
+  const bubs=()=>[...document.querySelectorAll('#intakeLog .bub.bot')].map(b=>b.textContent);
+  out.rates=bubs().filter(t=>/an hour\b/.test(t));
+  const adv=window.iaAdvance; window.iaAdvance=()=>{};
+  document.getElementById('iaLoopDone').click(); await wait(300);
+  window.iaAdvance=adv;
+  out.recap=bubs().pop();
+  return out;
+});
+const money=t=>[...String(t).matchAll(/\$([\d,]+(?:\.\d+)?)/g)].map(m=>+m[1].replace(/,/g,''));
+const eq=(a,b)=>Math.abs(a-b)<0.005;
+const baseOnly=money(income.stripWithNoExtras).pop();
+const stripTotal=money(income.stripAll).pop();
+check(`the running total counts income 1 as income (got ${baseOnly})`, eq(baseOnly,3200), income.stripWithNoExtras);
+check(`...and every source after it (got ${stripTotal}, want 11500)`, eq(stripTotal,11500), income.stripAll);
+check('a monthly side-gig amount is not suggested as "$40"', /e\.g\. 500/.test(income.amountPlaceholders['Side gig']||''),
+      income.amountPlaceholders['Side gig']);
+check("a partner's amount gets its own realistic example", /e\.g\. 2400/.test(income.amountPlaceholders['Partner']||''),
+      income.amountPlaceholders['Partner']);
+check('a side gig is asked for its hours', income.gigAsksHours===true);
+check("a partner's pay is asked for theirs", income.partnerAsksHours===true);
+check('passive benefits are not', income.benefitsAsksHours===false);
+check(`every worked source reports its own rate (${income.rates.length} of 2)`, income.rates.length===2, income.rates.join('  //  '));
+check('the side gig rate is right ($1,500 / 20 hrs = $75)', /\$75 an hour/.test(income.rates[0]||''), income.rates[0]);
+check("the partner's rate is right ($6,000 / 160 hrs = $37.50)", /\$37\.50 an hour/.test(income.rates[1]||''), income.rates[1]);
+check('Done reads the whole picture back instead of moving on', /landing each month/.test(income.recap||''),
+      (income.recap||'(nothing said)').slice(0,110));
+check('the recap names every dollar, not just the extras', /\$11,500/.test(income.recap||''), income.recap);
+/* $3,200 pay + $1,500 gig + $800 benefits = $5,500 is yours; the $6,000 is theirs. */
+check('the recap separates what is yours from the household total', /\$5,500 of it is yours/.test(income.recap||''), income.recap);
+/* ...but the RATE counts only what you sold hours for: ($3,200 + $1,500) / (173.3 + 20)
+   = $24.31. Folding the passive $800 in would quote $28.45 - a rate the app never
+   prices with, because recomputeBlendedWage ignores income with no hours. */
+check('the recap rate ignores passive income, like the wage engine does',
+      /\$24\.31 an hour/.test(income.recap||''), income.recap);
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
-  check(`${t}: names the real minutes`, /6 minutes/.test(text) && /10 minutes/.test(text));
+  check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));
   check(`${t}: names the question counts`, /16 questions/.test(text) && /22 questions/.test(text));
   check(`${t}: says the quiet part rather than apologising for asking`,
         /isn't your app|keep the six minutes|not going to pretend otherwise/.test(text));
