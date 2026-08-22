@@ -39,7 +39,16 @@ away.
 
 **Photograph the budget you already have.** Anyone who answers anything but
 "never really tried" at `budgetPast` is offered the camera (`budgetPhoto`,
-`renderBudgetPhoto`). The receipt reader is reused - `loadTesseract` plus
+`renderBudgetPhoto`). **Two file inputs, not one:** `accept="image/*"` alone
+leaves the choice to the browser, and an in-app browser (a link opened inside
+Instagram, Messenger, a Custom Tab) commonly answers with the gallery alone, so
+"Photograph it" offered no camera to anyone who had not already taken the photo.
+`capture="environment"` forces the camera but removes the gallery, so neither
+input can serve both jobs: `#bpCam` (capture) backs **Take a photo** and
+`#bpFile` backs **Pick from my photos**. Both feed the same handler, and each
+clears its own `value` so retrying the *same* photo after a bad read still fires
+`change`. The quick-log "Snap my notepad" row (`#qlCam` / `#qlPhoto`) works the
+same way. On desktop `capture` is ignored and both open a file dialog. The receipt reader is reused - `loadTesseract` plus
 `qlParseOcr` - with `bpParse` dropping the rows a budget sheet carries that a
 receipt does not: totals, subtotals, the income line at the top.
 
