@@ -207,6 +207,10 @@
   .leak-bills[open]>summary::before{content:'- '}
   .leak-bills .lb-why{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
   .leak-note{font-size:11.5px;color:var(--muted);margin:-2px 0 4px}
+  .startover{margin-top:14px;border:1px solid rgba(var(--bad-rgb),.34);background:rgba(var(--bad-rgb),.07);border-radius:14px;padding:14px 16px}
+  .startover .so-head{font-weight:800;color:var(--bad);font-size:14px}
+  .startover.so-flash{animation:soFlash 1.5s ease}
+  @keyframes soFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 3px rgba(var(--bad-rgb),.35)}}
   .cal-newgoal{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
   .cal-newgoal input{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font:inherit;font-size:14px}
   .cal-newgoal #calGoalName{flex:1;min-width:150px}
@@ -1934,7 +1938,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="btn ghost" id="installBtn2">Install app</button>
           <button class="btn ghost" id="exportBtn2">Export data</button>
           <button class="btn ghost" id="importBtn2">Import</button>
-          <button class="btn ghost danger" id="resetBtn2">Reset all</button>
+        </div>
+        <div class="startover" id="startOver">
+          <div class="so-head">Start over</div>
+          <p class="sub" style="margin:6px 0 10px">Wipes the budget, every transaction, your goals and your settings from this browser. There is no server copy and no undo - so save a backup first if there is any chance you will want this back.</p>
+          <div class="row">
+            <button class="btn ghost" id="resetBackupFirst">Back it up first</button>
+            <button class="btn ghost danger" id="resetBtn2">Erase everything</button>
+          </div>
         </div>
         <div class="databox">
           <div class="db-head">Keep a safe backup</div>
@@ -1982,14 +1993,19 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     </section>
   </div>
 
+  <!-- This footer sits under EVERY screen, and "Reset all" sat in it as a plain
+       link one space from "Export data" - a permanent wipe, on a browser-only
+       store with no server copy, a mistap away on every tab. What belongs here
+       is the constructive half: backing up and restoring can only ever help, so
+       they stay one tap from anywhere. Starting over and re-running setup moved
+       into Settings > Setup & data, where you go on purpose. -->
   <div class="foot">
     <span>Accountability · a working prototype. Everything saves to this browser only - nothing leaves your device.</span>
     <div class="actions">
-      <button class="linkbtn" id="intakeBtn">Setup chat</button>
       <button class="linkbtn" id="installBtn">Install app</button>
       <button class="linkbtn" id="exportBtn">Export data</button>
       <button class="linkbtn" id="importBtn">Import</button>
-      <button class="linkbtn" id="resetBtn">Reset all</button>
+      <button class="linkbtn" id="footSettings">Start over</button>
       <input type="file" id="importFile" accept="application/json" class="hide">
     </div>
   </div>
@@ -4752,14 +4768,26 @@ document.getElementById('importFile').addEventListener('change',e=>{
   r.readAsText(f); e.target.value='';
 });
 var bootAfterReset=false;   // var on purpose: boot() reads it, and a let here would be in the TDZ if boot ever moved earlier
-document.getElementById('resetBtn').addEventListener('click',()=>{
-  if(confirm('Wipe all budget, transactions, goals, and settings from this browser? No undo.')){
-    localStorage.removeItem(STORE_KEY); state=defaultState();
-    bootAfterReset=true; boot();
-    activateTab('home');
-    if(typeof toast==='function') toast('Wiped. Start the setup chat whenever you are ready.');
-  }
-});
+/* Two confirmations, deliberately. The first is the ordinary "are you sure"; the
+   second names what is actually being destroyed, because a browser-only store
+   has no server copy to fall back on and nobody gets a second chance at this. */
+function resetEverything(){
+  if(!confirm('Wipe all budget, transactions, goals, and settings from this browser? No undo.')) return;
+  const M=(typeof thisMonth==='function')?thisMonth():'';
+  const bits=[];
+  try{
+    const cats=(state.categories||[]).length, tx=(state.transactions||[]).length, goals=(state.goals||[]).length;
+    if(cats) bits.push(cats+' categor'+(cats>1?'ies':'y'));
+    if(tx) bits.push(tx+' transaction'+(tx>1?'s':''));
+    if(goals) bits.push(goals+' goal'+(goals>1?'s':''));
+  }catch(_){}
+  const what = bits.length ? bits.join(', ') : 'everything in this browser';
+  if(!confirm('Last check: this erases '+what+'. It cannot be undone and there is no copy anywhere else.\n\nErase it?')) return;
+  localStorage.removeItem(STORE_KEY); state=defaultState();
+  bootAfterReset=true; boot();
+  activateTab('home');
+  if(typeof toast==='function') toast('Wiped. Start the setup chat whenever you are ready.');
+}
 
 /* ---------- encrypted backup (WebCrypto AES-GCM, on-device only) ---------- */
 const cryptoOK=()=>!!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
@@ -8152,7 +8180,9 @@ function commitIntake(){
   applyHousehold(); applySpending();
   closeOverlayThenTab('home');
 }
-document.getElementById('intakeBtn').addEventListener('click',openIntake);
+// "Setup chat" left the global footer for Settings > Setup & data ("Re-run setup
+// chat"), so this listener has nothing to bind to; intakeBtn2 carries it now.
+(function(){ const b=document.getElementById('intakeBtn'); if(b) b.addEventListener('click',openIntake); })();
 document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); dismissOverlay(); });
 
 /* ---------- boot ---------- */
@@ -8402,7 +8432,18 @@ document.getElementById('intakeBtn2').addEventListener('click',()=>openIntake())
 document.getElementById('installBtn2').addEventListener('click',()=>document.getElementById('installBtn').click());
 document.getElementById('exportBtn2').addEventListener('click',()=>document.getElementById('exportBtn').click());
 document.getElementById('importBtn2').addEventListener('click',()=>document.getElementById('importBtn').click());
-document.getElementById('resetBtn2').addEventListener('click',()=>document.getElementById('resetBtn').click());
+document.getElementById('resetBtn2').addEventListener('click',()=>resetEverything());
+// the footer's "Start over" is a signpost, not the trigger - it walks you to the
+// panel that explains what erasing costs and offers the backup first
+document.getElementById('footSettings').addEventListener('click',()=>{
+  activateTab('settings');
+  setTimeout(()=>{ const el=document.getElementById('startOver');
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('so-flash'); setTimeout(()=>el.classList.remove('so-flash'),1600); } },160);
+});
+document.getElementById('resetBackupFirst').addEventListener('click',()=>{
+  const b=document.getElementById('encBackupBtn') || document.getElementById('exportBtn');
+  if(b){ b.scrollIntoView({behavior:'smooth',block:'center'}); b.click(); }
+});
 /* 2C: the "Enough" anchor + margin-of-safety prompt */
 function renderEnough(income){
   const box=document.getElementById('enoughCard'); if(!box) return;
