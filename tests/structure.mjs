@@ -1061,6 +1061,57 @@ const t3 = await p.evaluate(() => {
 check('a ransom logged the way the app logs it shows up in the hours signal',
       /called a trap/.test(t3), t3.replace(/<[^>]+>/g,'').slice(0,120));
 
+/* ---- 22. outside numbers: shipped, dated, tied to the user's own figures ----
+   The app never fetches them - they are baked at build time, every card carries
+   its as-of date on screen, and a build old enough for them to be stale says so
+   and goes quiet. Context, never advice: no product, bank or fund is named. */
+const OUT={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:RM,
+  hourlyWage:24, wageSetAt:'2026-03-10',
+  categories:[{id:'groc',name:'Groceries'}], budgets:{[RM]:{groc:650}},
+  transactions:[{id:'i',type:'income',amount:3200,date:RM+'-01'},
+                {id:'e',type:'expense',amount:650,catId:'groc',date:RM+'-03'}],
+  accounts:[{id:'a',name:'Checking',kind:'checking',balance:2150}],
+  debts:[{id:'d',name:'Visa',balance:2400,minPayment:75,apr:28.9}]};
+await seed(OUT); await p.reload(); await p.waitForTimeout(900);
+const outside = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await wait(500);
+  const cards=[...document.querySelectorAll('.rp-card')];
+  const oCards=cards.filter(c=>c.querySelector('.rp-src'));
+  const firstOutsideIdx=cards.findIndex(c=>c.querySelector('.rp-src'));
+  const lastPersonalIdx=cards.reduce((m,c,i)=>c.querySelector('.rp-src')?m:i,-1);
+  const text=oCards.map(c=>c.textContent).join(' ');
+  const was=OUTSIDE.built; OUTSIDE.built='2025-01-01';
+  const stale=buildReport(); OUTSIDE.built=was;
+  return {
+    n:oCards.length,
+    stamped:oCards.every(c=>/as of (July|August) 2026/.test(c.querySelector('.rp-src').textContent)),
+    neverFetched:oCards.every(c=>/never fetched/.test(c.querySelector('.rp-src').textContent)),
+    cpiWork:(oCards.map(c=>(c.querySelector('.rp-w')||{}).textContent||'').find(w=>/1\.034/.test(w)))||'',
+    savingsWork:(oCards.map(c=>(c.querySelector('.rp-w')||{}).textContent||'').find(w=>/0\.38%/.test(w)))||'',
+    sinceWage:/has not changed since Mar 2026/.test(text),
+    noAdvice:!/\byou should\b|switch to|open a|sign up|move your money/i.test(text),
+    noBrands:!/bankrate|nerdwallet|chase|ally|amex|fidelity|vanguard/i.test(text),
+    frame:!!document.querySelector('.rp-frame'),
+    afterPersonal:firstOutsideIdx>lastPersonalIdx && lastPersonalIdx>=0,
+    staleOutside:stale.signals.filter(g=>g.outside).length,
+    staleSaysSo:stale.locked.some(l=>/too old to show as current/.test(l))
+  };
+});
+check('the outside numbers appear, tied to this household', outside.n===4, String(outside.n));
+check('...every one stamped with its as-of date on screen', outside.stamped===true);
+check('...and marked as baked in, never fetched', outside.neverFetched===true);
+check('the CPI card divides by 1.034 and shows it', /\$24 ÷ 1\.034 = \$23\.21/.test(outside.cpiWork), outside.cpiWork);
+check('the savings card prices the cash at the real average', /\$2,150 × 0\.38% = \$8\.17/.test(outside.savingsWork), outside.savingsWork);
+check('a wage the app watched change is dated, not hedged', outside.sinceWage===true);
+check('no card tells anyone what to do', outside.noAdvice===true);
+check('...and none names a bank, fund or brand', outside.noBrands===true);
+check('the standing frame line says context, not advice', outside.frame===true);
+check('outside numbers wait behind the personal ones', outside.afterPersonal===true);
+check('a stale build goes quiet instead of showing old numbers as current',
+      outside.staleOutside===0 && outside.staleSaysSo===true,
+      `${outside.staleOutside} shown, note ${outside.staleSaysSo}`);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

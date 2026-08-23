@@ -1,5 +1,11 @@
 # Recommendations, and outside numbers
 
+> **Status: both parts are built.** Part 1 shipped as the Accountability Report
+> (Reflect opens on it). Part 2 shipped as Option B exactly as recommended -
+> baked and dated, inflation and rates only, no equities, every figure tied to
+> the user's own budget, with the 240-day staleness guard. `docs/DEPLOY.md`
+> carries the refresh step.
+
 Two questions, deep-dived:
 
 1. Can the app give **accountability recommendations** from spending habits, investing

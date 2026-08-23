@@ -301,6 +301,9 @@
      report you could only find by guessing the strip scrolls. They wrap to two
      rows instead - every report visible without a swipe. */
   .rp-card{background:var(--panel-2);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:14px;padding:15px 17px;margin-top:12px}
+  .rp-card.outside{border-left-color:var(--accent)}
+  .rp-src{font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+  .rp-frame{margin-top:14px;font-size:12.5px;line-height:1.55;color:var(--muted);font-style:italic}
   .rp-card.bad{border-left-color:var(--accent-2)}
   .rp-t{font-weight:900;font-size:16.5px;letter-spacing:-.2px;margin-bottom:6px}
   .rp-b{font-size:14px;line-height:1.6;color:var(--muted)}
@@ -6929,7 +6932,9 @@ document.getElementById('addLiab').addEventListener('click',()=>{
 /* --- hourly wage --- */
 const wageEl=document.getElementById('wage');
 wageEl.addEventListener('input',()=>{
-  state.hourlyWage=parseFloat(wageEl.value)||0; state.wageAuto=false; save();   // manual override stops auto-reblending
+  const v=parseFloat(wageEl.value)||0;
+  if(v!==state.hourlyWage) state.wageSetAt=todayStr();   // the outside-numbers card wants "hasn't moved since March", not a hedge
+  state.hourlyWage=v; state.wageAuto=false; save();   // manual override stops auto-reblending
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
 /* hours/week is an input, never an assumption - editable here, not just at intake */
@@ -8368,6 +8373,95 @@ const REPORT_SIGNALS=[
     }}
 ];
 
+/* ============================================================
+   OUTSIDE NUMBERS - shipped, not fetched.
+
+   The app promises "nothing leaves your device", so it does not call anyone to
+   ask what inflation is. These figures are baked in at build time and refreshed
+   on deploy (docs/DEPLOY.md has the step). The trade is deliberate: numbers
+   that move monthly, at most, in exchange for zero network calls, zero API
+   keys, and a promise kept absolutely.
+
+   Rules, from docs/Insight-and-Market-Data.md:
+     - every figure is stamped with its as-of date ON SCREEN
+     - each one is connected to the user's OWN budget, never shown as trivia
+     - observations only - no product, bank or fund is ever named
+     - nothing here projects a return or implies a figure will continue
+     - a build old enough that these have gone stale says so and goes quiet,
+       because a stale number presented as current is the one way this feature
+       could genuinely hurt someone
+
+   Sources checked 2026-08-23: BLS CPI release for July 2026 (all-items +3.4%
+   and food-at-home +2.7%, 12 months, released 2026-08-12); Federal Reserve H.15
+   (effective fed funds 3.63%, target 3.50-3.75%, 2026-08-20); FDIC national
+   average savings 0.38% APY with top widely-available accounts around 4%
+   (2026-08); average APR on new card offers about 23.8% (2026-08, survey
+   averages vary 19-25% by methodology - the new-offer figure is the
+   conservative comparison for "how does my card rank"). */
+const OUTSIDE={
+  built:'2026-08-23',
+  cpi:{ yoy:3.4, asOf:'July 2026' },
+  food:{ yoy:2.7, asOf:'July 2026' },
+  savings:{ avgApy:0.38, highApy:4.0, asOf:'August 2026' },
+  card:{ avgApr:23.8, asOf:'August 2026' },
+  fedFunds:{ rate:3.63, asOf:'August 2026' }
+};
+function outsideFresh(){ return daysSince(OUTSIDE.built) <= 240; }
+
+/* the outside signals ride the same rails as the personal ones: silent below
+   their data, working shown, never first (context waits behind the person's own
+   month). They are declared after the personal signals for exactly that reason. */
+REPORT_SIGNALS.push(
+  { k:'oCpi', run(){
+      if(!outsideFresh()) return null;
+      /* only a rate the user actually SET - effectiveHourly falls back to an
+         estimate from logged income, and "your hour buys 3% less" is not a
+         sentence to build on a guess */
+      if(!(state.hourlyWage>0)) return null;
+      const H=effectiveHourly();
+      const then=H/(1+OUTSIDE.cpi.yoy/100);
+      const since=state.wageSetAt ? ` and has not changed since ${monShort(state.wageSetAt.slice(0,7))} ${state.wageSetAt.slice(0,4)}` : '';
+      return { t:'Prices moved. Did your rate?', outside:OUTSIDE.cpi.asOf,
+        body:`Prices are up <b>${OUTSIDE.cpi.yoy}%</b> over the last year. Your hour earns <b>${money(H)}</b> today${since}, so in last year's money it buys about <b>${money(then)}</b> worth.`,
+        work:`${money(H)} ÷ ${(1+OUTSIDE.cpi.yoy/100).toFixed(3)} = ${money(then)}`,
+        nudge:`Same hour, ${money(H-then)} less of it. A raise below ${OUTSIDE.cpi.yoy}% this year is a pay cut wearing a raise's clothes - that is arithmetic, not advice.` };
+    }},
+  { k:'oFood', run(){
+      if(!outsideFresh()) return null;
+      const M=state.activeMonth;
+      const groc=state.categories.filter(c=>/grocer|food/.test(c.name.toLowerCase()) && !c.parentId)
+        .reduce((s,c)=>s+catAssigned(c.id,M),0);
+      if(!(groc>0)) return null;
+      const then=groc/(1+OUTSIDE.food.yoy/100);
+      return { t:'The same cart costs more than it did', outside:OUTSIDE.food.asOf,
+        body:`Grocery prices are up <b>${OUTSIDE.food.yoy}%</b> over the year. Your food money this month is <b>${money(groc)}</b> - a year ago about <b>${money(then)}</b> bought the same cart.`,
+        work:`${money(groc)} ÷ ${(1+OUTSIDE.food.yoy/100).toFixed(3)} = ${money(then)}`,
+        nudge:`If that line has not grown ${OUTSIDE.food.yoy}% in your plan, you are buying slightly less food for the same money - worth knowing before it reads as overspending.` };
+    }},
+  { k:'oSavings', run(){
+      if(!outsideFresh()) return null;
+      const cash=liquidTotal(); if(!(cash>0)) return null;
+      const atAvg=cash*OUTSIDE.savings.avgApy/100, atHigh=cash*OUTSIDE.savings.highApy/100;
+      return { t:'What idle cash pays right now', outside:OUTSIDE.savings.asOf,
+        body:`You hold <b>${money(cash)}</b> you could spend today. The national average savings account pays <b>${OUTSIDE.savings.avgApy}%</b> - about <b>${money(atAvg)}</b> a year on that. Widely available high-yield accounts run near <b>${OUTSIDE.savings.highApy}%</b> - about <b>${money(atHigh)}</b> a year.`,
+        work:`${money(cash)} × ${OUTSIDE.savings.avgApy}% = ${money(atAvg)}/yr · × ${OUTSIDE.savings.highApy}% = ${money(atHigh)}/yr`,
+        nudge:`That is the gap between the two, per year, for the same cash${rpLife(atHigh-atAvg)}. No account named, nothing endorsed - just what the rates are.` };
+    }},
+  { k:'oCard', run(){
+      if(!outsideFresh()) return null;
+      const carded=(state.debts||[]).filter(d=>(+d.balance||0)>0 && (+d.apr||0)>0);
+      if(!carded.length) return null;
+      const worst=carded.slice().sort((a,b)=>b.apr-a.apr)[0];
+      const above=worst.apr>OUTSIDE.card.avgApr;
+      return { t:`${escapeHtml(worst.name)} is ${above?'above':'below'} the going rate`, outside:OUTSIDE.card.asOf,
+        body:`Your dearest debt runs <b>${worst.apr}%</b>. The average new card offer is about <b>${OUTSIDE.card.avgApr}%</b>, so yours is <b>${Math.abs(worst.apr-OUTSIDE.card.avgApr).toFixed(1)} points ${above?'above':'below'}</b> it.`,
+        work:`${worst.apr}% − ${OUTSIDE.card.avgApr}% = ${(worst.apr-OUTSIDE.card.avgApr).toFixed(1)}`,
+        nudge: above
+          ? `Paying it down earns a guaranteed ${worst.apr}% - the planner on Debt already prices what each extra dollar buys back.`
+          : `Below the going rate - the order the Debt planner picked already accounts for that.` };
+    }}
+);
+
 function buildReport(){
   const out=[], locked=[];
   REPORT_SIGNALS.forEach(sig=>{
@@ -8377,6 +8471,8 @@ function buildReport(){
     if(r.locked){ locked.push(r.locked); return; }
     out.push(Object.assign({k:sig.k}, r));
   });
+  if(!outsideFresh() && effectiveHourly()>0)
+    locked.push(`Outside numbers (inflation, rates) were baked into this build on ${OUTSIDE.built} and are too old to show as current - they return when the app updates.`);
   /* Bad news leads. A month where more went out than came in must not open with
      a compliment about something else that happened to go well - that is the
      same rule iaTone() enforces on the intake, applied to the report. Stable
@@ -8389,7 +8485,8 @@ function renderReport(){
   const box=document.getElementById('rpBody'); if(!box) return;
   const {signals, locked}=buildReport();
   const cards=signals.map(g=>`
-    <div class="rp-card${g.bad?' bad':''}">
+    <div class="rp-card${g.bad?' bad':''}${g.outside?' outside':''}">
+      ${g.outside?`<div class="rp-src">Outside number · as of ${escapeHtml(g.outside)} · baked into the app, never fetched</div>`:''}
       <div class="rp-t">${g.t}</div>
       <div class="rp-b">${g.body}</div>
       ${g.work?`<div class="rp-w" title="The arithmetic behind the line above">${escapeHtml(g.work)}</div>`:''}
@@ -8398,8 +8495,10 @@ function renderReport(){
   const lockHTML = locked.length
     ? `<details class="rp-lock"><summary>${locked.length} more would appear with a little more logged</summary><ul>${locked.map(l=>`<li>${escapeHtml(l)}</li>`).join('')}</ul></details>`
     : '';
+  const outsideFoot = signals.some(g=>g.outside)
+    ? `<p class="rp-frame">The outside numbers say what is, not what to do. They name no bank, no fund and no product - context for your own figures, nothing more.</p>` : '';
   box.innerHTML = signals.length
-    ? cards+lockHTML
+    ? cards+outsideFoot+lockHTML
     : `<div class="empty rf-empty">Nothing worth saying yet - and saying something anyway would be worse than saying nothing. Log a month of money in and out and this fills itself in.</div>`+lockHTML;
 }
 function renderReflectTab(){
