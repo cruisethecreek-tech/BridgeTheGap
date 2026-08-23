@@ -2553,8 +2553,11 @@ function offenseDefense(M){
   const indieIncome=inc.filter(t=>isIndependent(t.srcType)).reduce((s,t)=>s+t.amount,0);
   const skillInvest=(state.skills||[]).filter(s=>monthOf(s.date)===M).reduce((a,s)=>a+(s.cost||0),0);
   const offense=indieIncome+skillInvest;
-  const debtCatIds=state.categories.filter(c=>/debt|loan|credit/.test(c.name.toLowerCase())).map(c=>c.id);
-  const debtPaid=txnsInMonth(M).filter(t=>t.type==='expense'&&debtCatIds.includes(t.catId)).reduce((s,t)=>s+t.amount,0);
+  /* "Visa" under a parent named "Debt Payments" is a debt payment - the name
+     check has to cover the subtree, not just the row's own name. (Audit F9.) */
+  const debtTops=state.categories.filter(c=>/debt|loan|credit/.test(c.name.toLowerCase()));
+  const debtCatIds=new Set(debtTops.flatMap(c=>[c.id].concat(descendantsOf(c.id).map(k=>k.id))));
+  const debtPaid=txnsInMonth(M).filter(t=>t.type==='expense'&&debtCatIds.has(t.catId)).reduce((s,t)=>s+t.amount,0);
   const frugality=state.impulse.filter(i=>i.type==='skip'&&monthOf(i.date)===M).reduce((s,i)=>s+i.amount,0);
   const defense=debtPaid+frugality;
   return {offense,defense,indieIncome,skillInvest,debtPaid,frugality};
@@ -2696,7 +2699,7 @@ function normalizeState(s){
   s.guidesOff=!!s.guidesOff;
   if(!Array.isArray(s.lessons)) s.lessons=[];
   s.lessons.forEach(l=>{ l.amount=num(l.amount); });
-  Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=num(b[k]); }); });
+  Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=Math.max(0,num(b[k])); }); });   // a negative assignment is invented money - clamp stored data too, so old saves heal
   (s.transactions||[]).forEach(t=>{ t.amount=num(t.amount); if(t.hours!=null) t.hours=num(t.hours); });
   (s.accounts||[]).forEach(a=>{ a.balance=num(a.balance); });
   (s.assets||[]).forEach(a=>{ a.value=num(a.value); a.cost=num(a.cost); });
@@ -2898,7 +2901,7 @@ function applyHousehold(){
 function spendTendencies(){
   // trailing 90-day window: patterns need more than one month, but all-time data
   // (e.g. an imported year of rent) would drown the "leak" signal - and the copy says so
-  const cutoff=localYMD(new Date(Date.now()-90*86400000));
+  const cutoff=shiftDays(todayStr(),-90);   // calendar days, not 2160 physical hours - DST makes those differ
   const exp=state.transactions.filter(t=>t.type==='expense' && t.amount>0 && (t.date||'')>=cutoff);
   if(exp.length<6) return null;
   const total=exp.reduce((s,t)=>s+t.amount,0); if(total<=0) return null;
@@ -2951,7 +2954,7 @@ function renderSpending(){
     const day=Math.max(1, Math.min(tc.days, dayN));
     tcDone = dayN>tc.days;
     const pct=Math.min(100,Math.round(day/tc.days*100));
-    const endStr=localYMD(new Date(Date.parse(tc.start+'T00:00:00')+(tc.days-1)*864e5));
+    const endStr=shiftDays(tc.start, tc.days-1);
     const loggedDays=Math.min(tc.days, new Set(state.transactions.filter(t=>t.type==='expense' && (t.date||'')>=tc.start && (t.date||'')<=endStr).map(t=>t.date)).size);
     tcHTML=`<div class="sp-track${tcDone?' done':''}">
       <div class="sp-k">30-day money map${tcDone?' · complete':' · day '+day+' of '+tc.days}</div>
@@ -3231,7 +3234,10 @@ function applySpending(){
 /* ---------- Debt Payoff Planner (snowball / avalanche) ---------- */
 function simulateDebts(debts, monthly, strategy){
   let ds=debts.map(d=>({name:d.name, bal:+d.balance||0, apr:+d.apr||0, min:+d.minPayment||0, interest:0, paidMonth:null}));
-  const totalMin=ds.reduce((s,d)=>s+(d.bal>0?d.min:0),0);
+  /* A minimum can exceed what is left ($10 balance, $50 min) - the lender only
+     takes the balance, so the required floor is min(min, balance). Uncapped, the
+     planner refused to run for the person one payment from done. (Audit F6.) */
+  const totalMin=ds.reduce((s,d)=>s+(d.bal>0?Math.min(d.min,d.bal):0),0);
   if(monthly < totalMin - 0.01) return {error:'below_min', totalMin};
   let month=0, totalInterest=0; const startBal=ds.reduce((s,d)=>s+d.bal,0);
   const schedule=[{month:0, total:startBal}];
@@ -3241,11 +3247,19 @@ function simulateDebts(debts, monthly, strategy){
        Ten years in with nothing paid down is the answer, so stop and say so. */
     if(month>120 && ds.reduce((s,d)=>s+Math.max(0,d.bal),0)>=startBal) break;
     month++;
-    ds.forEach(d=>{ if(d.bal>0.005){ const i=d.bal*(d.apr/100/12); d.bal+=i; d.interest+=i; totalInterest+=i; } });
+    ds.forEach(d=>{ if(d.bal>0.005){ d.balPre=d.bal; const i=d.bal*(d.apr/100/12); d.bal+=i; d.interest+=i; totalInterest+=i; } });
     let budget=monthly;
     ds.forEach(d=>{ if(d.bal>0.005){ const pay=Math.min(d.min, d.bal); d.bal-=pay; budget-=pay; } });
     if(budget>0.005){
-      const active=ds.filter(d=>d.bal>0.005).sort(strategy==='snowball'?(a,b)=>a.bal-b.bal:(a,b)=>b.apr-a.apr);
+      /* Rank by the balance BEFORE this month's interest - the statement figure a
+         person would actually rank by. Sorting on the post-interest balance meant
+         two debts that started tied were no longer tied, and the higher rate had
+         the HIGHER balance, so snowball targeted the cheap debt first and paid
+         maximum interest. Ties break toward less interest: same balance, kill the
+         dearer rate; same rate, the smaller balance. (Audit F7.) */
+      const active=ds.filter(d=>d.bal>0.005).sort(strategy==='snowball'
+        ? (a,b)=>((a.balPre??a.bal)-(b.balPre??b.bal))||(b.apr-a.apr)
+        : (a,b)=>(b.apr-a.apr)||((a.balPre??a.bal)-(b.balPre??b.bal)));
       for(const t of active){ if(budget<=0.005) break; const pay=Math.min(budget,t.bal); t.bal-=pay; budget-=pay; }
     }
     ds.forEach(d=>{ if(d.bal<=0.005 && d.paidMonth===null){ d.paidMonth=month; d.bal=0; } });
@@ -3265,7 +3279,7 @@ function simulateDebts(debts, monthly, strategy){
    to trust that). */
 function debtPaymentFor(debts, strat, targetMonths){
   const totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);
-  const totalMin=debts.reduce((s,d)=>s+(+d.minPayment||0),0);
+  const totalMin=debts.reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0);
   if(!(totalBal>0)) return null;
   const clears=p=>{ const r=simulateDebts(debts,p,strat); return !r.error && !r.stalled && r.months<=targetMonths; };
   let lo=Math.max(totalMin,0), hi=Math.max(totalBal*1.5, totalMin+totalBal, 10);
@@ -3335,7 +3349,7 @@ function renderDebtResults(){
   const debts=state.debts.filter(d=>(+d.balance||0)>0);
   if(!debts.length){ box.innerHTML='<div class="sub" style="margin-top:12px">Add a debt with a balance to see your way out.</div>'; return; }
   const budget=state.debtBudget||0;
-  const totalMin=debts.reduce((s,d)=>s+(+d.minPayment||0),0), totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);
+  const totalMin=debts.reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0), totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);   // capped at the balance: a $50 min on a $10 remainder only costs $10
   if(budget < totalMin-0.01){
     box.innerHTML=`<div class="imp-err" style="margin-top:12px">Your monthly amount (${actMoney(budget)}) is under your minimum payments (${actMoney(totalMin)}). Set it to at least ${actMoney(totalMin)} to start making progress.</div>`;
     return;
@@ -3420,7 +3434,7 @@ function investCompare(debts, monthly, retPct, horizon){
 function renderInvestCompare(){
   const box=document.getElementById('investResults'); if(!box) return;
   const debts=state.debts.filter(d=>(+d.balance||0)>0);
-  const budget=state.debtBudget||0, totalMin=debts.reduce((s,d)=>s+(+d.minPayment||0),0);
+  const budget=state.debtBudget||0, totalMin=debts.reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0);
   const ri=document.getElementById('investReturn'); if(ri&&document.activeElement!==ri) ri.value=state.investReturn||'';
   document.querySelectorAll('#investYears button').forEach(b=>b.classList.toggle('on',+b.dataset.y===(state.investYears||10)));
   if(!debts.length || budget<totalMin-0.01){ box.innerHTML='<div class="sub" style="margin-top:12px">Add your debts and a monthly amount above to see how paying down compares to investing.</div>'; return; }
@@ -4587,7 +4601,10 @@ function renderBudget(){
   box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; renderBudget(); }));
   let budgetAdvancing=false;
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
-    inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=parseFloat(inp.value)||0; save(); refreshBudgetSummary(); });
+    /* Clamp at the point of entry: the field says min=0 but typing "-500" got
+       past it, and a negative assignment SUBTRACTS from the assigned total -
+       zero-based math you can print money against. (Independent audit, F1.) */
+    inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=Math.max(0,parseFloat(inp.value)||0); save(); refreshBudgetSummary(); });
     inp.addEventListener('change',()=>{ if(budgetAdvancing) return; renderBudget(); });
     inp.addEventListener('keydown',e=>{
       if(e.key!=='Enter') return;
@@ -4772,7 +4789,7 @@ const IMP_DATE_RX=/^\s*(\d{1,4})[\/\-.](\d{1,2})[\/\-.](\d{1,4})\s*$/;
 function parseImpDate(s){ if(!s) return null; s=String(s).trim();
   const iso=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
   const m=s.match(IMP_DATE_RX);
-  if(!m){ const d=new Date(s); return isNaN(d)?null:d.toISOString().slice(0,10); }
+  if(!m){ const d=new Date(s); return isNaN(d)?null:localYMD(d); }   // toISOString() is UTC and moved "Nov 1" to Oct 31 for anyone east of Greenwich (audit F4) - the comment at localYMD already explains the same trap westward
   let a=+m[1], b=+m[2], c=+m[3];
   if(m[1].length===4) return `${m[1]}-${String(b).padStart(2,'0')}-${String(c).padStart(2,'0')}`;
   let mm=a, dd=b; if(a>12&&b<=12){ mm=b; dd=a; }   // US MM/DD default; flip if impossible
@@ -5206,7 +5223,13 @@ const TIME_KINDS=[
   {k:'people', ic:'', label:'People',       hint:'family, friends, network'},
   {k:'leak',   ic:'', label:'Screen drift', hint:'scroll, autoplay'}
 ];
-function timeWeekFrom(){ return localYMD(new Date(Date.parse(todayStr()+'T00:00:00')-6*86400000)); }
+/* Shift a local date by whole CALENDAR days. Subtracting n*86400000 ms subtracts
+   physical hours, and a DST jump means a calendar day is not always 24 of those -
+   30 days after spring-forward, the ms version lands a day early and a "7-day
+   week" quietly holds 8 days of data. The Date constructor rolls day arithmetic
+   in local calendar space, which is the thing actually meant. (Audit F10.) */
+function shiftDays(iso,n){ const [y,m,d]=String(iso).split('-').map(Number); return localYMD(new Date(y,m-1,d+n)); }
+function timeWeekFrom(){ return shiftDays(todayStr(),-6); }
 function timeWeekTotals(){ const from=timeWeekFrom(); const tot={}; (state.timeLog||[]).forEach(e=>{ if(e.date>=from) tot[e.kind]=(tot[e.kind]||0)+(+e.hours||0); }); return tot; }
 function logTime(kind,hours){
   state.timeLog=state.timeLog||[];
@@ -5216,7 +5239,7 @@ function logTime(kind,hours){
   const used=Object.values(tot).reduce((s,v)=>s+v,0)+(state.hoursPerWeek||0);
   if(used+hours>168){ if(typeof toast==='function') toast("That's past 168 hours - a week doesn't hold any more than that."); return; }
   state.timeLog.push({id:uid(),date:todayStr(),kind,hours});
-  const cutoff=localYMD(new Date(Date.parse(todayStr()+'T00:00:00')-90*86400000));
+  const cutoff=shiftDays(todayStr(),-90);
   state.timeLog=state.timeLog.filter(e=>e.date>=cutoff);   // bound storage; the ledger is about this season, not forever
   save(); renderTimeLog();
 }
@@ -7865,7 +7888,11 @@ function recOccurrences(r,month){
     let guard=0;
     while(d<=last && guard++<40){ if(d>=first) out.push(d); d=shiftDay(d,step); }
   } else if(f==='semimonthly'){
-    out=[day(aDay), day(aDay+15>dim ? aDay-15 : aDay+15)];
+    /* "half a month later" can fall off the end of February; the old fallback
+       aDay-15 went to zero and clamped to the 1st, posting the second half of a
+       15th-anchored paycheck on Feb 1 - two days after Jan 30. End of month is
+       the honest landing spot when there is no room. (Audit F5.) */
+    out=[day(aDay), day(aDay+15<=dim ? aDay+15 : (aDay-15>=1 ? aDay-15 : dim))];
   } else if(f==='quarterly'){
     if(((monIdx(month)-monIdx(anchor.slice(0,7)))%3+3)%3!==0) return [];
     out=[day(aDay)];
@@ -8187,7 +8214,7 @@ function rpNotes(fromISO,toISO){
       if(k.length>1){ const e=out[k]||(out[k]={n:0,total:0,label:raw,last:''}); e.n++; e.total+=t.amount; if((t.date||'')>e.last) e.last=t.date||''; } });
   return out;
 }
-function rpAgo(days){ return localYMD(new Date(Date.now()-days*86400000)); }
+function rpAgo(days){ return shiftDays(todayStr(),-days); }
 /* "$90, which is 3.7 hrs of your life" - the app's own unit, only when it knows the rate */
 function rpLife(amount){ const H=effectiveHourly(); return H>0 ? ` - ${fmtHours(amount/H)} of your life` : ''; }
 
@@ -8269,7 +8296,7 @@ const REPORT_SIGNALS=[
       if(!best) return null;
       return { t:`"${escapeHtml(best.label)}" is new`,
         body:`It shows up <b>${best.n} times</b> in the last 30 days, and not once in the 30 before that. <b>${money(best.total)}</b> so far${rpLife(best.total)}.`,
-        work:`${best.n} entries × ${money(best.total/best.n)} average = ${money(best.total)}`,
+        work:`${money(best.total)} ÷ ${best.n} entries ≈ ${money(best.total/best.n)} each`,
         nudge:`At this rate that is about <b>${money(best.total*12)}</b> a year${rpLife(best.total*12)}. New habits are cheapest to look at while they are still new.`,
         bad:true };
     }},
@@ -8332,7 +8359,7 @@ const REPORT_SIGNALS=[
       const M=state.activeMonth, H=effectiveHourly();
       if(!(H>0)) return {locked:'Your hourly rate in Settings - every figure in hours of your life comes from it.'};
       const exp=monthExpense(M); if(!(exp>0)) return null;
-      const traps=(state.impulse||[]).filter(i=>i.decision==='buy'&&monthOf(i.date)===M)
+      const traps=(state.impulse||[]).filter(i=>i.type==='buy'&&monthOf(i.date)===M)   // the impulse log writes type:, not decision: - my test seeded the same wrong field, so it passed while the real clause never fired
         .reduce((s,i)=>s+(+i.amount||0),0);
       return { t:`${fmtHours(exp/H)} of your life went out this month`, bad:false,
         body:`<b>${money(exp)}</b> spent at <b>${money(H)}</b> an hour is <b>${fmtHours(exp/H)}</b> you already worked for.${traps>0?` <b>${fmtHours(traps/H)}</b> of it went on things you yourself called a trap.`:''}`,
@@ -10135,13 +10162,29 @@ function mergeDuplicates(){
     let survivor;
     if(key.startsWith('wall:')){ const canon=key.slice(5); survivor=cats.find(c=>c.name.toLowerCase()===canon.toLowerCase())||cats.slice().sort((a,b)=>catScore(b)-catScore(a))[0]; survivor.name=canon; }
     else survivor=cats.slice().sort((a,b)=>catScore(b)-catScore(a))[0];
+    /* Merging used to sum the DIRECT assignments and reparent the children, but
+       a category's effective budget is max(own, sum of kids) - so when one
+       duplicate's money lived in its own figure and the other's lived in its
+       kids, the max() absorbed the smaller side and the plan silently shrank
+       ($100-own merged with $50-in-kids became $100, not $150). Compute each
+       month's effective totals BEFORE touching the tree, and give the survivor
+       the sum - the kids' figures can never exceed it, so nothing is absorbed.
+       (Independent audit, F3.) */
+    const effOf=(m,id)=>{ const b=state.budgets[m]||{};
+      const kids=state.categories.filter(k=>k.parentId===id);
+      const own=+b[id]||0;
+      if(!kids.length) return own;
+      return Math.max(own, kids.reduce((t,k)=>t+effOf(m,k.id),0)); };
+    const effTotals={};
+    Object.keys(state.budgets).forEach(m=>{ effTotals[m]=cats.reduce((t,c)=>t+effOf(m,c.id),0); });
     cats.forEach(c=>{ if(c.id===survivor.id) return;
       state.categories.forEach(k=>{ if(k.parentId===c.id) k.parentId=survivor.id; });  // reparent children
-      Object.keys(state.budgets).forEach(m=>{ const b=state.budgets[m]; if(b&&b[c.id]!=null){ b[survivor.id]=(b[survivor.id]||0)+b[c.id]; delete b[c.id]; } });
+      Object.keys(state.budgets).forEach(m=>{ const b=state.budgets[m]; if(b&&b[c.id]!=null) delete b[c.id]; });
       state.transactions.forEach(t=>{ if(t.catId===c.id) t.catId=survivor.id; });
       (state.recurring||[]).forEach(r=>{ if(r.catId===c.id) r.catId=survivor.id; });
       remove.add(c.id); merged++;
     });
+    Object.keys(effTotals).forEach(m=>{ if(effTotals[m]>0){ (state.budgets[m]=state.budgets[m]||{})[survivor.id]=effTotals[m]; } });
   });
   if(merged){ state.categories=state.categories.filter(c=>!remove.has(c.id)); save(); }
   return merged;

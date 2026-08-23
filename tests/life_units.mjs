@@ -58,7 +58,7 @@ const STATE = {
          {id:'d2',name:'Car loan',balance:8600,minPayment:240,apr:6.4}],
   skills:[{id:'sk1',name:'Welding course',cost:1200,lift:400}],
   network:[{id:'n1',name:'Mentor - Dee',value:'intro to the shop'}],
-  impulse:[{id:'p1',name:'New phone',amount:1100,date:'2026-08-10',verdict:'skip'}],
+  impulse:[{id:'p1',name:'New phone',amount:1100,date:'2026-08-10',type:'skip'}],   // type:, the field logNeutralize actually writes - verdict: made the War Chest $0 and the test checked a vacuous string
   vault:[{id:'w1',name:'New phone',amount:1100,unlocksAt:Date.now()+86400000,trap:'status'}],
   diary:[{id:'dy1',date:'2026-08-19',ts:'2026-08-19T18:40:00',kind:'win',text:'Skipped takeout twice.',acted:[{amount:38,label:'Eating out'}]}],
   sweptDays:{}, goalsGiven:[], impulseStreak:3, intake:{}

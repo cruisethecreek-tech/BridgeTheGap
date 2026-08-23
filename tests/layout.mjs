@@ -46,7 +46,7 @@ const HOUSE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,gu
   {id:'t2',type:'expense',amount:87.42,catId:'groc',date:'2026-08-03',energy:'growth'},
   {id:'t5',type:'invest',amount:500,date:'2026-08-06',note:'Index fund'}],
  goals:[{id:'g',name:'Emergency fund that covers three months',target:9000,saved:2400}],
- impulse:[{id:'p',name:'Mechanical keyboard',amount:189,trap:'scroll',date:'2026-08-03',decision:'skip'}],
+ impulse:[{id:'p',name:'Mechanical keyboard',amount:189,trap:'scroll',date:'2026-08-03',type:'skip'}],
  recurring:[{id:'r',type:'expense',amount:1250,catId:'roof',freq:'monthly',anchor:'2026-08-01'}],
  accounts:[{id:'a',name:'Checking',kind:'checking',balance:2150}],
  assets:[{id:'as',name:'Index fund at the brokerage',value:12000,kind:'real'}],
