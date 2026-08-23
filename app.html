@@ -2595,6 +2595,23 @@ function normalizeState(s){
   (s.impulse||[]).forEach(i=>{ if(i.goalId && !goalIds.has(i.goalId)) delete i.goalId; });   // orphaned dream-skips return to the War Chest
   const txIds=new Set((s.transactions||[]).map(t=>t.id));
   if(Array.isArray(s.giving)) s.giving=s.giving.filter(g=>!g.txId || txIds.has(g.txId));
+  /* Entries already posted under the old note say "Recurring" and nothing else,
+     which is not something the user can fix by hand for every past month. Name
+     them from the schedule that made them, or from the category they landed in
+     when that schedule is gone. Only ever rewrites the exact placeholder, so a
+     note somebody typed is never touched. */
+  {
+    const byId={}; (s.recurring||[]).forEach(r=>{ byId[r.id]=r; });
+    const nameOf=id=>{ const c=(s.categories||[]).find(x=>x.id===id); return c?c.name:''; };
+    (s.transactions||[]).forEach(t=>{
+      if(t.note!=='Recurring') return;
+      const r=t.recId?byId[t.recId]:null;
+      const nm = r ? (r.type==='expense' ? (r.name||nameOf(r.catId)) : (r.source||r.name))
+                   : (t.type==='expense' ? nameOf(t.catId) : (t.source||''));
+      const clean=String(nm||'').trim();
+      if(clean) t.note=clean; else delete t.note;   // no name to give it: let the row fall back to its category
+    });
+  }
   // tracking origin: the day this budget actually began. Backfill from the earliest
   // REAL transaction (imported history included) so days before it never score as
   // wins. Intake-seeded transactions are dated the 1st for month math - they're a
@@ -5052,6 +5069,17 @@ function renderQuickLog(){
         +(uncat?' - '+uncat+' with no category yet, findable under Uncategorized.':'.')); }
   };
 }
+/* Every posted recurring entry was noted "Recurring" - so four bills in a row
+   read "Recurring, Recurring, Recurring, Recurring" and the list said nothing
+   at all. The transaction already carries recId, so the app knows perfectly
+   well that it was automatic; the note is the one place that should say WHAT it
+   was. It names the bill instead, and the row marks itself automatic from recId
+   rather than spending its only line saying so. */
+function recTxNote(r){
+  const n = r.type==='expense' ? (r.name || catName(r.catId)) : (r.source || r.name);
+  return String(n||'').trim() || 'Recurring';
+}
+
 /* ============================================================
    TIME LEDGER - the other thing you invest.
    Same 168-hour paycheck for everyone: hours sold to work (from hoursPerWeek),
@@ -5158,9 +5186,12 @@ function renderTxList(){
               :(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span><span class="tx-note">${escapeHtml(t.note||'Expense')}</span>`);
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
-    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):''))
-            :t.type==='invest'?(((t.ikind||'holds')==='self'?'Into you - spent on purpose':'Still yours - working')+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
-            :((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
+    /* the note now names the bill, so "posted automatically" moves to the line
+       that has room for it rather than eating the only line that says what it was */
+    const auto=t.recId?' · repeats':'';
+    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+auto+(t.note?' · '+escapeHtml(t.note):''))
+            :t.type==='invest'?(((t.ikind||'holds')==='self'?'Into you - spent on purpose':'Still yours - working')+auto+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
+            :((en?en.ic+' ':'')+'Expense'+auto+(txAllMonths?' · '+monthOf(t.date):''));
     const owner=t.owner||'a', Ho=hourlyFor(owner);
     let badge='';
     if(t.type==='income' && t.hours>0) badge=`<span class="tx-yield">${usd(t.amount/t.hours)}/hr</span>`;
@@ -7756,9 +7787,9 @@ function postRecurring(month){
       if(cap && date>cap) return;
       // dedupe per OCCURRENCE, not per month - a weekly bill lands four times
       if(state.transactions.some(t=>t.recId===r.id&&t.date===date)) return;
-      if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
-      else if(r.type==='invest'){ const ik=r.ikind||'holds'; state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id,ikind:ik}); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
-      else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
+      if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
+      else if(r.type==='invest'){ const ik=r.ikind||'holds'; state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik}); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
+      else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:recTxNote(r),recId:r.id});
       added++;
     });
   });

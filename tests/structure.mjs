@@ -703,6 +703,51 @@ check('a guessed row logs into the category it guessed',
 check('...and one it could not guess lands as Uncategorized, said out loud',
       logged.uncat===1 && /uncategorized/i.test(logged.toast), logged.toast);
 
+/* ---- 18. a posted bill says WHICH bill ----
+   Every recurring entry was noted "Recurring", so four bills in a row read
+   "Recurring, Recurring, Recurring, Recurring" and the list said nothing at
+   all. The transaction carries recId, so the app already knows it was
+   automatic; the note is the one place that should say what it WAS. ---- */
+const REC={...EMPTY, uiMode:'all', stageReached:3, spendingMode:true,
+  categories:[{id:'rent',name:'Rent / mortgage'},{id:'util',name:'Utilities (power, water)'},
+              {id:'car',name:'Car payment'},{id:'ins',name:'Insurance'}],
+  budgets:{'2026-08':{rent:850,util:620,car:340,ins:100}},
+  recurring:[{id:'r1',type:'expense',amount:300,catId:'rent',freq:'monthly',anchor:'2026-08-01'},
+             {id:'r2',type:'expense',amount:340,catId:'car',freq:'monthly',anchor:'2026-08-01'},
+             {id:'r4',type:'income',amount:2000,source:'Warehouse paycheck',freq:'monthly',anchor:'2026-08-01'}],
+  transactions:[
+    {id:'t1',type:'expense',amount:300,catId:'rent',date:'2026-08-01',note:'Recurring',recId:'r1'},
+    {id:'t2',type:'expense',amount:340,catId:'car', date:'2026-08-01',note:'Recurring',recId:'r2'},
+    {id:'t4',type:'expense',amount:620,catId:'util',date:'2026-08-01',note:'Recurring'},
+    {id:'t5',type:'income', amount:2000,source:'Warehouse paycheck',date:'2026-08-01',note:'Recurring',recId:'r4'},
+    {id:'t6',type:'expense',amount:44,catId:'util',date:'2026-08-05',note:'Recurring bill I typed myself'}]};
+await seed(REC); await p.reload(); await p.waitForTimeout(900);
+const named = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('home'); await wait(400);
+  const byId=id=>(state.transactions.find(t=>t.id===id)||{});
+  const recent=[...document.querySelectorAll('.sp-recent .r .nm')].map(e=>e.textContent.trim());
+  activateTab('tx'); await wait(400);
+  const subs=[...document.querySelectorAll('.tx-sub')].map(e=>e.textContent.trim());
+  return { t1:byId('t1').note, t2:byId('t2').note, t4:byId('t4').note, t5:byId('t5').note,
+           t6:byId('t6').note, recent, subs,
+           anySayRecurringAlone: recent.some(r=>r==='Recurring') };
+});
+check('a posted bill is named, not just called "Recurring"',
+      named.t1==='Rent / mortgage' && named.t2==='Car payment',
+      `${named.t1} / ${named.t2}`);
+check('...even when the schedule behind it is gone, from the category it landed in',
+      named.t4==='Utilities (power, water)', named.t4);
+check('...and a recurring paycheck is named from its source',
+      named.t5==='Warehouse paycheck', named.t5);
+check('a note somebody typed themselves is never rewritten',
+      named.t6==='Recurring bill I typed myself', named.t6);
+check('no row in the recent list just says "Recurring"',
+      named.anySayRecurringAlone===false, named.recent.join(' | '));
+check('...and "posted automatically" moves to the line that has room for it',
+      named.subs.some(x=>/repeats/.test(x)) && !named.subs.every(x=>/repeats/.test(x)),
+      named.subs.slice(0,4).join(' | '));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
