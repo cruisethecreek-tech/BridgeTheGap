@@ -119,6 +119,18 @@ dollar manually, which is the #1 churn risk for a manual app, so most people sta
 (spend vs. a daily allowance + the reward-calendar streak, the habit that actually sticks).
 Full zero-based is one tap away for anyone who runs the household budget.
 
+**An instruction to leave needs a door.** The savage chooser ends *"if six minutes
+is too much to spend on the thing that decides where your life actually goes,
+**stop here**"* - and then offered two buttons, both of which continue. Telling
+someone to leave and not letting them is worse than never saying it. A step can
+now declare `bail:a=>({label, bye})`, rendered by the `choice` input in the
+underrow, worded in whichever voice made the offer: **"Stop here"** (savage),
+**"Then it isn't my app"** (blunt), **"Not today"** (forgiving). Pressing it says
+one honest line, marks the app usable, clears the draft and closes - no argument
+and no retention pitch, because they were invited to go. `tests/intake_cost.mjs`
+sweeps every step in every tone for copy that tells you to leave and fails if it
+has no exit, so the promise cannot come back unbacked.
+
 **No step may claim a position it does not hold.** The wage step opened *"Last
 setup question"* - true when it was written, false the moment it moved up so each
 income could get its own rate. Seven questions still followed it on the spend

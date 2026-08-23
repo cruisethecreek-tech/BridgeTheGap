@@ -7830,6 +7830,15 @@ const INTAKE=[
         return `Two ways in${nm}, and I'd rather you know the real cost up front than find out halfway. ${light} ${cost} Money doesn't get sorted in thirty seconds, and I'm not going to pretend otherwise. Take the one you'll actually finish. Which fits?`;
     }},
     input:'choice', key:'acct',
+    /* The savage line ends "stop here". This is the button that does it. */
+    bail:a=>{ switch(iaTone(a)){
+      case 'savage': return {label:'Stop here',
+        bye:"Respect for not pretending. The app is behind this screen if you change your mind - setup is in Settings whenever you want it."};
+      case 'blunt': return {label:"Then it isn't my app",
+        bye:"Fair enough, and no hard feelings. Everything still works without setup - and the chat is in Settings if you ever want to do it properly."};
+      default: return {label:'Not today',
+        bye:"That's completely fine. Nothing is lost - the app works without any of this, and the setup chat is waiting in Settings whenever the time is better."};
+    }},
     options:[{label:'Just track my spending · ~6 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
@@ -8362,8 +8371,23 @@ function renderIntakeDock(s){
   const canBack = iaCanBack();
   const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
-    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
+    /* A step may offer a way OUT, not just a way on. The path chooser tells
+       people "if six minutes is too much... stop here" and then gave them two
+       buttons, both of which continue - an instruction with no control behind
+       it. Telling someone to leave and not letting them is worse than never
+       saying it, so the exit is real where the copy invites it. */
+    const bail=(typeof s.bail==='function')?s.bail(iaAns):null;
+    const bailBtn=bail?`<button class="intake-skip" id="iaBail">${escapeHtml(bail.label)}</button>`:'';
+    const under=(bailBtn||backBtn)?`<div class="intake-underrow">${bailBtn}${backBtn}</div>`:'';
+    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${under}`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; iaBub(o.label,'me'); iaStore(s.key,o.value); iaAdvance(); });
+    const bl=document.getElementById('iaBail');
+    if(bl) bl.onclick=()=>{
+      iaBub(bail.label,'me');
+      // no argument, no retention pitch - they were invited to go, so let them
+      iaBotSay(bail.bye, ()=>{ setTimeout(()=>{ state.onboarded=true; iaClearDraft(); save(); dismissOverlay(); },1400); });
+      const dk=document.getElementById('intakeDock'); if(dk) dk.innerHTML='';
+    };
     const bk0=document.getElementById('iaBack'); if(bk0) bk0.onclick=iaBack;
     return;
   }

@@ -365,6 +365,41 @@ const position = await p.evaluate(() => {
 check(`no step claims a position it does not hold (${position.checked} positional claims across every path and tone)`,
       position.bad.length===0, position.bad.slice(0,4).join('\n        '));
 
+/* ---- 4h. an instruction to leave needs a way out ----
+        The savage chooser ends "if six minutes is too much to spend on the thing
+        that decides where your life actually goes, STOP HERE" - and then offered
+        two buttons, both of which continue. Telling someone to leave and not
+        letting them is worse than never saying it. ---- */
+const exits = await p.evaluate(() => {
+  const TELLS_YOU_TO_GO=/stop here|isn't your app|is not your app|walk away|come back when/i;
+  const base={name:'Pat',register:'middle',situation:'ok',wage:22,hoursPerWeek:40,budgetPast:'lapsed',income:3300};
+  const missing=[], present=[];
+  let checked=0;
+  for(const tone of ['clean','blunt','savage'])
+    for(const acct of ['spend','full'])
+      for(const s of INTAKE){
+        let t=''; try{ t = typeof s.bot==='function' ? String(s.bot({...base,tone,acct})) : String(s.bot||''); }catch(e){ continue; }
+        if(!TELLS_YOU_TO_GO.test(t)) continue;
+        checked++;
+        const bail=(typeof s.bail==='function')?s.bail({...base,tone,acct}):null;
+        if(bail && bail.label && bail.bye) present.push(`${s.id}/${tone}: "${bail.label}"`);
+        else missing.push(`${s.id}/${tone} says go, offers nothing`);
+      }
+  /* and the exit has to be worded like the line that invited it. Guarded,
+     because a step with no bail at all must FAIL this suite, not crash it - a
+     harness that throws cannot tell you whether the feature is missing or the
+     test is. */
+  const acct=INTAKE.find(s=>s.id==='acct');
+  const labels=['clean','blunt','savage'].map(tone=>{
+    try{ const bl=(typeof acct.bail==='function')?acct.bail({...base,tone}):null; return (bl&&bl.label)||'(no exit)'; }
+    catch(e){ return '(threw)'; } });
+  return { missing, present:[...new Set(present)], checked, labels };
+});
+check(`copy that tells you to leave offers the door (${exits.checked} such lines)`,
+      exits.missing.length===0, exits.missing.slice(0,3).join('\n        '));
+check('...and the door is worded in the same voice as the line', new Set(exits.labels).size===3, exits.labels.join(' | '));
+check('...savage, which literally says "stop here", says it on the button', exits.labels[2]==='Stop here', exits.labels[2]);
+
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
   check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));
