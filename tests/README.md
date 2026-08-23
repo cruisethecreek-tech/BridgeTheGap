@@ -15,6 +15,7 @@ node tests/intake_cost.mjs           # the setup chat tells the truth about itse
 node tests/talk_through.mjs          # understanding before labelling
 node tests/structure.mjs             # one place to reflect, nothing shown too early
 node tests/layout.mjs                # ten tabs, four phone widths, no text on text
+node tests/funnel.mjs                # one honest ask, by link and never by script
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
@@ -296,3 +297,30 @@ page sideways because a grid item's default `min-width:auto` refused to let
 `$2,638.50` shrink, a category name leaning 9px onto `"Assign $"`, an impulse
 row leaving 45px for its name, and the fourth Reflect sub-tab sitting off the
 right edge of the glass with nothing to say it was there.
+
+## 12. `funnel.mjs` - the money model, and the promise it could break
+
+The app's only revenue path is also the easiest place to break a privacy promise
+by accident. Every processor offers a checkout-overlay script that gives a nicer
+flow; embedding one would load third-party payment code on a page whose headline
+is *"nothing leaves your device"* - for **every** visitor, including everyone who
+never clicks buy. A promise broken silently, by a convenience.
+
+So: **link only, never a script.** The suite fails on any of Lemon Squeezy,
+Stripe, PayPal, Gumroad or Paddle appearing in either file, and on any
+`<script src>` pointing at a payment host. Verified by embedding a real
+`lemon.js` tag - two checks fail.
+
+It also holds the honest-by-default posture: with no checkout configured the
+support panel stays hidden and no link points anywhere; with one configured, the
+ask still waits until the app has earned it (20+ entries logged, or a purchase
+actually talked out of), opens in a new tab with `rel=noopener`, says plainly
+that **nothing unlocks**, and never reads as a plea - no "please", no "help us",
+no "donate".
+
+One note on the detector: the first version failed on both files because the
+comments *explaining* why `lemon.js` is banned contain the string `lemon.js`. It
+strips block and HTML comments before scanning. Line comments are left in on
+purpose - stripping `//` to end-of-line would eat the rest of any line
+containing `https://`, which is exactly where a real payment script would hide.
+

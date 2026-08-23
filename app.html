@@ -2221,9 +2221,18 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="subResult" class="subresult" role="status" aria-live="polite"></div>
         <div class="offer-row">
           <a class="btn" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">Get the Method Guide</a>
-          <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">Support the build</a>
         </div>
         <p class="sub offerfine" id="offerFine" style="display:none">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
+      </div>
+
+      <div class="panel" id="supportPanel" style="display:none">
+        <h2>What this costs</h2>
+        <p class="sub">Nothing, and there is no locked version. No ads, no subscription, no affiliate links pointing you at where to put your money - that would make this the exact thing it was built to fight. It does not see your numbers, so it could not sell them if it wanted to.</p>
+        <p class="sub" id="supportEarned"></p>
+        <div class="offer-row">
+          <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">Pay what it was worth</a>
+        </div>
+        <p class="sub offerfine">One payment, no account, nothing unlocks - you would be paying for the thing you already have. Entirely optional, and the app never asks twice.</p>
       </div>
 
       <div class="panel">
@@ -2399,10 +2408,29 @@ const STORE_KEY = 'unfiltered_budget_v2';
      - NEWSLETTER_ENDPOINT: a form POST URL (Kit/ConvertKit, Formspree,
        Buttondown, Mailchimp, or your own webhook). Only the email is sent.
      - GUIDE_URL: link to the paid guide / course / waitlist (Gumroad, Podia...).
-     - SUPPORT_URL: voluntary tip link (Ko-fi, Buy Me a Coffee, Stripe).
+     - SUPPORT_URL: the one-time "pay what it was worth" checkout.
+
+   PLATFORM: Lemon Squeezy, chosen because it is the merchant of record - it
+   handles sales tax and EU VAT registration, remittance and invoices, which a
+   solo founder otherwise carries personally. Setup runbook, including the exact
+   product settings this business model needs, is docs/Lemon-Squeezy-Setup.md.
+
+   Deliberately a plain LINK, never their checkout-overlay script. lemon.js would
+   put a third-party payment script on a page whose entire promise is that
+   nothing about the user goes anywhere - and it would load, and phone home, for
+   every visitor including the ones who never click. A link sends nothing until
+   the user chooses to go. tests/funnel.mjs fails the build if a payment script
+   ever appears in either file.
+
+   Lemon Squeezy is converging into Stripe Managed Payments after the
+   acquisition, with no announced end date. That is why the URL is one constant
+   and nothing in the app knows the vendor's name: migrating is editing this
+   line and the matching one in index.html.
    ============================================================ */
 const NEWSLETTER_ENDPOINT = 'YOUR_FORM_ENDPOINT_URL';
 const GUIDE_URL           = 'YOUR_GUIDE_OR_WAITLIST_URL';
+/* Lemon Squeezy checkout link - Product > Share > copy. Shape:
+   https://YOURSTORE.lemonsqueezy.com/checkout/buy/VARIANT_ID  */
 const SUPPORT_URL         = 'YOUR_SUPPORT_URL';
 const isConfigured = v => !!v && v.indexOf('YOUR_') === -1;
 
@@ -5989,6 +6017,25 @@ async function refreshSyncState(){
     if(isConfigured(url)){ a.href=url; a.style.display=''; anyOffer=true; }
   });
   const fine=document.getElementById('offerFine'); if(fine&&anyOffer) fine.style.display='';
+
+  /* The ask waits until the app has earned it. A brand-new user who has logged
+     nothing is being asked to pay for a promise; someone thirty transactions in
+     is being asked to pay for something that already worked. Same principle the
+     report runs on - say nothing until there is something to say. And it names
+     what the app actually did rather than pleading, because the War Chest is a
+     figure the user can check. */
+  const sp=document.getElementById('supportPanel');
+  if(sp && isConfigured(SUPPORT_URL)){
+    const logged=(state.transactions||[]).length;
+    const kept=(typeof impulseSaved==='function')?impulseSaved():0;
+    if(logged>=20 || kept>0){
+      sp.style.display='';
+      const e=document.getElementById('supportEarned');
+      if(e) e.textContent = kept>0
+        ? `You have talked yourself out of ${money(kept)} of impulse buys with this so far. If it keeps doing that, it is worth what you think it is worth.`
+        : `You have logged ${logged} entries in here. If it has changed anything, it is worth what you think it is worth.`;
+    }
+  }
 
   const f=document.getElementById('subForm'); if(!f) return;
   // no endpoint = no newsletter exists yet: hide the form rather than fake a success.

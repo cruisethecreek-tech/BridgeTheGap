@@ -23,7 +23,20 @@ instead of fighting it.
 
 ## What actually works here
 
-### 1. One-time purchase (honor system) - recommended
+### 1. One-time purchase (honor system) - **CHOSEN, wired, awaiting a URL**
+
+Platform decided: **Lemon Squeezy**, on merchant-of-record grounds - it registers
+for and remits sales tax and EU VAT and issues invoices, which a Stripe payment
+link would leave on the founder personally (digital-goods VAT in the EU has no
+small-seller threshold; one sale creates the obligation). Both `app.html` and
+`index.html` are wired and inert until `SUPPORT_URL` is set in each. The
+integration is a plain link, never their overlay script - `tests/funnel.mjs`
+fails the build if a payment script from any processor appears in either file.
+Accepted risk: Lemon Squeezy is converging into Stripe Managed Payments with no
+announced end date, so the checkout lives in one constant per file and no code
+knows the vendor's name. Runbook: `docs/Lemon-Squeezy-Setup.md`.
+
+
 Sell the whole app for a one-time price on a storefront that handles payment and
 delivery (Gumroad, LemonSqueezy, Ko-fi, or a simple "buy" page). The buyer gets
 the file / the install link. There is no lock inside the app - you are selling
