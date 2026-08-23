@@ -14,6 +14,7 @@ node tests/life_units.mjs            # Freedom Mode says things that make sense
 node tests/intake_cost.mjs           # the setup chat tells the truth about itself
 node tests/talk_through.mjs          # understanding before labelling
 node tests/structure.mjs             # one place to reflect, nothing shown too early
+node tests/layout.mjs                # ten tabs, four phone widths, no text on text
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
@@ -215,6 +216,23 @@ first, sits at the top, and no two share a description; dismissal is per area,
 survives reload, can be turned off wholesale and replayed) and the **map** (lists
 every area, counts how many you have used, marks used ones done, and navigates).
 
+It also holds **category reordering**, which is a drag now rather than two arrow
+buttons. These are real pointer events driven through Playwright's mouse, not
+functions called directly, so the threshold, the drop index and the commit all
+get exercised: the grip owns the gesture (`touch-action:none`) instead of the
+page scroller, a ghost and a drop line appear once you move, a category dragged
+above the list lands first, a subcategory dragged hard past the top of the screen
+stays inside its parent, a drag that goes nowhere renumbers nothing, **Escape**
+abandons one and clears the ghost, the arrow keys still move a row without a
+mouse, and leaving the mode leaves no ghost, line or greyed row behind. The
+section runs at a 2,400px viewport so the test is about dragging rather than
+about auto-scrolling; real phones get the auto-scroll.
+
+And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
+keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
+rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
+close button to `y=-115`.
+
 It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.
@@ -224,3 +242,44 @@ code that had been hiding it silently stopped finding it.
   every failure found by real people so far had correct arithmetic underneath.
 - Whether the numbers a user types are true (nothing can verify that).
 - Browser rendering differences; run the app on a real device before release.
+
+## 10. `layout.mjs` - does it fit the phone it is on?
+
+Every fault this suite exists for was found by a person looking at their own
+phone, and none were found by the other nine layers - because the arithmetic was
+right and the **pixels** were wrong.
+
+The one that started it: a transaction row is four things on one line - date,
+what it was, how much, delete. `.tx-amt` was `white-space:nowrap` with no
+`flex-shrink:0`, so flex squeezed its **box** below its content and the amount
+painted outside it, straight across the category chip beside it. Text on text,
+on every row, at every width. `.tx-title` was one `nowrap` + ellipsis line
+holding the chip and the note together, so a long category ate the whole width
+and `"Rent for August, paid late"` truncated to three pixels of it.
+
+Ten tabs at 320, 360, 390 and 430px, with a household whose names and amounts
+are the awkward ones - a category that does not fit, a four-figure amount with
+cents, a note longer than its row:
+
+- no two unrelated pieces of text share pixels
+- nothing is pushed off the side of the glass, and the page never scrolls
+  sideways
+- no label is crushed into a sliver - `"Mechanic..."` in 45px is not a label
+- an amount can never be squeezed below the number inside it, and the category
+  chip is never shaved to fit beside it
+
+Two things **are** stacked on purpose and are excluded by name: the two faces of
+a flip stat card, which share one box because that is what a flip card is, and
+the contents of a closed `<details>`, which Chromium still reports rects for.
+Comparison is over **line boxes** rather than bounding boxes, because an inline
+span that wraps to a second line has one rect spanning both and would otherwise
+"overlap" everything above it - the first version of this suite reported 144
+faults on Goals, and every one was that.
+
+Verified by putting the original fault back: five of the six checks fail.
+
+It found four more the same day it was written - a stat grid pushing a 320px
+page sideways because a grid item's default `min-width:auto` refused to let
+`$2,638.50` shrink, a category name leaning 9px onto `"Assign $"`, an impulse
+row leaving 45px for its name, and the fourth Reflect sub-tab sitting off the
+right edge of the glass with nothing to say it was there.

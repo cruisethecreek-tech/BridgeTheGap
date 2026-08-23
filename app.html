@@ -115,7 +115,7 @@
   .runwaybox .rb-k{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:var(--good)}
   .runwaybox .rb-v{font-size:26px;font-weight:900;margin-top:4px;letter-spacing:-.4px;color:var(--good)}
   .runwaybox .rb-note{font-size:13px;color:var(--text);margin-top:6px;line-height:1.5}
-  .tx-life{font-size:12px;font-weight:800;color:var(--muted);margin-left:8px;white-space:nowrap}
+  .tx-life{font-size:11.5px;font-weight:800;color:var(--muted);white-space:nowrap}
 
   /* ---------- Pillar 3: Sovereignty Audit ---------- */
   .sov-tier{display:flex;align-items:center;gap:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
@@ -184,7 +184,17 @@
      assign box and the split and delete buttons, "Internet" rendered as "I...".
      A name you cannot read is a row you cannot use, so the name gets a floor and
      the row wraps around it instead of eating it. */
-  .subrow .sub-name{flex:1 1 auto;font-weight:700;font-size:14px;min-width:96px;white-space:normal;overflow-wrap:anywhere}
+  .subrow .sub-name{flex:1 1 auto;font-weight:700;font-size:14px;min-width:96px;white-space:normal;overflow-wrap:anywhere;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  /* Renaming a subcategory was impossible - the ✎ existed only on top-level
+     categories, so fixing a typo in "Groecries" meant deleting it, which takes
+     its transactions' category with it. The rename engine was already generic
+     (catEditId + saveRename work on any id); only the affordance was missing.
+     While a row is being renamed the rest of it steps aside so the field has
+     the width, the same way reorder mode does. */
+  .subrow.editing .sub-assign,.subrow.editing .rep,.subrow.editing .sub-spent,
+  .subrow.editing .sub-split-btn,.subrow.editing .btn.danger{display:none!important}
+  .subrow.editing .sub-name{flex:1 1 100%}
+  .subrow .cat-rename{font-size:14px;padding:5px 8px}
   .subrow .sub-assign{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
   .subrow .sub-assign input{width:80px;padding:6px 8px;font-size:13px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px}
   .subrow .sub-spent{font-size:12px;color:var(--muted);white-space:nowrap}
@@ -224,16 +234,32 @@
   .rep.on .rep-t span{background:rgba(var(--good-rgb),.16);border-color:rgba(var(--good-rgb),.5);color:var(--good)}
   .rep-t input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
   .rep-f{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:6px 4px;font:inherit;font-size:11.5px;max-width:112px}
-  .cat-move{display:inline-flex;gap:3px;flex-shrink:0;margin-right:2px}
-  .cm-b{background:var(--panel-2);border:1px solid var(--line);color:var(--accent);border-radius:8px;width:30px;height:30px;font-size:14px;line-height:1;cursor:pointer;padding:0}
-  .cm-b:hover:not([disabled]){border-color:var(--accent)}
-  .cm-b[disabled]{opacity:.3;cursor:default;color:var(--muted)}
+  /* One grip, dragged, instead of two arrows tapped. Arrows made you count taps
+     to move a category down eleven rows, and each tap re-rendered the list under
+     your thumb. HTML5 drag-and-drop is not an option - it does not fire on touch
+     at all - so this is pointer events: touch, mouse and stylus through one path.
+     touch-action:none on the grip is what stops the browser claiming the gesture
+     as a page scroll, which is why the handle is a handle and not the whole row:
+     the row still has to scroll normally under a finger that is not on the grip.
+     The grip is still a real button, so arrow keys move it too - drag is the
+     preferred way, not the only way, and a screen reader keeps a path. */
+  .cat-grip{background:var(--panel-2);border:1px solid var(--line);color:var(--accent);border-radius:9px;width:34px;height:34px;font-size:15px;line-height:1;cursor:grab;padding:0;flex-shrink:0;margin-right:4px;touch-action:none;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
+  .cat-grip:hover{border-color:var(--accent)}
+  .cat-grip:active,.cat-grip.held{cursor:grabbing;background:rgba(var(--accent-rgb),.16);border-color:var(--accent)}
+  .cat-grip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* the row you picked up stays in place, greyed, so the list never jumps while
+     your finger is still deciding - the ghost and the line show the outcome */
+  .drag-src{opacity:.34}
+  .drag-ghost{position:fixed;z-index:140;pointer-events:none;background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:12px;padding:9px 14px;font-weight:800;font-size:14.5px;box-shadow:0 12px 32px rgba(0,0,0,.45);max-width:74vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transform:translate(-14px,-50%)}
+  .drag-line{position:fixed;z-index:139;pointer-events:none;height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.22)}
+  body.dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
   /* In reorder mode the editing controls GO, rather than dimming. Dimming still
-     costs the width, and on a subcategory row the arrows plus a greyed-out amount
+     costs the width, and on a subcategory row the grip plus a greyed-out amount
      squeezed the name down to "E..." and "G..." - you cannot choose what to move
      if you cannot read what it is. Collapsing them frees the row, and removes
-     the mis-tap risk outright instead of relying on pointer-events. The figures
-     are still on the line underneath ("Spent $0 of $1,250", "$80 spent"). */
+     the mis-tap risk outright instead of relying on pointer-events. It also
+     means a drag can never land on an amount field. The figures are still on
+     the line underneath ("Spent $0 of $1,250", "$80 spent"). */
   .cat.reordering .cat-assign,.cat.reordering .btn.danger,.cat.reordering .mini-edit,
   .cat.reordering .assign-now,.cat.reordering .addsub-first,.cat.reordering .addsub-row,
   .subrow.reordering .sub-assign,.subrow.reordering .btn.danger,.subrow.reordering .sub-split-btn,
@@ -259,8 +285,12 @@
   .map-row .mr-w{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
   .map-row .mr-go{color:var(--muted);flex-shrink:0}
   .map-foot{margin-top:14px;text-align:center}
-  .rf-tabs{display:flex;gap:4px;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:4px;margin:12px 0 10px;overflow-x:auto}
-  .rf-tab{flex:1;white-space:nowrap;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:9px 10px;border-radius:9px;cursor:pointer}
+  /* Four sub-tabs in a horizontal scroller: on a 320-360px phone the fourth sat
+     off the right edge with nothing to say it was there, so "In vs out" was a
+     report you could only find by guessing the strip scrolls. They wrap to two
+     rows instead - every report visible without a swipe. */
+  .rf-tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:4px;margin:12px 0 10px}
+  .rf-tab{flex:1 1 auto;min-width:fit-content;white-space:nowrap;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:9px 10px;border-radius:9px;cursor:pointer}
   .rf-tab.on{background:var(--accent);color:var(--on-accent)}
   .rf-lead{margin:8px 0 12px}
   .rf-period{display:flex;align-items:center;justify-content:center;gap:12px;margin:4px 0 2px}
@@ -366,7 +396,7 @@
   .skillitem .st .c{font-weight:900}
   .skillitem .payback{font-size:13px;color:var(--good);font-weight:700;margin-top:7px}
   .skillitem .payback.slow{color:var(--accent)}
-  .tx-yield{font-size:12px;font-weight:800;color:var(--good);margin-left:8px;white-space:nowrap}
+  .tx-yield{font-size:11.5px;font-weight:800;color:var(--good);white-space:nowrap}
   /* numbered flow steps on the nav grid */
   .path-card{position:relative}
   .pc-step{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center}
@@ -427,8 +457,10 @@
   /* Hub open: lift the FAB above the sheet's scrim so the ✕is visible and tappable,
      and pin it back to its notch (the more-open lift is pointless behind a scrim). */
   body.hub-open .fab{z-index:62;bottom:calc(28px + env(safe-area-inset-bottom))}
-  #intentSheet .modal.sheet{margin-bottom:calc(96px + env(safe-area-inset-bottom))}   /* the card floats above the notch + FAB */
-  @media(min-width:560px){ #intentSheet .modal.sheet{margin-bottom:0} }
+  /* the card floats above the notch + FAB, so its cap gives that space back */
+  #intentSheet .modal.sheet{margin-bottom:calc(96px + env(safe-area-inset-bottom));
+    max-height:calc(88vh - 96px);max-height:calc(88dvh - 96px - env(safe-area-inset-bottom))}
+  @media(min-width:560px){ #intentSheet .modal.sheet{margin-bottom:0;max-height:88vh;max-height:88dvh} }
   .tab{flex:1;background:none;border:none;color:var(--muted);font-weight:700;font-size:11px;padding:9px 2px 7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-width:0}
   .tab .t-ic{font-size:19px;line-height:1;filter:grayscale(.55) opacity(.75);transition:filter .15s ease}
   .tab .t-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -747,8 +779,13 @@
   /* ---------- Categories ---------- */
   .cat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
   .cat-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .cat-name{font-weight:800;font-size:16px;flex:1;min-width:120px;display:flex;align-items:center;gap:8px}
+  /* min-width:120px without min-width:0 on the CONTENT meant a long name plus
+     the ✎ pushed 9px past the box and sat on top of "Assign $". Wrapping lets
+     a long name take a second line instead of leaning on its neighbour. */
+  .cat-name{font-weight:800;font-size:16px;flex:1 1 120px;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;overflow-wrap:anywhere}
   .cat-edit{width:24px;height:24px;font-size:12px;flex:none}
+  /* money with a job that is not spending, so the Plan stops reading like it is */
+  .growth-tag{font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:var(--accent-2);background:rgba(var(--accent-2-rgb),.13);border:1px solid rgba(var(--accent-2-rgb),.4);border-radius:6px;padding:2px 7px;flex:none}
   .cat-rename{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--accent);border-radius:8px;color:var(--fg);padding:6px 9px;font-size:15px;font-weight:700}
   .cat-assign{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
   .cat-assign input{width:110px;padding:8px 10px;font-size:14px}
@@ -765,37 +802,76 @@
   .typetoggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:14px;padding:9px 18px;border-radius:8px}
   .typetoggle button.on[data-t=expense]{background:var(--accent);color:var(--on-accent)}
   .typetoggle button.on[data-t=income]{background:var(--income);color:#08120d}
+  /* Invest had the .on class applied like the other two and no rule to paint it,
+     so picking it silently switched the form underneath while the toggle still
+     looked like Expense was selected. It gets accent-2 because accent already
+     means Expense here, and telling growth apart from spending at a glance is
+     the entire point of the third option. */
+  .typetoggle button.on[data-t=invest]{background:var(--accent-2);color:var(--on-accent)}
 
   .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
   .pill{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:50px;padding:7px 14px;font-weight:700;font-size:13px}
   .pill.on{background:var(--text);color:var(--on-accent);border-color:var(--text)}
   .filters input[type=text]{flex:1;min-width:140px}
 
-  .tx{display:flex;align-items:center;gap:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 16px;margin-top:10px}
-  .tx-date{font-size:12px;color:var(--muted);font-weight:700;width:56px;flex-shrink:0;text-align:center;line-height:1.2}
+  /* A transaction row is four things on one line: date, what it was, how much,
+     and delete. Two of them were sized wrong and the result was text ON text.
+     .tx-amt was nowrap with no flex-shrink:0, so flex squeezed its BOX below its
+     content and the amount painted outside it - straight across the category
+     chip beside it. And .tx-title was one nowrap+ellipsis line holding the chip
+     and the note together, so a long category ate the whole width and the note
+     ellipsised to three pixels ("Roof over my head" + "Rent for August" printed
+     as one clipped smear).
+     Now: the amount is a fixed column that cannot be squeezed, with the life
+     figure UNDER it rather than trailing it; the title wraps, with the category
+     chip whole and the note truncating on its own; and nothing on the row can
+     shrink into its neighbour. */
+  .tx{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:10px}
+  .tx-date{font-size:12px;color:var(--muted);font-weight:700;width:44px;flex:none;text-align:center;line-height:1.2}
   .tx-date b{display:block;font-size:18px;color:var(--text)}
-  .tx-main{flex:1;min-width:0}
-  .tx-title{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tx-sub{font-size:12px;color:var(--muted);margin-top:2px}
-  .tx-amt{font-weight:900;font-size:17px;white-space:nowrap}
+  .tx-main{flex:1 1 auto;min-width:0}
+  .tx-title{display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px;font-weight:800;font-size:15px;min-width:0}
+  .tx-note{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tx-sub{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tx-amt{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-weight:900;font-size:17px;line-height:1.2;white-space:nowrap;text-align:right}
+  /* Sizing the boxes right stopped the text painting on top of itself, but it
+     could not create room that is not there: at 360px the date, the amount and
+     the delete button plus their gaps leave about 40px for the description, and
+     no amount of truncation makes 40px readable. A phone gets two lines - the
+     date and the amount on top like a bank statement, the whole description
+     underneath with the full width to itself. Nothing competes, so nothing is
+     shaved. */
+  @media (max-width:560px){
+    .tx{flex-wrap:wrap;gap:4px 10px}
+    .tx-date{order:1;width:auto;display:flex;align-items:baseline;gap:5px;text-align:left}
+    .tx-date b{display:inline;font-size:15px}
+    .tx-amt{order:2;margin-left:auto;flex-direction:row;align-items:baseline;gap:8px}
+    .tx .del{order:3;margin-right:-4px}
+    .tx-main{order:4;flex:1 1 100%}
+  }
   .tx.income .tx-amt{color:var(--income)}
   .tx.expense .tx-amt{color:var(--text)}
   .tx.invest .tx-amt{color:var(--accent)}
   /* ---------- time ledger (hours invested vs leaked) ---------- */
-  .time-row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-top:8px}
+  /* four items on one line again, and on a 320px phone the label was left with
+     56px - "moved, cooked, slept right" cut to "moved, cooke". The hint is the
+     part that explains what the row MEANS, so it wraps now instead of being
+     shaved, and the hour count and buttons drop to a second line rather than
+     squeezing it. */
+  .time-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-top:8px}
   .time-row.leak{border-color:rgba(var(--bad-rgb),.3)}
   .time-row .tr-ic{font-size:18px;width:24px;text-align:center;flex:none}
-  .time-row .tr-l{font-weight:800;font-size:14px;flex:1;min-width:0}
-  .time-row .tr-l i{display:block;font-style:normal;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .time-row .tr-h{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+  .time-row .tr-l{font-weight:800;font-size:14px;flex:1 1 140px;min-width:0}
+  .time-row .tr-l i{display:block;font-style:normal;font-size:11px;color:var(--muted);font-weight:600;line-height:1.4}
+  .time-row .tr-h{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap;margin-left:auto}
   .time-row.leak .tr-h{color:var(--bad)}
   .time-row .tr-b{display:flex;gap:6px;flex:none}
   .time-sum{margin-top:12px;font-size:14px;line-height:1.55}
   .time-leak{margin-top:8px;font-size:13px;font-weight:700;color:var(--bad);line-height:1.5}
   .time-grow{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.5}
-  .tx .del{background:none;border:none;color:var(--muted);font-size:16px;padding:4px 8px;border-radius:8px}
+  .tx .del{background:none;border:none;color:var(--muted);font-size:16px;padding:4px 6px;border-radius:8px;flex:none}
   .tx .del:hover{color:var(--bad);background:var(--ink)}
-  .tx .tag-cat{display:inline-block;background:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--muted);margin-right:6px}
+  .tx .tag-cat{display:inline-block;flex:none;max-width:100%;background:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   /* ---------- Goals ---------- */
   .goal{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:14px}
@@ -1085,7 +1161,15 @@
   .decision .badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:4px 9px;border-radius:6px;flex-shrink:0}
   .decision.skip .badge{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
   .decision.buy .badge{background:rgba(var(--accent-2-rgb),.12);color:var(--accent-2);border:1px solid rgba(var(--accent-2-rgb),.38)}
-  .decision .nm{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .decision .nm{flex:1 1 auto;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* badge + name + amount + delete on a 320px line left 45px for the name, so
+     "Mechanical keyboard" read as "Mechanic...". The name takes the second line
+     rather than a sliver of the first. */
+  @media (max-width:400px){
+    .decision{flex-wrap:wrap;gap:4px 8px}
+    .decision .nm{flex:1 1 100%;order:3;white-space:normal;overflow:visible;text-overflow:clip}
+    .decision .am{margin-left:auto}
+  }
   .decision .am{font-weight:900}
   .decision.skip .am{color:var(--good)}
   .decision .del{background:none;border:none;color:var(--muted);cursor:pointer}
@@ -1099,7 +1183,12 @@
   .fab .fab-ic{font-size:20px;line-height:1}
   .fab #fabLbl{font-size:0}   /* the visible label lives in the bar under the notch */
   /* "I want to..." intent sheet - one tap from anywhere to any job the app does */
-  .modal.sheet{max-height:86vh;overflow-y:auto}
+  /* The sheet used to scroll ITSELF (overflow-y:auto). Its ✕ is positioned
+     absolutely inside it, so scrolling the sheet scrolled the close button
+     off the top - the same trap as an uncapped modal, by a different route.
+     It now follows the same rule as every other modal: the sheet holds
+     still, the list inside it scrolls. Its cap lives with its margin below,
+     because it floats clear of the FAB and that space has to come off. */
   .intent{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-top:9px;cursor:pointer;transition:border-color .12s ease,transform .12s ease}
   .intent:hover{border-color:var(--accent);transform:translateX(2px)}
   .intent.hero{background:rgba(var(--accent-rgb),.1);border-color:rgba(var(--accent-rgb),.42)}
@@ -1111,7 +1200,21 @@
   .intent:hover .int-a{color:var(--accent)}
   .modal-overlay{position:fixed;inset:0;background:rgba(5,6,9,.74);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-end;justify-content:center}
   .modal-overlay.on{display:flex}
-  .modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:24px 20px calc(28px + env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:slideup .25s ease}
+  /* Every modal grew to whatever its content wanted, with no cap and no scroll.
+     The app map wants 938px; on a 780px phone that put its own close button at
+     y=-115 - above the top of the screen, unreachable. A sheet you cannot close
+     is the worst thing in an app, and this was on ALL of them, not just the map.
+     So: cap at the viewport, and scroll the CONTENT rather than the sheet, which
+     keeps the heading and the ✕ pinned where a thumb expects them. Every modal
+     here keeps its scrollable content in a final container, so :last-child is
+     the right hook and no markup has to change.
+     dvh first for mobile browsers whose toolbars shrink the viewport, vh as the
+     fallback for anything that does not know it. */
+  .modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:24px 20px calc(28px + env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:slideup .25s ease;
+    display:flex;flex-direction:column;max-height:88vh;max-height:88dvh}
+  .modal>*:last-child{overflow-y:auto;overscroll-behavior:contain;min-height:0;-webkit-overflow-scrolling:touch}
+  /* a modal whose whole body is one short block should not gain a scrollbar */
+  .modal>*:last-child:only-child{overflow:visible}
   @media(min-width:560px){.modal-overlay{align-items:center}.modal{border-radius:20px}}
   @keyframes slideup{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
   .modal h3{font-size:20px;font-weight:900;margin-bottom:4px}
@@ -1317,7 +1420,19 @@
   .solve-hint{margin-top:12px;font-size:13px;color:var(--text);line-height:1.55}
   .solve-hint b{color:var(--accent)}
 
+  /* A grid item's default min-width is auto, so a stat holding an unbreakable
+     "$2,638.50" refused to shrink below it and pushed the whole grid past the
+     right edge of a 320px screen - the page scrolled sideways and the figure sat
+     off the glass. min-width:0 lets the column obey 1fr, and the smaller type at
+     the narrow end keeps the number inside it rather than clipped by it. */
+  .summary>*{min-width:0}
   @media (max-width:720px){ .summary{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:380px){
+    .summary{gap:9px}
+    .stat{padding:13px 12px}
+    .stat .v{font-size:18px}
+    .ltb .v{font-size:26px}
+  }
   @media (min-width:721px){ .summary.five{grid-template-columns:repeat(5,1fr)} }
   @media (max-width:560px){
     .quote-controls{align-items:stretch;width:100%}
@@ -3644,7 +3759,7 @@ document.getElementById('reorderBtn').addEventListener('click',()=>{
   b.classList.toggle('primary',catReorder);
   if(catReorder) collapsedCats.clear();   // you cannot move what you cannot see
   renderBudget();
-  if(catReorder && typeof toast==='function') toast('Move anything with the arrows. Subs stay inside their group.');
+  if(catReorder && typeof toast==='function') toast('Drag anything by its ⠿ grip. Subs stay inside their group.');
 });
 document.getElementById('mergeBtn').addEventListener('click',()=>{
   const n=mergeDuplicates();
@@ -3754,13 +3869,139 @@ function wireRepeat(box){
     if(typeof toast==='function') toast(`Now ${recFreqMeta(r).short} - about ${money(recMonthly(r))} a month.`);
   }));
 }
-function reorderCtrlHTML(id, first, last){
+function reorderCtrlHTML(id){
   if(!catReorder) return '';
-  return `<span class="cat-move"><button class="cm-b" data-moveup="${id}"${first?' disabled':''} aria-label="Move up">↑</button><button class="cm-b" data-movedn="${id}"${last?' disabled':''} aria-label="Move down">↓</button></span>`;
+  const n=catName(id)||'this category';
+  return `<button class="cat-grip" data-grip="${id}" aria-label="Drag to move ${escapeHtml(n)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`;
+}
+/* ---- dragging a category into place ----------------------------------------
+   Rows are NOT shuffled in the DOM while a finger is down. The source stays put
+   and greys out; a small ghost follows the pointer and a line shows where the
+   row will land. Only on release does anything change, and then it is one
+   renderBudget() from committed state. Shuffling live looked tempting and is
+   where the bugs are: the plan is a flat list holding three nesting levels plus
+   split notes and add-rows, so "move this element" means "move this element and
+   the four unrelated-looking ones that belong to it". Reading rects and writing
+   one sort order at the end avoids all of it.
+   A drag is confined to the row's own siblings, so a subcategory can be
+   reordered among its brothers and can never be dropped into the top level -
+   a sub outranking a category is not a thing anyone means. ---------------- */
+let drag=null;
+/* Escape puts it back. A drag you cannot abandon is a drag you hesitate to
+   start, and the pointer is still down at that moment, so this marks the drag
+   dead and lets the release do the tidying rather than tearing state out from
+   under the handler that is still running. */
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape' || !drag) return;
+  e.preventDefault();
+  drag.cancelled=true; drag.idx=null;
+  if(drag.ghost) drag.ghost.style.display='none';
+  if(drag.line) drag.line.style.display='none';
+  if(drag.src) drag.src.classList.remove('drag-src');
+});
+function dragSiblings(parentId){
+  return [...document.querySelectorAll('#cats [data-row][data-lvl="'+(parentId||'')+'"]')];
+}
+function dragCleanup(commitIdx){
+  if(!drag) return;
+  const d=drag; drag=null;
+  if(d.raf) cancelAnimationFrame(d.raf);
+  if(d.ghost) d.ghost.remove();
+  if(d.line) d.line.remove();
+  if(d.src) d.src.classList.remove('drag-src');
+  if(d.grip) d.grip.classList.remove('held');
+  document.body.classList.remove('dragging');
+  if(commitIdx!=null && moveCatTo(d.id, commitIdx)){
+    renderBudget();
+    const g=document.querySelector('[data-grip="'+d.id+'"]'); if(g) g.focus();
+    if(typeof toast==='function') toast(`${catName(d.id)} moved to ${ordinalWord(commitIdx+1)}.`);
+  } else if(d.grip && d.moved===false){
+    d.grip.focus();
+  }
+}
+function ordinalWord(n){
+  return ['first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth'][n-1] || ('position '+n);
+}
+/* where would the row land if it were dropped at this y? An index into the
+   siblings WITHOUT the dragged one, which is exactly what moveCatTo takes. */
+function dropIndexAt(y){
+  const others=drag.sibs.filter(el=>el!==drag.src);
+  for(let i=0;i<others.length;i++){
+    const r=others[i].getBoundingClientRect();
+    if(y < r.top + r.height/2) return i;
+  }
+  return others.length;
+}
+function paintDropLine(idx){
+  const others=drag.sibs.filter(el=>el!==drag.src);
+  const ref=others[Math.min(idx,others.length-1)];
+  if(!ref) return;
+  const r=ref.getBoundingClientRect();
+  drag.line.style.left=r.left+'px';
+  drag.line.style.width=r.width+'px';
+  drag.line.style.top=((idx>=others.length ? r.bottom : r.top)-1.5)+'px';
+}
+/* a long list has to keep moving when the finger reaches the edge of the glass,
+   or you can only ever drop something you can already see */
+function dragAutoScroll(){
+  if(!drag) return;
+  const y=drag.y, edge=96, vh=innerHeight;
+  let dy=0;
+  if(y<edge) dy=-Math.ceil((edge-y)/6);
+  else if(y>vh-edge) dy=Math.ceil((y-(vh-edge))/6);
+  if(dy){ scrollBy(0,dy); paintDropLine(dropIndexAt(y)); }
+  drag.raf=requestAnimationFrame(dragAutoScroll);
 }
 function wireReorder(box){
-  box.querySelectorAll('[data-moveup]').forEach(b=>b.onclick=()=>{ if(moveCat(b.dataset.moveup,-1)) renderBudget(); });
-  box.querySelectorAll('[data-movedn]').forEach(b=>b.onclick=()=>{ if(moveCat(b.dataset.movedn,1)) renderBudget(); });
+  box.querySelectorAll('[data-grip]').forEach(g=>{
+    g.addEventListener('keydown',e=>{
+      const dir = e.key==='ArrowUp'?-1 : (e.key==='ArrowDown'?1:0);
+      if(!dir) return;
+      e.preventDefault();
+      if(!moveCat(g.dataset.grip,dir)) return;
+      const id=g.dataset.grip;
+      renderBudget();
+      const again=document.querySelector('[data-grip="'+id+'"]'); if(again) again.focus();
+    });
+    g.addEventListener('pointerdown',e=>{
+      if(e.button!=null && e.button!==0) return;
+      const id=g.dataset.grip;
+      const src=g.closest('[data-row]'); if(!src) return;
+      e.preventDefault();
+      try{ g.setPointerCapture(e.pointerId); }catch(_){}
+      drag={ id, grip:g, src, pid:src.dataset.lvl||'', pointerId:e.pointerId,
+             sibs:dragSiblings(src.dataset.lvl||''), startY:e.clientY, y:e.clientY,
+             moved:false, ghost:null, line:null, raf:0, idx:null };
+    });
+    g.addEventListener('pointermove',e=>{
+      if(!drag || drag.pointerId!==e.pointerId) return;
+      drag.y=e.clientY;
+      if(!drag.moved){
+        if(Math.abs(e.clientY-drag.startY)<6) return;   // a tap is not a drag
+        drag.moved=true;
+        drag.src.classList.add('drag-src');
+        drag.grip.classList.add('held');
+        document.body.classList.add('dragging');
+        drag.ghost=document.createElement('div');
+        drag.ghost.className='drag-ghost';
+        drag.ghost.textContent=catName(drag.id)||'Category';
+        drag.line=document.createElement('div');
+        drag.line.className='drag-line';
+        document.body.appendChild(drag.ghost); document.body.appendChild(drag.line);
+        drag.raf=requestAnimationFrame(dragAutoScroll);
+      }
+      drag.ghost.style.left=e.clientX+'px';
+      drag.ghost.style.top=e.clientY+'px';
+      drag.idx=dropIndexAt(e.clientY);
+      paintDropLine(drag.idx);
+    });
+    const end=e=>{
+      if(!drag || drag.pointerId!==e.pointerId) return;
+      dragCleanup(drag.cancelled ? null : (drag.moved ? drag.idx : null));
+    };
+    g.addEventListener('pointerup',end);
+    g.addEventListener('pointercancel',()=>{ if(drag){ drag.idx=null; dragCleanup(null); } });
+  });
 }
 let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
 let catEditId=null;        // top category currently being renamed (rename keeps transactions attached, unlike delete)
@@ -3788,6 +4029,16 @@ function topCats(){ return catOrder(state.categories.filter(c=>!c.parentId)); }
 /* Move one category within its own level. Subcategories reorder inside their
    parent and can never escape it - a sub outranking a top-level category is not
    a thing anyone means. Renumbers the whole level so the values stay dense. */
+function moveCatTo(id, idx){
+  const c=state.categories.find(x=>x.id===id); if(!c) return false;
+  const sibs=c.parentId?childrenOf(c.parentId):topCats();
+  const i=sibs.findIndex(x=>x.id===id); if(i<0) return false;
+  const rest=sibs.slice(); rest.splice(i,1);
+  rest.splice(Math.max(0,Math.min(rest.length,idx)),0,c);
+  if(rest.every((x,k)=>x.id===sibs[k].id)) return false;   // dropped back where it started
+  rest.forEach((x,k)=>{ x.sort=k; });
+  save(); return true;
+}
 function moveCat(id,dir){
   const c=state.categories.find(x=>x.id===id); if(!c) return false;
   const sibs=c.parentId?childrenOf(c.parentId):topCats();
@@ -4129,9 +4380,13 @@ function renderBudget(){
         const gkids=childrenOf(k.id), kGroup=gkids.length>0;
         const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
         const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
-        let h=`<div class="subrow${catReorder?' reordering':''}">${reorderCtrlHTML(k.id, ki===0, ki===kids.length-1)}<span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span>${kGroup?'':repeatCtrlHTML(k.id)}<span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        let h=`<div class="subrow${catReorder?' reordering':''}${k.id===catEditId?' editing':''}" data-row="${k.id}" data-lvl="${c.id}">${reorderCtrlHTML(k.id)}<span class="sub-name">${k.id===catEditId
+          ? `<input type="text" class="cat-rename" value="${escapeHtml(k.name)}" data-rename="${k.id}" placeholder="Subcategory name"><button class="btn sm primary" data-renamesave="${k.id}">Save</button>`
+          : `${escapeHtml(k.name)}<button class="mini-edit cat-edit" data-editcat="${k.id}" title="Rename ${escapeHtml(k.name)} (keeps your transactions)">✎</button>${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}`}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span>${kGroup?'':repeatCtrlHTML(k.id)}<span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
         if(kGroup){
-          h+=gkids.map((g,gi)=>`<div class="subrow subsub${catReorder?' reordering':''}">${reorderCtrlHTML(g.id, gi===0, gi===gkids.length-1)}<span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span>${repeatCtrlHTML(g.id)}<span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
+          h+=gkids.map(g=>`<div class="subrow subsub${catReorder?' reordering':''}${g.id===catEditId?' editing':''}" data-row="${g.id}" data-lvl="${k.id}">${reorderCtrlHTML(g.id)}<span class="sub-name">${g.id===catEditId
+            ? `<input type="text" class="cat-rename" value="${escapeHtml(g.name)}" data-rename="${g.id}" placeholder="Subcategory name"><button class="btn sm primary" data-renamesave="${g.id}">Save</button>`
+            : `${escapeHtml(g.name)}<button class="mini-edit cat-edit" data-editcat="${g.id}" title="Rename ${escapeHtml(g.name)} (keeps your transactions)">✎</button>`}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span>${repeatCtrlHTML(g.id)}<span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
           h+=splitNoteHTML(k.id,M,k.name);
         }
         if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
@@ -4141,13 +4396,13 @@ function renderBudget(){
       const addSub = showAddRow
         ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋ Add</button></div>`
         : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
-      return `<div class="cat ${over?'overspent':''}${catReorder?' reordering':''}">
+      return `<div class="cat ${over?'overspent':''}${catReorder?' reordering':''}" data-row="${c.id}" data-lvl="">
         <div class="cat-top">
-          ${reorderCtrlHTML(c.id, ti===0, ti===tops.length-1)}
+          ${reorderCtrlHTML(c.id)}
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
           ${c.id===catEditId
             ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
-            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${isGroup&&a>assignedFor(c.id,M)?`<span class="roll-tag" title="Added up from your subs">= ${money(a)}</span>`:''}</span>`}
+            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag" title="This money is not spending - logging against it defaults to Invest">${GROWTH_TAG[c.growth]||'Not spending'}</span>`:''}${isGroup&&a>assignedFor(c.id,M)?`<span class="roll-tag" title="Added up from your subs">= ${money(a)}</span>`:''}</span>`}
           <span class="cat-assign">Assign $ <input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(c.id,M)||0}" data-cat="${c.id}" ${isGroup?`placeholder="or fill the subs"`:''}></span>
           ${isGroup?'':repeatCtrlHTML(c.id)}
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
@@ -4264,6 +4519,21 @@ function refreshBudgetSummary(){
 
 /* ---------- transactions ---------- */
 let txType='expense', txFilter='all', txAllMonths=false;
+/* Picking a category whose money is growth, not spending, while the form is set
+   to Expense would file a retirement contribution as money spent - wrong on the
+   Plan, wrong in the spending totals, and wrong in net worth. The category knows
+   what kind of money it is, so the form follows it and says why rather than
+   letting someone log it the wrong way and find out later. */
+(function(){
+  const sel=document.getElementById('txCat'); if(!sel) return;
+  sel.addEventListener('change',()=>{
+    const c=state.categories.find(x=>x.id===sel.value);
+    if(!c || c.growth!=='invest' || txType!=='expense') return;
+    const t=document.querySelector('#typeToggle button[data-t="invest"]'); if(!t) return;
+    t.click();
+    if(typeof toast==='function') toast(`${c.name} is money you invest, not money you spend - switched to Invest.`);
+  });
+})();
 document.getElementById('typeToggle').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   txType=b.dataset.t;
@@ -4750,9 +5020,11 @@ function renderTxList(){
     const d=new Date(t.date+'T00:00:00');
     const day=isNaN(d)?'--':d.toLocaleString(undefined,{day:'numeric'});
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
-    const title=t.type==='income'?escapeHtml(t.source||'Income')
-              :t.type==='invest'?(`<span class="tag-cat">Invested</span>${escapeHtml(t.source||'Investment')}`)
-              :(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span>${escapeHtml(t.note||'Expense')}`);
+    /* the chip and the note are separate boxes so the note truncates on its own
+       - together in one nowrap line, a long category name ate the whole width */
+    const title=t.type==='income'?`<span class="tx-note">${escapeHtml(t.source||'Income')}</span>`
+              :t.type==='invest'?(`<span class="tag-cat">Invested</span><span class="tx-note">${escapeHtml(t.source||'Investment')}</span>`)
+              :(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span><span class="tx-note">${escapeHtml(t.note||'Expense')}</span>`);
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
     const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):''))
@@ -7830,6 +8102,15 @@ const INTAKE=[
         return `Two ways in${nm}, and I'd rather you know the real cost up front than find out halfway. ${light} ${cost} Money doesn't get sorted in thirty seconds, and I'm not going to pretend otherwise. Take the one you'll actually finish. Which fits?`;
     }},
     input:'choice', key:'acct',
+    /* The savage line ends "stop here". This is the button that does it. */
+    bail:a=>{ switch(iaTone(a)){
+      case 'savage': return {label:'Stop here',
+        bye:"Respect for not pretending. The app is behind this screen if you change your mind - setup is in Settings whenever you want it."};
+      case 'blunt': return {label:"Then it isn't my app",
+        bye:"Fair enough, and no hard feelings. Everything still works without setup - and the chat is in Settings if you ever want to do it properly."};
+      default: return {label:'Not today',
+        bye:"That's completely fine. Nothing is lost - the app works without any of this, and the setup chat is waiting in Settings whenever the time is better."};
+    }},
     options:[{label:'Just track my spending · ~6 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
@@ -8362,8 +8643,23 @@ function renderIntakeDock(s){
   const canBack = iaCanBack();
   const backBtn = canBack ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   if(s.input==='choice'){
-    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${backBtn?`<div class="intake-underrow">${backBtn}</div>`:''}`;
+    /* A step may offer a way OUT, not just a way on. The path chooser tells
+       people "if six minutes is too much... stop here" and then gave them two
+       buttons, both of which continue - an instruction with no control behind
+       it. Telling someone to leave and not letting them is worse than never
+       saying it, so the exit is real where the copy invites it. */
+    const bail=(typeof s.bail==='function')?s.bail(iaAns):null;
+    const bailBtn=bail?`<button class="intake-skip" id="iaBail">${escapeHtml(bail.label)}</button>`:'';
+    const under=(bailBtn||backBtn)?`<div class="intake-underrow">${bailBtn}${backBtn}</div>`:'';
+    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div>${under}`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; iaBub(o.label,'me'); iaStore(s.key,o.value); iaAdvance(); });
+    const bl=document.getElementById('iaBail');
+    if(bl) bl.onclick=()=>{
+      iaBub(bail.label,'me');
+      // no argument, no retention pitch - they were invited to go, so let them
+      iaBotSay(bail.bye, ()=>{ setTimeout(()=>{ state.onboarded=true; iaClearDraft(); save(); dismissOverlay(); },1400); });
+      const dk=document.getElementById('intakeDock'); if(dk) dk.innerHTML='';
+    };
     const bk0=document.getElementById('iaBack'); if(bk0) bk0.onclick=iaBack;
     return;
   }
@@ -8941,7 +9237,7 @@ function commitIntake(){
     });
     (a.expenses||[]).forEach(x=>{ if(+x.amount>0 && x.name){ bPut(findOrCreateCat(x.name).id, +x.amount); } });
     const left=Math.round(intakeIncomeTotal(a)-intakeAssignedTotal(a));   // zero-based close: park any leftover
-    if(left>1 && (a.zeroChoice==='savings'||a.zeroChoice==='goal')){ bPut(findOrCreateCat(a.zeroChoice==='goal'&&a.dream?'Savings ('+a.dream+')':'Savings').id, left); }
+    if(left>1 && (a.zeroChoice==='savings'||a.zeroChoice==='goal')){ bPut(findOrCreateCat(a.zeroChoice==='goal'&&a.dream?'Savings ('+a.dream+')':'Savings','save').id, left); }
     if(a.hasDebt==='yes' && a.debtAmt>0) state.liabilities.push({id:uid(),name:'Debt',value:a.debtAmt,src:'intake'});
     if(a.dream) state.goals.push({id:uid(),name:a.dream,target:a.dreamAmt>0?a.dreamAmt:1000,saved:0,date:'',src:'intake'});
   }
@@ -8953,7 +9249,7 @@ function commitIntake(){
     state.spendingMode=true;
     state.spendLimit=a.spendLimit>0?a.spendLimit:0;
     // deep-dive leaks become real, budgeted categories so the spending picture is already mapped
-    (a.leaks||[]).forEach(x=>{ if(+x.monthly>0 && x.name){ bPut(findOrCreateCat(x.name).id, +x.monthly); } });
+    (a.leaks||[]).forEach(x=>{ if(+x.monthly>0 && x.name){ bPut(findOrCreateCat(x.name, x.purpose?growthKindFor(x.name):'').id, +x.monthly); } });
     if(a.deepDive==='track') state.trackChallenge={start:todayStr(), days:30};   // the honest 30-day money map
     if(!state.categories.length) state.categories.push({id:uid(),name:'Spending'});
   }
@@ -9284,7 +9580,22 @@ function wallAssigned(w,M){
 /* which essential wall (if any) a category name belongs to */
 function categoryWall(name){ const n=(name||'').toLowerCase(); return WALLS.find(w=>w.match.some(t=>n.includes(t)))||null; }
 /* generic: reuse a top-level category by name, else create it */
-function findOrCreateCat(name){ let c=state.categories.find(k=>!k.parentId && k.name.toLowerCase()===String(name).toLowerCase()); if(!c){ c={id:uid(),name:String(name)}; state.categories.push(c); } return c; }
+function findOrCreateCat(name,growth){ let c=state.categories.find(k=>!k.parentId && k.name.toLowerCase()===String(name).toLowerCase()); if(!c){ c={id:uid(),name:String(name)}; state.categories.push(c); } if(growth) c.growth=growth; return c; }
+/* Which of the intake's "already going somewhere on purpose" rows is which kind
+   of money. The finder kept them out of the leak total correctly, but the commit
+   then filed all three as ordinary spending categories, so "Investing /
+   retirement" landed on the Plan looking exactly like Takeout - and logging
+   against it would have counted retirement contributions as money spent.
+   They still get assigned (a zero-based plan gives investing a job like anything
+   else); they are just no longer CALLED spending. */
+function growthKindFor(name){
+  const n=String(name||'').toLowerCase();
+  if(n.includes('invest')||n.includes('retirement')) return 'invest';
+  if(n.includes('saving')) return 'save';
+  if(n.includes('debt')) return 'debt';
+  return '';
+}
+const GROWTH_TAG={invest:'Invested, not spent', save:'Saved, not spent', debt:'Debt paid down'};
 /* intake budget math: total money in, and total given a job so far */
 function intakeIncomeTotal(a){ return (+a.income||0) + ((a.extraIncome||[]).reduce((s,x)=>s+(+x.amount||0),0)); }
 function intakeAssignedTotal(a){ const walls=(+a.roof||0)+(+a.food||0)+(+a.util||0)+(+a.transport||0); const exp=(a.expenses||[]).reduce((s,x)=>s+(+x.amount||0),0); return walls+exp; }

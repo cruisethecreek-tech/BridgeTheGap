@@ -261,54 +261,136 @@ const ORDERED={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true,
   budgets:{'2026-08':{fun:300,groc:400,eat:220,roof:1250,car:340}},
   transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'}]};
 await seed(ORDERED); await p.reload(); await p.waitForTimeout(900);
+/* Reordering is a DRAG now, not two arrows. Arrows meant counting taps to move
+   a category down eleven rows, with the list re-rendering under your thumb after
+   every one. These tests drive real pointer events through Playwright's mouse,
+   so they exercise the actual engine - threshold, drop index, commit - and not a
+   function called directly. */
+const centre = async sel => p.evaluate(s=>{ const e=document.querySelector(s); if(!e) return null;
+  const r=e.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2, top:r.top, bottom:r.bottom}; }, sel);
+async function dragTo(gripSel, targetY, opts={}){
+  const g=await centre(gripSel); if(!g) throw new Error('no grip '+gripSel);
+  await p.mouse.move(g.x,g.y); await p.mouse.down();
+  const steps=8;
+  for(let i=1;i<=steps;i++){ await p.mouse.move(g.x, g.y+(targetY-g.y)*i/steps); await p.waitForTimeout(16); }
+  const mid = await p.evaluate(()=>({ghost:!!document.querySelector('.drag-ghost'),
+    ghostText:(document.querySelector('.drag-ghost')||{}).textContent||'',
+    line:!!document.querySelector('.drag-line'),
+    dimmed:!!document.querySelector('.drag-src')}));
+  if(opts.cancel) await p.keyboard.press('Escape');
+  await p.mouse.up(); await p.waitForTimeout(200);
+  return mid;
+}
+
+/* the whole plan has to be on screen for a drag test to be about dragging and
+   not about auto-scrolling, so this section gets a viewport tall enough to
+   hold it. Real phones get the auto-scroll instead. */
+await p.setViewportSize({width:390,height:2400});
+await p.evaluate(async()=>{ activateTab('budget'); scrollTo(0,0); });
+await p.waitForTimeout(300);
+const beforeOrder = await p.evaluate(()=>({tops:topCats().map(c=>c.name),
+  grips:document.querySelectorAll('#cats .cat-grip').length,
+  arrows:document.querySelectorAll('#cats .cat-move, #cats [data-moveup]').length}));
+check('reorder is a mode, off by default', beforeOrder.grips===0, String(beforeOrder.grips));
+check('...and the old up/down arrows are gone entirely', beforeOrder.arrows===0, String(beforeOrder.arrows));
+
+await p.evaluate(()=>document.getElementById('reorderBtn').click());
+await p.waitForTimeout(250);
+const inMode = await p.evaluate(()=>({
+  grips:document.querySelectorAll('#cats .cat-grip').length,
+  rows:document.querySelectorAll('#cats [data-row][data-lvl]').length,
+  assignFrozen:(()=>{ const e=document.querySelector('.cat.reordering .cat-assign');
+    return e ? getComputedStyle(e).display==='none' : false; })(),
+  /* the browser must not claim the gesture as a page scroll, or a drag on a
+     phone just scrolls the list and nothing ever moves */
+  touchAction:getComputedStyle(document.querySelector('#cats .cat-grip')).touchAction,
+  labelled:[...document.querySelectorAll('#cats .cat-grip')].every(g=>/arrow keys/i.test(g.getAttribute('aria-label')||'')),
+  subNames:[...document.querySelectorAll('.subrow.reordering .sub-name')]
+    .map(e=>({full:e.textContent.trim(), w:e.getBoundingClientRect().width,
+              clipped:e.scrollWidth>e.clientWidth+1}))
+}));
+check('turning it on puts a grip on every row', inMode.grips>0 && inMode.grips===inMode.rows,
+      `${inMode.grips} grips / ${inMode.rows} rows`);
+check('...the grip owns the gesture rather than the page scroller', inMode.touchAction==='none', inMode.touchAction);
+check('...and the editing controls step aside while you move things', inMode.assignFrozen===true);
+check('...leaving the names readable, not truncated to one letter',
+      inMode.subNames.length>0 && inMode.subNames.every(n=>!n.clipped && n.full.length>3),
+      inMode.subNames.map(n=>`"${n.full}" ${Math.round(n.w)}px${n.clipped?' CLIPPED':''}`).join(' | '));
+
+/* Roof is third. Drag it above the first card. */
+const firstCard = await centre('#cats .cat:first-child');
+const mid = await dragTo('[data-grip="roof"]', firstCard.top+4);
+const afterDrag = await p.evaluate(()=>topCats().map(c=>c.name));
+check('a ghost and a drop line show what is about to happen',
+      mid.ghost && mid.line && mid.dimmed && /Roof/.test(mid.ghostText),
+      JSON.stringify(mid));
+check('dragging a category to the top actually puts it at the top',
+      afterDrag[0]==='Roof' && beforeOrder.tops[0]==='Fun',
+      `${beforeOrder.tops.join(',')} -> ${afterDrag.join(',')}`);
+
+/* a subcategory dragged HARD past the top of the screen still lands inside its
+   own parent - a sub outranking a category is not a thing anyone means */
+const subsBefore = await p.evaluate(()=>childrenOf('food').map(c=>c.name));
+await dragTo('[data-grip="eat"]', 2);
+const escaped = await p.evaluate(()=>({subs:childrenOf('food').map(c=>c.name),
+                                       tops:topCats().map(c=>c.name)}));
+check('a subcategory reorders inside its parent',
+      escaped.subs.join(',')!==subsBefore.join(','), `${subsBefore.join(',')} -> ${escaped.subs.join(',')}`);
+check('...and cannot be dragged out into the top level',
+      !escaped.tops.includes('Eating out') && escaped.subs[0]==='Eating out',
+      `tops ${escaped.tops.join(',')} / subs ${escaped.subs.join(',')}`);
+
+/* picking a row up and putting it back must not renumber anything */
+const settled = await p.evaluate(()=>topCats().map(c=>c.name));
+const backGrip = await centre('#cats .cat:nth-child(2) .cat-grip');
+await dragTo('#cats .cat:nth-child(2) .cat-grip', backGrip.y+3);
+const unchanged = await p.evaluate(()=>topCats().map(c=>c.name));
+check('a drag that goes nowhere changes nothing', unchanged.join(',')===settled.join(','),
+      `${settled.join(',')} -> ${unchanged.join(',')}`);
+
+/* a drag you cannot abandon is a drag you hesitate to start */
+const beforeEsc = await p.evaluate(()=>topCats().map(c=>c.name));
+const lastCard = await centre('#cats .cat:last-child');
+await dragTo('#cats .cat:last-child .cat-grip', lastCard.top-400, {cancel:true});
+const afterEsc = await p.evaluate(()=>({tops:topCats().map(c=>c.name),
+  strays:document.querySelectorAll('.drag-ghost,.drag-line,.drag-src').length}));
+check('Escape abandons a drag and puts the row back',
+      afterEsc.tops.join(',')===beforeEsc.join(','), `${beforeEsc.join(',')} -> ${afterEsc.tops.join(',')}`);
+check('...and clears the ghost with it', afterEsc.strays===0, String(afterEsc.strays));
+
+/* drag is the preferred way, not the only way - the grip is still a button */
+const kb = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const before=topCats().map(c=>c.name);
+  const g=document.querySelector('#cats .cat:first-child .cat-grip'); g.focus();
+  g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+  await wait(200);
+  return { before, after:topCats().map(c=>c.name),
+           refocused:(document.activeElement||{}).dataset?.grip };
+});
+check('the keyboard still moves a row without a mouse',
+      kb.after[0]===kb.before[1] && kb.after[1]===kb.before[0], `${kb.before.join(',')} -> ${kb.after.join(',')}`);
+check('...and focus follows the row it just moved', kb.refocused===kb.before[0].toLowerCase().slice(0,3) || !!kb.refocused, kb.refocused);
+
 const reorder = await p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
-  activateTab('budget'); await wait(200);
-  const before=topCats().map(c=>c.name);
-  const noArrows=document.querySelectorAll('#cats .cat-move').length;
   document.getElementById('reorderBtn').click(); await wait(200);
-  const arrows=document.querySelectorAll('#cats .cat-move').length;
-  const assignFrozen=(()=>{ const e=document.querySelector('.cat.reordering .cat-assign');
-    return e ? getComputedStyle(e).display==='none' : false; })();
-  /* the names must stay READABLE - the arrows took width and squeezed a
-     subcategory down to "E..." until the editing controls collapsed instead */
-  const subNames=[...document.querySelectorAll('.subrow.reordering .sub-name')]
-    .map(e=>({full:e.textContent.trim(), w:e.getBoundingClientRect().width,
-              clipped:e.scrollWidth>e.clientWidth+1}));
-  // Roof is third: two moves up puts it first
-  document.querySelector('[data-moveup="roof"]').click(); await wait(120);
-  document.querySelector('[data-moveup="roof"]').click(); await wait(120);
-  const after=topCats().map(c=>c.name);
-  // a sub moves inside its parent and cannot escape it
-  document.querySelector('[data-movedn="groc"]').click(); await wait(120);
-  const subs=childrenOf('food').map(c=>c.name);
-  const stillTop=topCats().map(c=>c.name);
-  // the ends are dead ends
-  const firstUp=document.querySelector('#cats .cat .cm-b[data-moveup]').disabled;
-  const downs=[...document.querySelectorAll('#cats .cat .cm-b[data-movedn]')];
-  const lastDown=downs[downs.length-1].disabled;
-  document.getElementById('reorderBtn').click(); await wait(150);
-  return { before, after, subs, stillTop, noArrows, arrows, assignFrozen, subNames, firstUp, lastDown,
-           gone:document.querySelectorAll('#cats .cat-move').length };
+  return { gone:document.querySelectorAll('#cats .cat-grip').length,
+           strays:document.querySelectorAll('.drag-ghost,.drag-line,.drag-src').length };
 });
-check('reorder is a mode, off by default', reorder.noArrows===0 && reorder.arrows>0, `${reorder.noArrows} -> ${reorder.arrows}`);
-check('...and the editing controls step aside while you move things', reorder.assignFrozen===true);
-check('...leaving the names readable, not truncated to one letter',
-      reorder.subNames.length>0 && reorder.subNames.every(n=>!n.clipped && n.full.length>3),
-      reorder.subNames.map(n=>`"${n.full}" ${Math.round(n.w)}px${n.clipped?' CLIPPED':''}`).join(' | '));
-check('moving a category up actually moves it',
-      reorder.after[0]==='Roof' && reorder.before[0]==='Fun', `${reorder.before.join(',')} -> ${reorder.after.join(',')}`);
-check('a subcategory reorders inside its parent', reorder.subs[0]==='Eating out', reorder.subs.join(','));
-check('...and cannot escape it into the top level', reorder.stillTop.length===4 && !reorder.stillTop.includes('Groceries'), reorder.stillTop.join(','));
-check('the first row cannot go up', reorder.firstUp===true);
-check('the last row cannot go down', reorder.lastDown===true);
-check('"Done" puts the arrows away', reorder.gone===0);
+check('"Done" puts the grips away', reorder.gone===0, String(reorder.gone));
+check('...and leaves no ghost or drop line behind', reorder.strays===0, String(reorder.strays));
+await p.setViewportSize({width:390,height:1000});
+await p.waitForTimeout(200);
 
 /* the order has to survive a reload, or it was never really theirs */
+const arranged = await p.evaluate(()=>({tops:topCats().map(c=>c.name), subs:childrenOf('food').map(c=>c.name)}));
 await p.reload(); await p.waitForTimeout(900);
 const persisted = await p.evaluate(()=>({tops:topCats().map(c=>c.name), subs:childrenOf('food').map(c=>c.name)}));
-check('the order survives a reload', persisted.tops[0]==='Roof' && persisted.subs[0]==='Eating out',
-      persisted.tops.join(',')+' / '+persisted.subs.join(','));
+check('the order survives a reload',
+      persisted.tops.join(',')===arranged.tops.join(',') && persisted.subs.join(',')===arranged.subs.join(',')
+      && arranged.subs[0]==='Eating out',
+      `${arranged.tops.join(',')} / ${arranged.subs.join(',')} -> ${persisted.tops.join(',')} / ${persisted.subs.join(',')}`);
 
 /* and every OTHER list of categories must agree - a picker still in creation
    order means the app disagrees with the user about their own arrangement */
@@ -403,6 +485,139 @@ const autofill = await p.evaluate(async () => {
 });
 check('picking a category fills the amount from what it is assigned', autofill.filled==='80', autofill.filled);
 check('...but never overwrites a figure someone typed', autofill.kept==='999', autofill.kept);
+
+/* ---- 15. no sheet may grow taller than the screen it opens on ----
+   Every .modal had no max-height and no overflow, so it grew to whatever its
+   content wanted. On a 780px phone the app map wanted 938px, and because the
+   overlay bottom-aligns the sheet, the extra went off the TOP - heading and
+   ✕ above y=0. A sheet you cannot close is not a layout bug, it is a trap.
+   The check is per modal, per phone height: the sheet fits, the ✕ is on
+   screen and hittable, and the overflow goes to the BODY not the sheet. ---- */
+const HEIGHTS=[700,780,844];
+const SHEETS=[{id:'appMap',open:'openAppMap()'},{id:'stageMap',open:'openStageMap()'},
+              {id:'ftHelp',open:'openFreedomHelp()'},
+              {id:'talkSheet',open:"openTalk({name:'Phone',amount:1100})"},
+              {id:'intentSheet',open:'openIntentSheet()'}];
+const fits=[];
+for(const h of HEIGHTS){
+  await p.setViewportSize({width:390,height:h});
+  for(const s of SHEETS){
+    const r = await p.evaluate(async ({open,id}) => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      document.querySelectorAll('.modal-overlay.on').forEach(o=>o.classList.remove('on'));
+      try{ (0,eval)(open); }catch(e){ return {err:String(e.message||e)}; }
+      await wait(320);
+      const ov=document.getElementById(id), m=ov&&ov.querySelector('.modal');
+      if(!m) return {err:'no sheet'};
+      const box=m.getBoundingClientRect(), x=m.querySelector('.x');
+      const xb=x?x.getBoundingClientRect():null;
+      const scroller=m.lastElementChild;
+      const hit=xb?document.elementFromPoint(xb.left+xb.width/2, xb.top+xb.height/2):null;
+      return { top:Math.round(box.top), bottom:Math.round(box.bottom), vh:innerHeight,
+               xTop:xb?Math.round(xb.top):null,
+               xHittable: !!(hit && (hit===x || x.contains(hit))),
+               bodyScrolls: scroller ? getComputedStyle(scroller).overflowY : 'none',
+               sheetScrolls: getComputedStyle(m).overflowY };
+    }, s);
+    fits.push({h, id:s.id, ...r});
+  }
+}
+await p.setViewportSize({width:390,height:1000});
+const bad = fits.filter(f=>f.err || f.top < 0 || f.bottom > f.vh+1);
+check('no sheet is taller than the phone it opens on', bad.length===0,
+      bad.map(f=>`${f.id}@${f.h}: ${f.err||('top '+f.top+' bottom '+f.bottom+' of '+f.vh)}`).join(' | '));
+const unreachable = fits.filter(f=>!f.err && !f.xHittable);
+check('...so the ✕ is always on screen and hittable', unreachable.length===0,
+      unreachable.map(f=>`${f.id}@${f.h}: x at y=${f.xTop}`).join(' | '));
+const wrongScroller = fits.filter(f=>!f.err && f.sheetScrolls==='visible' && f.bodyScrolls==='visible' && (f.bottom-f.top)>f.vh-40);
+check('...and long content scrolls inside the sheet, not off the top',
+      wrongScroller.length===0, wrongScroller.map(f=>`${f.id}@${f.h}`).join(' | '));
+
+/* ---- 16. three faults found by using the app on a real phone ---- */
+const REAL={...EMPTY, uiMode:'all', stageReached:3, hourlyWage:24,
+  categories:[{id:'inv',name:'Investing / retirement',growth:'invest'},
+              {id:'food',name:'Food'},{id:'groc',name:'Groecries',parentId:'food'},
+              {id:'w',name:'Walmart',parentId:'groc'}],
+  budgets:{'2026-08':{inv:2400,groc:650,w:200}},
+  transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'},
+                {id:'t',type:'expense',amount:80,catId:'groc',date:'2026-08-03'}]};
+await seed(REAL); await p.reload(); await p.waitForTimeout(900);
+
+/* Invest carried the .on class like the other two and had no rule to paint it,
+   so choosing it switched the form underneath while the toggle still looked
+   like Expense was selected. */
+const toggle = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await wait(300);
+  const out={};
+  for(const t of ['expense','income','invest']){
+    const btn=document.querySelector(`#typeToggle button[data-t="${t}"]`);
+    btn.click(); await wait(140);
+    const cs=getComputedStyle(btn), bg=cs.backgroundColor;
+    out[t]={on:btn.classList.contains('on'), bg,
+            painted: bg!=='rgba(0, 0, 0, 0)' && bg!=='transparent'};
+  }
+  out.distinct = new Set(['expense','income','invest'].map(t=>out[t].bg)).size;
+  return out;
+});
+check('every log type shows which one is selected',
+      ['expense','income','invest'].every(t=>toggle[t].on && toggle[t].painted),
+      JSON.stringify(toggle));
+check('...and each one is told apart from the others', toggle.distinct===3,
+      `${toggle.expense.bg} / ${toggle.income.bg} / ${toggle.invest.bg}`);
+
+/* A subcategory could only be deleted, and deleting it takes its transactions'
+   category with it - so fixing a typo cost you history. */
+const rename = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(350);
+  const pencils=document.querySelectorAll('#cats .subrow .cat-edit').length;
+  document.querySelector('[data-editcat="groc"]').click(); await wait(220);
+  const field=!!document.querySelector('input[data-rename="groc"]');
+  const cleared=(()=>{ const e=document.querySelector('.subrow.editing .sub-assign');
+    return e ? getComputedStyle(e).display==='none' : false; })();
+  document.querySelector('input[data-rename="groc"]').value='Groceries';
+  document.querySelector('[data-renamesave="groc"]').click(); await wait(220);
+  // a third-level sub renames too, and Enter commits it
+  document.querySelector('[data-editcat="w"]').click(); await wait(220);
+  const i3=document.querySelector('input[data-rename="w"]'); i3.value='Walmart Supercenter';
+  i3.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); await wait(220);
+  return { pencils, field, cleared, names:state.categories.map(c=>c.name),
+           txKept:state.transactions.filter(t=>t.catId==='groc').length,
+           assignKept:(state.budgets['2026-08']||{}).groc };
+});
+check('a subcategory can be renamed, not only deleted', rename.pencils===2 && rename.field,
+      `${rename.pencils} pencils, field ${rename.field}`);
+check('...at the third level too, with Enter to commit',
+      rename.names.includes('Groceries') && rename.names.includes('Walmart Supercenter'),
+      rename.names.join(','));
+check('...and renaming keeps the transactions and the money',
+      rename.txKept===1 && rename.assignKept===650, `${rename.txKept} tx, ${rename.assignKept} assigned`);
+check('...with the rest of the row stepping aside for the field', rename.cleared===true);
+
+/* The intake filed "Investing / retirement" as an ordinary spending category,
+   so a retirement contribution logged against it would count as money spent. */
+const growth = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(300);
+  const tags=[...document.querySelectorAll('#cats .growth-tag')].map(e=>e.textContent.trim());
+  activateTab('tx'); await wait(300);
+  const sel=document.getElementById('txCat');
+  document.querySelector('#typeToggle button[data-t="expense"]').click(); await wait(120);
+  sel.value='food'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(160);
+  const afterOrdinary=txType;
+  sel.value='inv'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(220);
+  return { tags, afterOrdinary, afterGrowth:txType,
+           kinds:['invest','save','debt'].map(k=>growthKindFor(k==='invest'?'Investing / retirement':k==='save'?'Savings':'Extra debt payments')) };
+});
+check('money that is invested is not shown as money spent', growth.tags.length===1 && /not spent/i.test(growth.tags[0]),
+      growth.tags.join(','));
+check('...and logging against it defaults to Invest, not Expense',
+      growth.afterOrdinary==='expense' && growth.afterGrowth==='invest',
+      `${growth.afterOrdinary} -> ${growth.afterGrowth}`);
+check('...while an ordinary category still logs as an expense', growth.afterOrdinary==='expense');
+check('the intake sorts each on-purpose row to its own kind',
+      growth.kinds.join(',')==='invest,save,debt', growth.kinds.join(','));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
