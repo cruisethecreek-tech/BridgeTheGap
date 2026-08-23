@@ -52,14 +52,18 @@ const reflect = await p.evaluate(async () => {
   const subs=[...document.querySelectorAll('#rfTabs .rf-tab')].map(b=>b.dataset.rf);
   const seen={};
   for(const t of subs){ rfTab=t; renderReflectTab(); await wait(120);
-    seen[t]={ chart:!!document.querySelector('#rfBody svg, #rfBody .cbar, #rfBody .mcol, #rfBody .bd-ring, #rfBody canvas, #rfBody .bd-row'),
+    /* The report is a verdict, not a chart - it draws cards. Everything else
+       has to draw something you can look at. */
+    seen[t]={ chart: t==='report'
+                ? !!document.querySelector('#rfBody .rp-card, #rfBody .rp-lock, #rfBody .rf-empty')
+                : !!document.querySelector('#rfBody svg, #rfBody .cbar, #rfBody .mcol, #rfBody .bd-ring, #rfBody canvas, #rfBody .bd-row'),
               hasPeriod:!!document.getElementById('rfPrev') }; }
   return { tab:!!document.querySelector('[data-view="reflect"]'), subs, seen,
            learnPanels:[...document.querySelectorAll('#view-learn h2')].map(h=>h.textContent) };
 });
 check('a Reflect tab exists', reflect.tab===true);
-check('...with the four reports as sub-tabs',
-      JSON.stringify(reflect.subs)===JSON.stringify(['breakdown','trends','worth','inout']), reflect.subs.join(','));
+check('...with the verdict first and the four reports under it',
+      JSON.stringify(reflect.subs)===JSON.stringify(['report','breakdown','trends','worth','inout']), reflect.subs.join(','));
 for(const t of reflect.subs) check(`...and "${t}" actually draws something`, reflect.seen[t].chart===true);
 check('Learn went back to teaching only',
       reflect.learnPanels.length===2 && /Money School/.test(reflect.learnPanels[0]), reflect.learnPanels.join(' | '));
@@ -841,6 +845,86 @@ check('...and says the rate can wait, so a missing one is not a dead end',
       /add the debt anyway/.test(help.text));
 check('the monthly amount says it INCLUDES the minimums',
       /minimums included|not extra on top/.test(help.budgetHint), help.budgetHint);
+
+/* ---- 20. the Accountability Report ----
+   The app measured plenty and concluded nothing. It knew the top category, the
+   priciest weekday, net worth, income against expense - and never once put two
+   months side by side and said what changed. ---- */
+const RM=await p.evaluate(()=>thisMonth());
+const rshift=(m,n)=>{const [y,mm]=m.split('-').map(Number); const d=new Date(y,mm-1+n,1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
+const REPORT={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24, activeMonth:RM,
+  categories:[{id:'eat',name:'Eating out'}], budgets:{[RM]:{eat:400}},
+  transactions:[{id:'i1',type:'income',amount:3200,date:RM+'-01'},
+                {id:'i2',type:'income',amount:3200,date:rshift(RM,-1)+'-01'},
+                {id:'a',type:'expense',amount:220,catId:'eat',date:rshift(RM,-1)+'-10'},
+                {id:'b',type:'expense',amount:400,catId:'eat',date:RM+'-05'}]};
+await seed(REPORT); await p.reload(); await p.waitForTimeout(900);
+const rpt = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await wait(450);
+  const r=buildReport();
+  const cards=[...document.querySelectorAll('.rp-card')];
+  return { on:document.querySelector('#rfTabs .rf-tab.on').dataset.rf,
+           keys:r.signals.map(g=>g.k),
+           everyCardShowsWorking:cards.length>0 && cards.every(c=>!!c.querySelector('.rp-w')),
+           drift:(r.signals.find(g=>g.k==='drift')||{}).t||'',
+           driftBody:(r.signals.find(g=>g.k==='drift')||{}).body||'',
+           badFirst:r.signals.length>1 ? r.signals[0].bad===true : true };
+});
+check('Reflect opens on the verdict, not a chart', rpt.on==='report', rpt.on);
+check('it compares this month against last, which nothing did before',
+      /up 82%/.test(rpt.drift), rpt.drift);
+check('...and shows both figures so the claim can be checked',
+      /\$400/.test(rpt.driftBody) && /\$220/.test(rpt.driftBody), rpt.driftBody.replace(/<[^>]+>/g,''));
+check('every card carries the arithmetic behind it', rpt.everyCardShowsWorking===true);
+
+/* A month that went negative must not open with a compliment about something
+   else that happened to go well. */
+const NEG={...REPORT, budgets:{[RM]:{eat:200}},
+  transactions:[{id:'i1',type:'income',amount:1000,date:RM+'-01'},
+                {id:'x',type:'expense',amount:1800,catId:'eat',date:RM+'-03'},
+                {id:'i0',type:'income',amount:1000,date:rshift(RM,-1)+'-01'},
+                {id:'y',type:'expense',amount:100,catId:'eat',date:rshift(RM,-1)+'-03'}]};
+await seed(NEG); await p.reload(); await p.waitForTimeout(900);
+const negative = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await wait(450);
+  const r=buildReport();
+  return { first:r.signals[0], kept:r.signals.find(g=>g.k==='kept') };
+});
+check('a month that went negative leads with the bad news',
+      negative.first && negative.first.bad===true, negative.first&&negative.first.t);
+check('...and says so plainly rather than as a percentage kept',
+      /spent more than came in/i.test(negative.kept.t), negative.kept.t);
+
+/* Silence over speculation - the rule the whole thing rests on. */
+const THIN={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:RM,
+  transactions:[{id:'i',type:'income',amount:3200,date:RM+'-01'}]};
+await seed(THIN); await p.reload(); await p.waitForTimeout(900);
+const thin = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await wait(450);
+  const r=buildReport();
+  return { cards:document.querySelectorAll('.rp-card').length, locked:r.locked,
+           lockUI:!!document.querySelector('.rp-lock'),
+           text:document.getElementById('rfBody').textContent.toLowerCase() };
+});
+check('with one paycheck and nothing else it says nothing at all', thin.cards===0, String(thin.cards));
+check('...it never congratulates you for keeping 100% of an empty ledger',
+      !/kept 100%/.test(thin.text), thin.text.slice(0,90));
+check('...and lists what would unlock more instead of failing silently',
+      thin.lockUI===true && thin.locked.length>=3, thin.locked.length+' locked');
+
+/* One broken signal must never take the page down with it. */
+const survives = await p.evaluate(() => {
+  const orig=REPORT_SIGNALS[0].run;
+  REPORT_SIGNALS[0].run=()=>{ throw new Error('boom'); };
+  let ok=false; try{ buildReport(); ok=true; }catch(e){ ok=false; }
+  REPORT_SIGNALS[0].run=orig;
+  return ok;
+});
+check('a signal that throws does not take the report with it', survives===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
