@@ -442,7 +442,7 @@ document.documentElement.setAttribute("data-theme-mode",(_s&&(_s.theme==="light"
   <div class="cta-row" style="justify-content:center">
     <a class="btn primary" href="app.html">Open the app - free →</a>
     <a class="btn buy" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">📖 Get the Method Guide</a>
-    <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">☕ Support the build</a>
+    <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">Pay what it was worth</a>
   </div>
   <p class="buynote" id="offerFine" style="display:none">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
 </section>
@@ -463,11 +463,22 @@ document.documentElement.setAttribute("data-theme-mode",(_s&&(_s.theme==="light"
        NEWSLETTER_ENDPOINT: form POST URL (Kit/ConvertKit, Formspree, Buttondown,
          Mailchimp, or your own webhook). Only the email is sent.
        GUIDE_URL:   link to the paid education guide / course / waitlist.
-       SUPPORT_URL: the "pay once to support the build" link (Ko-fi, Buy Me a
-         Coffee, or a Stripe payment link) - the app's honest, only money model.
+       SUPPORT_URL: the one-time "pay what it was worth" checkout - the app's
+         honest, only money model.
+
+     PLATFORM: Lemon Squeezy, as merchant of record, so sales tax and EU VAT are
+     its problem rather than the founder's. Runbook: docs/Lemon-Squeezy-Setup.md.
+     Kept a plain link on purpose - their checkout-overlay script (lemon.js)
+     would load a third-party payment script for every visitor to a page whose
+     headline promise is that nothing about them goes anywhere, including the
+     visitors who never click. A link sends nothing until someone chooses to go.
+     Lemon Squeezy is converging into Stripe Managed Payments; nothing here
+     knows the vendor's name, so switching is editing this one line.
      ============================================================ */
   var NEWSLETTER_ENDPOINT = "YOUR_FORM_ENDPOINT_URL";
   var GUIDE_URL           = "YOUR_GUIDE_OR_WAITLIST_URL";
+  /* Lemon Squeezy: Product > Share > copy.
+     https://YOURSTORE.lemonsqueezy.com/checkout/buy/VARIANT_ID */
   var SUPPORT_URL         = "YOUR_SUPPORT_URL";
 
   (function(){
