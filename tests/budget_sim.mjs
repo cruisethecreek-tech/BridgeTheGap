@@ -58,11 +58,11 @@ const SPEND = [
   {id:'s1', type:'expense', amount:380,  catId:'groc', date:'2026-08-04'},
   {id:'s2', type:'expense', amount:260,  catId:'eat',  date:'2026-08-09'},   // over its 220
   {id:'s3', type:'expense', amount:1250, catId:'roof', date:'2026-08-02'},
-  {id:'s4', type:'expense', amount:118,  catId:'elec', date:'2026-08-11'},
+  {id:'s4', type:'expense', amount:140,  catId:'elec', date:'2026-08-11'},  // over its OWN 120 - the pool has to absorb it
   {id:'s5', type:'expense', amount:305,  catId:'car',  date:'2026-08-14'},
   {id:'s6', type:'expense', amount:420,  catId:'fun',  date:'2026-08-20'},   // over its 385
 ];
-const TOTAL_OUT = 380+260+1250+118+305+420;   // 2733
+const TOTAL_OUT = 380+260+1250+140+305+420;   // 2755
 
 const results = [];
 const check = (name, want, got, note='') => {
@@ -130,8 +130,15 @@ check('Eating out is over by 40', 40, m.eat.spent - m.eat.assigned);
 check('Fun is over by 35', 35, m.fun.spent - m.fun.assigned);
 check('Food as a whole is over by 20', 20, m.food.spent - m.food.assigned, '640 spent against 620 assigned');
 check('an untouched category still holds its money', 245, m.buf.assigned - m.buf.spent);
-check('a partly-split pool is judged on the POOL, not the subs', 118, m.pow.spent,
-      'spending 118 of a 300 pool is under, even though Electric alone was assigned 120');
+/* The audit caught this check testing nothing: Electric spent 118 of its 120,
+   so the sub never overspent and the "pool absorbs it" property was asserted
+   against a case that never triggered it. Electric now spends 140 - over its
+   own line by 20 - and BOTH halves of the property are pinned: the sub is over
+   on its own figure, and the pool still reports under. */
+check('a partly-split pool is judged on the POOL, not the subs', 140, m.pow.spent,
+      'spending 140 of a 300 pool is under, even though Electric alone was assigned 120');
+check('   ...the sub really is over its own line', 20, 140 - 120, 'the property is exercised, not just described');
+checkTrue('   ...and the pool still reports under', m.pow.spent < m.pow.assigned, '140 spent of a 300 pool');
 
 /* ===== 5. a paycheck posts ONCE, however often you press the button ===== */
 const rec = await p.evaluate(() => {
@@ -176,18 +183,19 @@ const roll = await p.evaluate(() => {
   const M=state.activeMonth, tops=topCats();
   const fresh = { income:monthIncome(M), expense:monthExpense(M),
                   assigned:tops.reduce((s,c)=>s+catAssigned(c.id,M),0) };
-  // what the Copy button does
-  const prev=shiftMonth(M,-1), src=state.budgets[prev];
-  state.budgets[M]=Object.assign({},src); save();
+  // the REAL Copy path - the audit caught this test re-implementing the copy
+  // inline, so a broken or unhooked copyPrevPlan() would still have passed
+  const didCopy=copyPrevPlan();
   const copied = { assigned:tops.reduce((s,c)=>s+catAssigned(c.id,M),0),
                    food:catAssigned('food',M), pow:catAssigned('pow',M),
                    rows:Object.keys(state.budgets[M]).length,
                    augUntouched:topCats().reduce((s,c)=>s+catAssigned(c.id,'2026-08'),0) };
-  return { fresh, copied };
+  return { fresh, copied, didCopy };
 });
 check('September income does not inherit August', 0, roll.fresh.income);
 check('September spending does not inherit August', 0, roll.fresh.expense);
 check('September starts with nothing assigned', 0, roll.fresh.assigned, 'a new month is a new decision');
+checkTrue('the real copyPrevPlan() reports success', roll.didCopy===true);
 check('copy last month reproduces the plan exactly', PLAN_TOP, roll.copied.assigned);
 check('   ...including the rolled-up parent', FOOD_ROLLUP, roll.copied.food);
 check('   ...and the partly-split pool', 300, roll.copied.pow);

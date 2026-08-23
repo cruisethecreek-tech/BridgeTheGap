@@ -926,6 +926,141 @@ const survives = await p.evaluate(() => {
 });
 check('a signal that throws does not take the report with it', survives===true);
 
+/* ---- 21. the independent audit's findings stay fixed ----
+   Ten findings from an outside model, each reproduced here before it was fixed
+   and pinned here after. The two timezone cases run in their own browser
+   contexts with the timezone pinned, because they only exist at the boundary. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'a',name:'Rent'},{id:'b',name:'Fun'}],
+  budgets:{'2026-08':{a:1000,b:500}}});
+await p.reload(); await p.waitForTimeout(900);
+
+/* F1 - a negative assignment subtracted from the assigned total: free money */
+const f1 = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(350);
+  const inp=document.querySelector('input[data-cat="b"]');
+  inp.value='-500'; inp.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
+  const typed=state.budgets['2026-08'].b;
+  // and a poisoned SAVE heals on load
+  const st=JSON.parse(localStorage.getItem('unfiltered_budget_v2'));
+  st.budgets['2026-08'].b=-500;
+  const healed=normalizeState(st).budgets['2026-08'].b;
+  return { typed, healed, assigned:topCats().reduce((s,c)=>s+catAssigned(c.id,'2026-08'),0) };
+});
+check('typing a negative assignment stores zero, not invented money', f1.typed===0, String(f1.typed));
+check('...a poisoned save heals to zero on load', f1.healed===0, String(f1.healed));
+check('...and the assigned total never went below the honest sum', f1.assigned===1000, String(f1.assigned));
+
+/* F3 - merging a $100-own duplicate with a $50-in-kids duplicate lost the $50 */
+const f3 = await p.evaluate(() => {
+  state.categories=[{id:'A',name:'Utilities (power, water)'},{id:'B',name:'Power & Wi-Fi'},
+                    {id:'bk',name:'Internet',parentId:'B'}];
+  state.budgets={'2026-08':{A:100, bk:50}}; state.activeMonth='2026-08'; save();
+  const before=topCats().reduce((s,c)=>s+catAssigned(c.id,'2026-08'),0);
+  const n=mergeDuplicates();
+  const after=topCats().reduce((s,c)=>s+catAssigned(c.id,'2026-08'),0);
+  return { n, before, after };
+});
+check('merging duplicates conserves the effective plan to the dollar',
+      f3.n>=1 && f3.before===150 && f3.after===150, `${f3.before} -> ${f3.after}`);
+
+/* F5 - a semimonthly schedule anchored to the 15th posted on Feb 1 */
+const f5 = await p.evaluate(() =>
+  recOccurrences({freq:'semimonthly',anchor:'2026-01-15'},'2026-02'));
+check('semimonthly on the 15th lands mid-month and month-end in February',
+      JSON.stringify(f5.map(d=>d.slice(8)).sort())===JSON.stringify(['15','28']), f5.join(','));
+
+/* F6 - a $50 minimum on a $10 balance locked the planner for the person one
+   payment from done */
+const f6 = await p.evaluate(() => simulateDebts([{name:'A',balance:10,apr:20,minPayment:50}],30,'avalanche'));
+check('a minimum bigger than the remaining balance no longer blocks the planner',
+      !f6.error && f6.months===1, f6.error||f6.months+' months');
+
+/* F7 - interest landing before the sort made snowball target the CHEAP debt on
+   a tie, maximising interest */
+const f7 = await p.evaluate(() => {
+  const D=[{name:'Cheap',balance:1000,apr:5,minPayment:0},{name:'Dear',balance:1000,apr:25,minPayment:0}];
+  return simulateDebts(D,300,'snowball').order.map(o=>o.name);
+});
+check('tied balances break toward the dearer rate, not away from it', f7[0]==='Dear', f7.join(' then '));
+
+/* F8 - the "started" working line printed 3 × $3.33 = $10.00, a false equation */
+const f8 = await p.evaluate(() => {
+  const t=todayStr();
+  state.transactions=[
+    {id:'a',type:'expense',amount:3.33,catId:null,date:shiftDays(t,-3),note:'Boba'},
+    {id:'b',type:'expense',amount:3.33,catId:null,date:shiftDays(t,-9),note:'Boba'},
+    {id:'c',type:'expense',amount:3.34,catId:null,date:shiftDays(t,-15),note:'Boba'}];
+  save();
+  const sig=REPORT_SIGNALS.find(x=>x.k==='started').run();
+  return sig ? sig.work : '(no signal)';
+});
+check('the started signal shows a division, never an equation rounding can falsify',
+      /÷/.test(f8) && /≈/.test(f8) && !/=/.test(f8), f8);
+
+/* F9 - "Visa" under a parent named "Debt Payments" was invisible to the
+   Offense vs Defense meter */
+const f9 = await p.evaluate(() => {
+  state.categories=[{id:'dp',name:'Debt Payments'},{id:'visa',name:'Visa',parentId:'dp'}];
+  state.transactions=[{id:'t',type:'expense',amount:200,catId:'visa',date:state.activeMonth+'-05'}];
+  state.impulse=[]; save();
+  return offenseDefense(state.activeMonth).debtPaid;
+});
+check('a debt payment logged to a subcategory counts as defense', f9===200, String(f9));
+
+/* F2 - the audit said Auto-Rebalance destroys money. Its trigger needs a
+   subcategory target, and the button only renders on top-level categories - so
+   the reachable path is pinned as conserving instead. */
+const f2 = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  state.categories=[{id:'roof',name:'Roof'},{id:'fun',name:'Fun Money'}];
+  state.budgets={'2026-08':{roof:100,fun:200}}; state.activeMonth='2026-08';
+  state.transactions=[{id:'s',type:'expense',amount:150,catId:'roof',date:'2026-08-05'}]; save();
+  activateTab('budget'); await wait(300);
+  const subTargets=[...document.querySelectorAll('[data-rebal]')]
+    .filter(b=>{ const c=state.categories.find(x=>x.id===b.dataset.rebal); return c&&c.parentId; }).length;
+  const before=topCats().reduce((s,c)=>s+catAssigned(c.id,'2026-08'),0);
+  autoRebalance('roof'); await wait(200);
+  const after=topCats().reduce((s,c)=>s+catAssigned(c.id,'2026-08'),0);
+  return { subTargets, before, after };
+});
+check('Auto-Rebalance can never target a subcategory from the screen', f2.subTargets===0);
+check('...and on its real targets it moves money without creating or destroying any',
+      f2.before===300 && f2.after===300, `${f2.before} -> ${f2.after}`);
+
+/* F4 + F10 - the timezone pair, in pinned-timezone contexts */
+const ctxNZ = await b.newContext({ timezoneId:'Pacific/Auckland' });
+const pNZ = await ctxNZ.newPage();
+await pNZ.goto('file://'+process.cwd()+'/app.html'); await pNZ.waitForTimeout(600);
+const f4 = await pNZ.evaluate(() => parseImpDate('Nov 1, 2026'));
+check('a textual CSV date east of Greenwich stays on its own day', f4==='2026-11-01', String(f4));
+await ctxNZ.close();
+
+const ctxNY = await b.newContext({ timezoneId:'America/New_York' });
+const pNY = await ctxNY.newPage();
+await pNY.goto('file://'+process.cwd()+'/app.html'); await pNY.waitForTimeout(600);
+const f10 = await pNY.evaluate(() => ({
+  fixed: shiftDays('2026-03-20',-30),
+  oldWay: localYMD(new Date(Date.parse('2026-03-20T00:00:00')-30*86400000))
+}));
+check('30 calendar days back across spring-forward is 30 days, not 31',
+      f10.fixed==='2026-02-18', `fixed ${f10.fixed}, ms arithmetic said ${f10.oldWay}`);
+check('...and the test proves the boundary is real, not hypothetical',
+      f10.oldWay==='2026-02-17', f10.oldWay);
+await ctxNY.close();
+
+/* T3's root - the report's trap clause now reads the field the app writes */
+const t3 = await p.evaluate(() => {
+  state.hourlyWage=24; state.activeMonth=thisMonth();
+  state.transactions=[{id:'e',type:'expense',amount:240,catId:null,date:thisMonth()+'-03'}];
+  state.impulse=[{id:'i',type:'buy',name:'Keyboard',amount:120,date:thisMonth()+'-03'}]; save();
+  const sig=REPORT_SIGNALS.find(x=>x.k==='hours').run();
+  return sig?sig.body:'';
+});
+check('a ransom logged the way the app logs it shows up in the hours signal',
+      /called a trap/.test(t3), t3.replace(/<[^>]+>/g,'').slice(0,120));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
