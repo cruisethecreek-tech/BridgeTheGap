@@ -249,6 +249,85 @@ const litUp = await p.evaluate(async () => {
 });
 check('areas you have used are marked done, so it reads as progress', litUp.length>=4, litUp.join(','));
 
+/* ---- 12. the plan is in YOUR order, and everything follows it ----
+        Category order was array order, which is creation order, which is an
+        accident. People read a budget in a shape that means something to them -
+        the rent at the top because it frightens them, the fun money at the top
+        because it is what they overspend. ---- */
+const ORDERED={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'fun',name:'Fun'},{id:'food',name:'Food'},
+              {id:'groc',name:'Groceries',parentId:'food'},{id:'eat',name:'Eating out',parentId:'food'},
+              {id:'roof',name:'Roof'},{id:'car',name:'Getting Around'}],
+  budgets:{'2026-08':{fun:300,groc:400,eat:220,roof:1250,car:340}},
+  transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'}]};
+await seed(ORDERED); await p.reload(); await p.waitForTimeout(900);
+const reorder = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(200);
+  const before=topCats().map(c=>c.name);
+  const noArrows=document.querySelectorAll('#cats .cat-move').length;
+  document.getElementById('reorderBtn').click(); await wait(200);
+  const arrows=document.querySelectorAll('#cats .cat-move').length;
+  const assignFrozen=(()=>{ const e=document.querySelector('.cat.reordering .cat-assign');
+    return e ? getComputedStyle(e).display==='none' : false; })();
+  /* the names must stay READABLE - the arrows took width and squeezed a
+     subcategory down to "E..." until the editing controls collapsed instead */
+  const subNames=[...document.querySelectorAll('.subrow.reordering .sub-name')]
+    .map(e=>({full:e.textContent.trim(), w:e.getBoundingClientRect().width,
+              clipped:e.scrollWidth>e.clientWidth+1}));
+  // Roof is third: two moves up puts it first
+  document.querySelector('[data-moveup="roof"]').click(); await wait(120);
+  document.querySelector('[data-moveup="roof"]').click(); await wait(120);
+  const after=topCats().map(c=>c.name);
+  // a sub moves inside its parent and cannot escape it
+  document.querySelector('[data-movedn="groc"]').click(); await wait(120);
+  const subs=childrenOf('food').map(c=>c.name);
+  const stillTop=topCats().map(c=>c.name);
+  // the ends are dead ends
+  const firstUp=document.querySelector('#cats .cat .cm-b[data-moveup]').disabled;
+  const downs=[...document.querySelectorAll('#cats .cat .cm-b[data-movedn]')];
+  const lastDown=downs[downs.length-1].disabled;
+  document.getElementById('reorderBtn').click(); await wait(150);
+  return { before, after, subs, stillTop, noArrows, arrows, assignFrozen, subNames, firstUp, lastDown,
+           gone:document.querySelectorAll('#cats .cat-move').length };
+});
+check('reorder is a mode, off by default', reorder.noArrows===0 && reorder.arrows>0, `${reorder.noArrows} -> ${reorder.arrows}`);
+check('...and the editing controls step aside while you move things', reorder.assignFrozen===true);
+check('...leaving the names readable, not truncated to one letter',
+      reorder.subNames.length>0 && reorder.subNames.every(n=>!n.clipped && n.full.length>3),
+      reorder.subNames.map(n=>`"${n.full}" ${Math.round(n.w)}px${n.clipped?' CLIPPED':''}`).join(' | '));
+check('moving a category up actually moves it',
+      reorder.after[0]==='Roof' && reorder.before[0]==='Fun', `${reorder.before.join(',')} -> ${reorder.after.join(',')}`);
+check('a subcategory reorders inside its parent', reorder.subs[0]==='Eating out', reorder.subs.join(','));
+check('...and cannot escape it into the top level', reorder.stillTop.length===4 && !reorder.stillTop.includes('Groceries'), reorder.stillTop.join(','));
+check('the first row cannot go up', reorder.firstUp===true);
+check('the last row cannot go down', reorder.lastDown===true);
+check('"Done" puts the arrows away', reorder.gone===0);
+
+/* the order has to survive a reload, or it was never really theirs */
+await p.reload(); await p.waitForTimeout(900);
+const persisted = await p.evaluate(()=>({tops:topCats().map(c=>c.name), subs:childrenOf('food').map(c=>c.name)}));
+check('the order survives a reload', persisted.tops[0]==='Roof' && persisted.subs[0]==='Eating out',
+      persisted.tops.join(',')+' / '+persisted.subs.join(','));
+
+/* and every OTHER list of categories must agree - a picker still in creation
+   order means the app disagrees with the user about their own arrangement */
+const agrees = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await wait(200);
+  const picker=[...document.querySelectorAll('#txCat option')].map(o=>o.textContent.trim()).filter(Boolean);
+  const plan=topCats().map(c=>c.name);
+  return { picker, plan, firstPicker:picker[0], firstPlan:plan[0] };
+});
+check('the transaction picker follows the plan order', agrees.firstPicker===agrees.firstPlan,
+      `picker starts "${agrees.firstPicker}", plan starts "${agrees.firstPlan}"`);
+
+/* an existing budget must not get shuffled by the feature arriving */
+await seed({...ORDERED, categories:ORDERED.categories.map(c=>{const {sort,...rest}=c; return rest;})});
+await p.reload(); await p.waitForTimeout(900);
+check('a budget from before this feature keeps the order it had',
+      (await p.evaluate(()=>topCats().map(c=>c.name).join(',')))==='Fun,Food,Roof,Getting Around');
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
