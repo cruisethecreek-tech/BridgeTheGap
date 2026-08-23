@@ -215,6 +215,23 @@ first, sits at the top, and no two share a description; dismissal is per area,
 survives reload, can be turned off wholesale and replayed) and the **map** (lists
 every area, counts how many you have used, marks used ones done, and navigates).
 
+It also holds **category reordering**, which is a drag now rather than two arrow
+buttons. These are real pointer events driven through Playwright's mouse, not
+functions called directly, so the threshold, the drop index and the commit all
+get exercised: the grip owns the gesture (`touch-action:none`) instead of the
+page scroller, a ghost and a drop line appear once you move, a category dragged
+above the list lands first, a subcategory dragged hard past the top of the screen
+stays inside its parent, a drag that goes nowhere renumbers nothing, **Escape**
+abandons one and clears the ghost, the arrow keys still move a row without a
+mouse, and leaving the mode leaves no ghost, line or greyed row behind. The
+section runs at a 2,400px viewport so the test is about dragging rather than
+about auto-scrolling; real phones get the auto-scroll.
+
+And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
+keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
+rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
+close button to `y=-115`.
+
 It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.

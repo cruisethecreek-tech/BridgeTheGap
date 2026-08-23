@@ -224,16 +224,32 @@
   .rep.on .rep-t span{background:rgba(var(--good-rgb),.16);border-color:rgba(var(--good-rgb),.5);color:var(--good)}
   .rep-t input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
   .rep-f{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:6px 4px;font:inherit;font-size:11.5px;max-width:112px}
-  .cat-move{display:inline-flex;gap:3px;flex-shrink:0;margin-right:2px}
-  .cm-b{background:var(--panel-2);border:1px solid var(--line);color:var(--accent);border-radius:8px;width:30px;height:30px;font-size:14px;line-height:1;cursor:pointer;padding:0}
-  .cm-b:hover:not([disabled]){border-color:var(--accent)}
-  .cm-b[disabled]{opacity:.3;cursor:default;color:var(--muted)}
+  /* One grip, dragged, instead of two arrows tapped. Arrows made you count taps
+     to move a category down eleven rows, and each tap re-rendered the list under
+     your thumb. HTML5 drag-and-drop is not an option - it does not fire on touch
+     at all - so this is pointer events: touch, mouse and stylus through one path.
+     touch-action:none on the grip is what stops the browser claiming the gesture
+     as a page scroll, which is why the handle is a handle and not the whole row:
+     the row still has to scroll normally under a finger that is not on the grip.
+     The grip is still a real button, so arrow keys move it too - drag is the
+     preferred way, not the only way, and a screen reader keeps a path. */
+  .cat-grip{background:var(--panel-2);border:1px solid var(--line);color:var(--accent);border-radius:9px;width:34px;height:34px;font-size:15px;line-height:1;cursor:grab;padding:0;flex-shrink:0;margin-right:4px;touch-action:none;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
+  .cat-grip:hover{border-color:var(--accent)}
+  .cat-grip:active,.cat-grip.held{cursor:grabbing;background:rgba(var(--accent-rgb),.16);border-color:var(--accent)}
+  .cat-grip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* the row you picked up stays in place, greyed, so the list never jumps while
+     your finger is still deciding - the ghost and the line show the outcome */
+  .drag-src{opacity:.34}
+  .drag-ghost{position:fixed;z-index:140;pointer-events:none;background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:12px;padding:9px 14px;font-weight:800;font-size:14.5px;box-shadow:0 12px 32px rgba(0,0,0,.45);max-width:74vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transform:translate(-14px,-50%)}
+  .drag-line{position:fixed;z-index:139;pointer-events:none;height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.22)}
+  body.dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
   /* In reorder mode the editing controls GO, rather than dimming. Dimming still
-     costs the width, and on a subcategory row the arrows plus a greyed-out amount
+     costs the width, and on a subcategory row the grip plus a greyed-out amount
      squeezed the name down to "E..." and "G..." - you cannot choose what to move
      if you cannot read what it is. Collapsing them frees the row, and removes
-     the mis-tap risk outright instead of relying on pointer-events. The figures
-     are still on the line underneath ("Spent $0 of $1,250", "$80 spent"). */
+     the mis-tap risk outright instead of relying on pointer-events. It also
+     means a drag can never land on an amount field. The figures are still on
+     the line underneath ("Spent $0 of $1,250", "$80 spent"). */
   .cat.reordering .cat-assign,.cat.reordering .btn.danger,.cat.reordering .mini-edit,
   .cat.reordering .assign-now,.cat.reordering .addsub-first,.cat.reordering .addsub-row,
   .subrow.reordering .sub-assign,.subrow.reordering .btn.danger,.subrow.reordering .sub-split-btn,
@@ -3665,7 +3681,7 @@ document.getElementById('reorderBtn').addEventListener('click',()=>{
   b.classList.toggle('primary',catReorder);
   if(catReorder) collapsedCats.clear();   // you cannot move what you cannot see
   renderBudget();
-  if(catReorder && typeof toast==='function') toast('Move anything with the arrows. Subs stay inside their group.');
+  if(catReorder && typeof toast==='function') toast('Drag anything by its ⠿ grip. Subs stay inside their group.');
 });
 document.getElementById('mergeBtn').addEventListener('click',()=>{
   const n=mergeDuplicates();
@@ -3775,13 +3791,139 @@ function wireRepeat(box){
     if(typeof toast==='function') toast(`Now ${recFreqMeta(r).short} - about ${money(recMonthly(r))} a month.`);
   }));
 }
-function reorderCtrlHTML(id, first, last){
+function reorderCtrlHTML(id){
   if(!catReorder) return '';
-  return `<span class="cat-move"><button class="cm-b" data-moveup="${id}"${first?' disabled':''} aria-label="Move up">↑</button><button class="cm-b" data-movedn="${id}"${last?' disabled':''} aria-label="Move down">↓</button></span>`;
+  const n=catName(id)||'this category';
+  return `<button class="cat-grip" data-grip="${id}" aria-label="Drag to move ${escapeHtml(n)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`;
+}
+/* ---- dragging a category into place ----------------------------------------
+   Rows are NOT shuffled in the DOM while a finger is down. The source stays put
+   and greys out; a small ghost follows the pointer and a line shows where the
+   row will land. Only on release does anything change, and then it is one
+   renderBudget() from committed state. Shuffling live looked tempting and is
+   where the bugs are: the plan is a flat list holding three nesting levels plus
+   split notes and add-rows, so "move this element" means "move this element and
+   the four unrelated-looking ones that belong to it". Reading rects and writing
+   one sort order at the end avoids all of it.
+   A drag is confined to the row's own siblings, so a subcategory can be
+   reordered among its brothers and can never be dropped into the top level -
+   a sub outranking a category is not a thing anyone means. ---------------- */
+let drag=null;
+/* Escape puts it back. A drag you cannot abandon is a drag you hesitate to
+   start, and the pointer is still down at that moment, so this marks the drag
+   dead and lets the release do the tidying rather than tearing state out from
+   under the handler that is still running. */
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape' || !drag) return;
+  e.preventDefault();
+  drag.cancelled=true; drag.idx=null;
+  if(drag.ghost) drag.ghost.style.display='none';
+  if(drag.line) drag.line.style.display='none';
+  if(drag.src) drag.src.classList.remove('drag-src');
+});
+function dragSiblings(parentId){
+  return [...document.querySelectorAll('#cats [data-row][data-lvl="'+(parentId||'')+'"]')];
+}
+function dragCleanup(commitIdx){
+  if(!drag) return;
+  const d=drag; drag=null;
+  if(d.raf) cancelAnimationFrame(d.raf);
+  if(d.ghost) d.ghost.remove();
+  if(d.line) d.line.remove();
+  if(d.src) d.src.classList.remove('drag-src');
+  if(d.grip) d.grip.classList.remove('held');
+  document.body.classList.remove('dragging');
+  if(commitIdx!=null && moveCatTo(d.id, commitIdx)){
+    renderBudget();
+    const g=document.querySelector('[data-grip="'+d.id+'"]'); if(g) g.focus();
+    if(typeof toast==='function') toast(`${catName(d.id)} moved to ${ordinalWord(commitIdx+1)}.`);
+  } else if(d.grip && d.moved===false){
+    d.grip.focus();
+  }
+}
+function ordinalWord(n){
+  return ['first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth'][n-1] || ('position '+n);
+}
+/* where would the row land if it were dropped at this y? An index into the
+   siblings WITHOUT the dragged one, which is exactly what moveCatTo takes. */
+function dropIndexAt(y){
+  const others=drag.sibs.filter(el=>el!==drag.src);
+  for(let i=0;i<others.length;i++){
+    const r=others[i].getBoundingClientRect();
+    if(y < r.top + r.height/2) return i;
+  }
+  return others.length;
+}
+function paintDropLine(idx){
+  const others=drag.sibs.filter(el=>el!==drag.src);
+  const ref=others[Math.min(idx,others.length-1)];
+  if(!ref) return;
+  const r=ref.getBoundingClientRect();
+  drag.line.style.left=r.left+'px';
+  drag.line.style.width=r.width+'px';
+  drag.line.style.top=((idx>=others.length ? r.bottom : r.top)-1.5)+'px';
+}
+/* a long list has to keep moving when the finger reaches the edge of the glass,
+   or you can only ever drop something you can already see */
+function dragAutoScroll(){
+  if(!drag) return;
+  const y=drag.y, edge=96, vh=innerHeight;
+  let dy=0;
+  if(y<edge) dy=-Math.ceil((edge-y)/6);
+  else if(y>vh-edge) dy=Math.ceil((y-(vh-edge))/6);
+  if(dy){ scrollBy(0,dy); paintDropLine(dropIndexAt(y)); }
+  drag.raf=requestAnimationFrame(dragAutoScroll);
 }
 function wireReorder(box){
-  box.querySelectorAll('[data-moveup]').forEach(b=>b.onclick=()=>{ if(moveCat(b.dataset.moveup,-1)) renderBudget(); });
-  box.querySelectorAll('[data-movedn]').forEach(b=>b.onclick=()=>{ if(moveCat(b.dataset.movedn,1)) renderBudget(); });
+  box.querySelectorAll('[data-grip]').forEach(g=>{
+    g.addEventListener('keydown',e=>{
+      const dir = e.key==='ArrowUp'?-1 : (e.key==='ArrowDown'?1:0);
+      if(!dir) return;
+      e.preventDefault();
+      if(!moveCat(g.dataset.grip,dir)) return;
+      const id=g.dataset.grip;
+      renderBudget();
+      const again=document.querySelector('[data-grip="'+id+'"]'); if(again) again.focus();
+    });
+    g.addEventListener('pointerdown',e=>{
+      if(e.button!=null && e.button!==0) return;
+      const id=g.dataset.grip;
+      const src=g.closest('[data-row]'); if(!src) return;
+      e.preventDefault();
+      try{ g.setPointerCapture(e.pointerId); }catch(_){}
+      drag={ id, grip:g, src, pid:src.dataset.lvl||'', pointerId:e.pointerId,
+             sibs:dragSiblings(src.dataset.lvl||''), startY:e.clientY, y:e.clientY,
+             moved:false, ghost:null, line:null, raf:0, idx:null };
+    });
+    g.addEventListener('pointermove',e=>{
+      if(!drag || drag.pointerId!==e.pointerId) return;
+      drag.y=e.clientY;
+      if(!drag.moved){
+        if(Math.abs(e.clientY-drag.startY)<6) return;   // a tap is not a drag
+        drag.moved=true;
+        drag.src.classList.add('drag-src');
+        drag.grip.classList.add('held');
+        document.body.classList.add('dragging');
+        drag.ghost=document.createElement('div');
+        drag.ghost.className='drag-ghost';
+        drag.ghost.textContent=catName(drag.id)||'Category';
+        drag.line=document.createElement('div');
+        drag.line.className='drag-line';
+        document.body.appendChild(drag.ghost); document.body.appendChild(drag.line);
+        drag.raf=requestAnimationFrame(dragAutoScroll);
+      }
+      drag.ghost.style.left=e.clientX+'px';
+      drag.ghost.style.top=e.clientY+'px';
+      drag.idx=dropIndexAt(e.clientY);
+      paintDropLine(drag.idx);
+    });
+    const end=e=>{
+      if(!drag || drag.pointerId!==e.pointerId) return;
+      dragCleanup(drag.cancelled ? null : (drag.moved ? drag.idx : null));
+    };
+    g.addEventListener('pointerup',end);
+    g.addEventListener('pointercancel',()=>{ if(drag){ drag.idx=null; dragCleanup(null); } });
+  });
 }
 let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
 let catEditId=null;        // top category currently being renamed (rename keeps transactions attached, unlike delete)
@@ -3809,6 +3951,16 @@ function topCats(){ return catOrder(state.categories.filter(c=>!c.parentId)); }
 /* Move one category within its own level. Subcategories reorder inside their
    parent and can never escape it - a sub outranking a top-level category is not
    a thing anyone means. Renumbers the whole level so the values stay dense. */
+function moveCatTo(id, idx){
+  const c=state.categories.find(x=>x.id===id); if(!c) return false;
+  const sibs=c.parentId?childrenOf(c.parentId):topCats();
+  const i=sibs.findIndex(x=>x.id===id); if(i<0) return false;
+  const rest=sibs.slice(); rest.splice(i,1);
+  rest.splice(Math.max(0,Math.min(rest.length,idx)),0,c);
+  if(rest.every((x,k)=>x.id===sibs[k].id)) return false;   // dropped back where it started
+  rest.forEach((x,k)=>{ x.sort=k; });
+  save(); return true;
+}
 function moveCat(id,dir){
   const c=state.categories.find(x=>x.id===id); if(!c) return false;
   const sibs=c.parentId?childrenOf(c.parentId):topCats();
@@ -4150,9 +4302,9 @@ function renderBudget(){
         const gkids=childrenOf(k.id), kGroup=gkids.length>0;
         const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
         const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
-        let h=`<div class="subrow${catReorder?' reordering':''}">${reorderCtrlHTML(k.id, ki===0, ki===kids.length-1)}<span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span>${kGroup?'':repeatCtrlHTML(k.id)}<span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        let h=`<div class="subrow${catReorder?' reordering':''}" data-row="${k.id}" data-lvl="${c.id}">${reorderCtrlHTML(k.id)}<span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span>${kGroup?'':repeatCtrlHTML(k.id)}<span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
         if(kGroup){
-          h+=gkids.map((g,gi)=>`<div class="subrow subsub${catReorder?' reordering':''}">${reorderCtrlHTML(g.id, gi===0, gi===gkids.length-1)}<span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span>${repeatCtrlHTML(g.id)}<span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
+          h+=gkids.map(g=>`<div class="subrow subsub${catReorder?' reordering':''}" data-row="${g.id}" data-lvl="${k.id}">${reorderCtrlHTML(g.id)}<span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span>${repeatCtrlHTML(g.id)}<span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
           h+=splitNoteHTML(k.id,M,k.name);
         }
         if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
@@ -4162,9 +4314,9 @@ function renderBudget(){
       const addSub = showAddRow
         ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋ Add</button></div>`
         : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
-      return `<div class="cat ${over?'overspent':''}${catReorder?' reordering':''}">
+      return `<div class="cat ${over?'overspent':''}${catReorder?' reordering':''}" data-row="${c.id}" data-lvl="">
         <div class="cat-top">
-          ${reorderCtrlHTML(c.id, ti===0, ti===tops.length-1)}
+          ${reorderCtrlHTML(c.id)}
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
           ${c.id===catEditId
             ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`

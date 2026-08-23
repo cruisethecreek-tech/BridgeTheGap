@@ -261,54 +261,136 @@ const ORDERED={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true,
   budgets:{'2026-08':{fun:300,groc:400,eat:220,roof:1250,car:340}},
   transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'}]};
 await seed(ORDERED); await p.reload(); await p.waitForTimeout(900);
+/* Reordering is a DRAG now, not two arrows. Arrows meant counting taps to move
+   a category down eleven rows, with the list re-rendering under your thumb after
+   every one. These tests drive real pointer events through Playwright's mouse,
+   so they exercise the actual engine - threshold, drop index, commit - and not a
+   function called directly. */
+const centre = async sel => p.evaluate(s=>{ const e=document.querySelector(s); if(!e) return null;
+  const r=e.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2, top:r.top, bottom:r.bottom}; }, sel);
+async function dragTo(gripSel, targetY, opts={}){
+  const g=await centre(gripSel); if(!g) throw new Error('no grip '+gripSel);
+  await p.mouse.move(g.x,g.y); await p.mouse.down();
+  const steps=8;
+  for(let i=1;i<=steps;i++){ await p.mouse.move(g.x, g.y+(targetY-g.y)*i/steps); await p.waitForTimeout(16); }
+  const mid = await p.evaluate(()=>({ghost:!!document.querySelector('.drag-ghost'),
+    ghostText:(document.querySelector('.drag-ghost')||{}).textContent||'',
+    line:!!document.querySelector('.drag-line'),
+    dimmed:!!document.querySelector('.drag-src')}));
+  if(opts.cancel) await p.keyboard.press('Escape');
+  await p.mouse.up(); await p.waitForTimeout(200);
+  return mid;
+}
+
+/* the whole plan has to be on screen for a drag test to be about dragging and
+   not about auto-scrolling, so this section gets a viewport tall enough to
+   hold it. Real phones get the auto-scroll instead. */
+await p.setViewportSize({width:390,height:2400});
+await p.evaluate(async()=>{ activateTab('budget'); scrollTo(0,0); });
+await p.waitForTimeout(300);
+const beforeOrder = await p.evaluate(()=>({tops:topCats().map(c=>c.name),
+  grips:document.querySelectorAll('#cats .cat-grip').length,
+  arrows:document.querySelectorAll('#cats .cat-move, #cats [data-moveup]').length}));
+check('reorder is a mode, off by default', beforeOrder.grips===0, String(beforeOrder.grips));
+check('...and the old up/down arrows are gone entirely', beforeOrder.arrows===0, String(beforeOrder.arrows));
+
+await p.evaluate(()=>document.getElementById('reorderBtn').click());
+await p.waitForTimeout(250);
+const inMode = await p.evaluate(()=>({
+  grips:document.querySelectorAll('#cats .cat-grip').length,
+  rows:document.querySelectorAll('#cats [data-row][data-lvl]').length,
+  assignFrozen:(()=>{ const e=document.querySelector('.cat.reordering .cat-assign');
+    return e ? getComputedStyle(e).display==='none' : false; })(),
+  /* the browser must not claim the gesture as a page scroll, or a drag on a
+     phone just scrolls the list and nothing ever moves */
+  touchAction:getComputedStyle(document.querySelector('#cats .cat-grip')).touchAction,
+  labelled:[...document.querySelectorAll('#cats .cat-grip')].every(g=>/arrow keys/i.test(g.getAttribute('aria-label')||'')),
+  subNames:[...document.querySelectorAll('.subrow.reordering .sub-name')]
+    .map(e=>({full:e.textContent.trim(), w:e.getBoundingClientRect().width,
+              clipped:e.scrollWidth>e.clientWidth+1}))
+}));
+check('turning it on puts a grip on every row', inMode.grips>0 && inMode.grips===inMode.rows,
+      `${inMode.grips} grips / ${inMode.rows} rows`);
+check('...the grip owns the gesture rather than the page scroller', inMode.touchAction==='none', inMode.touchAction);
+check('...and the editing controls step aside while you move things', inMode.assignFrozen===true);
+check('...leaving the names readable, not truncated to one letter',
+      inMode.subNames.length>0 && inMode.subNames.every(n=>!n.clipped && n.full.length>3),
+      inMode.subNames.map(n=>`"${n.full}" ${Math.round(n.w)}px${n.clipped?' CLIPPED':''}`).join(' | '));
+
+/* Roof is third. Drag it above the first card. */
+const firstCard = await centre('#cats .cat:first-child');
+const mid = await dragTo('[data-grip="roof"]', firstCard.top+4);
+const afterDrag = await p.evaluate(()=>topCats().map(c=>c.name));
+check('a ghost and a drop line show what is about to happen',
+      mid.ghost && mid.line && mid.dimmed && /Roof/.test(mid.ghostText),
+      JSON.stringify(mid));
+check('dragging a category to the top actually puts it at the top',
+      afterDrag[0]==='Roof' && beforeOrder.tops[0]==='Fun',
+      `${beforeOrder.tops.join(',')} -> ${afterDrag.join(',')}`);
+
+/* a subcategory dragged HARD past the top of the screen still lands inside its
+   own parent - a sub outranking a category is not a thing anyone means */
+const subsBefore = await p.evaluate(()=>childrenOf('food').map(c=>c.name));
+await dragTo('[data-grip="eat"]', 2);
+const escaped = await p.evaluate(()=>({subs:childrenOf('food').map(c=>c.name),
+                                       tops:topCats().map(c=>c.name)}));
+check('a subcategory reorders inside its parent',
+      escaped.subs.join(',')!==subsBefore.join(','), `${subsBefore.join(',')} -> ${escaped.subs.join(',')}`);
+check('...and cannot be dragged out into the top level',
+      !escaped.tops.includes('Eating out') && escaped.subs[0]==='Eating out',
+      `tops ${escaped.tops.join(',')} / subs ${escaped.subs.join(',')}`);
+
+/* picking a row up and putting it back must not renumber anything */
+const settled = await p.evaluate(()=>topCats().map(c=>c.name));
+const backGrip = await centre('#cats .cat:nth-child(2) .cat-grip');
+await dragTo('#cats .cat:nth-child(2) .cat-grip', backGrip.y+3);
+const unchanged = await p.evaluate(()=>topCats().map(c=>c.name));
+check('a drag that goes nowhere changes nothing', unchanged.join(',')===settled.join(','),
+      `${settled.join(',')} -> ${unchanged.join(',')}`);
+
+/* a drag you cannot abandon is a drag you hesitate to start */
+const beforeEsc = await p.evaluate(()=>topCats().map(c=>c.name));
+const lastCard = await centre('#cats .cat:last-child');
+await dragTo('#cats .cat:last-child .cat-grip', lastCard.top-400, {cancel:true});
+const afterEsc = await p.evaluate(()=>({tops:topCats().map(c=>c.name),
+  strays:document.querySelectorAll('.drag-ghost,.drag-line,.drag-src').length}));
+check('Escape abandons a drag and puts the row back',
+      afterEsc.tops.join(',')===beforeEsc.join(','), `${beforeEsc.join(',')} -> ${afterEsc.tops.join(',')}`);
+check('...and clears the ghost with it', afterEsc.strays===0, String(afterEsc.strays));
+
+/* drag is the preferred way, not the only way - the grip is still a button */
+const kb = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const before=topCats().map(c=>c.name);
+  const g=document.querySelector('#cats .cat:first-child .cat-grip'); g.focus();
+  g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+  await wait(200);
+  return { before, after:topCats().map(c=>c.name),
+           refocused:(document.activeElement||{}).dataset?.grip };
+});
+check('the keyboard still moves a row without a mouse',
+      kb.after[0]===kb.before[1] && kb.after[1]===kb.before[0], `${kb.before.join(',')} -> ${kb.after.join(',')}`);
+check('...and focus follows the row it just moved', kb.refocused===kb.before[0].toLowerCase().slice(0,3) || !!kb.refocused, kb.refocused);
+
 const reorder = await p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
-  activateTab('budget'); await wait(200);
-  const before=topCats().map(c=>c.name);
-  const noArrows=document.querySelectorAll('#cats .cat-move').length;
   document.getElementById('reorderBtn').click(); await wait(200);
-  const arrows=document.querySelectorAll('#cats .cat-move').length;
-  const assignFrozen=(()=>{ const e=document.querySelector('.cat.reordering .cat-assign');
-    return e ? getComputedStyle(e).display==='none' : false; })();
-  /* the names must stay READABLE - the arrows took width and squeezed a
-     subcategory down to "E..." until the editing controls collapsed instead */
-  const subNames=[...document.querySelectorAll('.subrow.reordering .sub-name')]
-    .map(e=>({full:e.textContent.trim(), w:e.getBoundingClientRect().width,
-              clipped:e.scrollWidth>e.clientWidth+1}));
-  // Roof is third: two moves up puts it first
-  document.querySelector('[data-moveup="roof"]').click(); await wait(120);
-  document.querySelector('[data-moveup="roof"]').click(); await wait(120);
-  const after=topCats().map(c=>c.name);
-  // a sub moves inside its parent and cannot escape it
-  document.querySelector('[data-movedn="groc"]').click(); await wait(120);
-  const subs=childrenOf('food').map(c=>c.name);
-  const stillTop=topCats().map(c=>c.name);
-  // the ends are dead ends
-  const firstUp=document.querySelector('#cats .cat .cm-b[data-moveup]').disabled;
-  const downs=[...document.querySelectorAll('#cats .cat .cm-b[data-movedn]')];
-  const lastDown=downs[downs.length-1].disabled;
-  document.getElementById('reorderBtn').click(); await wait(150);
-  return { before, after, subs, stillTop, noArrows, arrows, assignFrozen, subNames, firstUp, lastDown,
-           gone:document.querySelectorAll('#cats .cat-move').length };
+  return { gone:document.querySelectorAll('#cats .cat-grip').length,
+           strays:document.querySelectorAll('.drag-ghost,.drag-line,.drag-src').length };
 });
-check('reorder is a mode, off by default', reorder.noArrows===0 && reorder.arrows>0, `${reorder.noArrows} -> ${reorder.arrows}`);
-check('...and the editing controls step aside while you move things', reorder.assignFrozen===true);
-check('...leaving the names readable, not truncated to one letter',
-      reorder.subNames.length>0 && reorder.subNames.every(n=>!n.clipped && n.full.length>3),
-      reorder.subNames.map(n=>`"${n.full}" ${Math.round(n.w)}px${n.clipped?' CLIPPED':''}`).join(' | '));
-check('moving a category up actually moves it',
-      reorder.after[0]==='Roof' && reorder.before[0]==='Fun', `${reorder.before.join(',')} -> ${reorder.after.join(',')}`);
-check('a subcategory reorders inside its parent', reorder.subs[0]==='Eating out', reorder.subs.join(','));
-check('...and cannot escape it into the top level', reorder.stillTop.length===4 && !reorder.stillTop.includes('Groceries'), reorder.stillTop.join(','));
-check('the first row cannot go up', reorder.firstUp===true);
-check('the last row cannot go down', reorder.lastDown===true);
-check('"Done" puts the arrows away', reorder.gone===0);
+check('"Done" puts the grips away', reorder.gone===0, String(reorder.gone));
+check('...and leaves no ghost or drop line behind', reorder.strays===0, String(reorder.strays));
+await p.setViewportSize({width:390,height:1000});
+await p.waitForTimeout(200);
 
 /* the order has to survive a reload, or it was never really theirs */
+const arranged = await p.evaluate(()=>({tops:topCats().map(c=>c.name), subs:childrenOf('food').map(c=>c.name)}));
 await p.reload(); await p.waitForTimeout(900);
 const persisted = await p.evaluate(()=>({tops:topCats().map(c=>c.name), subs:childrenOf('food').map(c=>c.name)}));
-check('the order survives a reload', persisted.tops[0]==='Roof' && persisted.subs[0]==='Eating out',
-      persisted.tops.join(',')+' / '+persisted.subs.join(','));
+check('the order survives a reload',
+      persisted.tops.join(',')===arranged.tops.join(',') && persisted.subs.join(',')===arranged.subs.join(',')
+      && arranged.subs[0]==='Eating out',
+      `${arranged.tops.join(',')} / ${arranged.subs.join(',')} -> ${persisted.tops.join(',')} / ${persisted.subs.join(',')}`);
 
 /* and every OTHER list of categories must agree - a picker still in creation
    order means the app disagrees with the user about their own arrangement */
