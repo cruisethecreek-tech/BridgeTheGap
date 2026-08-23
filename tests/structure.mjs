@@ -619,6 +619,90 @@ check('...while an ordinary category still logs as an expense', growth.afterOrdi
 check('the intake sorts each on-purpose row to its own kind',
       growth.kinds.join(',')==='invest,save,debt', growth.kinds.join(','));
 
+/* ---- 17. the multi-line log guesses the category instead of claiming one ----
+   Every row's dropdown defaulted to whichever category happened to be first, so
+   a notepad full of coffees logged itself as "Rent / mortgage" unless you fixed
+   each line by hand. A wrong confident default is worse than none, because it
+   looks decided. ---- */
+const GUESS={...EMPTY, uiMode:'all', stageReached:3,
+  categories:[{id:'rent',name:'Rent / mortgage'},{id:'food',name:'Food'},
+              {id:'groc',name:'Groceries',parentId:'food'},{id:'eat',name:'Eating out',parentId:'food'},
+              {id:'cof',name:'Coffee / drinks out'},{id:'gas',name:'Getting Around'},
+              {id:'sub',name:'Subscriptions / streaming'}],
+  budgets:{'2026-08':{rent:850,groc:400,eat:200,cof:60,gas:150,sub:40}},
+  transactions:[{id:'h1',type:'expense',amount:14,catId:'eat',date:'2026-08-02',note:'Marios pizza'},
+                {id:'h2',type:'expense',amount:14,catId:'eat',date:'2026-08-09',note:'Marios pizza'}],
+  recurring:[{id:'r',type:'expense',amount:40,catId:'sub',freq:'monthly',anchor:'2026-08-01',name:'Netflix'}]};
+await seed(GUESS); await p.reload(); await p.waitForTimeout(900);
+const guess = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await wait(300);
+  quickLogOpen=true; renderQuickLog(); await wait(300);
+  const row=document.querySelector('#quickLog .ql-row');
+  const cat=row.querySelector('.ql-cat'), what=row.querySelector('.ql-what');
+  const start={ value:cat.value, label:cat.selectedOptions[0].textContent };
+  const type=async t=>{ what.value=t; what.dispatchEvent(new Event('input',{bubbles:true})); await wait(70);
+    return { cat:cat.value?catName(cat.value):'', marked:cat.classList.contains('guessed') }; };
+  const out={ start, g:{} };
+  for(const t of ['Starbucks','Marios pizza','walmart','netflix','uber','rent','xyzzy qwerty'])
+    out.g[t]=await type(t);
+  // a correction is permanent - more typing must never overwrite it
+  cat.value='groc'; cat.dispatchEvent(new Event('change',{bubbles:true})); await wait(70);
+  what.value='Starbucks latte'; what.dispatchEvent(new Event('input',{bubbles:true})); await wait(90);
+  out.afterCorrection=catName(cat.value);
+  out.markCleared=!cat.classList.contains('guessed');
+  return out;
+});
+check('a row starts with no category rather than claiming the first one',
+      guess.start.value==='' && /which category/i.test(guess.start.label),
+      `"${guess.start.label}"`);
+check('...and typing what it was fills the category in',
+      guess.g['Starbucks'].cat==='Coffee / drinks out' && guess.g['Starbucks'].marked,
+      JSON.stringify(guess.g['Starbucks']));
+check('it learns from what you logged before, not just a word list',
+      guess.g['Marios pizza'].cat==='Food › Eating out', guess.g['Marios pizza'].cat);
+check('...from a bill you already said repeats',
+      guess.g['netflix'].cat==='Subscriptions / streaming', guess.g['netflix'].cat);
+check('...and from the category names themselves',
+      guess.g['rent'].cat==='Rent / mortgage' && guess.g['uber'].cat==='Getting Around',
+      `${guess.g['rent'].cat} / ${guess.g['uber'].cat}`);
+check('a guess can land on a subcategory, which is the more specific home',
+      guess.g['walmart'].cat==='Food › Groceries', guess.g['walmart'].cat);
+check('it guesses nothing rather than guessing wrong', guess.g['xyzzy qwerty'].cat==='',
+      guess.g['xyzzy qwerty'].cat);
+check('a guess is marked as a guess, not shown as a decision',
+      Object.values(guess.g).filter(x=>x.cat).every(x=>x.marked));
+check('correcting one is permanent - more typing never overwrites it',
+      guess.afterCorrection==='Food › Groceries' && guess.markCleared, guess.afterCorrection);
+
+/* and what it could not guess is logged honestly, not filed under whatever was
+   first - the toast says how many need a home */
+const logged = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  quickLogOpen=false; renderQuickLog(); await wait(150);
+  quickLogOpen=true; renderQuickLog(); await wait(250);
+  const fill=async(i,what,amt)=>{
+    let rows=[...document.querySelectorAll('#quickLog .ql-row')];
+    while(rows.length<=i){ document.getElementById('qlAdd').click(); await wait(70);
+      rows=[...document.querySelectorAll('#quickLog .ql-row')]; }
+    const r=rows[i], w=r.querySelector('.ql-what');
+    w.value=what; w.dispatchEvent(new Event('input',{bubbles:true}));
+    r.querySelector('.ql-amt').value=amt; await wait(70);
+  };
+  await fill(0,'Starbucks',6.4);
+  await fill(1,'zzz mystery thing',12);
+  document.getElementById('qlSave').click(); await wait(450);
+  const fresh=state.transactions.filter(t=>t.date===todayStr());
+  return { n:fresh.length,
+           guessed:fresh.filter(t=>t.catId).map(t=>catName(t.catId)),
+           uncat:fresh.filter(t=>!t.catId).length,
+           toast:(document.querySelector('.toast')||{}).textContent||'' };
+});
+check('a guessed row logs into the category it guessed',
+      logged.n===2 && logged.guessed.join(',')==='Coffee / drinks out', JSON.stringify(logged.guessed));
+check('...and one it could not guess lands as Uncategorized, said out loud',
+      logged.uncat===1 && /uncategorized/i.test(logged.toast), logged.toast);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

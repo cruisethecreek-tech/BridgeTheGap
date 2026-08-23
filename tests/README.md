@@ -278,6 +278,19 @@ faults on Goals, and every one was that.
 
 Verified by putting the original fault back: five of the six checks fail.
 
+It also walks every rendered text element in **both themes** and asks the only
+question that matters - can you read it? Anything under 1.6:1 against its
+effective background is not low contrast, it is invisible. `palette.mjs` checks
+token **pairs** and could never see the fault that prompted this: the Reorder
+button carries `.btn ghost primary`, `.ghost` is declared after `.primary` at
+the same specificity, so `.ghost` won the background while `.primary` still set
+the text to `--on-accent` - near-white on near-white. The fault is not in any
+pair, it is in which rule won on one live element.
+
+Note the limit honestly: the sweep visits each tab's **default** state, so it
+would not have caught that button either - it only turns invisible once pressed.
+Stateful controls need their own checks, and the pressed Reorder button has one.
+
 It found four more the same day it was written - a stat grid pushing a 320px
 page sideways because a grid item's default `min-width:auto` refused to let
 `$2,638.50` shrink, a category name leaning 9px onto `"Assign $"`, an impulse
