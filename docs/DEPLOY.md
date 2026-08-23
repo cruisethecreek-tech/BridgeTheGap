@@ -159,3 +159,26 @@ the new shell rather than a stale one.
   `no-cache`
 - `curl -sI https://accountability.money/ | grep -i x-content-type` returns
   `nosniff`
+
+## Refresh the outside numbers (every deploy)
+
+`app.html` carries a small baked table called `OUTSIDE` - CPI, food-at-home CPI,
+the national average savings APY and high-yield ballpark, the average new-card
+APR, and the fed funds rate, each with its as-of label. The app never fetches
+these (that is the point - "nothing leaves your device" stays absolute), so a
+deploy is when they update.
+
+Before deploying:
+1. Check the latest BLS CPI release (all items and food-at-home, 12-month), the
+   FDIC national savings average, a current new-card APR survey, and the Fed's
+   H.15 for the effective funds rate.
+2. Update the figures and their `asOf` labels in the `OUTSIDE` constant, and set
+   `OUTSIDE.built` to today.
+3. Run `node tests/structure.mjs` - section 22 asserts the cards still show
+   their dates and arithmetic.
+
+If a deploy ships without this step, nothing breaks: once `built` is more than
+240 days old the outside cards go quiet on their own and the report says the
+figures are too old to show as current. Stale-but-silent is the designed
+failure mode; stale-shown-as-current is the one this exists to prevent.
+
