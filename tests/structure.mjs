@@ -328,6 +328,82 @@ await p.reload(); await p.waitForTimeout(900);
 check('a budget from before this feature keeps the order it had',
       (await p.evaluate(()=>topCats().map(c=>c.name).join(',')))==='Fun,Food,Roof,Getting Around');
 
+/* ---- 13. repeats are set where you plan, not in a second form ----
+        Setting up a recurring bill meant leaving the category you were looking
+        at, scrolling to a separate section, and retyping its name, its amount
+        and its category - three facts already on screen. ---- */
+const REPEAT={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'roof',name:'Roof'},{id:'pow',name:'Power & Wi-Fi'},
+              {id:'elec',name:'Electric',parentId:'pow'},{id:'net',name:'Internet',parentId:'pow'},
+              {id:'fun',name:'Fun'}],
+  budgets:{'2026-08':{roof:1250,elec:120,net:80,fun:0}},
+  transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'}]};
+await seed(REPEAT); await p.reload(); await p.waitForTimeout(900);
+const rep = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(250);
+  const boxes=document.querySelectorAll('#cats [data-repeat]').length;
+  const onGroup=!!document.querySelector('#cats [data-repeat="pow"]');
+  const click=id=>{ const c=document.querySelector('[data-repeat="'+id+'"]'); c.checked=!c.checked; c.dispatchEvent(new Event('change',{bubbles:true})); };
+  click('roof'); await wait(200);
+  const afterTick=(state.recurring||[]).map(r=>({cat:r.catId, amt:r.amount, freq:r.freq}));
+  const freqOpts=[...document.querySelectorAll('[data-repfreq="roof"] option')].map(o=>o.value);
+  const sel=document.querySelector('[data-repfreq="roof"]'); sel.value='quarterly';
+  sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(200);
+  const afterFreq=(state.recurring||[]).map(r=>r.freq);
+  click('elec'); await wait(200);
+  const withSub=(state.recurring||[]).length;
+  // a zero-amount category cannot repeat nothing
+  click('fun'); await wait(250);
+  const zeroRefused=(state.recurring||[]).every(r=>r.catId!=='fun');
+  const zeroUnticked=!document.querySelector('[data-repeat="fun"]').checked;
+  click('elec'); await wait(200);
+  const afterUntick=(state.recurring||[]).length;
+  // names stay readable with the control on the row
+  const names=[...document.querySelectorAll('.subrow .sub-name')].map(e=>({n:e.textContent.trim(), clipped:e.scrollWidth>e.clientWidth+1}));
+  return { boxes, onGroup, afterTick, freqOpts, afterFreq, withSub, zeroRefused, zeroUnticked, afterUntick, names };
+});
+check('every leaf category carries a repeat toggle', rep.boxes===4, String(rep.boxes));
+check('...but a group does not - its subs carry the bills', rep.onGroup===false);
+check('ticking it creates the recurring item from the row',
+      rep.afterTick.length===1 && rep.afterTick[0].cat==='roof' && rep.afterTick[0].amt===1250 && rep.afterTick[0].freq==='monthly',
+      JSON.stringify(rep.afterTick));
+check('...offering weekly, biweekly, monthly and quarterly',
+      JSON.stringify(rep.freqOpts)===JSON.stringify(['weekly','biweekly','monthly','quarterly']), rep.freqOpts.join(','));
+check('...and the frequency sticks', rep.afterFreq[0]==='quarterly', rep.afterFreq.join(','));
+check('a subcategory can repeat on its own', rep.withSub===2, String(rep.withSub));
+check('a category with no amount cannot repeat nothing', rep.zeroRefused && rep.zeroUnticked,
+      `refused ${rep.zeroRefused}, unticked ${rep.zeroUnticked}`);
+check('unticking removes it', rep.afterUntick===1, String(rep.afterUntick));
+check('...and the name is still readable beside the control',
+      rep.names.length>0 && rep.names.every(n=>!n.clipped && n.n.length>3),
+      rep.names.map(n=>`"${n.n}"${n.clipped?' CLIPPED':''}`).join(' | '));
+
+/* it has to survive a reload and agree with the Recurring panel */
+await p.reload(); await p.waitForTimeout(900);
+const persistRep = await p.evaluate(async () => {
+  await new Promise(r=>setTimeout(r,150)); activateTab('budget');
+  await new Promise(r=>setTimeout(r,250));
+  return { n:(state.recurring||[]).length, freq:(state.recurring[0]||{}).freq,
+           ticked:document.querySelector('[data-repeat="roof"]').checked,
+           panel:(document.getElementById('recList')||{}).innerText||'' };
+});
+check('a row-set repeat survives a reload', persistRep.n===1 && persistRep.freq==='quarterly' && persistRep.ticked,
+      JSON.stringify({n:persistRep.n, freq:persistRep.freq, ticked:persistRep.ticked}));
+check('...and shows up in the Recurring panel as one item', /quarterly/.test(persistRep.panel), persistRep.panel.replace(/\n/g,' ').slice(0,90));
+
+/* ---- 14. the Recurring form stops asking for what it already knows ---- */
+const autofill = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const cat=document.getElementById('recCat'), amt=document.getElementById('recAmt');
+  amt.value=''; cat.value='net'; cat.dispatchEvent(new Event('change',{bubbles:true})); await wait(120);
+  const filled=amt.value;
+  amt.value='999'; cat.value='elec'; cat.dispatchEvent(new Event('change',{bubbles:true})); await wait(120);
+  return { filled, kept:amt.value };
+});
+check('picking a category fills the amount from what it is assigned', autofill.filled==='80', autofill.filled);
+check('...but never overwrites a figure someone typed', autofill.kept==='999', autofill.kept);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
