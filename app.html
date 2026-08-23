@@ -1112,6 +1112,9 @@
   .ql-row .ql-dol{display:inline-flex;align-items:center;gap:3px;color:var(--muted);font-weight:700}
   .ql-row .ql-amt{width:78px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 8px;font-size:14px}
   .ql-row .ql-cat{flex:1;min-width:110px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 8px;font-size:13px}
+  /* a guess should not look like a decision - it is marked until you confirm or
+     change it, and the mark clears the moment you touch the dropdown */
+  .ql-row .ql-cat.guessed{border-color:var(--accent);border-left-width:4px;background:rgba(var(--accent-rgb),.07)}
   .ql-row .ql-new{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--accent);color:var(--text);border-radius:9px;padding:9px 10px;font-size:13px}
   .ql-row .ql-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex:none}
   .ql-row .ql-del:hover{color:var(--bad)}
@@ -4822,8 +4825,92 @@ let quickLogOpen=false;
 /* full nested category list (matches the main form), plus an explicit Uncategorized
    home when the budget is empty - so a fresh user doesn't mint one category per coffee */
 function qlCatOptions(){
-  const cats=state.categories.length?categoryOptions():`<option value="">Uncategorized</option>`;
+  /* A leading placeholder so the browser cannot pre-select a real category. It
+     used to land on whichever one was first - "Rent / mortgage" for most people
+     - and every unreviewed line claimed to be rent. */
+  const cats=state.categories.length?`<option value="">Which category?</option>`+categoryOptions():`<option value="">Uncategorized</option>`;
   return cats+`<option value="__new">＋ New category…</option>`;
+}
+/* ---- guessing the category from what you typed -------------------------------
+   Every row's dropdown defaulted to whatever category happened to be first, so
+   a notepad full of coffees logged itself as rent unless you fixed each line by
+   hand - and a wrong confident default is worse than none, because it looks
+   decided. Rows now start on Uncategorized and the app EARNS the category.
+
+   Strongest evidence first, because the best guide to what someone means is
+   what they have done before:
+     1. their own past entries with the same description (a habit they repeat)
+     2. a bill they already told the app repeats, matched by name
+     3. the category and subcategory names themselves
+     4. common purchase vocabulary, and only ever pointed at a category that
+        already exists - this never invents one
+
+   It only fills a dropdown nobody has touched, so a correction always wins and
+   is never overwritten by more typing. ------------------------------------- */
+const HABIT_WORDS=[
+  {w:['coffee','latte','espresso','starbucks','dunkin','cafe','cappuccino'], c:['coffee','drinks out']},
+  {w:['doordash','ubereats','grubhub','takeout','delivery','takeaway'],      c:['takeout','delivery']},
+  {w:['mcdonalds','burger','fries','taco','kfc','wendys','chipotle'],        c:['fast food']},
+  {w:['restaurant','dinner','lunch','diner','bistro'],                       c:['dining','eating out','restaurant']},
+  {w:['grocery','groceries','supermarket','walmart','aldi','kroger','meijer','safeway','costco'], c:['grocer','food']},
+  {w:['gas','fuel','petrol','shell','chevron','exxon'],                      c:['gas','fuel','getting around','transport']},
+  {w:['uber','lyft','taxi','bus','train','transit','metro'],                 c:['rideshare','getting around','transport']},
+  {w:['amazon','ebay','shein','temu','etsy'],                                c:['online shopping','shopping']},
+  {w:['netflix','spotify','hulu','disney','subscription','prime'],           c:['subscription','streaming']},
+  {w:['rent','mortgage','landlord'],                                         c:['rent','mortgage','roof']},
+  {w:['electric','electricity','power','water','utility','utilities'],       c:['utilit','power','electric']},
+  {w:['phone','internet','wifi','mobile','broadband'],                       c:['phone','internet','wi-fi']},
+  {w:['cigarettes','cigarette','vape','tobacco','smokes'],                   c:['cigarette','vape']},
+  {w:['beer','bar','wine','liquor','pub','cocktail'],                        c:['drinks','bars','alcohol']},
+  {w:['vet','dog','cat','petfood'],                                          c:['pet']},
+  {w:['gym','fitness','workout'],                                            c:['gym','fitness','health']},
+  {w:['insurance','premium'],                                                c:['insur']},
+  {w:['pharmacy','prescription','doctor','dentist','medical','clinic'],      c:['medical','health','pharmacy']},
+  {w:['haircut','hair','nails','salon','barber'],                            c:['personal care','hair']},
+  {w:['daycare','childcare','babysitter','diapers'],                         c:['child','kids','daycare']}
+];
+function qlWords(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(w=>w.length>2); }
+function suggestCatFor(text){
+  const q=String(text||'').trim().toLowerCase();
+  if(q.length<3) return '';
+  const words=qlWords(q); if(!words.length) return '';
+  const live=new Map(state.categories.map(c=>[c.id,c]));
+  const score={};
+  const bump=(id,n)=>{ if(id&&live.has(id)) score[id]=(score[id]||0)+n; };
+
+  // 1. what they have logged before under this description
+  (state.transactions||[]).forEach(t=>{
+    if(t.type!=='expense'||!t.catId) return;
+    const note=String(t.note||'').trim().toLowerCase(); if(!note) return;
+    if(note===q) bump(t.catId,14);
+    else if(note.includes(q)||q.includes(note)) bump(t.catId,8);
+    else { const nw=qlWords(note); const hits=words.filter(w=>nw.includes(w)).length; if(hits) bump(t.catId,4*hits); }
+  });
+  // 2. a bill they already said repeats
+  (state.recurring||[]).forEach(r=>{
+    if(r.type!=='expense'||!r.catId) return;
+    const nm=String(r.name||catName(r.catId)||'').toLowerCase(); if(!nm) return;
+    const nw=qlWords(nm); const hits=words.filter(w=>nw.includes(w)).length;
+    if(nm.includes(q)||q.includes(nm)) bump(r.catId,9); else if(hits) bump(r.catId,4*hits);
+  });
+  // 3. the names of the categories themselves, subcategories included
+  state.categories.forEach(c=>{
+    const nm=String(c.name||'').toLowerCase(); if(!nm) return;
+    if(nm===q) bump(c.id,13);
+    else if(nm.includes(q)||q.includes(nm)) bump(c.id,7);
+    else { const nw=qlWords(nm); const hits=words.filter(w=>nw.includes(w)).length; if(hits) bump(c.id,4*hits); }
+  });
+  // 4. common vocabulary, aimed only at categories that already exist
+  HABIT_WORDS.forEach(h=>{
+    if(!words.some(w=>h.w.some(x=>w===x||w.startsWith(x)||x.startsWith(w)))) return;
+    state.categories.forEach(c=>{
+      const nm=String(c.name||'').toLowerCase();
+      if(h.c.some(frag=>nm.includes(frag))) bump(c.id, c.parentId?6:5);   // a sub is the more specific home
+    });
+  });
+  let best='', top=0;
+  Object.keys(score).forEach(id=>{ if(score[id]>top){ top=score[id]; best=id; } });
+  return top>=4 ? best : '';
 }
 function qlRow(){ return `<div class="ql-row">
     <input class="ql-what" type="text" placeholder="What was it? (e.g. Coffee, Amazon)">
@@ -4840,7 +4927,7 @@ function qlRow(){ return `<div class="ql-row">
    row for review, nothing logs without the user's eyes on it.
    qlGen is a render epoch: an OCR pass that outlives its panel must not write into
    a rebuilt (or closed) DOM. */
-let qlPhotoURL=null, qlPhotoFile=null, tessLoading=null, qlGen=0;
+let qlPhotoURL=null, qlPhotoFile=null, tessLoading=null, qlGen=0, qlGuessSaid=false;   // say what the guessing is once, not once per row
 function loadTesseract(){
   if(window.Tesseract) return Promise.resolve(window.Tesseract);
   if(tessLoading) return tessLoading;
@@ -4915,30 +5002,44 @@ function renderQuickLog(){
         items.forEach(it=>{
           let row=[...box.querySelectorAll('.ql-row')].find(el=>!el.querySelector('.ql-what').value && !el.querySelector('.ql-amt').value);
           if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; listEl.appendChild(row); wireRow(row); }
-          row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt; filled++;
+          row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt; guessRow(row); filled++;
         });
         note.textContent='Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
       }
     }catch(e){ if(gen===qlGen) note.textContent="Couldn't fetch the reader (offline, maybe). The photo still works as your reference - type the lines in yourself."; }
     readBtn.disabled=false;
   };
+  /* Fill a row's category from what was typed - but only a dropdown nobody has
+     touched, so a correction is permanent and more typing never undoes it. */
+  const guessRow=(el)=>{
+    const c=el.querySelector('.ql-cat');
+    if(c.dataset.touched==='1') return;
+    const id=suggestCatFor(el.querySelector('.ql-what').value);
+    const wasGuess=c.classList.contains('guessed');
+    if(id){ c.value=id; c.classList.add('guessed'); c.title='Guessed from what you typed - change it if it is wrong'; }
+    else if(wasGuess){ c.value=''; c.classList.remove('guessed'); c.removeAttribute('title'); }
+    if(id && !qlGuessSaid){ qlGuessSaid=true;
+      if(typeof toast==='function') toast('Filling the category from what you type. Change any that are wrong - I remember your corrections.'); }
+  };
   const wireRow=(el)=>{
     const c=el.querySelector('.ql-cat'), nw=el.querySelector('.ql-new');
     const syncNew=()=>{ nw.classList.toggle('hide', c.value!=='__new'); };
-    c.onchange=()=>{ syncNew(); if(c.value==='__new') nw.focus(); };
+    c.onchange=()=>{ c.dataset.touched='1'; c.classList.remove('guessed'); c.removeAttribute('title'); syncNew(); if(c.value==='__new') nw.focus(); };
     syncNew();   // if __new is the default (empty budget), show the name field from the start
+    el.querySelector('.ql-what').addEventListener('input',()=>guessRow(el));
     el.querySelector('.ql-del').onclick=()=>{ if(box.querySelectorAll('.ql-row').length>1) el.remove(); };
   };
   box.querySelectorAll('.ql-row').forEach(wireRow);
   document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
   document.getElementById('qlSave').onclick=()=>{
-    const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0;
+    const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0;
     box.querySelectorAll('.ql-row').forEach(el=>{
       const what=(el.querySelector('.ql-what').value||'').trim();
       const amt=parseFloat(el.querySelector('.ql-amt').value);
       if(!(amt>0)){ if(what){ namedNoAmt++; el.querySelector('.ql-amt').style.borderColor='var(--bad)'; } return; }
       const catSel=el.querySelector('.ql-cat'); let catId=catSel.value||null;   // '' = Uncategorized, on purpose
       if(catId==='__new'){ const nm=(el.querySelector('.ql-new').value||'').trim()||what||'Spending'; catId=findOrCreateCat(nm).id; }
+      if(!catId) uncat++;   // honest: a row nothing could be guessed for lands as Uncategorized, and says so
       state.transactions.push({id:uid(),type:'expense',amount:amt,catId,date,note:what}); added++;
       el.remove();   // logged rows leave; flagged rows stay on screen for fixing
     });
@@ -4946,7 +5047,9 @@ function renderQuickLog(){
     state.activeMonth=monthOf(date);   // jump so the user SEES the entries land, same as the single form
     save(); renderTxForm(); renderTx(); renderBudget(); renderHome();
     if(namedNoAmt){ if(typeof toast==='function') toast('Logged '+added+' - fix the highlighted line'+(namedNoAmt>1?'s':'')+' and log again.'); }
-    else { quickLogOpen=false; renderQuickLog(); if(typeof toast==='function') toast('Logged '+added+' purchase'+(added>1?'s':'')+'.'); }
+    else { quickLogOpen=false; renderQuickLog();
+      if(typeof toast==='function') toast('Logged '+added+' purchase'+(added>1?'s':'')
+        +(uncat?' - '+uncat+' with no category yet, findable under Uncategorized.':'.')); }
   };
 }
 /* ============================================================
