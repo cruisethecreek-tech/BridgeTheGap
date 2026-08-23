@@ -212,6 +212,20 @@
   .panel-waiting{opacity:.72}
   .panel-waiting>*:not(h2):not(.sub):not(.pw-note){display:none!important}
   .panel-waiting .pw-note{display:block;margin-top:10px;font-size:12.5px;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-radius:10px;padding:9px 12px}
+  .cat-move{display:inline-flex;gap:3px;flex-shrink:0;margin-right:2px}
+  .cm-b{background:var(--panel-2);border:1px solid var(--line);color:var(--accent);border-radius:8px;width:30px;height:30px;font-size:14px;line-height:1;cursor:pointer;padding:0}
+  .cm-b:hover:not([disabled]){border-color:var(--accent)}
+  .cm-b[disabled]{opacity:.3;cursor:default;color:var(--muted)}
+  /* In reorder mode the editing controls GO, rather than dimming. Dimming still
+     costs the width, and on a subcategory row the arrows plus a greyed-out amount
+     squeezed the name down to "E..." and "G..." - you cannot choose what to move
+     if you cannot read what it is. Collapsing them frees the row, and removes
+     the mis-tap risk outright instead of relying on pointer-events. The figures
+     are still on the line underneath ("Spent $0 of $1,250", "$80 spent"). */
+  .cat.reordering .cat-assign,.cat.reordering .btn.danger,.cat.reordering .mini-edit,
+  .cat.reordering .assign-now,.cat.reordering .addsub-first,.cat.reordering .addsub-row,
+  .subrow.reordering .sub-assign,.subrow.reordering .btn.danger,.subrow.reordering .sub-split-btn{display:none!important}
+  .subrow.reordering .sub-name,.cat.reordering .cat-name{flex:1;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
   .areaguide{background:rgba(var(--accent-rgb),.09);border:1px solid rgba(var(--accent-rgb),.34);border-radius:16px;padding:16px 18px;margin-bottom:16px}
   .areaguide .ag-k{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent)}
   .areaguide .ag-t{font-weight:800;font-size:16px;margin:4px 0 6px;color:var(--text)}
@@ -1496,6 +1510,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="btn ghost" id="starterBtn">Starter set</button>
           <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
           <button class="btn ghost" id="mergeBtn" title="Merge duplicate essentials into one">Tidy duplicates</button>
+          <button class="btn ghost" id="reorderBtn" title="Put your categories in the order you actually think about them">Reorder</button>
         </div>
         <div id="newMonthBanner"></div>
         <div id="dupBanner"></div>
@@ -2449,6 +2464,16 @@ function normalizeState(s){
   // backup) is forced to a finite number here. One string in a money field would
   // otherwise turn addition into concatenation everywhere downstream.
   const num=(v)=>{ const n=+v; return isFinite(n)?n:0; };
+  // seed sort from current position once, per level, so an existing budget keeps
+  // exactly the order it had before this feature existed
+  (function(){
+    const byParent={};
+    (s.categories||[]).forEach(c=>{ const k=c.parentId||''; (byParent[k]=byParent[k]||[]).push(c); });
+    Object.values(byParent).forEach(list=>{
+      if(list.every(c=>Number.isFinite(+c.sort))) return;
+      list.forEach((c,i)=>{ if(!Number.isFinite(+c.sort)) c.sort=i; });
+    });
+  })();
   if(!s.seenGuide || typeof s.seenGuide!=='object') s.seenGuide={};
   s.guidesOff=!!s.guidesOff;
   if(!Array.isArray(s.lessons)) s.lessons=[];
@@ -2579,14 +2604,17 @@ function catName(id){
 }
 /* option list for tx/recurring dropdowns, grouped by parent; third-level
    categories render indented inside their group (optgroups can't nest) */
+/* through topCats/childrenOf, not a raw filter - otherwise reordering your plan
+   changes the Plan screen and leaves every category picker in creation order,
+   so the app disagrees with the user about their own arrangement */
 function categoryOptions(){
-  const tops=state.categories.filter(x=>!x.parentId);
+  const tops=topCats();
   if(!tops.length) return '';
   return tops.map(c=>{
-    const kids=state.categories.filter(k=>k.parentId===c.id);
+    const kids=childrenOf(c.id);
     if(!kids.length) return `<option value="${c.id}">${escapeHtml(c.name)}</option>`;
     const kidOpts=kids.map(k=>{
-      const gkids=state.categories.filter(g=>g.parentId===k.id);
+      const gkids=childrenOf(k.id);
       return `<option value="${k.id}">${escapeHtml(k.name)}${gkids.length?' (whole group)':''}</option>`
         + gkids.map(g=>`<option value="${g.id}">&nbsp;&nbsp;› ${escapeHtml(g.name)}</option>`).join('');
     }).join('');
@@ -3579,6 +3607,15 @@ document.getElementById('starterBtn').addEventListener('click',()=>{
   });
   save(); renderBudget(); renderTxForm();
 });
+document.getElementById('reorderBtn').addEventListener('click',()=>{
+  catReorder=!catReorder;
+  const b=document.getElementById('reorderBtn');
+  b.textContent=catReorder?'Done reordering':'Reorder';
+  b.classList.toggle('primary',catReorder);
+  if(catReorder) collapsedCats.clear();   // you cannot move what you cannot see
+  renderBudget();
+  if(catReorder && typeof toast==='function') toast('Move anything with the arrows. Subs stay inside their group.');
+});
 document.getElementById('mergeBtn').addEventListener('click',()=>{
   const n=mergeDuplicates();
   if(n){ renderBudget(); renderTx(); renderNetWorth(); alert('Tidied up - merged '+n+' duplicate categor'+(n>1?'ies':'y')+' into your essentials. Assignments and transactions were kept and combined.'); }
@@ -3624,7 +3661,20 @@ function newMonthPromptHTML(M){
 }
 
 /* ---------- category hierarchy (one level of subcategories) ---------- */
+let catReorder=false;   // a mode, not a drag: touch drag-and-drop is fragile and this has to work on a phone first
 let collapsedCats=new Set();
+/* The arrows are deliberately not drag handles. HTML5 drag does not work on
+   touch without a library, and the workarounds fight the browser's own scrolling
+   on exactly the long list this is for. Two buttons move one row one place, work
+   with a screen reader for free, and cannot half-drop something. */
+function reorderCtrlHTML(id, first, last){
+  if(!catReorder) return '';
+  return `<span class="cat-move"><button class="cm-b" data-moveup="${id}"${first?' disabled':''} aria-label="Move up">↑</button><button class="cm-b" data-movedn="${id}"${last?' disabled':''} aria-label="Move down">↓</button></span>`;
+}
+function wireReorder(box){
+  box.querySelectorAll('[data-moveup]').forEach(b=>b.onclick=()=>{ if(moveCat(b.dataset.moveup,-1)) renderBudget(); });
+  box.querySelectorAll('[data-movedn]').forEach(b=>b.onclick=()=>{ if(moveCat(b.dataset.movedn,1)) renderBudget(); });
+}
 let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
 let catEditId=null;        // top category currently being renamed (rename keeps transactions attached, unlike delete)
 /* top-level categories that map to the same essential (leftover duplicates) */
@@ -3633,8 +3683,34 @@ function duplicateGroups(){
   state.categories.filter(c=>!c.parentId).forEach(c=>{ const w=categoryWall(c.name); const key=w?'wall:'+w.cat:'name:'+c.name.trim().toLowerCase(); (groups[key]=groups[key]||[]).push(c); });
   return Object.values(groups).filter(cats=>cats.length>1).map(cats=>cats.map(c=>c.name));
 }
-function childrenOf(id){ return state.categories.filter(c=>c.parentId===id); }
-function topCats(){ return state.categories.filter(c=>!c.parentId); }
+/* Category order was array order - which is creation order, and creation order is
+   an accident. People read their budget in a shape that means something to them:
+   the rent at the top because it is the one that frightens them, or the fun money
+   at the top because it is the one they overspend. An explicit `sort` beats array
+   position because it survives merges, imports and a restore from backup, all of
+   which rebuild the array. Ties fall back to array position so nothing jumps
+   around before anyone has reordered anything. */
+function catOrder(list){
+  return list.map((c,i)=>({c,i})).sort((a,b)=>{
+    const sa=Number.isFinite(+a.c.sort)?+a.c.sort:a.i, sb=Number.isFinite(+b.c.sort)?+b.c.sort:b.i;
+    return sa===sb ? a.i-b.i : sa-sb;
+  }).map(x=>x.c);
+}
+function childrenOf(id){ return catOrder(state.categories.filter(c=>c.parentId===id)); }
+function topCats(){ return catOrder(state.categories.filter(c=>!c.parentId)); }
+/* Move one category within its own level. Subcategories reorder inside their
+   parent and can never escape it - a sub outranking a top-level category is not
+   a thing anyone means. Renumbers the whole level so the values stay dense. */
+function moveCat(id,dir){
+  const c=state.categories.find(x=>x.id===id); if(!c) return false;
+  const sibs=c.parentId?childrenOf(c.parentId):topCats();
+  const i=sibs.findIndex(x=>x.id===id), j=i+dir;
+  if(i<0||j<0||j>=sibs.length) return false;
+  const reordered=sibs.slice();
+  reordered.splice(j,0,reordered.splice(i,1)[0]);
+  reordered.forEach((x,k)=>{ x.sort=k; });
+  save(); return true;
+}
 /* the whole subtree under a category - categories nest to three levels
    (e.g. Getting Around → Gas → Car 1 / Car 2) */
 function descendantsOf(id){
@@ -3950,7 +4026,8 @@ function renderBudget(){
   if(!state.categories.length){
     box.innerHTML=`<div class="empty">No categories yet. Add one above, or hit “Starter set” to skip the blank page.</div>`;
   } else {
-    box.innerHTML=topCats().map(c=>{
+    const tops=topCats();
+    box.innerHTML=tops.map((c,ti)=>{
       const a=catAssigned(c.id,M), sp=catSpent(c.id,M), rem=a-sp;   // rolled up: subs you filled in count even if the parent is blank
       const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
       const over=sp>a&&sp>0;
@@ -3960,14 +4037,14 @@ function renderBudget(){
           <div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
           <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div>
         </div>` : '';
-      const subsHTML = (isGroup && !collapsed) ? kids.map(k=>{
+      const subsHTML = (isGroup && !collapsed) ? kids.map((k,ki)=>{
         // a sub can be a group itself: Gas → Car 1 / Car 2, Groceries → Walmart / Meijer (three levels max)
         const gkids=childrenOf(k.id), kGroup=gkids.length>0;
         const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
         const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
-        let h=`<div class="subrow"><span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        let h=`<div class="subrow${catReorder?' reordering':''}">${reorderCtrlHTML(k.id, ki===0, ki===kids.length-1)}<span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
         if(kGroup){
-          h+=gkids.map(g=>`<div class="subrow subsub"><span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span><span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
+          h+=gkids.map((g,gi)=>`<div class="subrow subsub${catReorder?' reordering':''}">${reorderCtrlHTML(g.id, gi===0, gi===gkids.length-1)}<span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span><span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
           h+=splitNoteHTML(k.id,M,k.name);
         }
         if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
@@ -3977,8 +4054,9 @@ function renderBudget(){
       const addSub = showAddRow
         ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋ Add</button></div>`
         : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
-      return `<div class="cat ${over?'overspent':''}">
+      return `<div class="cat ${over?'overspent':''}${catReorder?' reordering':''}">
         <div class="cat-top">
+          ${reorderCtrlHTML(c.id, ti===0, ti===tops.length-1)}
           ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
           ${c.id===catEditId
             ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
@@ -4035,6 +4113,7 @@ function renderBudget(){
     // keep transactions for history; they become "Uncategorized"
     save(); renderBudget(); renderTx();
   }));
+  wireReorder(box);
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
   box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); renderBudget(); }));
   // "Split into subcategories" reveals an inline input (no jarring browser prompt) and focuses it
