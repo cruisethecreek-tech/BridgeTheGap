@@ -300,6 +300,23 @@
      off the right edge with nothing to say it was there, so "In vs out" was a
      report you could only find by guessing the strip scrolls. They wrap to two
      rows instead - every report visible without a swipe. */
+  .rp-card{background:var(--panel-2);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:14px;padding:15px 17px;margin-top:12px}
+  .rp-card.bad{border-left-color:var(--accent-2)}
+  .rp-t{font-weight:900;font-size:16.5px;letter-spacing:-.2px;margin-bottom:6px}
+  .rp-b{font-size:14px;line-height:1.6;color:var(--muted)}
+  .rp-b b{color:var(--text)}
+  /* the arithmetic, always available and never shouting - a conclusion nobody
+     can check is a conclusion nobody should trust */
+  .rp-w{margin-top:9px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--muted);opacity:.75;background:var(--ink);border-radius:7px;padding:6px 9px;overflow-x:auto;white-space:nowrap}
+  .rp-n{margin-top:10px;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .rp-n b{color:var(--accent)}
+  .rp-lock{margin-top:16px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
+  .rp-lock>summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);list-style:none;padding:12px 0}
+  .rp-lock>summary::-webkit-details-marker{display:none}
+  .rp-lock>summary::before{content:'▸ ';font-size:10px}
+  .rp-lock[open]>summary::before{content:'▾ '}
+  .rp-lock ul{margin:0 0 12px;padding-left:18px;font-size:13px;line-height:1.6;color:var(--muted)}
+  .rp-lock li{margin-bottom:6px}
   .rf-tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:4px;margin:12px 0 10px}
   .rf-tab{flex:1 1 auto;min-width:fit-content;white-space:nowrap;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:9px 10px;border-radius:9px;cursor:pointer}
   .rf-tab.on{background:var(--accent);color:var(--on-accent)}
@@ -679,6 +696,23 @@
   /* debt payoff planner */
   .debtrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
   .debtrow .dr-name{font-weight:800;flex:1;min-width:90px}
+  .fieldhelp{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
+  .fieldhelp>summary{cursor:pointer;font-weight:800;font-size:13.5px;color:var(--accent);list-style:none;padding:11px 0}
+  .fieldhelp>summary::-webkit-details-marker{display:none}
+  .fieldhelp>summary::before{content:'▸ ';font-size:11px}
+  .fieldhelp[open]>summary::before{content:'▾ '}
+  .fieldhelp ul{margin:0 0 10px;padding-left:18px;font-size:13px;line-height:1.6;color:var(--muted)}
+  .fieldhelp li{margin-bottom:7px}
+  .fieldhelp li b{color:var(--text)}
+  .fieldhelp p{font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 14px}
+  /* what is missing is not an error - an error tells you that you did something
+     wrong, and they have not */
+  .debt-todo{background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.4);border-radius:12px;padding:13px 15px;font-size:13.5px;line-height:1.6}
+  .debt-todo b{color:var(--accent)}
+  .debt-nudge{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 15px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+  .debt-nudge ul{margin:8px 0;padding-left:18px}
+  .debt-nudge li{margin-bottom:4px}
+  .debt-nudge b{color:var(--text)}
   .debtrow .dr-f{display:inline-flex;align-items:center;gap:3px;font-size:13px;color:var(--muted);font-weight:700}
   .debtrow .dr-f input{width:76px;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 8px;font-size:14px}
   #debtStrategy button{white-space:nowrap}
@@ -1857,6 +1891,18 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld">Min pay $<input type="number" id="debtMin" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:100px"></label>
           <button class="btn primary" id="addDebt">Add</button>
         </div>
+        <!-- Someone who has never budgeted does not know what APR means or where
+             the minimum payment is written, and a form that assumes they do stops
+             them at the first field. This says where each number lives in plain
+             words, and says which ones can wait. -->
+        <details class="fieldhelp"><summary>Where do I find these?</summary>
+          <ul>
+            <li><b>Balance</b> - what you still owe today, not what you borrowed. Top of the statement, or the app for that card or loan.</li>
+            <li><b>Rate APR %</b> - the interest they charge you per year. On a card statement it is usually called <i>purchase APR</i> or <i>interest rate</i>, often on the back or the last page. On a loan it is on the agreement.</li>
+            <li><b>Min pay $</b> - the smallest payment they will accept without a late fee. On a card statement it is the <i>minimum payment due</i>.</li>
+          </ul>
+          <p>Do not have the rate to hand? Add the debt anyway with the balance - it still counts what you owe. Come back and fill the rate in when you have the statement, and the numbers sharpen up.</p>
+        </details>
         <div style="margin-top:8px"><button class="btn sm ghost" id="importLiab">⤵ Import from my liabilities</button></div>
         <div id="debtList"></div>
       </div>
@@ -1866,6 +1912,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div class="row">
           <label class="fld">Total you can pay toward debt each month $<input type="number" id="debtBudget" min="0" step="10" placeholder="e.g. 900" style="width:150px"></label>
         </div>
+        <!-- The one thing people get wrong here: they type the EXTRA they can find,
+             not the total. That makes the payoff date wildly pessimistic and the
+             screen look broken. -->
+        <p class="sub" id="debtBudgetHint" style="margin-top:6px">This is the <b>whole</b> amount, minimums included - not extra on top of them.</p>
         <div class="uimode" id="debtStrategy" style="margin-top:12px">
           <button data-s="avalanche">Avalanche</button>
           <button data-s="snowball">Snowball</button>
@@ -2060,7 +2110,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Reflect</h2>
         <p class="sub">What actually happened, in four views. The numbers here are only as good as what you have logged - they are a mirror, not a verdict.</p>
         <div class="rf-tabs" id="rfTabs" role="tablist">
-          <button class="rf-tab on" data-rf="breakdown" role="tab">Breakdown</button>
+          <button class="rf-tab on" data-rf="report" role="tab">The report</button>
+          <button class="rf-tab" data-rf="breakdown" role="tab">Breakdown</button>
           <button class="rf-tab" data-rf="trends" role="tab">Trends</button>
           <button class="rf-tab" data-rf="worth" role="tab">Net worth</button>
           <button class="rf-tab" data-rf="inout" role="tab">In vs out</button>
@@ -2595,6 +2646,23 @@ function normalizeState(s){
   (s.impulse||[]).forEach(i=>{ if(i.goalId && !goalIds.has(i.goalId)) delete i.goalId; });   // orphaned dream-skips return to the War Chest
   const txIds=new Set((s.transactions||[]).map(t=>t.id));
   if(Array.isArray(s.giving)) s.giving=s.giving.filter(g=>!g.txId || txIds.has(g.txId));
+  /* Entries already posted under the old note say "Recurring" and nothing else,
+     which is not something the user can fix by hand for every past month. Name
+     them from the schedule that made them, or from the category they landed in
+     when that schedule is gone. Only ever rewrites the exact placeholder, so a
+     note somebody typed is never touched. */
+  {
+    const byId={}; (s.recurring||[]).forEach(r=>{ byId[r.id]=r; });
+    const nameOf=id=>{ const c=(s.categories||[]).find(x=>x.id===id); return c?c.name:''; };
+    (s.transactions||[]).forEach(t=>{
+      if(t.note!=='Recurring') return;
+      const r=t.recId?byId[t.recId]:null;
+      const nm = r ? (r.type==='expense' ? (r.name||nameOf(r.catId)) : (r.source||r.name))
+                   : (t.type==='expense' ? nameOf(t.catId) : (t.source||''));
+      const clean=String(nm||'').trim();
+      if(clean) t.note=clean; else delete t.note;   // no name to give it: let the row fall back to its category
+    });
+  }
   // tracking origin: the day this budget actually began. Backfill from the earliest
   // REAL transaction (imported history included) so days before it never score as
   // wins. Intake-seeded transactions are dated the 1st for month math - they're a
@@ -3165,8 +3233,13 @@ function simulateDebts(debts, monthly, strategy){
   let ds=debts.map(d=>({name:d.name, bal:+d.balance||0, apr:+d.apr||0, min:+d.minPayment||0, interest:0, paidMonth:null}));
   const totalMin=ds.reduce((s,d)=>s+(d.bal>0?d.min:0),0);
   if(monthly < totalMin - 0.01) return {error:'below_min', totalMin};
-  let month=0, totalInterest=0; const schedule=[{month:0, total:ds.reduce((s,d)=>s+d.bal,0)}];
+  let month=0, totalInterest=0; const startBal=ds.reduce((s,d)=>s+d.bal,0);
+  const schedule=[{month:0, total:startBal}];
   while(ds.some(d=>d.bal>0.005) && month<720){
+    /* A payment that cannot beat the interest never will, and grinding out 720
+       months of compounding on it produced a "total interest" in the billions.
+       Ten years in with nothing paid down is the answer, so stop and say so. */
+    if(month>120 && ds.reduce((s,d)=>s+Math.max(0,d.bal),0)>=startBal) break;
     month++;
     ds.forEach(d=>{ if(d.bal>0.005){ const i=d.bal*(d.apr/100/12); d.bal+=i; d.interest+=i; totalInterest+=i; } });
     let budget=monthly;
@@ -3181,6 +3254,44 @@ function simulateDebts(debts, monthly, strategy){
   const stalled = ds.some(d=>d.bal>0.005);   // hit the 720-month cap with balances left = never pays off at this payment
   return { months:month, totalInterest, schedule, stalled,
            order: ds.slice().sort((a,b)=>(a.paidMonth||9e9)-(b.paidMonth||9e9)).map(d=>({name:d.name, paidMonth:d.paidMonth, interest:d.interest})) };
+}
+/* The old nudge was Math.ceil((monthlyInterest+1)/10)*10 - the smallest payment
+   that technically beats the interest by a dollar. On a $2,400 card that came
+   out as "$10/mo", which is 240 months and useless as a target. This asks the
+   real question instead - what clears it in N months - by binary-searching the
+   same simulation the rest of the screen uses, so the answer cannot disagree
+   with the payoff date shown next to it. Returns null if even paying the whole
+   balance would not do it (which cannot happen, but the caller should not have
+   to trust that). */
+function debtPaymentFor(debts, strat, targetMonths){
+  const totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);
+  const totalMin=debts.reduce((s,d)=>s+(+d.minPayment||0),0);
+  if(!(totalBal>0)) return null;
+  const clears=p=>{ const r=simulateDebts(debts,p,strat); return !r.error && !r.stalled && r.months<=targetMonths; };
+  let lo=Math.max(totalMin,0), hi=Math.max(totalBal*1.5, totalMin+totalBal, 10);
+  if(!clears(hi)) return null;
+  for(let i=0;i<40 && hi-lo>1;i++){ const mid=(lo+hi)/2; if(clears(mid)) hi=mid; else lo=mid; }
+  const pay=Math.ceil(hi/5)*5;   // a round number a person can actually aim at
+  /* Rounding UP to something aimable means the payment usually clears faster
+     than the horizon that was asked for, so report what it ACTUALLY does rather
+     than the target it was derived from. The first version of this said
+     "$80/mo clears it in about 5 years" about a payment that clears it in 47
+     months - the screen would have been arguing with itself. */
+  const real=simulateDebts(debts,pay,strat);
+  if(real.error||real.stalled) return null;
+  return {pay, months:real.months};
+}
+/* "3 yrs 11 mo", the same shape the payoff hero uses */
+function debtDur(m){
+  const y=Math.floor(m/12), mo=m%12;
+  return (y?y+' yr'+(y>1?'s':''):'')+(y&&mo?' ':'')+(mo?mo+' mo':'')||'0 mo';
+}
+/* The "no rate set" caveat used to render only on the success path, so the
+   stalled screens - the ones a beginner hits first - blamed interest without
+   ever mentioning that no rate had been entered. */
+function noAprIn(debts){
+  return debts.some(d=>(+d.apr||0)<=0)
+    ? ` Some of these have no rate set yet, so the interest here is understated.` : '';
 }
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
 /* The Debt planner promises one thing in its own intro: "the fastest, cheapest
@@ -3233,10 +3344,27 @@ function renderDebtResults(){
   const plan=simulateDebts(debts, budget, strat);
   const other=simulateDebts(debts, budget, strat==='avalanche'?'snowball':'avalanche');
   const H=effectiveHourly();
-  if(plan.stalled){   // budget covers minimums but not the interest - honest math, not a fake 60-year date
+  if(plan.stalled){
+    /* One catch-all message used to blame interest for every stall, so the state
+       a beginner is MOST likely to reach - a debt added before they have looked
+       up the rate or decided what they can pay - read "you're not outrunning the
+       interest, about $0 piles on every month". It contradicted itself in one
+       sentence and never named the actual blocker, which was simply that nobody
+       had said what they could pay yet. Diagnose it, then say that. */
     const monthlyInterest=debts.reduce((s,d)=>s+(+d.balance||0)*((+d.apr||0)/100/12),0);
-    const need=Math.ceil((monthlyInterest+1)/10)*10;
-    box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${actMoney(budget)}</b>/mo you're not outrunning the interest - about <b>${money(monthlyInterest)}</b> piles on every month, so the balance never shrinks. You need at least roughly <b>${actMoney(need)}</b>/mo to start winning. Even $20 more a month changes the picture - try nudging it up.</div>`;
+    const rungs=[]; const seen=new Set();
+    [60,36,24].forEach(target=>{ const r=debtPaymentFor(debts, strat, target);
+      if(r && !seen.has(r.pay)){ seen.add(r.pay); rungs.push(r); } });
+    const ladder = rungs.length ? `<div class="debt-nudge">What different amounts would do, worked out from your own numbers:<ul>
+        ${rungs.map(r=>`<li><b>${actMoney(r.pay)}</b>/mo pays it off in <b>${debtDur(r.months)}</b></li>`).join('')}
+      </ul>Type whichever one is real for you. Nothing here moves money - it only shows the shape.</div>` : '';
+    if(budget<=0){
+      box.innerHTML=`<div class="debt-todo" style="margin-top:12px"><b>One thing missing:</b> how much you can put toward this each month. Nothing above it is wrong - the planner just cannot draw a way out until it knows the payment. Put a figure in <b>Total you can pay toward debt each month</b> and the date appears.${noAprIn(debts)}</div>${ladder}`;
+    } else if(monthlyInterest>0 && budget<=monthlyInterest){
+      box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${actMoney(budget)}</b>/mo the balance never shrinks - interest adds about <b>${money(monthlyInterest)}</b> every month, which is more than you are paying. That is not a judgement, it is arithmetic, and it is exactly the thing worth knowing early.</div>${ladder}`;
+    } else {
+      box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${actMoney(budget)}</b>/mo this does not clear inside ten years, so there is no honest date to show yet.${noAprIn(debts)}</div>${ladder}`;
+    }
     renderInvestCompare(); return;
   }
   const noApr=debts.some(d=>(+d.apr||0)<=0);
@@ -5052,6 +5180,17 @@ function renderQuickLog(){
         +(uncat?' - '+uncat+' with no category yet, findable under Uncategorized.':'.')); }
   };
 }
+/* Every posted recurring entry was noted "Recurring" - so four bills in a row
+   read "Recurring, Recurring, Recurring, Recurring" and the list said nothing
+   at all. The transaction already carries recId, so the app knows perfectly
+   well that it was automatic; the note is the one place that should say WHAT it
+   was. It names the bill instead, and the row marks itself automatic from recId
+   rather than spending its only line saying so. */
+function recTxNote(r){
+  const n = r.type==='expense' ? (r.name || catName(r.catId)) : (r.source || r.name);
+  return String(n||'').trim() || 'Recurring';
+}
+
 /* ============================================================
    TIME LEDGER - the other thing you invest.
    Same 168-hour paycheck for everyone: hours sold to work (from hoursPerWeek),
@@ -5158,9 +5297,12 @@ function renderTxList(){
               :(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span><span class="tx-note">${escapeHtml(t.note||'Expense')}</span>`);
     const en=t.energy?energyOf(t.energy):null;
     const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
-    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+(t.note?' · '+escapeHtml(t.note):''))
-            :t.type==='invest'?(((t.ikind||'holds')==='self'?'Into you - spent on purpose':'Still yours - working')+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
-            :((en?en.ic+' ':'')+'Expense'+(txAllMonths?' · '+monthOf(t.date):''));
+    /* the note now names the bill, so "posted automatically" moves to the line
+       that has room for it rather than eating the only line that says what it was */
+    const auto=t.recId?' · repeats':'';
+    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+auto+(t.note?' · '+escapeHtml(t.note):''))
+            :t.type==='invest'?(((t.ikind||'holds')==='self'?'Into you - spent on purpose':'Still yours - working')+auto+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
+            :((en?en.ic+' ':'')+'Expense'+auto+(txAllMonths?' · '+monthOf(t.date):''));
     const owner=t.owner||'a', Ho=hourlyFor(owner);
     let badge='';
     if(t.type==='income' && t.hours>0) badge=`<span class="tx-yield">${usd(t.amount/t.hours)}/hr</span>`;
@@ -7756,9 +7898,9 @@ function postRecurring(month){
       if(cap && date>cap) return;
       // dedupe per OCCURRENCE, not per month - a weekly bill lands four times
       if(state.transactions.some(t=>t.recId===r.id&&t.date===date)) return;
-      if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
-      else if(r.type==='invest'){ const ik=r.ikind||'holds'; state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:'Recurring',recId:r.id,ikind:ik}); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
-      else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:'Recurring',recId:r.id});
+      if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
+      else if(r.type==='invest'){ const ik=r.ikind||'holds'; state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik}); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
+      else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:recTxNote(r),recId:r.id});
       added++;
     });
   });
@@ -7956,7 +8098,7 @@ function openAppMap(){
    and they move state.activeMonth, so Plan and Reflect stay one truth rather
    than two.
    ============================================================ */
-let rfTab='breakdown';
+let rfTab='report';   // the verdict first, the charts under it as the evidence
 function rfHasData(){ return (state.transactions||[]).length>0; }
 /* ============================================================
    HIDE UNTIL IT MEANS SOMETHING
@@ -7994,6 +8136,245 @@ function applyPanelGates(){
     n.textContent=note;
   });
 }
+/* ============================================================
+   THE ACCOUNTABILITY REPORT
+
+   The app measured plenty and concluded nothing. It knew the top category, the
+   priciest weekday, net worth, income against expense - and it never once put
+   two months side by side and said what changed. The user was left to hold two
+   screens in their head and do the comparing, which is the one job software is
+   better at than people.
+
+   Every signal below obeys four rules, all of which the app already believed
+   somewhere else:
+
+     1. SILENCE OVER SPECULATION. Each signal declares the data it needs. Below
+        that it does not appear - not greyed out, not hedged, not with a smaller
+        number. spendTendencies() has always worked this way (fewer than six
+        expenses returns null) and it is the right precedent. What is missing is
+        listed separately, as something to unlock rather than something failed.
+     2. SHOW THE WORKING. Every claim carries the arithmetic that produced it,
+        the way the leak finder and the intake recap do. A conclusion nobody can
+        check is a conclusion nobody should trust.
+     3. OBSERVATION, THEN A CHOICE. "Takeout is up 41%" is an observation.
+        "Cut your takeout" is advice, and this app does not give advice. The
+        nudge is always a fact about their own numbers that implies the next
+        step without naming it - the same shape as the debt planner's ladder.
+     4. NEVER CONGRATULATE SOMEONE WHO IS DROWNING. Enforced already by iaTone()
+        and tests/intake_cost.mjs; the report inherits it rather than restating
+        it, by never opening with praise when the month is negative.
+
+   A signal returns one of three things: a result, null (it had the data and
+   there was nothing worth saying), or {locked} (it did not have the data, and
+   here is what would unlock it).
+   ============================================================ */
+function rpPct(a,b){ return b>0 ? Math.round((a/b)*100) : 0; }
+function rpDays(M){ return M===thisMonth() ? new Date().getDate() : daysInMonth(M); }
+/* spend by category NAME for a month, leaves only - a parent and its subs must
+   not both count or every drift doubles */
+function rpByCat(M){
+  const out={};
+  txnsInMonth(M).filter(t=>t.type==='expense'&&t.amount>0).forEach(t=>{
+    const n=catName(t.catId)||'Uncategorized'; out[n]=(out[n]||0)+t.amount;
+  });
+  return out;
+}
+/* every expense note in a window, by how often it shows up */
+function rpNotes(fromISO,toISO){
+  const out={};
+  state.transactions.filter(t=>t.type==='expense'&&t.amount>0&&(t.date||'')>=fromISO&&(t.date||'')<toISO)
+    .forEach(t=>{ const raw=(t.note||'').trim(); const k=raw.toLowerCase();
+      if(k.length>1){ const e=out[k]||(out[k]={n:0,total:0,label:raw,last:''}); e.n++; e.total+=t.amount; if((t.date||'')>e.last) e.last=t.date||''; } });
+  return out;
+}
+function rpAgo(days){ return localYMD(new Date(Date.now()-days*86400000)); }
+/* "$90, which is 3.7 hrs of your life" - the app's own unit, only when it knows the rate */
+function rpLife(amount){ const H=effectiveHourly(); return H>0 ? ` - ${fmtHours(amount/H)} of your life` : ''; }
+
+const REPORT_SIGNALS=[
+  /* ---- are you on track to blow this month, while you can still act on it ---- */
+  { k:'pace', run(){
+      const M=state.activeMonth;
+      if(M!==thisMonth()) return null;                       // a finished month has an outcome, not a pace
+      const day=new Date().getDate(), dim=daysInMonth(M);
+      if(day<5) return {locked:'A few more days of this month - a pace read before day 5 is noise.'};
+      const spent=monthExpense(M); if(!(spent>0)) return null;
+      const planned=state.categories.filter(c=>!c.parentId).reduce((s,c)=>s+catAssigned(c.id,M),0);
+      if(!(planned>0)) return {locked:'A plan on the Plan tab - pace needs something to be measured against.'};
+      const proj=spent/day*dim;
+      if(Math.abs(proj-planned)/planned<0.05) return null;    // dead on, nothing to say
+      const over=proj>planned;
+      return { t: over?'You are on pace to go over':'You are on pace to come in under',
+        body:`${day} day${day>1?'s':''} into ${fmtMonth(M)} you have spent <b>${money(spent)}</b>. Carry on at that rate and you land at about <b>${money(proj)}</b> against a plan of <b>${money(planned)}</b>.`,
+        work:`${money(spent)} ÷ ${day} days × ${dim} days = ${money(proj)}`,
+        nudge: over ? `That is <b>${money(proj-planned)}</b> past the plan${rpLife(proj-planned)}. There are ${dim-day} days left to change the number.`
+                    : `That is <b>${money(planned-proj)}</b> under${rpLife(planned-proj)}.`,
+        bad:over };
+    }},
+
+  /* ---- the single most honest summary of a month ---- */
+  { k:'kept', run(){
+      const M=state.activeMonth, inc=monthIncome(M);
+      if(!(inc>0)) return {locked:'Income logged for this month - a keep rate needs something to divide by.'};
+      const exp=monthExpense(M), kept=inc-exp, rate=rpPct(kept,inc);
+      /* "You kept 100% of what you earned" after one paycheck and no spending
+         yet is not a compliment, it is a measurement of what has not been typed
+         in. Praise for an empty ledger is exactly the kind of hollow line this
+         app refuses everywhere else. */
+      if(!(exp>0)) return {locked:'Some spending logged this month - a keep rate with nothing spent measures what you have not logged yet, not what you kept.'};
+      const hist=[shiftMonth(M,-2),shiftMonth(M,-1),M]
+        .map(m=>({m, inc:monthIncome(m), exp:monthExpense(m)}))
+        .filter(x=>x.inc>0).map(x=>({m:x.m, r:rpPct(x.inc-x.exp,x.inc)}));
+      const trend = hist.length>=3
+        ? `Last three months: ${hist.map(h=>`<b>${h.r}%</b>`).join(', ')}.${hist[2].r<hist[1].r&&hist[1].r<hist[0].r?' Down every month.':''}`
+        : '';
+      const invested=monthInvested(M);
+      return { t: kept<0 ? 'You spent more than came in' : `You kept ${rate}% of what you earned`,
+        body: kept<0
+          ? `<b>${money(inc)}</b> came in and <b>${money(exp)}</b> went out. That is <b>${money(-kept)}</b> more than you had${rpLife(-kept)}.`
+          : `<b>${money(inc)}</b> came in, <b>${money(exp)}</b> went out, so <b>${money(kept)}</b> stayed yours.${invested>0?` <b>${money(invested)}</b> of it went into investments.`:''}`,
+        work:`(${money(inc)} − ${money(exp)}) ÷ ${money(inc)} = ${rate}%`,
+        nudge: trend, bad: kept<0 };
+    }},
+
+  /* ---- the comparison the app never made ---- */
+  { k:'drift', run(){
+      const M=state.activeMonth, P=shiftMonth(M,-1);
+      const now=rpByCat(M), was=rpByCat(P);
+      if(!Object.keys(was).length) return {locked:'A second month of spending - drift is a comparison, and there is only one month to compare.'};
+      let best=null;
+      Object.keys(now).forEach(n=>{
+        const a=now[n], b=was[n]||0; if(!(b>0)) return;       // brand new is the "new habit" signal's job
+        const d=a-b; if(Math.abs(d)<20 || Math.abs(d)/b<0.2) return;
+        if(!best || Math.abs(d)>Math.abs(best.d)) best={n, a, b, d};
+      });
+      if(!best) return null;
+      const up=best.d>0, pct=Math.abs(Math.round(best.d/best.b*100));
+      return { t:`${escapeHtml(best.n)} is ${up?'up':'down'} ${pct}%`,
+        body:`<b>${money(best.a)}</b> in ${fmtMonth(M)}, against <b>${money(best.b)}</b> in ${fmtMonth(P)}. That is <b>${money(Math.abs(best.d))}</b> ${up?'more':'less'}${rpLife(Math.abs(best.d))}.`,
+        work:`${money(best.a)} − ${money(best.b)} = ${up?'+':'−'}${money(Math.abs(best.d))}`,
+        nudge: up ? `One category moving ${money(Math.abs(best.d))} in a month is the kind of thing that is invisible until someone puts the two numbers next to each other.`
+                  : `Whatever you did there, it held for a whole month.`,
+        bad: up };
+    }},
+
+  /* ---- something started ---- */
+  { k:'started', run(){
+      const from30=rpAgo(30), from60=rpAgo(60);
+      const recent=rpNotes(from30,'9999-99-99'), before=rpNotes(from60,from30);
+      let best=null;
+      Object.keys(recent).forEach(k=>{ const r=recent[k];
+        if(r.n<3 || before[k]) return;
+        if(!best || r.total>best.total) best=r; });
+      if(!best) return null;
+      return { t:`"${escapeHtml(best.label)}" is new`,
+        body:`It shows up <b>${best.n} times</b> in the last 30 days, and not once in the 30 before that. <b>${money(best.total)}</b> so far${rpLife(best.total)}.`,
+        work:`${best.n} entries × ${money(best.total/best.n)} average = ${money(best.total)}`,
+        nudge:`At this rate that is about <b>${money(best.total*12)}</b> a year${rpLife(best.total*12)}. New habits are cheapest to look at while they are still new.`,
+        bad:true };
+    }},
+
+  /* ---- something stopped, and the app should notice that too ---- */
+  { k:'stopped', run(){
+      const from90=rpAgo(90), from30=rpAgo(30);
+      const older=rpNotes(from90,from30), recent=rpNotes(from30,'9999-99-99');
+      let best=null;
+      Object.keys(older).forEach(k=>{ const o=older[k];
+        if(o.n<3 || recent[k]) return;
+        if(!best || o.total>best.total) best=o; });
+      if(!best) return null;
+      const perMonth=best.total/2;                            // the 60-day window it was seen in
+      const days=Math.round((Date.parse(todayStr()+'T00:00:00')-Date.parse(best.last+'T00:00:00'))/86400000);
+      return { t:`"${escapeHtml(best.label)}" has stopped`,
+        body:`Nothing logged under it for <b>${days} days</b>. Before that it ran <b>${best.n} times</b> for <b>${money(best.total)}</b>.`,
+        work:`${money(best.total)} over the 60 days it appeared ≈ ${money(perMonth)} a month`,
+        nudge:`That is roughly <b>${money(perMonth)}</b> a month you are no longer spending${rpLife(perMonth)}. Worth knowing you did that.`,
+        bad:false };
+    }},
+
+  /* ---- the essentials creeping up on you ---- */
+  { k:'essentials', run(){
+      const M=state.activeMonth, P=shiftMonth(M,-1);
+      const incNow=monthIncome(M), incWas=monthIncome(P);
+      if(!(incNow>0&&incWas>0)) return null;
+      const share=m=>{ const inc=monthIncome(m); if(!(inc>0)) return null;
+        const ess=WALLS.reduce((s,w)=>s+wallAssigned(w,m),0); return ess>0?rpPct(ess,inc):null; };
+      const a=share(M), b=share(P);
+      if(a===null||b===null||Math.abs(a-b)<5) return null;
+      const up=a>b;
+      return { t:`Your essentials are taking ${up?'more':'less'} of what you earn`,
+        body:`<b>${a}%</b> of income in ${fmtMonth(M)}, against <b>${b}%</b> in ${fmtMonth(P)}.`,
+        work:`essentials assigned ÷ income logged, both months`,
+        nudge: up ? `The four walls moving up ${a-b} points is the number that decides how much room everything else gets.`
+                  : `That is ${b-a} points of your income handed back to everything else.`,
+        bad:up };
+    }},
+
+  /* ---- the growth side, measured as thinly as the spending side was not ---- */
+  { k:'investing', run(){
+      const M=state.activeMonth, ms=[shiftMonth(M,-2),shiftMonth(M,-1),M];
+      const withIncome=ms.filter(m=>monthIncome(m)>0);
+      if(withIncome.length<3) return {locked:'Three months of income logged - consistency is a pattern, and a pattern needs three points.'};
+      const invested=ms.map(m=>monthInvested(m)), hit=invested.filter(v=>v>0).length;
+      const total=invested.reduce((s,v)=>s+v,0), inc=ms.reduce((s,m)=>s+monthIncome(m),0);
+      if(total<=0) return { t:'Nothing has gone into investing', bad:true,
+        body:`Across ${fmtMonth(ms[0])} to ${fmtMonth(M)} you logged <b>${money(inc)}</b> of income and <b>${money(0)}</b> invested.`,
+        work:`0 of 3 months`,
+        nudge:`This is a statement about the record, not about you - if it is going somewhere the app cannot see, logging it as Invest is what makes it show up here.` };
+      return { t:`You invested in ${hit} of the last 3 months`, bad:hit<3,
+        body:`<b>${money(total)}</b> across ${fmtMonth(ms[0])} to ${fmtMonth(M)}, out of <b>${money(inc)}</b> earned - about <b>${rpPct(total,inc)}%</b>.`,
+        work:`${money(total)} ÷ ${money(inc)} = ${rpPct(total,inc)}%`,
+        nudge: hit===3 ? `Three months in a row is the part almost nobody manages.` : `The months it happened are worth more than the amount that happened.` };
+    }},
+
+  /* ---- the app's own thesis, stated once a month ---- */
+  { k:'hours', run(){
+      const M=state.activeMonth, H=effectiveHourly();
+      if(!(H>0)) return {locked:'Your hourly rate in Settings - every figure in hours of your life comes from it.'};
+      const exp=monthExpense(M); if(!(exp>0)) return null;
+      const traps=(state.impulse||[]).filter(i=>i.decision==='buy'&&monthOf(i.date)===M)
+        .reduce((s,i)=>s+(+i.amount||0),0);
+      return { t:`${fmtHours(exp/H)} of your life went out this month`, bad:false,
+        body:`<b>${money(exp)}</b> spent at <b>${money(H)}</b> an hour is <b>${fmtHours(exp/H)}</b> you already worked for.${traps>0?` <b>${fmtHours(traps/H)}</b> of it went on things you yourself called a trap.`:''}`,
+        work:`${money(exp)} ÷ ${money(H)}/hr = ${fmtHours(exp/H)}`,
+        nudge:`` };
+    }}
+];
+
+function buildReport(){
+  const out=[], locked=[];
+  REPORT_SIGNALS.forEach(sig=>{
+    let r=null;
+    try{ r=sig.run(); }catch(e){ return; }   // one broken signal must never take the page with it
+    if(!r) return;
+    if(r.locked){ locked.push(r.locked); return; }
+    out.push(Object.assign({k:sig.k}, r));
+  });
+  /* Bad news leads. A month where more went out than came in must not open with
+     a compliment about something else that happened to go well - that is the
+     same rule iaTone() enforces on the intake, applied to the report. Stable
+     within each group, so the declared order still reads as written. */
+  const bad=out.filter(g=>g.bad), rest=out.filter(g=>!g.bad);
+  return {signals:bad.concat(rest), locked};
+}
+
+function renderReport(){
+  const box=document.getElementById('rpBody'); if(!box) return;
+  const {signals, locked}=buildReport();
+  const cards=signals.map(g=>`
+    <div class="rp-card${g.bad?' bad':''}">
+      <div class="rp-t">${g.t}</div>
+      <div class="rp-b">${g.body}</div>
+      ${g.work?`<div class="rp-w" title="The arithmetic behind the line above">${escapeHtml(g.work)}</div>`:''}
+      ${g.nudge?`<div class="rp-n">${g.nudge}</div>`:''}
+    </div>`).join('');
+  const lockHTML = locked.length
+    ? `<details class="rp-lock"><summary>${locked.length} more would appear with a little more logged</summary><ul>${locked.map(l=>`<li>${escapeHtml(l)}</li>`).join('')}</ul></details>`
+    : '';
+  box.innerHTML = signals.length
+    ? cards+lockHTML
+    : `<div class="empty rf-empty">Nothing worth saying yet - and saying something anyway would be worse than saying nothing. Log a month of money in and out and this fills itself in.</div>`+lockHTML;
+}
 function renderReflectTab(){
   const body=document.getElementById('rfBody'), bar=document.getElementById('rfBar');
   if(!body||!bar) return;
@@ -8011,7 +8392,11 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
   const M=state.activeMonth;
   const monthBar = `<div class="rf-period"><button class="rf-arrow" id="rfPrev" title="Previous month">‹</button><span class="rf-m">${escapeHtml(fmtMonth(M))}${M===thisMonth()?' <small>this month</small>':''}</span><button class="rf-arrow" id="rfNext" title="Next month">›</button></div>`;
 
-  if(rfTab==='breakdown'){
+  if(rfTab==='report'){
+    bar.innerHTML=monthBar+`<p class="sub rf-lead">What your own numbers say about ${escapeHtml(fmtMonth(M))}. Every line shows the arithmetic behind it, and nothing appears until there is enough to be sure of.</p>`;
+    body.innerHTML=`<div id="rpBody"></div>`;
+    renderReport();
+  } else if(rfTab==='breakdown'){
     bar.innerHTML=`<p class="sub rf-lead">Where it went and where it came from. Widen the window to tell a one-off from a habit, and tap a slice to break it down further.</p>`;
     body.innerHTML=`<div id="bdBox"></div>`;
     renderBreakdown();   // carries its own 1/3/6/12 control, which IS the period here

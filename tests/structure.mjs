@@ -52,14 +52,18 @@ const reflect = await p.evaluate(async () => {
   const subs=[...document.querySelectorAll('#rfTabs .rf-tab')].map(b=>b.dataset.rf);
   const seen={};
   for(const t of subs){ rfTab=t; renderReflectTab(); await wait(120);
-    seen[t]={ chart:!!document.querySelector('#rfBody svg, #rfBody .cbar, #rfBody .mcol, #rfBody .bd-ring, #rfBody canvas, #rfBody .bd-row'),
+    /* The report is a verdict, not a chart - it draws cards. Everything else
+       has to draw something you can look at. */
+    seen[t]={ chart: t==='report'
+                ? !!document.querySelector('#rfBody .rp-card, #rfBody .rp-lock, #rfBody .rf-empty')
+                : !!document.querySelector('#rfBody svg, #rfBody .cbar, #rfBody .mcol, #rfBody .bd-ring, #rfBody canvas, #rfBody .bd-row'),
               hasPeriod:!!document.getElementById('rfPrev') }; }
   return { tab:!!document.querySelector('[data-view="reflect"]'), subs, seen,
            learnPanels:[...document.querySelectorAll('#view-learn h2')].map(h=>h.textContent) };
 });
 check('a Reflect tab exists', reflect.tab===true);
-check('...with the four reports as sub-tabs',
-      JSON.stringify(reflect.subs)===JSON.stringify(['breakdown','trends','worth','inout']), reflect.subs.join(','));
+check('...with the verdict first and the four reports under it',
+      JSON.stringify(reflect.subs)===JSON.stringify(['report','breakdown','trends','worth','inout']), reflect.subs.join(','));
 for(const t of reflect.subs) check(`...and "${t}" actually draws something`, reflect.seen[t].chart===true);
 check('Learn went back to teaching only',
       reflect.learnPanels.length===2 && /Money School/.test(reflect.learnPanels[0]), reflect.learnPanels.join(' | '));
@@ -702,6 +706,225 @@ check('a guessed row logs into the category it guessed',
       logged.n===2 && logged.guessed.join(',')==='Coffee / drinks out', JSON.stringify(logged.guessed));
 check('...and one it could not guess lands as Uncategorized, said out loud',
       logged.uncat===1 && /uncategorized/i.test(logged.toast), logged.toast);
+
+/* ---- 18. a posted bill says WHICH bill ----
+   Every recurring entry was noted "Recurring", so four bills in a row read
+   "Recurring, Recurring, Recurring, Recurring" and the list said nothing at
+   all. The transaction carries recId, so the app already knows it was
+   automatic; the note is the one place that should say what it WAS. ---- */
+const REC={...EMPTY, uiMode:'all', stageReached:3, spendingMode:true,
+  categories:[{id:'rent',name:'Rent / mortgage'},{id:'util',name:'Utilities (power, water)'},
+              {id:'car',name:'Car payment'},{id:'ins',name:'Insurance'}],
+  budgets:{'2026-08':{rent:850,util:620,car:340,ins:100}},
+  recurring:[{id:'r1',type:'expense',amount:300,catId:'rent',freq:'monthly',anchor:'2026-08-01'},
+             {id:'r2',type:'expense',amount:340,catId:'car',freq:'monthly',anchor:'2026-08-01'},
+             {id:'r4',type:'income',amount:2000,source:'Warehouse paycheck',freq:'monthly',anchor:'2026-08-01'}],
+  transactions:[
+    {id:'t1',type:'expense',amount:300,catId:'rent',date:'2026-08-01',note:'Recurring',recId:'r1'},
+    {id:'t2',type:'expense',amount:340,catId:'car', date:'2026-08-01',note:'Recurring',recId:'r2'},
+    {id:'t4',type:'expense',amount:620,catId:'util',date:'2026-08-01',note:'Recurring'},
+    {id:'t5',type:'income', amount:2000,source:'Warehouse paycheck',date:'2026-08-01',note:'Recurring',recId:'r4'},
+    {id:'t6',type:'expense',amount:44,catId:'util',date:'2026-08-05',note:'Recurring bill I typed myself'}]};
+await seed(REC); await p.reload(); await p.waitForTimeout(900);
+const named = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('home'); await wait(400);
+  const byId=id=>(state.transactions.find(t=>t.id===id)||{});
+  const recent=[...document.querySelectorAll('.sp-recent .r .nm')].map(e=>e.textContent.trim());
+  activateTab('tx'); await wait(400);
+  const subs=[...document.querySelectorAll('.tx-sub')].map(e=>e.textContent.trim());
+  return { t1:byId('t1').note, t2:byId('t2').note, t4:byId('t4').note, t5:byId('t5').note,
+           t6:byId('t6').note, recent, subs,
+           anySayRecurringAlone: recent.some(r=>r==='Recurring') };
+});
+check('a posted bill is named, not just called "Recurring"',
+      named.t1==='Rent / mortgage' && named.t2==='Car payment',
+      `${named.t1} / ${named.t2}`);
+check('...even when the schedule behind it is gone, from the category it landed in',
+      named.t4==='Utilities (power, water)', named.t4);
+check('...and a recurring paycheck is named from its source',
+      named.t5==='Warehouse paycheck', named.t5);
+check('a note somebody typed themselves is never rewritten',
+      named.t6==='Recurring bill I typed myself', named.t6);
+check('no row in the recent list just says "Recurring"',
+      named.anySayRecurringAlone===false, named.recent.join(' | '));
+check('...and "posted automatically" moves to the line that has room for it',
+      named.subs.some(x=>/repeats/.test(x)) && !named.subs.every(x=>/repeats/.test(x)),
+      named.subs.slice(0,4).join(' | '));
+
+/* ---- 19. the debt planner tells you what is actually wrong ----
+   The state a beginner reaches first - a debt added before they have looked up
+   the rate or decided what they can pay - produced "you're not outrunning the
+   interest, about $0 piles on every month". It contradicted itself in one
+   sentence and never named the blocker, which was that nobody had said what
+   they could pay yet. ---- */
+const DEBTS={...EMPTY, uiMode:'all', stageReached:3, hourlyWage:24, debts:[], debtBudget:0};
+await seed(DEBTS); await p.reload(); await p.waitForTimeout(900);
+const debt = await p.evaluate(async () => {
+  const wait=()=>new Promise(r=>setTimeout(r,320));
+  activateTab('debt'); await wait();
+  const set=(id,v)=>{const e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true}));};
+  const out={};
+  // a debt with no rate and no payment yet - the very first thing that happens
+  set('debtName','Visa'); set('debtBal','2400'); set('debtApr',''); set('debtMin','');
+  document.getElementById('addDebt').click(); await wait();
+  out.noPayment=document.getElementById('debtResults').textContent.replace(/\s+/g,' ').trim();
+  /* genuinely under water: the payment clears the minimums and still loses to
+     the interest. Needs a minimum SMALLER than the monthly interest, which is
+     exactly the shape of a large balance at a high rate. */
+  const setRow=(k,v)=>{ const e=document.querySelector(`[data-debt][data-k="${k}"]`);
+    if(e){ e.value=v; e.dispatchEvent(new Event('input',{bubbles:true})); } };
+  setRow('balance','20000'); setRow('apr','29.9'); setRow('minPayment','100');
+  await wait();
+  set('debtBudget','150'); await wait();
+  out.underwater=document.getElementById('debtResults').textContent.replace(/\s+/g,' ').trim();
+  // a real plan
+  set('debtBudget','900'); await wait();
+  out.plan=document.getElementById('debtResults').textContent.replace(/\s+/g,' ').trim();
+  return out;
+});
+check('a planner with no payment set says THAT, not that interest is winning',
+      /how much you can put toward this/i.test(debt.noPayment) && !/outrunning/i.test(debt.noPayment),
+      debt.noPayment.slice(0,120));
+check('...and never blames interest that is not there',
+      !/\$0[^0-9]*(piles|every month)/i.test(debt.noPayment), debt.noPayment.slice(0,120));
+check('...while a genuinely under-water payment is still called what it is',
+      /never shrinks/i.test(debt.underwater), debt.underwater.slice(0,110));
+check('a workable payment still produces a payoff date',
+      /Debt-free by/i.test(debt.plan), debt.plan.slice(0,90));
+
+/* The nudge has to be a number a person can act on, and it has to agree with
+   the simulation printed beside it. The old one was
+   Math.ceil((monthlyInterest+1)/10)*10 - on a $2,400 card that came out as $10,
+   which is BELOW the $75 minimum, so the app would have refused it outright. */
+const nudge = await p.evaluate(() => {
+  const D=[{name:'A',balance:2400,apr:23.9,minPayment:75}];
+  const rungs=[60,36,24].map(t=>debtPaymentFor(D,'avalanche',t)).filter(Boolean);
+  return rungs.map(r=>{ const sim=simulateDebts(D,r.pay,'avalanche');
+    return { pay:r.pay, claimed:r.months, actual:sim.error?null:sim.months,
+             aboveMin:r.pay>=75, round:r.pay%5===0 }; });
+});
+check('every suggested amount clears the minimum payment',
+      nudge.length>0 && nudge.every(r=>r.aboveMin), JSON.stringify(nudge));
+check('...is a round number a person can aim at', nudge.every(r=>r.round), JSON.stringify(nudge));
+check('...and the months it claims are the months it actually takes',
+      nudge.every(r=>r.claimed===r.actual), JSON.stringify(nudge));
+
+/* A payment that cannot beat the interest used to grind out 720 months of
+   compounding and report an interest total in the billions. */
+const runaway = await p.evaluate(() =>
+  simulateDebts([{name:'A',balance:20000,apr:29.9,minPayment:100}],100,'avalanche'));
+check('a debt that never moves is stopped, not compounded into the billions',
+      runaway.stalled===true && runaway.months<=121 && runaway.totalInterest<1e6,
+      `${runaway.months} months, interest ${Math.round(runaway.totalInterest)}`);
+
+/* avalanche and snowball must actually differ when the orders differ */
+const strat = await p.evaluate(() => {
+  const D=[{name:'Store card',balance:500,apr:5,minPayment:25},{name:'Visa',balance:6000,apr:24,minPayment:150}];
+  const a=simulateDebts(D,500,'avalanche'), s=simulateDebts(D,500,'snowball');
+  return {aOrder:a.order.map(o=>o.name), sOrder:s.order.map(o=>o.name),
+          aInt:Math.round(a.totalInterest*100)/100, sInt:Math.round(s.totalInterest*100)/100};
+});
+check('avalanche pays the dearest rate first, snowball the smallest balance',
+      strat.aOrder[0]==='Visa' && strat.sOrder[0]==='Store card',
+      `${strat.aOrder.join('>')} vs ${strat.sOrder.join('>')}`);
+check('...and avalanche genuinely costs less interest when they differ',
+      strat.aInt < strat.sInt, `${strat.aInt} vs ${strat.sInt}`);
+
+/* the form has to be answerable by someone who has never seen an APR */
+const help = await p.evaluate(() => {
+  const d=document.querySelector('#view-debt .fieldhelp');
+  const hint=document.getElementById('debtBudgetHint');
+  return { exists:!!d, text:d?d.textContent.toLowerCase():'',
+           budgetHint:hint?hint.textContent.toLowerCase():'' };
+});
+check('the debt form explains where to find each number', help.exists===true);
+check('...including what APR means in plain words',
+      /purchase apr|interest rate/.test(help.text) && /minimum payment due/.test(help.text));
+check('...and says the rate can wait, so a missing one is not a dead end',
+      /add the debt anyway/.test(help.text));
+check('the monthly amount says it INCLUDES the minimums',
+      /minimums included|not extra on top/.test(help.budgetHint), help.budgetHint);
+
+/* ---- 20. the Accountability Report ----
+   The app measured plenty and concluded nothing. It knew the top category, the
+   priciest weekday, net worth, income against expense - and never once put two
+   months side by side and said what changed. ---- */
+const RM=await p.evaluate(()=>thisMonth());
+const rshift=(m,n)=>{const [y,mm]=m.split('-').map(Number); const d=new Date(y,mm-1+n,1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
+const REPORT={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24, activeMonth:RM,
+  categories:[{id:'eat',name:'Eating out'}], budgets:{[RM]:{eat:400}},
+  transactions:[{id:'i1',type:'income',amount:3200,date:RM+'-01'},
+                {id:'i2',type:'income',amount:3200,date:rshift(RM,-1)+'-01'},
+                {id:'a',type:'expense',amount:220,catId:'eat',date:rshift(RM,-1)+'-10'},
+                {id:'b',type:'expense',amount:400,catId:'eat',date:RM+'-05'}]};
+await seed(REPORT); await p.reload(); await p.waitForTimeout(900);
+const rpt = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await wait(450);
+  const r=buildReport();
+  const cards=[...document.querySelectorAll('.rp-card')];
+  return { on:document.querySelector('#rfTabs .rf-tab.on').dataset.rf,
+           keys:r.signals.map(g=>g.k),
+           everyCardShowsWorking:cards.length>0 && cards.every(c=>!!c.querySelector('.rp-w')),
+           drift:(r.signals.find(g=>g.k==='drift')||{}).t||'',
+           driftBody:(r.signals.find(g=>g.k==='drift')||{}).body||'',
+           badFirst:r.signals.length>1 ? r.signals[0].bad===true : true };
+});
+check('Reflect opens on the verdict, not a chart', rpt.on==='report', rpt.on);
+check('it compares this month against last, which nothing did before',
+      /up 82%/.test(rpt.drift), rpt.drift);
+check('...and shows both figures so the claim can be checked',
+      /\$400/.test(rpt.driftBody) && /\$220/.test(rpt.driftBody), rpt.driftBody.replace(/<[^>]+>/g,''));
+check('every card carries the arithmetic behind it', rpt.everyCardShowsWorking===true);
+
+/* A month that went negative must not open with a compliment about something
+   else that happened to go well. */
+const NEG={...REPORT, budgets:{[RM]:{eat:200}},
+  transactions:[{id:'i1',type:'income',amount:1000,date:RM+'-01'},
+                {id:'x',type:'expense',amount:1800,catId:'eat',date:RM+'-03'},
+                {id:'i0',type:'income',amount:1000,date:rshift(RM,-1)+'-01'},
+                {id:'y',type:'expense',amount:100,catId:'eat',date:rshift(RM,-1)+'-03'}]};
+await seed(NEG); await p.reload(); await p.waitForTimeout(900);
+const negative = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await wait(450);
+  const r=buildReport();
+  return { first:r.signals[0], kept:r.signals.find(g=>g.k==='kept') };
+});
+check('a month that went negative leads with the bad news',
+      negative.first && negative.first.bad===true, negative.first&&negative.first.t);
+check('...and says so plainly rather than as a percentage kept',
+      /spent more than came in/i.test(negative.kept.t), negative.kept.t);
+
+/* Silence over speculation - the rule the whole thing rests on. */
+const THIN={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:RM,
+  transactions:[{id:'i',type:'income',amount:3200,date:RM+'-01'}]};
+await seed(THIN); await p.reload(); await p.waitForTimeout(900);
+const thin = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await wait(450);
+  const r=buildReport();
+  return { cards:document.querySelectorAll('.rp-card').length, locked:r.locked,
+           lockUI:!!document.querySelector('.rp-lock'),
+           text:document.getElementById('rfBody').textContent.toLowerCase() };
+});
+check('with one paycheck and nothing else it says nothing at all', thin.cards===0, String(thin.cards));
+check('...it never congratulates you for keeping 100% of an empty ledger',
+      !/kept 100%/.test(thin.text), thin.text.slice(0,90));
+check('...and lists what would unlock more instead of failing silently',
+      thin.lockUI===true && thin.locked.length>=3, thin.locked.length+' locked');
+
+/* One broken signal must never take the page down with it. */
+const survives = await p.evaluate(() => {
+  const orig=REPORT_SIGNALS[0].run;
+  REPORT_SIGNALS[0].run=()=>{ throw new Error('boom'); };
+  let ok=false; try{ buildReport(); ok=true; }catch(e){ ok=false; }
+  REPORT_SIGNALS[0].run=orig;
+  return ok;
+});
+check('a signal that throws does not take the report with it', survives===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
