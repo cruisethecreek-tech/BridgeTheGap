@@ -748,6 +748,100 @@ check('...and "posted automatically" moves to the line that has room for it',
       named.subs.some(x=>/repeats/.test(x)) && !named.subs.every(x=>/repeats/.test(x)),
       named.subs.slice(0,4).join(' | '));
 
+/* ---- 19. the debt planner tells you what is actually wrong ----
+   The state a beginner reaches first - a debt added before they have looked up
+   the rate or decided what they can pay - produced "you're not outrunning the
+   interest, about $0 piles on every month". It contradicted itself in one
+   sentence and never named the blocker, which was that nobody had said what
+   they could pay yet. ---- */
+const DEBTS={...EMPTY, uiMode:'all', stageReached:3, hourlyWage:24, debts:[], debtBudget:0};
+await seed(DEBTS); await p.reload(); await p.waitForTimeout(900);
+const debt = await p.evaluate(async () => {
+  const wait=()=>new Promise(r=>setTimeout(r,320));
+  activateTab('debt'); await wait();
+  const set=(id,v)=>{const e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true}));};
+  const out={};
+  // a debt with no rate and no payment yet - the very first thing that happens
+  set('debtName','Visa'); set('debtBal','2400'); set('debtApr',''); set('debtMin','');
+  document.getElementById('addDebt').click(); await wait();
+  out.noPayment=document.getElementById('debtResults').textContent.replace(/\s+/g,' ').trim();
+  /* genuinely under water: the payment clears the minimums and still loses to
+     the interest. Needs a minimum SMALLER than the monthly interest, which is
+     exactly the shape of a large balance at a high rate. */
+  const setRow=(k,v)=>{ const e=document.querySelector(`[data-debt][data-k="${k}"]`);
+    if(e){ e.value=v; e.dispatchEvent(new Event('input',{bubbles:true})); } };
+  setRow('balance','20000'); setRow('apr','29.9'); setRow('minPayment','100');
+  await wait();
+  set('debtBudget','150'); await wait();
+  out.underwater=document.getElementById('debtResults').textContent.replace(/\s+/g,' ').trim();
+  // a real plan
+  set('debtBudget','900'); await wait();
+  out.plan=document.getElementById('debtResults').textContent.replace(/\s+/g,' ').trim();
+  return out;
+});
+check('a planner with no payment set says THAT, not that interest is winning',
+      /how much you can put toward this/i.test(debt.noPayment) && !/outrunning/i.test(debt.noPayment),
+      debt.noPayment.slice(0,120));
+check('...and never blames interest that is not there',
+      !/\$0[^0-9]*(piles|every month)/i.test(debt.noPayment), debt.noPayment.slice(0,120));
+check('...while a genuinely under-water payment is still called what it is',
+      /never shrinks/i.test(debt.underwater), debt.underwater.slice(0,110));
+check('a workable payment still produces a payoff date',
+      /Debt-free by/i.test(debt.plan), debt.plan.slice(0,90));
+
+/* The nudge has to be a number a person can act on, and it has to agree with
+   the simulation printed beside it. The old one was
+   Math.ceil((monthlyInterest+1)/10)*10 - on a $2,400 card that came out as $10,
+   which is BELOW the $75 minimum, so the app would have refused it outright. */
+const nudge = await p.evaluate(() => {
+  const D=[{name:'A',balance:2400,apr:23.9,minPayment:75}];
+  const rungs=[60,36,24].map(t=>debtPaymentFor(D,'avalanche',t)).filter(Boolean);
+  return rungs.map(r=>{ const sim=simulateDebts(D,r.pay,'avalanche');
+    return { pay:r.pay, claimed:r.months, actual:sim.error?null:sim.months,
+             aboveMin:r.pay>=75, round:r.pay%5===0 }; });
+});
+check('every suggested amount clears the minimum payment',
+      nudge.length>0 && nudge.every(r=>r.aboveMin), JSON.stringify(nudge));
+check('...is a round number a person can aim at', nudge.every(r=>r.round), JSON.stringify(nudge));
+check('...and the months it claims are the months it actually takes',
+      nudge.every(r=>r.claimed===r.actual), JSON.stringify(nudge));
+
+/* A payment that cannot beat the interest used to grind out 720 months of
+   compounding and report an interest total in the billions. */
+const runaway = await p.evaluate(() =>
+  simulateDebts([{name:'A',balance:20000,apr:29.9,minPayment:100}],100,'avalanche'));
+check('a debt that never moves is stopped, not compounded into the billions',
+      runaway.stalled===true && runaway.months<=121 && runaway.totalInterest<1e6,
+      `${runaway.months} months, interest ${Math.round(runaway.totalInterest)}`);
+
+/* avalanche and snowball must actually differ when the orders differ */
+const strat = await p.evaluate(() => {
+  const D=[{name:'Store card',balance:500,apr:5,minPayment:25},{name:'Visa',balance:6000,apr:24,minPayment:150}];
+  const a=simulateDebts(D,500,'avalanche'), s=simulateDebts(D,500,'snowball');
+  return {aOrder:a.order.map(o=>o.name), sOrder:s.order.map(o=>o.name),
+          aInt:Math.round(a.totalInterest*100)/100, sInt:Math.round(s.totalInterest*100)/100};
+});
+check('avalanche pays the dearest rate first, snowball the smallest balance',
+      strat.aOrder[0]==='Visa' && strat.sOrder[0]==='Store card',
+      `${strat.aOrder.join('>')} vs ${strat.sOrder.join('>')}`);
+check('...and avalanche genuinely costs less interest when they differ',
+      strat.aInt < strat.sInt, `${strat.aInt} vs ${strat.sInt}`);
+
+/* the form has to be answerable by someone who has never seen an APR */
+const help = await p.evaluate(() => {
+  const d=document.querySelector('#view-debt .fieldhelp');
+  const hint=document.getElementById('debtBudgetHint');
+  return { exists:!!d, text:d?d.textContent.toLowerCase():'',
+           budgetHint:hint?hint.textContent.toLowerCase():'' };
+});
+check('the debt form explains where to find each number', help.exists===true);
+check('...including what APR means in plain words',
+      /purchase apr|interest rate/.test(help.text) && /minimum payment due/.test(help.text));
+check('...and says the rate can wait, so a missing one is not a dead end',
+      /add the debt anyway/.test(help.text));
+check('the monthly amount says it INCLUDES the minimums',
+      /minimums included|not extra on top/.test(help.budgetHint), help.budgetHint);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

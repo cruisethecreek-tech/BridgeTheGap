@@ -679,6 +679,23 @@
   /* debt payoff planner */
   .debtrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
   .debtrow .dr-name{font-weight:800;flex:1;min-width:90px}
+  .fieldhelp{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
+  .fieldhelp>summary{cursor:pointer;font-weight:800;font-size:13.5px;color:var(--accent);list-style:none;padding:11px 0}
+  .fieldhelp>summary::-webkit-details-marker{display:none}
+  .fieldhelp>summary::before{content:'▸ ';font-size:11px}
+  .fieldhelp[open]>summary::before{content:'▾ '}
+  .fieldhelp ul{margin:0 0 10px;padding-left:18px;font-size:13px;line-height:1.6;color:var(--muted)}
+  .fieldhelp li{margin-bottom:7px}
+  .fieldhelp li b{color:var(--text)}
+  .fieldhelp p{font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 14px}
+  /* what is missing is not an error - an error tells you that you did something
+     wrong, and they have not */
+  .debt-todo{background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.4);border-radius:12px;padding:13px 15px;font-size:13.5px;line-height:1.6}
+  .debt-todo b{color:var(--accent)}
+  .debt-nudge{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 15px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+  .debt-nudge ul{margin:8px 0;padding-left:18px}
+  .debt-nudge li{margin-bottom:4px}
+  .debt-nudge b{color:var(--text)}
   .debtrow .dr-f{display:inline-flex;align-items:center;gap:3px;font-size:13px;color:var(--muted);font-weight:700}
   .debtrow .dr-f input{width:76px;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 8px;font-size:14px}
   #debtStrategy button{white-space:nowrap}
@@ -1857,6 +1874,18 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld">Min pay $<input type="number" id="debtMin" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:100px"></label>
           <button class="btn primary" id="addDebt">Add</button>
         </div>
+        <!-- Someone who has never budgeted does not know what APR means or where
+             the minimum payment is written, and a form that assumes they do stops
+             them at the first field. This says where each number lives in plain
+             words, and says which ones can wait. -->
+        <details class="fieldhelp"><summary>Where do I find these?</summary>
+          <ul>
+            <li><b>Balance</b> - what you still owe today, not what you borrowed. Top of the statement, or the app for that card or loan.</li>
+            <li><b>Rate APR %</b> - the interest they charge you per year. On a card statement it is usually called <i>purchase APR</i> or <i>interest rate</i>, often on the back or the last page. On a loan it is on the agreement.</li>
+            <li><b>Min pay $</b> - the smallest payment they will accept without a late fee. On a card statement it is the <i>minimum payment due</i>.</li>
+          </ul>
+          <p>Do not have the rate to hand? Add the debt anyway with the balance - it still counts what you owe. Come back and fill the rate in when you have the statement, and the numbers sharpen up.</p>
+        </details>
         <div style="margin-top:8px"><button class="btn sm ghost" id="importLiab">⤵ Import from my liabilities</button></div>
         <div id="debtList"></div>
       </div>
@@ -1866,6 +1895,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div class="row">
           <label class="fld">Total you can pay toward debt each month $<input type="number" id="debtBudget" min="0" step="10" placeholder="e.g. 900" style="width:150px"></label>
         </div>
+        <!-- The one thing people get wrong here: they type the EXTRA they can find,
+             not the total. That makes the payoff date wildly pessimistic and the
+             screen look broken. -->
+        <p class="sub" id="debtBudgetHint" style="margin-top:6px">This is the <b>whole</b> amount, minimums included - not extra on top of them.</p>
         <div class="uimode" id="debtStrategy" style="margin-top:12px">
           <button data-s="avalanche">Avalanche</button>
           <button data-s="snowball">Snowball</button>
@@ -3182,8 +3215,13 @@ function simulateDebts(debts, monthly, strategy){
   let ds=debts.map(d=>({name:d.name, bal:+d.balance||0, apr:+d.apr||0, min:+d.minPayment||0, interest:0, paidMonth:null}));
   const totalMin=ds.reduce((s,d)=>s+(d.bal>0?d.min:0),0);
   if(monthly < totalMin - 0.01) return {error:'below_min', totalMin};
-  let month=0, totalInterest=0; const schedule=[{month:0, total:ds.reduce((s,d)=>s+d.bal,0)}];
+  let month=0, totalInterest=0; const startBal=ds.reduce((s,d)=>s+d.bal,0);
+  const schedule=[{month:0, total:startBal}];
   while(ds.some(d=>d.bal>0.005) && month<720){
+    /* A payment that cannot beat the interest never will, and grinding out 720
+       months of compounding on it produced a "total interest" in the billions.
+       Ten years in with nothing paid down is the answer, so stop and say so. */
+    if(month>120 && ds.reduce((s,d)=>s+Math.max(0,d.bal),0)>=startBal) break;
     month++;
     ds.forEach(d=>{ if(d.bal>0.005){ const i=d.bal*(d.apr/100/12); d.bal+=i; d.interest+=i; totalInterest+=i; } });
     let budget=monthly;
@@ -3198,6 +3236,44 @@ function simulateDebts(debts, monthly, strategy){
   const stalled = ds.some(d=>d.bal>0.005);   // hit the 720-month cap with balances left = never pays off at this payment
   return { months:month, totalInterest, schedule, stalled,
            order: ds.slice().sort((a,b)=>(a.paidMonth||9e9)-(b.paidMonth||9e9)).map(d=>({name:d.name, paidMonth:d.paidMonth, interest:d.interest})) };
+}
+/* The old nudge was Math.ceil((monthlyInterest+1)/10)*10 - the smallest payment
+   that technically beats the interest by a dollar. On a $2,400 card that came
+   out as "$10/mo", which is 240 months and useless as a target. This asks the
+   real question instead - what clears it in N months - by binary-searching the
+   same simulation the rest of the screen uses, so the answer cannot disagree
+   with the payoff date shown next to it. Returns null if even paying the whole
+   balance would not do it (which cannot happen, but the caller should not have
+   to trust that). */
+function debtPaymentFor(debts, strat, targetMonths){
+  const totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);
+  const totalMin=debts.reduce((s,d)=>s+(+d.minPayment||0),0);
+  if(!(totalBal>0)) return null;
+  const clears=p=>{ const r=simulateDebts(debts,p,strat); return !r.error && !r.stalled && r.months<=targetMonths; };
+  let lo=Math.max(totalMin,0), hi=Math.max(totalBal*1.5, totalMin+totalBal, 10);
+  if(!clears(hi)) return null;
+  for(let i=0;i<40 && hi-lo>1;i++){ const mid=(lo+hi)/2; if(clears(mid)) hi=mid; else lo=mid; }
+  const pay=Math.ceil(hi/5)*5;   // a round number a person can actually aim at
+  /* Rounding UP to something aimable means the payment usually clears faster
+     than the horizon that was asked for, so report what it ACTUALLY does rather
+     than the target it was derived from. The first version of this said
+     "$80/mo clears it in about 5 years" about a payment that clears it in 47
+     months - the screen would have been arguing with itself. */
+  const real=simulateDebts(debts,pay,strat);
+  if(real.error||real.stalled) return null;
+  return {pay, months:real.months};
+}
+/* "3 yrs 11 mo", the same shape the payoff hero uses */
+function debtDur(m){
+  const y=Math.floor(m/12), mo=m%12;
+  return (y?y+' yr'+(y>1?'s':''):'')+(y&&mo?' ':'')+(mo?mo+' mo':'')||'0 mo';
+}
+/* The "no rate set" caveat used to render only on the success path, so the
+   stalled screens - the ones a beginner hits first - blamed interest without
+   ever mentioning that no rate had been entered. */
+function noAprIn(debts){
+  return debts.some(d=>(+d.apr||0)<=0)
+    ? ` Some of these have no rate set yet, so the interest here is understated.` : '';
 }
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
 /* The Debt planner promises one thing in its own intro: "the fastest, cheapest
@@ -3250,10 +3326,27 @@ function renderDebtResults(){
   const plan=simulateDebts(debts, budget, strat);
   const other=simulateDebts(debts, budget, strat==='avalanche'?'snowball':'avalanche');
   const H=effectiveHourly();
-  if(plan.stalled){   // budget covers minimums but not the interest - honest math, not a fake 60-year date
+  if(plan.stalled){
+    /* One catch-all message used to blame interest for every stall, so the state
+       a beginner is MOST likely to reach - a debt added before they have looked
+       up the rate or decided what they can pay - read "you're not outrunning the
+       interest, about $0 piles on every month". It contradicted itself in one
+       sentence and never named the actual blocker, which was simply that nobody
+       had said what they could pay yet. Diagnose it, then say that. */
     const monthlyInterest=debts.reduce((s,d)=>s+(+d.balance||0)*((+d.apr||0)/100/12),0);
-    const need=Math.ceil((monthlyInterest+1)/10)*10;
-    box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${actMoney(budget)}</b>/mo you're not outrunning the interest - about <b>${money(monthlyInterest)}</b> piles on every month, so the balance never shrinks. You need at least roughly <b>${actMoney(need)}</b>/mo to start winning. Even $20 more a month changes the picture - try nudging it up.</div>`;
+    const rungs=[]; const seen=new Set();
+    [60,36,24].forEach(target=>{ const r=debtPaymentFor(debts, strat, target);
+      if(r && !seen.has(r.pay)){ seen.add(r.pay); rungs.push(r); } });
+    const ladder = rungs.length ? `<div class="debt-nudge">What different amounts would do, worked out from your own numbers:<ul>
+        ${rungs.map(r=>`<li><b>${actMoney(r.pay)}</b>/mo pays it off in <b>${debtDur(r.months)}</b></li>`).join('')}
+      </ul>Type whichever one is real for you. Nothing here moves money - it only shows the shape.</div>` : '';
+    if(budget<=0){
+      box.innerHTML=`<div class="debt-todo" style="margin-top:12px"><b>One thing missing:</b> how much you can put toward this each month. Nothing above it is wrong - the planner just cannot draw a way out until it knows the payment. Put a figure in <b>Total you can pay toward debt each month</b> and the date appears.${noAprIn(debts)}</div>${ladder}`;
+    } else if(monthlyInterest>0 && budget<=monthlyInterest){
+      box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${actMoney(budget)}</b>/mo the balance never shrinks - interest adds about <b>${money(monthlyInterest)}</b> every month, which is more than you are paying. That is not a judgement, it is arithmetic, and it is exactly the thing worth knowing early.</div>${ladder}`;
+    } else {
+      box.innerHTML=`<div class="imp-err" style="margin-top:12px">At <b>${actMoney(budget)}</b>/mo this does not clear inside ten years, so there is no honest date to show yet.${noAprIn(debts)}</div>${ladder}`;
+    }
     renderInvestCompare(); return;
   }
   const noApr=debts.some(d=>(+d.apr||0)<=0);
