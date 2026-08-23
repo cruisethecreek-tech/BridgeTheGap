@@ -533,6 +533,92 @@ const wrongScroller = fits.filter(f=>!f.err && f.sheetScrolls==='visible' && f.b
 check('...and long content scrolls inside the sheet, not off the top',
       wrongScroller.length===0, wrongScroller.map(f=>`${f.id}@${f.h}`).join(' | '));
 
+/* ---- 16. three faults found by using the app on a real phone ---- */
+const REAL={...EMPTY, uiMode:'all', stageReached:3, hourlyWage:24,
+  categories:[{id:'inv',name:'Investing / retirement',growth:'invest'},
+              {id:'food',name:'Food'},{id:'groc',name:'Groecries',parentId:'food'},
+              {id:'w',name:'Walmart',parentId:'groc'}],
+  budgets:{'2026-08':{inv:2400,groc:650,w:200}},
+  transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'},
+                {id:'t',type:'expense',amount:80,catId:'groc',date:'2026-08-03'}]};
+await seed(REAL); await p.reload(); await p.waitForTimeout(900);
+
+/* Invest carried the .on class like the other two and had no rule to paint it,
+   so choosing it switched the form underneath while the toggle still looked
+   like Expense was selected. */
+const toggle = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await wait(300);
+  const out={};
+  for(const t of ['expense','income','invest']){
+    const btn=document.querySelector(`#typeToggle button[data-t="${t}"]`);
+    btn.click(); await wait(140);
+    const cs=getComputedStyle(btn), bg=cs.backgroundColor;
+    out[t]={on:btn.classList.contains('on'), bg,
+            painted: bg!=='rgba(0, 0, 0, 0)' && bg!=='transparent'};
+  }
+  out.distinct = new Set(['expense','income','invest'].map(t=>out[t].bg)).size;
+  return out;
+});
+check('every log type shows which one is selected',
+      ['expense','income','invest'].every(t=>toggle[t].on && toggle[t].painted),
+      JSON.stringify(toggle));
+check('...and each one is told apart from the others', toggle.distinct===3,
+      `${toggle.expense.bg} / ${toggle.income.bg} / ${toggle.invest.bg}`);
+
+/* A subcategory could only be deleted, and deleting it takes its transactions'
+   category with it - so fixing a typo cost you history. */
+const rename = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(350);
+  const pencils=document.querySelectorAll('#cats .subrow .cat-edit').length;
+  document.querySelector('[data-editcat="groc"]').click(); await wait(220);
+  const field=!!document.querySelector('input[data-rename="groc"]');
+  const cleared=(()=>{ const e=document.querySelector('.subrow.editing .sub-assign');
+    return e ? getComputedStyle(e).display==='none' : false; })();
+  document.querySelector('input[data-rename="groc"]').value='Groceries';
+  document.querySelector('[data-renamesave="groc"]').click(); await wait(220);
+  // a third-level sub renames too, and Enter commits it
+  document.querySelector('[data-editcat="w"]').click(); await wait(220);
+  const i3=document.querySelector('input[data-rename="w"]'); i3.value='Walmart Supercenter';
+  i3.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); await wait(220);
+  return { pencils, field, cleared, names:state.categories.map(c=>c.name),
+           txKept:state.transactions.filter(t=>t.catId==='groc').length,
+           assignKept:(state.budgets['2026-08']||{}).groc };
+});
+check('a subcategory can be renamed, not only deleted', rename.pencils===2 && rename.field,
+      `${rename.pencils} pencils, field ${rename.field}`);
+check('...at the third level too, with Enter to commit',
+      rename.names.includes('Groceries') && rename.names.includes('Walmart Supercenter'),
+      rename.names.join(','));
+check('...and renaming keeps the transactions and the money',
+      rename.txKept===1 && rename.assignKept===650, `${rename.txKept} tx, ${rename.assignKept} assigned`);
+check('...with the rest of the row stepping aside for the field', rename.cleared===true);
+
+/* The intake filed "Investing / retirement" as an ordinary spending category,
+   so a retirement contribution logged against it would count as money spent. */
+const growth = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await wait(300);
+  const tags=[...document.querySelectorAll('#cats .growth-tag')].map(e=>e.textContent.trim());
+  activateTab('tx'); await wait(300);
+  const sel=document.getElementById('txCat');
+  document.querySelector('#typeToggle button[data-t="expense"]').click(); await wait(120);
+  sel.value='food'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(160);
+  const afterOrdinary=txType;
+  sel.value='inv'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(220);
+  return { tags, afterOrdinary, afterGrowth:txType,
+           kinds:['invest','save','debt'].map(k=>growthKindFor(k==='invest'?'Investing / retirement':k==='save'?'Savings':'Extra debt payments')) };
+});
+check('money that is invested is not shown as money spent', growth.tags.length===1 && /not spent/i.test(growth.tags[0]),
+      growth.tags.join(','));
+check('...and logging against it defaults to Invest, not Expense',
+      growth.afterOrdinary==='expense' && growth.afterGrowth==='invest',
+      `${growth.afterOrdinary} -> ${growth.afterGrowth}`);
+check('...while an ordinary category still logs as an expense', growth.afterOrdinary==='expense');
+check('the intake sorts each on-purpose row to its own kind',
+      growth.kinds.join(',')==='invest,save,debt', growth.kinds.join(','));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
