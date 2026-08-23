@@ -427,8 +427,10 @@
   /* Hub open: lift the FAB above the sheet's scrim so the ✕is visible and tappable,
      and pin it back to its notch (the more-open lift is pointless behind a scrim). */
   body.hub-open .fab{z-index:62;bottom:calc(28px + env(safe-area-inset-bottom))}
-  #intentSheet .modal.sheet{margin-bottom:calc(96px + env(safe-area-inset-bottom))}   /* the card floats above the notch + FAB */
-  @media(min-width:560px){ #intentSheet .modal.sheet{margin-bottom:0} }
+  /* the card floats above the notch + FAB, so its cap gives that space back */
+  #intentSheet .modal.sheet{margin-bottom:calc(96px + env(safe-area-inset-bottom));
+    max-height:calc(88vh - 96px);max-height:calc(88dvh - 96px - env(safe-area-inset-bottom))}
+  @media(min-width:560px){ #intentSheet .modal.sheet{margin-bottom:0;max-height:88vh;max-height:88dvh} }
   .tab{flex:1;background:none;border:none;color:var(--muted);font-weight:700;font-size:11px;padding:9px 2px 7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-width:0}
   .tab .t-ic{font-size:19px;line-height:1;filter:grayscale(.55) opacity(.75);transition:filter .15s ease}
   .tab .t-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -1099,7 +1101,12 @@
   .fab .fab-ic{font-size:20px;line-height:1}
   .fab #fabLbl{font-size:0}   /* the visible label lives in the bar under the notch */
   /* "I want to..." intent sheet - one tap from anywhere to any job the app does */
-  .modal.sheet{max-height:86vh;overflow-y:auto}
+  /* The sheet used to scroll ITSELF (overflow-y:auto). Its ✕ is positioned
+     absolutely inside it, so scrolling the sheet scrolled the close button
+     off the top - the same trap as an uncapped modal, by a different route.
+     It now follows the same rule as every other modal: the sheet holds
+     still, the list inside it scrolls. Its cap lives with its margin below,
+     because it floats clear of the FAB and that space has to come off. */
   .intent{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-top:9px;cursor:pointer;transition:border-color .12s ease,transform .12s ease}
   .intent:hover{border-color:var(--accent);transform:translateX(2px)}
   .intent.hero{background:rgba(var(--accent-rgb),.1);border-color:rgba(var(--accent-rgb),.42)}
@@ -1111,7 +1118,21 @@
   .intent:hover .int-a{color:var(--accent)}
   .modal-overlay{position:fixed;inset:0;background:rgba(5,6,9,.74);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-end;justify-content:center}
   .modal-overlay.on{display:flex}
-  .modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:24px 20px calc(28px + env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:slideup .25s ease}
+  /* Every modal grew to whatever its content wanted, with no cap and no scroll.
+     The app map wants 938px; on a 780px phone that put its own close button at
+     y=-115 - above the top of the screen, unreachable. A sheet you cannot close
+     is the worst thing in an app, and this was on ALL of them, not just the map.
+     So: cap at the viewport, and scroll the CONTENT rather than the sheet, which
+     keeps the heading and the ✕ pinned where a thumb expects them. Every modal
+     here keeps its scrollable content in a final container, so :last-child is
+     the right hook and no markup has to change.
+     dvh first for mobile browsers whose toolbars shrink the viewport, vh as the
+     fallback for anything that does not know it. */
+  .modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:24px 20px calc(28px + env(safe-area-inset-bottom));box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:slideup .25s ease;
+    display:flex;flex-direction:column;max-height:88vh;max-height:88dvh}
+  .modal>*:last-child{overflow-y:auto;overscroll-behavior:contain;min-height:0;-webkit-overflow-scrolling:touch}
+  /* a modal whose whole body is one short block should not gain a scrollbar */
+  .modal>*:last-child:only-child{overflow:visible}
   @media(min-width:560px){.modal-overlay{align-items:center}.modal{border-radius:20px}}
   @keyframes slideup{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
   .modal h3{font-size:20px;font-weight:900;margin-bottom:4px}

@@ -404,6 +404,53 @@ const autofill = await p.evaluate(async () => {
 check('picking a category fills the amount from what it is assigned', autofill.filled==='80', autofill.filled);
 check('...but never overwrites a figure someone typed', autofill.kept==='999', autofill.kept);
 
+/* ---- 15. no sheet may grow taller than the screen it opens on ----
+   Every .modal had no max-height and no overflow, so it grew to whatever its
+   content wanted. On a 780px phone the app map wanted 938px, and because the
+   overlay bottom-aligns the sheet, the extra went off the TOP - heading and
+   ✕ above y=0. A sheet you cannot close is not a layout bug, it is a trap.
+   The check is per modal, per phone height: the sheet fits, the ✕ is on
+   screen and hittable, and the overflow goes to the BODY not the sheet. ---- */
+const HEIGHTS=[700,780,844];
+const SHEETS=[{id:'appMap',open:'openAppMap()'},{id:'stageMap',open:'openStageMap()'},
+              {id:'ftHelp',open:'openFreedomHelp()'},
+              {id:'talkSheet',open:"openTalk({name:'Phone',amount:1100})"},
+              {id:'intentSheet',open:'openIntentSheet()'}];
+const fits=[];
+for(const h of HEIGHTS){
+  await p.setViewportSize({width:390,height:h});
+  for(const s of SHEETS){
+    const r = await p.evaluate(async ({open,id}) => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      document.querySelectorAll('.modal-overlay.on').forEach(o=>o.classList.remove('on'));
+      try{ (0,eval)(open); }catch(e){ return {err:String(e.message||e)}; }
+      await wait(320);
+      const ov=document.getElementById(id), m=ov&&ov.querySelector('.modal');
+      if(!m) return {err:'no sheet'};
+      const box=m.getBoundingClientRect(), x=m.querySelector('.x');
+      const xb=x?x.getBoundingClientRect():null;
+      const scroller=m.lastElementChild;
+      const hit=xb?document.elementFromPoint(xb.left+xb.width/2, xb.top+xb.height/2):null;
+      return { top:Math.round(box.top), bottom:Math.round(box.bottom), vh:innerHeight,
+               xTop:xb?Math.round(xb.top):null,
+               xHittable: !!(hit && (hit===x || x.contains(hit))),
+               bodyScrolls: scroller ? getComputedStyle(scroller).overflowY : 'none',
+               sheetScrolls: getComputedStyle(m).overflowY };
+    }, s);
+    fits.push({h, id:s.id, ...r});
+  }
+}
+await p.setViewportSize({width:390,height:1000});
+const bad = fits.filter(f=>f.err || f.top < 0 || f.bottom > f.vh+1);
+check('no sheet is taller than the phone it opens on', bad.length===0,
+      bad.map(f=>`${f.id}@${f.h}: ${f.err||('top '+f.top+' bottom '+f.bottom+' of '+f.vh)}`).join(' | '));
+const unreachable = fits.filter(f=>!f.err && !f.xHittable);
+check('...so the ✕ is always on screen and hittable', unreachable.length===0,
+      unreachable.map(f=>`${f.id}@${f.h}: x at y=${f.xTop}`).join(' | '));
+const wrongScroller = fits.filter(f=>!f.err && f.sheetScrolls==='visible' && f.bodyScrolls==='visible' && (f.bottom-f.top)>f.vh-40);
+check('...and long content scrolls inside the sheet, not off the top',
+      wrongScroller.length===0, wrongScroller.map(f=>`${f.id}@${f.h}`).join(' | '));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
