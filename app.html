@@ -179,7 +179,12 @@
   .assign-now:hover{background:rgba(var(--good-rgb),.24)}
   .roll-tag{font-size:11px;font-weight:800;color:var(--good);background:rgba(var(--good-rgb),.12);border:1px solid rgba(var(--good-rgb),.3);border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap}
   .subrow{display:flex;align-items:center;gap:8px;padding:9px 10px;margin-top:8px;background:var(--ink);border:1px solid var(--line);border-radius:10px}
-  .subrow .sub-name{flex:1;font-weight:700;font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* A subcategory name must stay readable, whatever else is on the row. It used
+     to ellipsis at flex:1 with min-width:0, so once the repeat toggle joined the
+     assign box and the split and delete buttons, "Internet" rendered as "I...".
+     A name you cannot read is a row you cannot use, so the name gets a floor and
+     the row wraps around it instead of eating it. */
+  .subrow .sub-name{flex:1 1 auto;font-weight:700;font-size:14px;min-width:96px;white-space:normal;overflow-wrap:anywhere}
   .subrow .sub-assign{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
   .subrow .sub-assign input{width:80px;padding:6px 8px;font-size:13px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:8px}
   .subrow .sub-spent{font-size:12px;color:var(--muted);white-space:nowrap}
@@ -212,6 +217,13 @@
   .panel-waiting{opacity:.72}
   .panel-waiting>*:not(h2):not(.sub):not(.pw-note){display:none!important}
   .panel-waiting .pw-note{display:block;margin-top:10px;font-size:12.5px;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-radius:10px;padding:9px 12px}
+  .rep{display:inline-flex;align-items:center;gap:5px;flex-shrink:0}
+  .rep-t{display:inline-flex;align-items:center;cursor:pointer;position:relative}
+  .rep-t input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+  .rep-t span{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:14px;line-height:1}
+  .rep.on .rep-t span{background:rgba(var(--good-rgb),.16);border-color:rgba(var(--good-rgb),.5);color:var(--good)}
+  .rep-t input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+  .rep-f{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:6px 4px;font:inherit;font-size:11.5px;max-width:112px}
   .cat-move{display:inline-flex;gap:3px;flex-shrink:0;margin-right:2px}
   .cm-b{background:var(--panel-2);border:1px solid var(--line);color:var(--accent);border-radius:8px;width:30px;height:30px;font-size:14px;line-height:1;cursor:pointer;padding:0}
   .cm-b:hover:not([disabled]){border-color:var(--accent)}
@@ -224,7 +236,8 @@
      are still on the line underneath ("Spent $0 of $1,250", "$80 spent"). */
   .cat.reordering .cat-assign,.cat.reordering .btn.danger,.cat.reordering .mini-edit,
   .cat.reordering .assign-now,.cat.reordering .addsub-first,.cat.reordering .addsub-row,
-  .subrow.reordering .sub-assign,.subrow.reordering .btn.danger,.subrow.reordering .sub-split-btn{display:none!important}
+  .subrow.reordering .sub-assign,.subrow.reordering .btn.danger,.subrow.reordering .sub-split-btn,
+  .cat.reordering .rep,.subrow.reordering .rep{display:none!important}
   .subrow.reordering .sub-name,.cat.reordering .cat-name{flex:1;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
   .areaguide{background:rgba(var(--accent-rgb),.09);border:1px solid rgba(var(--accent-rgb),.34);border-radius:16px;padding:16px 18px;margin-bottom:16px}
   .areaguide .ag-k{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent)}
@@ -364,7 +377,7 @@
   .give-target input{width:70px;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:8px 10px;font-size:15px;text-align:center}
   .give-prog{height:12px;background:var(--ink);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px}
   .give-prog>span{display:block;height:100%;background:linear-gradient(90deg,rgba(var(--good-rgb),.34),var(--good));border-radius:6px;transition:width .4s ease}
-  @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} }
+  @media(max-width:560px){ .subrow{flex-wrap:wrap} .subrow .sub-spent{width:100%;order:3} .subrow .sub-name{flex:1 1 100%} }
   .rebalance{margin-top:12px;background:rgba(var(--accent-rgb),.10);border:1px solid rgba(var(--accent-rgb),.38);border-radius:12px;padding:12px 14px}
   .rebalance .rb-msg{font-size:13px;color:var(--text);line-height:1.45;font-weight:600}
   .rebalance .rb-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
@@ -3607,6 +3620,23 @@ document.getElementById('starterBtn').addEventListener('click',()=>{
   });
   save(); renderBudget(); renderTxForm();
 });
+/* Choosing a category in the Recurring form already tells us the amount - it is
+   sitting on that category's Assign box - so asking for it again is asking the
+   user to look it up and retype it. Fill it in, and say where the number came
+   from so it never looks like the app invented one. Only fills a BLANK amount:
+   a figure someone typed is never overwritten. */
+(function(){
+  const cat=document.getElementById('recCat'), amt=document.getElementById('recAmt');
+  if(!cat||!amt) return;
+  cat.addEventListener('change',()=>{
+    const id=cat.value; if(!id) return;
+    if(amt.value.trim()!=='') return;
+    const a=assignedFor(id, state.activeMonth);
+    if(!(a>0)) return;
+    amt.value=a;
+    if(typeof toast==='function') toast(`Filled ${money(a)} from what you assigned ${catName(id)} this month. Change it if the bill differs.`);
+  });
+})();
 document.getElementById('reorderBtn').addEventListener('click',()=>{
   catReorder=!catReorder;
   const b=document.getElementById('reorderBtn');
@@ -3667,6 +3697,63 @@ let collapsedCats=new Set();
    touch without a library, and the workarounds fight the browser's own scrolling
    on exactly the long list this is for. Two buttons move one row one place, work
    with a screen reader for free, and cannot half-drop something. */
+/* ============================================================
+   REPEATS, ON THE ROW
+   Setting up a recurring bill meant leaving the category you were looking at,
+   scrolling to a separate section, and retyping its name, its amount and its
+   category - three facts already on screen. So the whole thing collapses to one
+   control where the decision actually happens: a checkbox beside the category,
+   and a frequency next to it once it is on.
+
+   The separate Recurring section stays, because income and anything that is not
+   a category still need somewhere to live - but nobody has to go there to say
+   "the rent repeats every month".
+   ============================================================ */
+const ROW_FREQS=['weekly','biweekly','monthly','quarterly'];   // the four people actually use; the full six stay in the Recurring panel
+function recForCat(catId){ return (state.recurring||[]).find(r=>r.type==='expense' && r.catId===catId) || null; }
+function repeatCtrlHTML(catId, assigned){
+  if(catReorder) return '';
+  const r=recForCat(catId), on=!!r;
+  const freq=on?recFreq(r):'monthly';
+  const opts=ROW_FREQS.map(k=>{ const m=REC_FREQS.find(x=>x.k===k);
+    return `<option value="${k}"${k===freq?' selected':''}>${escapeHtml(m.label)}</option>`; }).join('');
+  const extra = on && !ROW_FREQS.includes(freq)
+    ? `<option value="${freq}" selected>${escapeHtml(recFreqMeta(r).label)}</option>` : '';
+  return `<span class="rep ${on?'on':''}">
+    <label class="rep-t" title="${on?'This repeats - untick to stop':'Tick if this bill repeats'}">
+      <input type="checkbox" data-repeat="${catId}"${on?' checked':''}><span>↻</span></label>
+    ${on?`<select class="rep-f" data-repfreq="${catId}" title="How often">${extra}${opts}</select>`:''}
+  </span>`;
+}
+function wireRepeat(box){
+  box.querySelectorAll('[data-repeat]').forEach(cb=>cb.addEventListener('change',()=>{
+    const id=cb.dataset.repeat, M=state.activeMonth;
+    if(!cb.checked){
+      state.recurring=(state.recurring||[]).filter(r=>!(r.type==='expense'&&r.catId===id));
+      save(); renderBudget(); renderRecurring(); renderTx();
+      if(typeof toast==='function') toast('Stopped repeating. Anything already posted stays.');
+      return;
+    }
+    const amt=assignedFor(id,M);
+    if(!(amt>0)){
+      cb.checked=false; renderBudget();
+      // a repeat with no amount posts nothing, so send them to the number first
+      setTimeout(()=>{ const inp=document.querySelector('#cats input[data-cat="'+id+'"]');
+        if(inp){ inp.scrollIntoView({behavior:'smooth',block:'center'}); inp.focus(); inp.select&&inp.select(); } },80);
+      if(typeof toast==='function') toast('Give it an amount first - then it can repeat that amount.');
+      return;
+    }
+    state.recurring=state.recurring||[];
+    state.recurring.push({id:uid(), type:'expense', amount:amt, catId:id, freq:'monthly', anchor:M+'-01', src:'row'});
+    save(); renderBudget(); renderRecurring(); renderTx();
+    if(typeof toast==='function') toast(`${catName(id)} repeats monthly at ${money(amt)}. Change the frequency beside it.`);
+  }));
+  box.querySelectorAll('[data-repfreq]').forEach(sel=>sel.addEventListener('change',()=>{
+    const r=recForCat(sel.dataset.repfreq); if(!r) return;
+    r.freq=sel.value; save(); renderBudget(); renderRecurring();
+    if(typeof toast==='function') toast(`Now ${recFreqMeta(r).short} - about ${money(recMonthly(r))} a month.`);
+  }));
+}
 function reorderCtrlHTML(id, first, last){
   if(!catReorder) return '';
   return `<span class="cat-move"><button class="cm-b" data-moveup="${id}"${first?' disabled':''} aria-label="Move up">↑</button><button class="cm-b" data-movedn="${id}"${last?' disabled':''} aria-label="Move down">↓</button></span>`;
@@ -4042,9 +4129,9 @@ function renderBudget(){
         const gkids=childrenOf(k.id), kGroup=gkids.length>0;
         const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
         const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
-        let h=`<div class="subrow${catReorder?' reordering':''}">${reorderCtrlHTML(k.id, ki===0, ki===kids.length-1)}<span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span><span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
+        let h=`<div class="subrow${catReorder?' reordering':''}">${reorderCtrlHTML(k.id, ki===0, ki===kids.length-1)}<span class="sub-name">${escapeHtml(k.name)}${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span>${kGroup?'':repeatCtrlHTML(k.id)}<span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
         if(kGroup){
-          h+=gkids.map((g,gi)=>`<div class="subrow subsub${catReorder?' reordering':''}">${reorderCtrlHTML(g.id, gi===0, gi===gkids.length-1)}<span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span><span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
+          h+=gkids.map((g,gi)=>`<div class="subrow subsub${catReorder?' reordering':''}">${reorderCtrlHTML(g.id, gi===0, gi===gkids.length-1)}<span class="sub-name">${escapeHtml(g.name)}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span>${repeatCtrlHTML(g.id)}<span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
           h+=splitNoteHTML(k.id,M,k.name);
         }
         if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
@@ -4062,6 +4149,7 @@ function renderBudget(){
             ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
             : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${isGroup&&a>assignedFor(c.id,M)?`<span class="roll-tag" title="Added up from your subs">= ${money(a)}</span>`:''}</span>`}
           <span class="cat-assign">Assign $ <input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(c.id,M)||0}" data-cat="${c.id}" ${isGroup?`placeholder="or fill the subs"`:''}></span>
+          ${isGroup?'':repeatCtrlHTML(c.id)}
           <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
         </div>
         <div class="bar"><span style="width:${pct}%"></span></div>
@@ -4113,7 +4201,7 @@ function renderBudget(){
     // keep transactions for history; they become "Uncategorized"
     save(); renderBudget(); renderTx();
   }));
-  wireReorder(box);
+  wireReorder(box); wireRepeat(box);
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
   box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); renderBudget(); }));
   // "Split into subcategories" reveals an inline input (no jarring browser prompt) and focuses it
