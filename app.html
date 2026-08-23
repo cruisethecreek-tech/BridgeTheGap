@@ -251,6 +251,17 @@
      your finger is still deciding - the ghost and the line show the outcome */
   .drag-src{opacity:.34}
   .drag-ghost{position:fixed;z-index:140;pointer-events:none;background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:12px;padding:9px 14px;font-weight:800;font-size:14.5px;box-shadow:0 12px 32px rgba(0,0,0,.45);max-width:74vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transform:translate(-14px,-50%)}
+  /* Reorder is a MODE, and the only way out of it sat in a toolbar at the top of
+     the list. Move something to the bottom of a long plan and you had to scroll
+     all the way back up to say you were finished. The way out follows you. */
+  .reorder-done{position:fixed;left:50%;transform:translateX(-50%);z-index:59;
+    bottom:calc(104px + env(safe-area-inset-bottom));
+    background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);
+    border-radius:50px;padding:12px 22px;font-weight:800;font-size:14.5px;cursor:pointer;
+    box-shadow:0 10px 28px rgba(0,0,0,.34);display:none;align-items:center;gap:8px}
+  body.reordering .reorder-done{display:inline-flex}
+  body.reordering .fab{display:none}   /* one clear action at a time */
+  @media(min-width:560px){ .reorder-done{bottom:calc(28px + env(safe-area-inset-bottom))} }
   .drag-line{position:fixed;z-index:139;pointer-events:none;height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.22)}
   body.dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
   /* In reorder mode the editing controls GO, rather than dimming. Dimming still
@@ -751,6 +762,13 @@
   .btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
   .btn.income{background:var(--income);color:#08120d;border-color:var(--income)}
   .btn.ghost{background:transparent}
+  /* .ghost is declared after .primary at the same specificity, so on a button
+     carrying BOTH it won the background while .primary still set the text to
+     --on-accent. In Ledger that is near-white text on a near-white panel: the
+     Reorder button turned into an empty outlined pill the moment you pressed
+     it. Naming the combination settles it for every such button, now and later,
+     rather than patching the one that was noticed. */
+  .btn.ghost.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
   .btn.sm{padding:7px 11px;font-size:13px}
   .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
 
@@ -2232,6 +2250,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     </div>
   </div>
 
+  <button class="reorder-done" id="reorderDone">✓ Done reordering</button>
   <button class="fab" id="fab"><span class="fab-ic" id="fabIc">+</span><span id="fabLbl">I want to…</span></button>
   <div class="modal-overlay" id="intentSheet">
     <div class="modal sheet">
@@ -3752,14 +3771,23 @@ document.getElementById('starterBtn').addEventListener('click',()=>{
     if(typeof toast==='function') toast(`Filled ${money(a)} from what you assigned ${catName(id)} this month. Change it if the bill differs.`);
   });
 })();
-document.getElementById('reorderBtn').addEventListener('click',()=>{
-  catReorder=!catReorder;
+function setReorder(on){
+  catReorder=!!on;
   const b=document.getElementById('reorderBtn');
   b.textContent=catReorder?'Done reordering':'Reorder';
   b.classList.toggle('primary',catReorder);
+  document.body.classList.toggle('reordering',catReorder);
   if(catReorder) collapsedCats.clear();   // you cannot move what you cannot see
   renderBudget();
   if(catReorder && typeof toast==='function') toast('Drag anything by its ⠿ grip. Subs stay inside their group.');
+}
+document.getElementById('reorderBtn').addEventListener('click',()=>setReorder(!catReorder));
+/* the floating way out - and it puts you back where the toolbar is, so the next
+   thing you reach for is where you left it rather than wherever you had scrolled to */
+document.getElementById('reorderDone').addEventListener('click',()=>{
+  setReorder(false);
+  const t=document.getElementById('reorderBtn');
+  if(t) t.scrollIntoView({behavior:'smooth',block:'center'});
 });
 document.getElementById('mergeBtn').addEventListener('click',()=>{
   const n=mergeDuplicates();

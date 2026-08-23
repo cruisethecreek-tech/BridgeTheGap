@@ -115,6 +115,94 @@ check('nothing is pushed off the side of the glass', offscreen.length===0, offsc
 check('the page never scrolls sideways', sideways.length===0, sideways.slice(0,6).join(' | '));
 check('no label is crushed into a sliver', crushed.length===0, crushed.slice(0,6).join(' | '));
 
+/* INVISIBLE TEXT. The Reorder button carried `.btn ghost primary`. `.ghost` is
+   declared after `.primary` at the same specificity, so it won the background
+   while `.primary` still set the text to --on-accent: near-white letters on a
+   near-white panel, in every theme where those two happen to be close. Pressing
+   Reorder turned the button into an empty outlined pill.
+   palette.mjs checks TOKEN pairs and could never see this, because the fault is
+   not in any pair - it is in which rule won on one live element. So this walks
+   what actually rendered and asks the only question that matters: can you read
+   it? Anything under 1.6:1 is not low contrast, it is invisible. */
+const contrast = [];
+for(const theme of ['midnight','ledger']){
+  const p2 = await b.newPage({ viewport:{width:390,height:900} });
+  p2.on('pageerror',e=>errs.push(`${theme}: ${e.message}`));
+  await p2.goto('file://'+process.cwd()+'/app.html'); await p2.waitForTimeout(400);
+  await p2.evaluate(([s,t])=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({...s,theme:t})),[HOUSE,theme]);
+  await p2.reload(); await p2.waitForTimeout(900);
+  for(const v of VIEWS){
+    const bad = await p2.evaluate(async(v)=>{
+      activateTab(v); await new Promise(r=>setTimeout(r,380));
+      const root=document.getElementById('view-'+v); if(!root) return [];
+      const px=c=>{const m=c.match(/[\d.]+/g)||[]; return {r:+m[0]||0,g:+m[1]||0,b:+m[2]||0,a:m.length>3?+m[3]:1};};
+      const lum=c=>{const f=x=>{x/=255; return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};
+        return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
+      const ratio=(a,c)=>{const L1=lum(a),L2=lum(c); return (Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05);};
+      const out=[];
+      for(const e of root.querySelectorAll('*')){
+        const cs=getComputedStyle(e);
+        if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity<.3) continue;
+        if(!e.offsetParent) continue;
+        if(![...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())) continue;
+        const r=e.getBoundingClientRect(); if(r.width<2||r.height<2) continue;
+        // effective background: first opaque ancestor. A gradient or image is
+        // not something this can reason about, so it is skipped rather than guessed.
+        let bg=null, skip=false;
+        for(let a=e; a; a=a.parentElement){
+          const s2=getComputedStyle(a);
+          if(s2.backgroundImage && s2.backgroundImage!=='none'){ skip=true; break; }
+          const c=px(s2.backgroundColor);
+          if(c.a>=.95){ bg=c; break; }
+          if(c.a>0){ skip=true; break; }   // translucent layer, not worth guessing through
+        }
+        if(skip||!bg) continue;
+        const fg=px(cs.color); if(fg.a<.6) continue;
+        const cr=ratio(fg,bg);
+        if(cr<1.6) out.push(`${(e.className||e.tagName)} "${e.textContent.trim().slice(0,26)}" ${cr.toFixed(2)}:1`);
+      }
+      return out;
+    },v);
+    bad.forEach(x=>contrast.push(`${theme}/${v}: ${x}`));
+  }
+  await p2.close();
+}
+check('no text is the same colour as what is behind it', contrast.length===0,
+      contrast.slice(0,8).join(' | '));
+
+/* the specific button that turned white, in both themes, in both states */
+for(const theme of ['midnight','ledger']){
+  const p3 = await b.newPage({ viewport:{width:390,height:780} });
+  await p3.goto('file://'+process.cwd()+'/app.html'); await p3.waitForTimeout(400);
+  await p3.evaluate(([s,t])=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({...s,theme:t})),[HOUSE,theme]);
+  await p3.reload(); await p3.waitForTimeout(900);
+  const r = await p3.evaluate(async()=>{
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    activateTab('budget'); await wait(350);
+    const btn=document.getElementById('reorderBtn');
+    btn.click(); await wait(350);
+    const cs=getComputedStyle(btn);
+    scrollTo(0,document.body.scrollHeight); await wait(300);
+    const pill=document.getElementById('reorderDone'), pr=pill.getBoundingClientRect();
+    const hit=document.elementFromPoint(pr.left+pr.width/2, pr.top+pr.height/2);
+    const tb=btn.getBoundingClientRect();
+    const out={ bg:cs.backgroundColor, opaque:!/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor),
+      text:btn.textContent,
+      toolbarOffScreen: tb.bottom<0||tb.top>innerHeight,
+      pillOnScreen: pr.top>=0&&pr.bottom<=innerHeight,
+      pillHittable: !!(hit&&(hit===pill||pill.contains(hit))) };
+    pill.click(); await wait(400);
+    out.exited = document.querySelectorAll('.cat-grip').length===0 && !document.body.classList.contains('reordering');
+    return out;
+  });
+  check(`the Reorder button is still readable once pressed (${theme})`, r.opaque && r.text==='Done reordering',
+        `${r.bg} "${r.text}"`);
+  check(`...and the way out follows you down a long plan (${theme})`,
+        r.toolbarOffScreen && r.pillOnScreen && r.pillHittable && r.exited,
+        JSON.stringify(r));
+  await p3.close();
+}
+
 /* The row that started this: whatever else changes, an amount must never be
    allowed to shrink below the text inside it. */
 const p = await b.newPage({ viewport:{width:390,height:900} });
