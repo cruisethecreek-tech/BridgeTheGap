@@ -744,6 +744,13 @@
   .iv-caveat b{color:var(--text)}
   /* Progressive interface stages */
   [data-stage].stage-locked{display:none!important}
+  .tab.area-off{display:none!important}
+  .arow{display:flex;align-items:flex-start;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:9px;cursor:pointer}
+  .arow.on{border-color:rgba(var(--good-rgb),.42)}
+  .arow input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--good)}
+  .arow-b{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .arow-t{font-weight:800;font-size:15px}
+  .arow-s{font-size:12.5px;color:var(--muted);line-height:1.45}
   .stagebar{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:16px}
   .stagebar .ic{font-size:22px}
   .stagebar .info{flex:1;min-width:0}
@@ -2225,6 +2232,12 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub offerfine" id="offerFine" style="display:none">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
       </div>
 
+      <div class="panel">
+        <h2>Which areas you want</h2>
+        <p class="sub">Turn off anything you do not use and it leaves the menu entirely. Nothing is deleted - whatever you have entered stays exactly where it is and comes straight back if you switch the area on again. Home, Plan, Track and Settings stay put, because an app without them has nothing to do.</p>
+        <div id="areaToggles"></div>
+      </div>
+
       <div class="panel" id="supportPanel" style="display:none">
         <h2>What this costs</h2>
         <p class="sub">Nothing, and there is no locked version. No ads, no subscription, no affiliate links pointing you at where to put your money - that would make this the exact thing it was built to fight. It does not see your numbers, so it could not sell them if it wanted to.</p>
@@ -2661,7 +2674,7 @@ function defaultState(){
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
-           debts:[], debtBudget:0, debtStrategy:'avalanche',
+           debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[],
            investReturn:7, investYears:10, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
 }
@@ -2678,6 +2691,10 @@ function normalizeState(s){
   (s.goals||[]).forEach(g=>{ if(!(g.target>0)) g.target=Math.max(1,+g.target||1000); if(g.saved>g.target) g.saved=g.target; if(!(g.saved>=0)) g.saved=0; });
   if(s.sweptDays) Object.keys(s.sweptDays).forEach(k=>{ if(!goalIds.has(s.sweptDays[k].goalId)) delete s.sweptDays[k]; });
   (s.impulse||[]).forEach(i=>{ if(i.goalId && !goalIds.has(i.goalId)) delete i.goalId; });   // orphaned dream-skips return to the War Chest
+  /* areasOff is a view preference, so it must never be able to hide the spine
+     (Settings especially - that is the switch that turns things back on) */
+  if(Array.isArray(s.areasOff)) s.areasOff=s.areasOff.filter(v=>['impulse','debt','reflect','goals','learn','diary'].includes(v));
+  else s.areasOff=[];
   const txIds=new Set((s.transactions||[]).map(t=>t.id));
   if(Array.isArray(s.giving)) s.giving=s.giving.filter(g=>!g.txId || txIds.has(g.txId));
   /* Entries already posted under the old note say "Recurring" and nothing else,
@@ -3540,9 +3557,73 @@ function renderIntensity(){
 function renderRegister(){ document.querySelectorAll('#register button').forEach(b=>b.classList.toggle('on',b.dataset.reg===(state.register||'middle'))); }
 
 /* ---------- tabs ---------- */
+/* ---------- Which areas this person actually wants ----------
+   The stage ladder decides what someone is READY for. This decides what they
+   WANT, which is a different question and only they can answer it. Someone who
+   just wants a clean plan-and-track dashboard should not have to walk past
+   Shield, Debt and Diary forever to say so.
+
+   Rules that keep it safe:
+     - The spine (Home, Plan, Track, Settings) cannot be switched off. Turning
+       off Settings would hide the switch that turns things back on, and hiding
+       Plan or Track leaves an app with nothing to do.
+     - Hiding is a VIEW choice, never a delete. Every figure, entry and history
+       stays exactly where it is and comes back untouched when the area does.
+     - Everything that can navigate has to agree: the tab bar, the app map, the
+       "I want to..." hub, and activateTab itself. A hidden area that is still
+       reachable from a shortcut is worse than no setting at all. */
+const HIDEABLE=[
+  {v:'impulse', label:'Shield',  what:'Gut-check a purchase before you buy it'},
+  {v:'debt',    label:'Debt',    what:'The payoff planner'},
+  {v:'reflect', label:'Reflect', what:'The report and the charts'},
+  {v:'goals',   label:'Build',   what:'Accounts, net worth, dreams, giving'},
+  {v:'learn',   label:'Learn',   what:'Money lessons'},
+  {v:'diary',   label:'Diary',   what:'Money in your own words'}
+];
+const SPINE=['home','budget','tx','settings'];
+function areaOff(v){ return !!(state.areasOff||[]).includes(v) && !SPINE.includes(v); }
+function areaOn(v){ return !areaOff(v); }
+function setAreaOff(v,off){
+  if(SPINE.includes(v)) return;
+  const cur=new Set(state.areasOff||[]);
+  off ? cur.add(v) : cur.delete(v);
+  state.areasOff=[...cur]; save();
+  applyAreaVisibility();
+  // standing on a floor you just removed: step back to Home rather than a blank screen
+  if(off && currentTab===v) activateTab('home');
+}
+function renderAreaToggles(){
+  const box=document.getElementById('areaToggles'); if(!box) return;
+  box.innerHTML=HIDEABLE.map(a=>{
+    const on=areaOn(a.v), used=areaUsed(a.v);
+    return `<label class="arow${on?' on':''}">
+      <input type="checkbox" data-area="${a.v}"${on?' checked':''}>
+      <span class="arow-b"><span class="arow-t">${escapeHtml(a.label)}</span><span class="arow-s">${escapeHtml(a.what)}${used&&!on?' · your entries are still saved':''}</span></span>
+    </label>`;
+  }).join('');
+  box.querySelectorAll('input[data-area]').forEach(c=>c.addEventListener('change',()=>{
+    const v=c.dataset.area;
+    setAreaOff(v, !c.checked);
+    renderAreaToggles();
+    if(typeof toast==='function'){
+      const a=HIDEABLE.find(x=>x.v===v);
+      toast(c.checked ? `${a.label} is back in the menu.`
+                      : `${a.label} hidden. Nothing was deleted - switch it back on any time.`);
+    }
+  }));
+}
+function applyAreaVisibility(){
+  document.querySelectorAll('.tab[data-view]').forEach(t=>{
+    if(SPINE.includes(t.dataset.view)) return;
+    t.classList.toggle('area-off', areaOff(t.dataset.view));
+  });
+}
 const MORE_VIEWS=['impulse','tx','debt','learn','diary','settings'];   // Shield moved into More; its ACTION is the hub's hero row
 let currentTab='home';
 function activateTab(name,fromHistory){
+  /* Nothing should be able to land on an area the user switched off - not a
+     shortcut, not the map, not a stale history entry from before they hid it. */
+  if(areaOff(name)) name='home';
   currentTab=name;
   if(!fromHistory && typeof history!=='undefined' && history.pushState){ history.pushState({t:'tab',name},''); }
   document.body.classList.toggle('on-home', name==='home');
@@ -7011,6 +7092,7 @@ function renderAll(){
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
   renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons(); renderReflectTab();
+  renderAreaToggles(); applyAreaVisibility();   // a sync pull can change which areas this person wants
   applyPanelGates();   // panels with nothing to show fold away, and say what brings them back
   ensureDay1();   // renderHome already ends with applyStage - no second pass
 }
@@ -7705,21 +7787,34 @@ function toast(msg){
 function intentItems(){
   const spend=!!state.spendingMode, stage=(typeof activeStage==='function')?activeStage():1;
   const list=[
-    {ic:'', t:'Gut-check something before I buy it', s:'Price it in hours of your life first', hero:true, go:()=>{ const sh=document.getElementById('intentSheet'); if(sh) sh.classList.remove('on'); setFabOpen(false); openModal(true); }},   // synchronous swap: the sheet's history entry becomes the modal's - no async back() to race
+    {ic:'', t:'Gut-check something before I buy it', s:'Price it in hours of your life first', hero:true, area:'impulse', go:()=>{ const sh=document.getElementById('intentSheet'); if(sh) sh.classList.remove('on'); setFabOpen(false); openModal(true); }},   // synchronous swap: the sheet's history entry becomes the modal's - no async back() to race
     {ic:'', t:'Log what I spent', s:'One line each - or snap your notepad', go:()=>{ quickLogOpen=true; closeOverlayThenTab('tx'); setTimeout(()=>{ if(!document.querySelector('#quickLog .ql-row')) renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },160); }},   // never wipe rows (or a photo) already in progress
     {ic:'', t:'Log money coming in', s:'Paycheck, side gig, anything that landed', go:()=>{ closeOverlayThenTab('tx'); setTimeout(()=>{ const tt=document.querySelector('#typeToggle button[data-t="income"]'); if(tt) tt.click(); const el=document.getElementById('txAmt'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },160); }},
     {ic:'', t:'Give my dollars a job', s:'Assign this month down to zero', hide:spend, go:()=>{ closeOverlayThenTab('budget'); }},
     {ic:'', t:"See where my money's actually going", s:'Your patterns, not your guesses', go:()=>{ closeOverlayThenTab(spend?'home':'learn'); }},
-    {ic:'', t:'Work on a dream', s:'Name it, fund it, watch it close', hide:spend||stage<2, go:()=>{ closeOverlayThenTab('goals'); setTimeout(()=>{ const el=document.getElementById('goalName'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },160); }},   // spend mode hides every wealth-stage panel - never route there
-    {ic:'', t:'Plan my way out of debt', s:'A real payoff date, priced in life', hide:!(state.debts||[]).length && !(state.liabilities||[]).length, go:()=>{ closeOverlayThenTab('debt'); }},
+    {ic:'', t:'Work on a dream', s:'Name it, fund it, watch it close', area:'goals', hide:spend||stage<2, go:()=>{ closeOverlayThenTab('goals'); setTimeout(()=>{ const el=document.getElementById('goalName'); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'auto',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },160); }},   // spend mode hides every wealth-stage panel - never route there
+    {ic:'', t:'Plan my way out of debt', s:'A real payoff date, priced in life', area:'debt', hide:!(state.debts||[]).length && !(state.liabilities||[]).length, go:()=>{ closeOverlayThenTab('debt'); }},
     {ic:'', t:(state.comfortMenu||[]).length?'Update my free comfort list':'Set up my free comfort list', s:"What helps when money isn't the answer", go:()=>{ closeOverlayThenTab('settings'); setTimeout(()=>{ const el=document.getElementById('comfortInput'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },170); }},
-    {ic:'', t:'Learn something in 2 minutes', s:'One lesson, one thing to try', go:()=>{ closeOverlayThenTab('learn'); }}
+    {ic:'', t:'Learn something in 2 minutes', s:'One lesson, one thing to try', area:'learn', go:()=>{ closeOverlayThenTab('learn'); }}
   ];
   return list.filter(x=>!x.hide);
 }
+/* Which area an intent belongs to, so the hub can drop the ones the user has
+   switched off. An explicit `area` wins; otherwise read the destination out of
+   the action itself so a plain navigation intent needs no annotation.
+   The explicit tag exists because inference alone was not enough: the gut-check
+   opens a MODAL rather than navigating, so with Shield switched off the hub
+   kept offering the one feature that person had just said they did not want. */
+function intentTarget(it){
+  if(it.area) return it.area;
+  const src=String(it.go||'');
+  const m=src.match(/closeOverlayThenTab\('(\w+)'\)/) || src.match(/activateTab\('(\w+)'\)/);
+  return m?m[1]:null;
+}
 function renderIntentSheet(){
   const box=document.getElementById('intentList'); if(!box) return;
-  const items=intentItems();
+  // an intent that leads somewhere the user switched off is a dead door
+  const items=intentItems().filter(x=>{ const t=intentTarget(x); return !t || areaOn(t); });
   box.innerHTML=items.map((x,i)=>`<button class="intent${x.hero?' hero':''}" data-int="${i}"><span class="int-ic">${x.ic}</span><span class="int-b"><span class="int-t">${escapeHtml(x.t)}</span><span class="int-s">${escapeHtml(x.s)}</span></span><span class="int-a">→</span></button>`).join('');
   box.querySelectorAll('button[data-int]').forEach(b=>b.onclick=()=>{ const it=items[+b.dataset.int]; if(it&&it.go) it.go(); });
 }
@@ -8140,15 +8235,16 @@ function areaUsed(v){
   }
 }
 function appMapHTML(){
-  const rows=MAP_ORDER.map(({v,step})=>{
+  const rows=MAP_ORDER.filter(m=>areaOn(m.v)).map(({v,step})=>{
     const g=AREA_GUIDE[v]; const used=areaUsed(v);
     return `<button class="map-row${used?' used':''}" data-mapgo="${v}">
       <span class="mr-n">${used?'✓':escapeHtml(step)}</span>
       <span class="mr-b"><span class="mr-t">${escapeHtml(g.t)}</span><span class="mr-w">${escapeHtml(g.what)}</span></span>
       <span class="mr-go">→</span></button>`; }).join('');
-  const done=MAP_ORDER.filter(m=>areaUsed(m.v)).length;
+  const shown=MAP_ORDER.filter(m=>areaOn(m.v));
+  const done=shown.filter(m=>areaUsed(m.v)).length;
   return `<p class="sub">The six numbered areas are the loop: decide, record, look, defend, build, clear. The rest are there when you want them. Tap any one to go.</p>
-    <div class="map-prog"><b>${done}</b> of ${MAP_ORDER.length} areas used so far</div>
+    <div class="map-prog"><b>${done}</b> of ${shown.length} areas used so far</div>
     <div class="map-list">${rows}</div>
     <div class="map-foot"><button class="btn sm ghost" id="mapReplay">Replay the first-time guides</button></div>`;
 }
@@ -8407,6 +8503,27 @@ const REPORT_SIGNALS=[
     }},
 
   /* ---- the app's own thesis, stated once a month ---- */
+  /* The time ledger was write-only. You tapped +1 hr, a caption underneath
+     updated, and the data was never seen again - not in Reflect, not in the
+     report, not anywhere. Hours are the app's own currency, so the week you
+     logged belongs in the same verdict as the money. It stays quiet unless
+     there is a full week of it, and it prices the leak at the user's own rate,
+     which is the only reason the number means anything. */
+  { k:'timeWeek', run(){
+      const tot=timeWeekTotals();
+      const logged=Object.values(tot).reduce((s,v)=>s+v,0);
+      if(logged<5) return {locked:'A week of hours logged on Track - the time ledger needs a few days before a week means anything.'};
+      const leak=+tot.leak||0, invested=logged-leak;
+      const H=effectiveHourly();
+      const sold=state.hoursPerWeek>0?state.hoursPerWeek:0;
+      return { t: leak>invested ? 'More of your week leaked than you invested' : `${fmtHours(invested)} of your week went into you`,
+        body:`Out of the hours you logged: <b>${fmtHours(invested)}</b> invested in health, learning, building or people${leak>0?`, and <b>${fmtHours(leak)}</b> to the screen`:''}.${sold>0?` You sold another <b>${fmtHours(sold)}</b> to work.`:''}`,
+        work:`${logged} logged = ${invested} invested + ${leak} leaked`,
+        nudge: (leak>0&&H>0)
+          ? `Those ${fmtHours(leak)} are worth <b>${money(leak*H)}</b> at your own rate - the feed monetises them whether you do or not.`
+          : (leak>0?`Those ${fmtHours(leak)} are the ones nobody bills you for.`:''),
+        bad: leak>invested };
+    }},
   { k:'hours', run(){
       const M=state.activeMonth, H=effectiveHourly();
       if(!(H>0)) return {locked:'Your hourly rate in Settings - every figure in hours of your life comes from it.'};
@@ -9974,6 +10091,7 @@ function boot(){
   { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
   renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
   renderBackupNote(); renderAutoBackup();
+  renderAreaToggles(); applyAreaVisibility();   // the areas this person chose to keep
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   applyPanelGates();
