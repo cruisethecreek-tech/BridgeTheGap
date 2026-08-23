@@ -56,6 +56,26 @@ trust positioning. Let them argue. Judge results, not effort.
    one scoped exception and its copy already says so.
 5. Ads are not formally banned but treat them as brand-hostile; argue for them
    only if you can carry the burden of proof, which is heavy.
+6. **Time has a hard cost.** For every unit-economic and break-even calculation,
+   value the founder's time at exactly **$100/hour**. Every hour spent on
+   customer support, tax compliance, or arguing with App Review is a $100 debit
+   against the bottom line. This is a modelling constant, not a market wage -
+   its job is to stop "just spend a weekend on it" from reading as free. Use it
+   consistently and show it in the arithmetic.
+
+## Platform status - already decided, now judge it
+
+Since this doc was first written, **Lemon Squeezy has been chosen, wired and
+tested** as the checkout, on merchant-of-record grounds. The integration is a
+plain link (never their overlay script, which would put third-party payment code
+on a page promising nothing leaves the visitor's device). Both files stay inert
+until the URL is set; nothing has been sold yet.
+
+So do not treat channel choice as greenfield. Judge the decision that was made:
+**was merchant-of-record worth the fee premium for this specific seller, and is
+Lemon Squeezy the right MoR given Stripe is folding it into Stripe Managed
+Payments with no announced end date?** If you would reverse it, say so and price
+the reversal.
 
 ## What the current plan says (attack this)
 
@@ -74,28 +94,76 @@ From the founder's own strategy doc:
 
 ## The questions to answer
 
-**1. Pricing and the honor-system bet.** Is $15-25 one-time right? What do
+**1. Pricing, and why anyone pays at all.** Is $15-25 one-time right? What do
 comparable tools actually charge and what does that imply here - YNAB, Monarch,
 Copilot, PocketSmith, Lunch Money on the subscription side; Actual Budget (free,
 open-source) as the zero-price anchor; and any honor-system or DRM-free indie
 comps you can name with real numbers. What does pay-what-you-want with a floor
-actually do to revenue in practice? Give a number you would charge and defend it.
+actually do to revenue in practice?
 
-**2. Channel mechanics.** Gumroad vs LemonSqueezy vs Ko-fi vs a Stripe payment
-link, specifically: fees, who acts as merchant of record (this decides whether a
-solo founder handles sales tax/VAT - weigh it heavily), payout friction, and
-what happens at tiny volume. Recommend one and say why.
+Then the question that actually decides this model. There is no lock, the source
+is readable, and the buyer already has everything. **So why does a human open
+their wallet?** Map the specific behavioural mechanism - reciprocity, identity,
+guilt, signalling, sunk investment in their own data, something else - and say
+which one this product can honestly pull on.
+
+**Then write the checkout copy: two sentences, in the app's own blunt voice.**
+Constraints on that copy, and they are hard: the app's test suite fails the build
+if the ask reads as a plea, so **no "please", no "help us", no "donate", no
+guilt, no manufactured scarcity.** The app's declared villain is manipulative
+design; copy that guilts someone into paying makes it the thing it condemns and
+is an automatic fail. Blunt is welcome. Coercive is not. Show the two sentences
+verbatim.
+
+Finish with **one number** you would charge, and defend it.
+
+**2. Channel mechanics - do the arithmetic, do not estimate it.**
+
+Use these rates. They were checked against current published pricing in August
+2026; if you have better information say so, but do not silently substitute
+half-remembered numbers:
+
+| Platform | Fee | Merchant of record? |
+|---|---|---|
+| Lemon Squeezy | 5% + $0.50 | **Yes** |
+| Gumroad | 10% direct sale (sources disagree on whether a fixed ~$0.50 applies; one all-in estimate lands near 12.9% + $0.80 once card processing is counted) | **Yes** |
+| Stripe payment link | 2.9% + $0.30 | **No** |
+
+Two things the simple table hides, and both matter for this seller:
+
+- Lemon Squeezy **stacks**: roughly +1.5% on international cards, +1.5% on
+  PayPal, and ~1% on payouts to non-US banks. A privacy-first indie app sells
+  heavily outside the US, so model the international case, not just the domestic
+  one.
+- The Gumroad number is genuinely contested across sources. Treat the spread as
+  real uncertainty and say how much it changes the answer.
+
+**Calculate the exact net payout on a $25 sale** on each, domestic and
+international. Then, using the $100/hour constant, **quantify the liability of
+running global VAT and US sales tax yourself on Stripe** versus paying the MoR
+premium: registration, filing cadence, thresholds, and the hours per year. Show
+the break-even sale volume at which each option wins.
+
+Then judge the decision already made (see "Platform status" above): keep Lemon
+Squeezy, or move, and what moving would cost.
 
 **3. The app-store wrap.** Costs and cuts (developer fees, the 15% small-business
 tiers), the real risk that a thin PWA wrapper gets rejected, the maintenance tax
 of a native shell, and whether a paid listing is worth it BEFORE there is
 evidence of web-side demand. Sequence it.
 
-**4. The sync tier.** Is a solo founder maintaining a Stripe-to-Supabase
-entitlement pipeline for a two-phone sync feature worth it below some user
-count? Model it: at what price and how many paying households does it clear its
-own infrastructure and the founder's maintenance hours? If the answer is "not
-before ~N households", say N and say what to do instead until then.
+**4. The sync tier - solve for N.** Use these constants: Supabase Pro at
+**$25/month**; a merchant of record taking **~6%** all-in; the founder's time at
+**$100/hour**; and support for end-to-end-encrypted sync edge cases costing at
+**least 2 hours a month** (a passphrase nobody can reset generates support load
+by design - and it cannot be resolved by the founder, who structurally cannot
+read the data, which makes each ticket longer, not shorter).
+
+At what monthly price, and **exactly how many paying households N**, does this
+tier clear its own infrastructure plus its own maintenance time? Show the
+arithmetic. If N is uncomfortably high, say the number out loud and say what to
+do instead until it is reached - including whether the honest answer is "do not
+ship this tier at all".
 
 **5. The audience play.** The founder's strongest long-term asset may be
 distribution (content around Life-Hour pricing, Trap Radar, the app's voice).
