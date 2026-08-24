@@ -745,6 +745,11 @@
   /* Progressive interface stages */
   [data-stage].stage-locked{display:none!important}
   .tab.area-off{display:none!important}
+  .gatepick{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+  .gatepick button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;width:100%}
+  .gatepick button:hover{border-color:var(--accent)}
+  .gp-t{font-weight:800;font-size:15px;color:var(--text)}
+  .gp-s{font-size:13px;line-height:1.45;color:var(--muted);font-style:italic}
   .arow{display:flex;align-items:flex-start;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:9px;cursor:pointer}
   .arow.on{border-color:rgba(var(--good-rgb),.42)}
   .arow input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--good)}
@@ -2291,17 +2296,18 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div class="databox">
           <div class="db-head">Voice &amp; tone</div>
-          <p class="sub" style="margin:6px 0 10px">How you want to be held accountable. This is the voice used everywhere - questions, gut-checks, nudges. Forgiving is gentle, Savage pulls no punches; the generation dial below sets the slang.</p>
+          <p class="sub" style="margin:6px 0 10px">How you want to be held accountable. This is the voice used everywhere - questions, gut-checks, nudges. Forgiving is gentle, Savage pulls no punches. The row below sets how it talks, not how old you are - pick whichever sounds like a person you would listen to.</p>
           <div class="intensity" id="intensity">
             <button data-lvl="clean">Forgiving</button>
             <button data-lvl="blunt">Blunt</button>
             <button data-lvl="savage">Savage</button>
           </div>
           <div class="intensity" id="register" style="margin-top:8px">
-            <button data-reg="genz">Gen Z</button>
-            <button data-reg="middle">Middle</button>
-            <button data-reg="mature">Mature</button>
+            <button data-reg="genz" title="Casual, with slang">Loose</button>
+            <button data-reg="middle" title="Straight talk, no slang">Plain</button>
+            <button data-reg="mature" title="Considered, more formal">Measured</button>
           </div>
+          <p class="sub" id="regSample" style="margin:8px 0 0;font-style:italic"></p>
           <p class="sub" style="margin:16px 0 6px">Chat pacing. The setup chat takes a beat before answering, the way a person would. Turn it off if you would rather it kept up with you.</p>
           <div class="intensity" id="chatPace" style="margin-top:8px">
             <button data-pace="natural">Takes a beat</button>
@@ -2469,12 +2475,14 @@ const SUB_ERR={
 
 /* ============================================================
    VOICE / SLANG LAYER  --  this is the product, not decoration.
-   The raw, real, generation-true vocabulary (Gen Z slang especially) is what
+   The raw, real, lived-in vocabulary (the slang register especially) is what
    makes Accountability sound like a person and not a corporate finance app.
    Do NOT sanitize it into neutral copy - that flattens the whole differentiator.
    Slang ages; that's fine. Refresh the current terms here a couple times a year
-   instead of removing them. The genz register in each matrix below is the layer
-   to update: QUOTES, SCARCITY_COPY, IMP_QUESTIONS, IMP_WANT/ASSET/NEED,
+   instead of removing them. The `genz` KEY is an internal name for the loose,
+   slangy register - it is not an age bracket and nothing sorts users by one.
+   Users choose their voice by hearing a sample of it. That register in each
+   matrix below is the layer to update: QUOTES, SCARCITY_COPY, IMP_QUESTIONS, IMP_WANT/ASSET/NEED,
    BLINDSPOT_COPY, TRAP_RESPONSES, CHALLENGE_STING, HOME_COPY.
    The ONE guardrail: the tone-safety-lock (pickVoiceCtx / pickTrapVoiceCtx +
    SENSITIVE_RX) forces the Clean register on rent/medical/utilities/groceries/
@@ -3554,7 +3562,15 @@ function renderIntensity(){
   } else if(note){ note.remove(); }
 }
 /* register is chosen at the intake age-gate; adjustable later under Voice & tone */
-function renderRegister(){ document.querySelectorAll('#register button').forEach(b=>b.classList.toggle('on',b.dataset.reg===(state.register||'middle'))); }
+function renderRegister(){
+  document.querySelectorAll('#register button').forEach(b=>b.classList.toggle('on',b.dataset.reg===(state.register||'middle')));
+  /* Show a line the app will genuinely say, at the intensity currently set, so
+     the choice is made by ear. Pulled from the real matrix rather than written
+     for the settings screen - a sample that is not the actual voice is a lie. */
+  const el=document.getElementById('regSample'); if(!el) return;
+  const t=TRAP_RESPONSES.scroll[state.register||'middle']||TRAP_RESPONSES.scroll.middle;
+  el.textContent='Sounds like: "'+(t[baseInt()]||t.blunt)+'"';
+}
 
 /* ---------- tabs ---------- */
 /* ---------- Which areas this person actually wants ----------
@@ -8815,7 +8831,17 @@ function initPWA(){
    Engine-critical (★) answers write straight into app state.
    ============================================================ */
 const INTAKE=[
-  {id:'gate', bot:"Welcome to Accountability. Which of these sounds most like you? It sets how I'll talk to you the whole way through. ★", input:'gate', key:'register', options:[{label:'Gen Z · under 30',value:'genz'},{label:'Middle · 30-55',value:'middle'},{label:'Mature · 55+',value:'mature'}]},
+  /* This used to ask an AGE - "Gen Z / under 30", "Middle / 30-55", "Mature /
+     55+" - and then used the answer to pick the SLANG. So a 23-year-old who
+     does not say "bestie" picked "under 30" because it was true about them, and
+     got talked to in a voice they do not use. The question asked about identity
+     and the answer controlled vocabulary; those are not the same thing.
+     It asks about the voice now, and shows a real line from each one so the
+     choice is made by ear instead of by demographic. Nobody is sorted by age. */
+  {id:'gate', bot:"Welcome to Accountability. I talk in one of three ways - pick whichever you would actually want to hear at 11pm when you are about to buy something stupid. You can change it any time. ★", input:'gate', key:'register', options:[
+    {label:'Loose', sample:"That ad found you on purpose - the algorithm clocked your weak spot.", value:'genz'},
+    {label:'Plain', sample:"That ad found you. Somebody paid to put it in front of you.", value:'middle'},
+    {label:'Measured', sample:"That advertisement was placed deliberately, to find your weak spot.", value:'mature'}]},
   {id:'tone', sum:'How you want to be held', input:'choice', key:'tone',
     bot:"And how do you want to be held accountable? This is the voice I'll use from here on. Every question, every gut-check, every time you're about to blow it. Pick what you'll actually listen to, not what sounds impressive. You can change it anytime in Settings. ★",
     options:[{label:'Forgiving - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
@@ -9441,7 +9467,7 @@ function renderIntakeDock(s){
   if(s.input==='comfort'){ renderComfortStep(s); return; }
   if(s.input==='photo'){ renderBudgetPhoto(s); return; }
   if(s.input==='gate'){
-    dock.innerHTML=`<div class="intake-chips">${s.options.map((o,i)=>`<button data-i="${i}">${escapeHtml(o.label)}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
+    dock.innerHTML=`<div class="gatepick">${s.options.map((o,i)=>`<button data-i="${i}"><span class="gp-t">${escapeHtml(o.label)}</span>${o.sample?`<span class="gp-s">${escapeHtml(o.sample)}</span>`:''}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
     dock.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{ const o=s.options[+b.dataset.i]; state.register=o.value; iaStore(s.key,o.value); save(); renderRegister(); renderHome(); iaBub(o.label,'me'); iaAdvance(); });
     document.getElementById('iaSkipGate').onclick=()=>{ state.onboarded=true; save(); dismissOverlay(); };
     return;

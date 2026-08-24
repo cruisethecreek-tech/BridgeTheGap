@@ -1193,6 +1193,69 @@ check('...with the split shown so it can be checked', tw.work==='27 logged = 21 
 check('...and the leak priced at the user own rate', /\$144/.test(tw.nudge), tw.nudge);
 check('...and it actually renders on Reflect', /week went into you/.test(tw.onScreen), tw.onScreen);
 
+/* ---- 25. nobody is sorted by age ----
+   The first question in the app used to ask an AGE - "Gen Z / under 30",
+   "Middle / 30-55", "Mature / 55+" - and then used the answer to choose the
+   SLANG. A 23-year-old who does not say "bestie" picked "under 30" because it
+   was true about them, and got talked to in a voice they do not use. The
+   question asked about identity; the answer controlled vocabulary. ---- */
+await p.evaluate(()=>localStorage.clear());
+await p.reload(); await p.waitForTimeout(1400);
+const gate = await p.evaluate(async () => {
+  await new Promise(r=>setTimeout(r,1400));
+  const dock=document.querySelector('.gatepick');
+  const bub=[...document.querySelectorAll('.bub')].map(x=>x.textContent).pop()||'';
+  const opts=dock?[...dock.querySelectorAll('button')].map(b=>({
+    label:b.querySelector('.gp-t').textContent.trim(),
+    sample:(b.querySelector('.gp-s')||{}).textContent||'' })):[];
+  return { question:bub, opts, all:(dock?dock.textContent:'')+bub };
+});
+check('the first question offers a voice, not an age bracket',
+      gate.opts.length===3 && !/under 30|30\s*-\s*55|55\s*\+|Gen ?Z|millennial|boomer/i.test(gate.all),
+      gate.opts.map(o=>o.label).join(' / '));
+check('...and every option carries a real sample line to choose by ear',
+      gate.opts.every(o=>o.sample.length>20), JSON.stringify(gate.opts.map(o=>o.sample.slice(0,30))));
+check('...with three genuinely different samples',
+      new Set(gate.opts.map(o=>o.sample)).size===3);
+check('...and the question asks how it should talk, not who you are',
+      /talk in one of three ways/i.test(gate.question) && !/sounds most like you/i.test(gate.question),
+      gate.question.slice(0,80));
+
+/* picking one still drives the whole voice engine */
+const picked = await p.evaluate(async () => {
+  const btns=[...document.querySelectorAll('.gatepick button')];
+  btns[0].click(); await new Promise(r=>setTimeout(r,400));
+  const loose=state.register;
+  state.onboarded=true; save();
+  return { loose };
+});
+check('choosing the loose voice still sets the slang register', picked.loose==='genz', picked.loose);
+
+/* Settings says the same thing, and shows what you would actually hear */
+await p.reload(); await p.waitForTimeout(900);
+const setPick = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('settings'); await wait(400);
+  const labels=[...document.querySelectorAll('#register button')].map(b=>b.textContent.trim());
+  const samples={};
+  for(const r of ['genz','middle','mature']){
+    document.querySelector(`#register button[data-reg="${r}"]`).click(); await wait(140);
+    samples[r]=document.getElementById('regSample').textContent;
+  }
+  // the sample must be a line the app really says, not copy written for settings
+  state.register='genz'; state.intensity='savage'; renderRegister(); await wait(120);
+  const savage=document.getElementById('regSample').textContent;
+  const real=Object.values(TRAP_RESPONSES.scroll.genz).some(v=>savage.includes(v));
+  return { labels, samples, real,
+           noAge:!/under 30|30\s*-\s*55|55\s*\+|Gen ?Z|generation dial/i.test(document.getElementById('view-settings').textContent) };
+});
+check('Settings names the voices without naming an age', setPick.noAge===true,
+      setPick.labels.join(' / '));
+check('...and shows what each one actually sounds like',
+      new Set(Object.values(setPick.samples)).size===3, JSON.stringify(setPick.samples));
+check('...quoting real app copy rather than a sample written for the picker',
+      setPick.real===true, setPick.samples.genz);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
