@@ -1386,6 +1386,44 @@ check('the circulation ratio opens on the first tagged spend',
 const hooked = await p.evaluate(() => /applyPanelGates/.test(String(save)));
 check('every gate is re-checked wherever state is saved', hooked===true);
 
+/* ---- 28. the vault confirmation is not a second copy of the vault ----
+   Asked from a real phone: "is this a duplicate of the 24-hour vault?" Two
+   things made it look like one. The panel below was stuck showing its
+   empty-state note while the card above said something had just been vaulted
+   (the stale-gate bug in section 27), and both texts ended with the same
+   sentence, word for word: "Most traps don't survive the wait." The panel
+   explains what the vault IS. The confirmation should say what happened to
+   THIS thing and when it comes back - the one fact the panel cannot yet. ---- */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24});
+await p.reload(); await p.waitForTimeout(900);
+const vault = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('impulse'); await wait(400);
+  const gatedBefore=document.getElementById('vaultPanel').classList.contains('panel-waiting');
+  document.getElementById('impName').value='Amazon';
+  document.getElementById('impAmt').value='140';
+  document.getElementById('impRun').click(); await wait(450);
+  document.getElementById('impVault').click(); await wait(550);
+  const conf=document.getElementById('impResult').textContent.trim();
+  const desc=document.querySelector('#vaultPanel .sub').textContent.trim();
+  const list=document.getElementById('vaultList').textContent.replace(/\s+/g,' ').trim();
+  const sents=t=>t.split(/(?<=\.)\s+/).map(x=>x.trim()).filter(x=>x.length>25);
+  return { gatedBefore,
+    gatedAfter:document.getElementById('vaultPanel').classList.contains('panel-waiting'),
+    conf, shared:sents(conf).filter(c=>desc.includes(c)),
+    listHasItem:/Amazon/.test(list), listHasTimer:/left/i.test(list),
+    emptyNote:/Vault's empty/.test(list) };
+});
+check('vaulting something opens the vault panel immediately',
+      vault.gatedBefore===true && vault.gatedAfter===false);
+check('...and the item is actually in it, with its timer running',
+      vault.listHasItem===true && vault.listHasTimer===true && vault.emptyNote===false,
+      vault.listHasItem+'/'+vault.listHasTimer);
+check('the confirmation shares no sentence with the panel it sits above',
+      vault.shared.length===0, vault.shared.join(' | '));
+check('...and names when the thing actually comes back',
+      /unlocks .*(today|tomorrow) at /i.test(vault.conf), vault.conf.slice(0,110));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

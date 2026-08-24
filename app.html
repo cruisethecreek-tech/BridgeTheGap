@@ -6703,8 +6703,17 @@ function logRansom(name,amount,trap){
 }
 /* 24-hour cooling vault */
 function addToVault(name,amount,trap){
-  state.vault.push({id:uid(),name,amount,trap:trap||'scroll',unlocksAt:Date.now()+24*3600*1000,createdAt:Date.now()});
+  const item={id:uid(),name,amount,trap:trap||'scroll',unlocksAt:Date.now()+24*3600*1000,createdAt:Date.now()};
+  state.vault.push(item);
   save();
+  return item;   // the caller names the real unlock time rather than repeating the panel's copy
+}
+/* "tomorrow at 10:44 pm" - a specific moment beats "in 24 hours", because the
+   whole mechanism is waiting and a person needs to know what they are waiting for */
+function fmtUnlockWhen(ts){
+  const d=new Date(ts), now=new Date();
+  const t=d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+  return (d.toDateString()===now.toDateString() ? 'today' : 'tomorrow')+' at '+t;
 }
 function renderVault(){
   const box=document.getElementById('vaultList'); if(!box) return;
@@ -7816,9 +7825,14 @@ function renderCheckResult(){
   });
   document.getElementById('impVault').addEventListener('click',()=>{
     const nm=pendingCheck.name;
-    addToVault(pendingCheck.name,pendingCheck.amt,pendingCheck.trap);
+    /* This used to repeat the vault panel's own explainer word for word - both
+       ended "Most traps don't survive the wait." - so stacked on one screen it
+       read as the same message printed twice. The panel explains what the vault
+       IS; the confirmation says what just happened to THIS thing and when it
+       comes back, which is the one fact the panel below cannot tell you yet. */
+    const it=addToVault(pendingCheck.name,pendingCheck.amt,pendingCheck.trap);
     pendingCheck=null; clearScan();
-    document.getElementById('impResult').innerHTML=`<div class="checkcard"><div class="verdict">⏳Locked in the 24-Hour Vault.</div><p class="sub" style="margin:8px 0 0">“${escapeHtml(nm)}” is cooling off. If you still want it in 24 hours, the ransom option unlocks below. Most traps don't survive the wait.</p></div>`;
+    document.getElementById('impResult').innerHTML=`<div class="checkcard"><div class="verdict">⏳Locked in the vault.</div><p class="sub" style="margin:8px 0 0">“${escapeHtml(nm)}” unlocks <b>${escapeHtml(fmtUnlockWhen(it.unlocksAt))}</b>. Until then it sits below with a timer on it, and the ransom option stays shut.</p></div>`;
     renderVault();
     const vp=document.getElementById('vaultPanel'); if(vp) vp.scrollIntoView({behavior:'smooth',block:'center'});
   });
