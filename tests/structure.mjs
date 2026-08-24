@@ -1112,6 +1112,87 @@ check('a stale build goes quiet instead of showing old numbers as current',
       outside.staleOutside===0 && outside.staleSaysSo===true,
       `${outside.staleOutside} shown, note ${outside.staleSaysSo}`);
 
+/* ---- 23. the areas a person actually wants ----
+   The stage ladder decides what someone is READY for; this decides what they
+   WANT, and only they can answer that. The danger is a half-applied setting: an
+   area hidden from the tab bar but still reachable from the map, the hub, or a
+   stale history entry is worse than no setting at all. ---- */
+const AREAS={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24,
+  categories:[{id:'a',name:'Rent'}], budgets:{'2026-08':{a:1000}},
+  transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'}],
+  impulse:[{id:'p',type:'skip',name:'Shoes',amount:120,date:'2026-08-05'}]};
+await seed(AREAS); await p.reload(); await p.waitForTimeout(900);
+const areas = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('settings'); await wait(350);
+  const vis=()=>[...document.querySelectorAll('.tab[data-view]')]
+    .filter(t=>getComputedStyle(t).display!=='none').map(t=>t.dataset.view);
+  const out={ toggles:document.querySelectorAll('#areaToggles input[data-area]').length,
+              before:vis() };
+  setAreaOff('impulse',true); setAreaOff('debt',true); await wait(220);
+  out.after=vis();
+  activateTab('impulse'); await wait(180); out.landed=currentTab;
+  out.mapHasShield=/Shield/.test(appMapHTML());
+  renderIntentSheet();
+  out.hubOffersGutCheck=/[Gg]ut-check/.test(document.getElementById('intentList').textContent);
+  out.dataKept=impulseSaved();
+  setAreaOff('settings',true); setAreaOff('budget',true); setAreaOff('tx',true); await wait(150);
+  out.spineSafe=areaOn('settings')&&areaOn('budget')&&areaOn('tx');
+  setAreaOff('impulse',false); await wait(200);
+  out.back=vis().includes('impulse');
+  out.stillKept=impulseSaved();
+  return out;
+});
+check('every optional area has a switch', areas.toggles===6, String(areas.toggles));
+check('switching one off removes it from the bar',
+      areas.before.includes('impulse') && !areas.after.includes('impulse') && !areas.after.includes('debt'),
+      areas.after.join(','));
+check('...nothing can navigate into a hidden area', areas.landed==='home', areas.landed);
+check('...the app map stops listing it', areas.mapHasShield===false);
+check('...and the "I want to" hub stops offering it', areas.hubOffersGutCheck===false);
+check('the spine cannot be switched off', areas.spineSafe===true);
+check('hiding an area never deletes what is in it', areas.dataKept===120 && areas.stillKept===120,
+      `${areas.dataKept} then ${areas.stillKept}`);
+check('switching it back on restores it', areas.back===true);
+
+/* a poisoned save must not be able to hide Settings - the switch that undoes it */
+const poison = await p.evaluate(() => {
+  const st=JSON.parse(localStorage.getItem('unfiltered_budget_v2'));
+  st.areasOff=['settings','budget','tx','home','impulse'];
+  const n=normalizeState(st);
+  return n.areasOff;
+});
+check('a corrupt areasOff cannot hide the spine',
+      poison.length===1 && poison[0]==='impulse', JSON.stringify(poison));
+
+/* ---- 24. the time ledger reaches the report ----
+   It used to be write-only: you tapped +1 hr, a caption underneath updated, and
+   the data was never seen again anywhere in the app. ---- */
+const TIMEW={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24, hoursPerWeek:40,
+  activeMonth:RM,
+  categories:[{id:'a',name:'Rent'}], budgets:{[RM]:{a:1000}},
+  transactions:[{id:'i',type:'income',amount:3200,date:RM+'-01'},
+                {id:'e',type:'expense',amount:900,catId:'a',date:RM+'-03'}]};
+await seed(TIMEW); await p.reload(); await p.waitForTimeout(900);
+const tw = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const sig=()=>REPORT_SIGNALS.find(x=>x.k==='timeWeek').run();
+  const cold=sig();
+  [['health',8],['learn',3],['build',9],['people',1],['leak',6]]
+    .forEach(([k,h])=>{ for(let i=0;i<h;i++) logTime(k,1); });
+  const warm=sig();
+  activateTab('reflect'); await wait(450);
+  return { coldLocked:!!(cold&&cold.locked), t:warm.t,
+           body:warm.body.replace(/<[^>]+>/g,''), work:warm.work,
+           nudge:warm.nudge.replace(/<[^>]+>/g,''),
+           onScreen:[...document.querySelectorAll('.rp-card .rp-t')].map(e=>e.textContent).join(' | ') };
+});
+check('with nothing logged the time signal stays silent', tw.coldLocked===true);
+check('a logged week reaches the report', /21 hrs of your week/.test(tw.t), tw.t);
+check('...with the split shown so it can be checked', tw.work==='27 logged = 21 invested + 6 leaked', tw.work);
+check('...and the leak priced at the user own rate', /\$144/.test(tw.nudge), tw.nudge);
+check('...and it actually renders on Reflect', /week went into you/.test(tw.onScreen), tw.onScreen);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
