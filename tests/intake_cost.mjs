@@ -2,7 +2,7 @@
    INTAKE COST HONESTY
 
    The setup chat tells people what it will cost them before they commit:
-   "about 5 minutes and 16 questions", "about 10 minutes and 22 questions",
+   "about 5 minutes and 16 questions", "about 10 minutes and 23 questions",
    "Map my averages now · ~3 min". Those are promises, and a promise about
    length rots the moment somebody adds a step - which is exactly what happened
    before: the spend path advertised "~2 min" while running seventeen steps, and
@@ -20,7 +20,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
    allowed to drift more than one. */
 const CLAIMS = {
   spend: { minutes:6,  questions:16, chip:'Just track my spending · ~6 min' },
-  full:  { minutes:10, questions:22, chip:'Build my whole budget · ~10 min' },
+  full:  { minutes:10, questions:23, chip:'Build my whole budget · ~10 min' },
 };
 const MINUTE_BAND = 0.25;    // the modelled time may exceed the claim by at most this - under-stating is the dishonest direction
 const OVERSTATE_MAX = 2;     // ...and a wildly padded claim scares people off a path they could afford
@@ -403,7 +403,7 @@ check('...savage, which literally says "stop here", says it on the button', exit
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
   check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));
-  check(`${t}: names the question counts`, /16 questions/.test(text) && /22 questions/.test(text));
+  check(`${t}: names the question counts`, /16 questions/.test(text) && /23 questions/.test(text));
   check(`${t}: says the quiet part rather than apologising for asking`,
         /isn't your app|keep the six minutes|not going to pretend otherwise/.test(text));
 }

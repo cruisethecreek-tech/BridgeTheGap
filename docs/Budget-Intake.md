@@ -468,3 +468,22 @@ steps track a manual-override flag (`iaForceInput`, reset per step).
 No credit pull, no account linking, no data leaving the device - everything the chat
 captures is stored locally, same as the rest of the app. It's a setup conversation,
 not a lead form.
+
+## What you have, not only what you owe
+
+The intake asked income, the four walls, other expenses and debt, and never
+asked for a balance. A full-budget user who declared a debt finished setup with
+a net worth of exactly minus that debt - the app calling someone with $8,000 in
+the bank $5,000 in the hole, because it had only ever heard one side.
+
+`haveNow` sits directly after the debt questions and asks for one rough number:
+everything they could actually get at. Optional, skippable, and worded as the
+other half of what was just said when a debt was given. It commits as a single
+`Bank` account, which the Accounts panel on Build can be split and renamed
+later - this is a starting point, not an inventory.
+
+It costs the full path one question, 22 to 23, and the app's own sentence about
+what setup costs was updated in the same commit. `tests/intake_cost.mjs`
+asserts the count exactly, on purpose: a tolerance there is how a "~2 min"
+claim once came to sit on top of a seventeen-step path.
+

@@ -1476,6 +1476,52 @@ check('a 29.9% card still gets a clear verdict', clear.wins===1 && /Crushing the
 check('...and says the guess does not matter there',
       /Not really/i.test(clear.range) && /do not need to predict/i.test(clear.range), clear.range.slice(0,70));
 
+/* ---- 30. the intake asks what you HAVE, not only what you owe ----
+   Asked from a real phone: "where is the savings area kept - what's in the bank
+   right now? And why isn't it part of the initial intake?" It was not. The
+   intake asked income, the four walls, other expenses and DEBT, and never once
+   asked for a balance. So a full-budget user who declared debt finished setup
+   with a net worth of exactly minus their debt - the app telling someone with
+   $8,000 in the bank that they were $5,000 in the hole, because it had only
+   ever heard one side of the ledger. ---- */
+const have = await p.evaluate(() => {
+  const step=INTAKE.find(s=>s.id==='haveNow');
+  if(!step) return {missing:true};
+  return { optional:!!step.optional, hasWhy:!!step.why, key:step.key, input:step.input,
+    onFull:step.showIf({acct:'full',hasDebt:'no'}),
+    onSpend:step.showIf({acct:'spend'}),
+    rightAfterDebt:INTAKE.findIndex(s=>s.id==='haveNow')-INTAKE.findIndex(s=>s.id==='debtFeel'),
+    pairs:step.bot({acct:'full',hasDebt:'yes',debtAmt:5000}),
+    alone:step.bot({acct:'full',hasDebt:'no'}) };
+});
+check('the intake asks what is in the bank', have.missing!==true && have.key==='haveNow' && have.input==='money');
+check('...and it can be skipped', have.optional===true);
+check('...it explains why it is asking', have.hasWhy===true);
+check('...it sits with the debt question, as the other side of the ledger',
+      have.rightAfterDebt===1, String(have.rightAfterDebt));
+check('...it names itself as the other side when a debt was just given',
+      /other side/i.test(have.pairs) && !/other side/i.test(have.alone),
+      have.pairs.slice(0,60));
+check('...and the light spending path is left light', have.onFull===true && have.onSpend===false);
+
+/* the fault it exists to fix */
+const ledger = await p.evaluate(() => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3;
+  state.liabilities.push({id:'l',name:'Debt',value:5000,src:'intake'});
+  save();
+  const oneSided=netWorth();
+  state.accounts.push({id:'a',name:'Bank',kind:'checking',purpose:'',balance:8000,updated:todayStr(),src:'intake'});
+  save();
+  return { oneSided, both:netWorth(), bank:bankTotal(), liquid:liquidTotal(),
+           savingsCard:!!REPORT_SIGNALS.find(s=>s.k==='oSavings').run() };
+});
+check('a balance turns a one-sided net worth into an honest one',
+      ledger.oneSided===-5000 && ledger.both===3000, `${ledger.oneSided} -> ${ledger.both}`);
+check('...it counts as money you could reach today', ledger.liquid===8000, String(ledger.liquid));
+check('...and the savings context card finally has something to work with',
+      ledger.savingsCard===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
