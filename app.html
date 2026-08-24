@@ -2774,7 +2774,22 @@ function load(){
        return normalizeState(Object.assign(defaultState(), JSON.parse(r))); }
   catch(e){ return defaultState(); }
 }
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); if(typeof scheduleVaultPush==='function') scheduleVaultPush(); }
+/* Gates are re-evaluated on every save, and that is deliberate.
+   They used to run in exactly two places - boot() and renderAll() - so a panel
+   waiting on data stayed waiting until one of those happened. Adding a debt
+   calls save() and renderDebt(), neither of which is either, so two debts could
+   sit right above a "Your way out" panel still saying "Add a debt above". All
+   five gates had it: the CSV importer, the circulation ratio, the vault, the
+   payoff planner and the invest comparison were every one stale until a reload.
+   Hooking the check to the single place all state changes pass through means no
+   future feature can forget - which is exactly how this one was forgotten.
+   Cost is a handful of .length reads next to a full JSON.stringify of state,
+   so it is noise against what save() already does. */
+function save(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  if(typeof applyPanelGates==='function') applyPanelGates();
+  if(typeof scheduleVaultPush==='function') scheduleVaultPush();
+}
 let state = load();
 if(!state.activeMonth) state.activeMonth = thisMonth();
 
