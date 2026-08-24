@@ -9103,7 +9103,7 @@ const INTAKE=[
     const light=surv
       ? `Given where you're at, I'd start light: keep your own spending honest against a daily allowance, small wins you can feel, no full-budget homework.`
       : `**Just track my spending** - keep your spending honest against a daily allowance, and see every dollar that leaves.`;
-    const cost=`That's about **6 minutes** and 16 questions. The whole budget is about **10 minutes** and 22 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
+    const cost=`That's about **6 minutes** and 16 questions. The whole budget is about **10 minutes** and 23 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
     switch(iaTone(a)){
       case 'savage':
         return `Two ways in${nm}. Real numbers, no pitch. ${light} ${cost} Neither one is padded. And if six minutes is too much to spend on the thing that decides where your life actually goes, stop here - you won't do the hard part either, and I'd rather you keep the six minutes. Still in? Pick one.`;
@@ -9268,6 +9268,20 @@ const INTAKE=[
       {label:'Slowly winning', value:'winning', reply:"Slowly winning is still winning."},
       {label:'Just getting started', value:'starting', reply:"You're already past the hardest part, which is starting."}
     ]},
+  /* The intake asked what you OWE and never what you HAVE, so a full-budget user
+     who declared debt finished setup with a net worth of minus their debt - the
+     app telling someone with $8,000 in the bank that they are $5,000 in the
+     hole, because it only ever heard one side. It also left the runway unknown
+     and the savings context card permanently silent. One optional number fixes
+     all three. It is deliberately ONE number: the split between current account
+     and savings is what the Accounts panel on Build is for, and this is a
+     starting point, not an inventory. */
+  {id:'haveNow', input:'money', key:'haveNow', optional:true, showIf:a=>a.acct!=='spend',
+    sum:'In the bank right now', placeholder:'e.g. 1200',
+    why:"Because a budget that only knows what you owe will call you broke while you have money in the bank. It sets your net worth honestly, and it is the difference between the app guessing at your runway and knowing it.",
+    bot:a=>a.hasDebt==='yes'&&a.debtAmt>0
+      ? "That is one side of it. The other side: roughly what is sitting in your accounts right now - current, savings, cash, anything you could actually get at? One rough number does it, and you can skip this."
+      : "Roughly what is sitting in your accounts right now - current, savings, cash, anything you could actually get at? One rough number does it, and you can skip this."},
   {id:'dream', sum:'Your dream',
     bot:a=>{
       if(a.roofFeel==='own') return `Now the big one - what are you actually chasing? You said you're dreaming of owning${a.roofFeelNote?` ("${a.roofFeelNote}")`:' a place'} - want that to be the dream we build toward, or is there a bigger one? ★`;
@@ -10250,6 +10264,9 @@ function commitIntake(){
     const left=Math.round(intakeIncomeTotal(a)-intakeAssignedTotal(a));   // zero-based close: park any leftover
     if(left>1 && (a.zeroChoice==='savings'||a.zeroChoice==='goal')){ bPut(findOrCreateCat(a.zeroChoice==='goal'&&a.dream?'Savings ('+a.dream+')':'Savings','save').id, left); }
     if(a.hasDebt==='yes' && a.debtAmt>0) state.liabilities.push({id:uid(),name:'Debt',value:a.debtAmt,src:'intake'});
+    /* one lump, splittable later on Build - the point is that net worth starts
+       from both sides of the ledger rather than only the side that hurts */
+    if(a.haveNow>0) state.accounts.push({id:uid(),name:'Bank',kind:'checking',purpose:'',balance:+a.haveNow,updated:todayStr(),src:'intake'});
     if(a.dream) state.goals.push({id:uid(),name:a.dream,target:a.dreamAmt>0?a.dreamAmt:1000,saved:0,date:'',src:'intake'});
   }
   if(a.tone) state.intensity=a.tone;
