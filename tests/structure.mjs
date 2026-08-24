@@ -19,6 +19,7 @@
    had been hiding it silently stopped finding it.
    ============================================================ */
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+import { writeFileSync } from 'node:fs';
 
 const results=[]; const check=(name,ok,detail='')=>results.push({ok,name,detail});
 const VIEWS=['home','budget','tx','impulse','debt','goals','reflect','learn','diary','settings'];
@@ -1255,6 +1256,81 @@ check('...and shows what each one actually sounds like',
       new Set(Object.values(setPick.samples)).size===3, JSON.stringify(setPick.samples));
 check('...quoting real app copy rather than a sample written for the picker',
       setPick.real===true, setPick.samples.genz);
+
+/* ---- 26. the import that ate everything ----
+   Reported from a real phone: took an encrypted backup, pressed Import, and the
+   app started over. Reproduced exactly. The plain importer accepted anything
+   that was valid JSON - and an encrypted .acct envelope IS valid JSON, with no
+   state keys in it - so Object.assign(defaultState(), envelope) produced a
+   pristine empty app, SAVED it over the real data, rebooted into onboarding and
+   said "Imported." Silent total data loss reported as success, on the one path
+   that exists to prevent data loss. With the old importer these checks report
+   cats 0 / tx 0 / onboarded false. ---- */
+const LIVE={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24,
+  categories:[{id:'a',name:'Rent'},{id:'b',name:'Food'}],
+  budgets:{'2026-08':{a:1200,b:600}},
+  goals:[{id:'g',name:'Emergency fund',target:9000,saved:2400}],
+  transactions:Array.from({length:37},(_,i)=>({id:'t'+i,type:'expense',amount:20,catId:'a',date:'2026-08-0'+(i%9+1)}))};
+await seed(LIVE); await p.reload(); await p.waitForTimeout(900);
+
+/* answer whatever the app asks, the way a hurried person would */
+const said=[];
+const onDialog=async d=>{ said.push(d.type()+':'+d.message());
+  if(d.type()==='prompt') await d.accept('correct horse battery'); else await d.accept(); };
+p.on('dialog',onDialog);
+
+const envelope = await p.evaluate(async () => {
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey('correct horse battery',salt);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(state)));
+  return JSON.stringify({app:'accountability',v:1,alg:'AES-GCM',kdf:'PBKDF2-SHA256',iter:150000,
+    salt:abToB64(salt),iv:abToB64(iv),data:abToB64(ct)});
+});
+const tmp=process.env.TMPDIR||'/tmp';
+writeFileSync(tmp+'/t-enc.acct', envelope);
+writeFileSync(tmp+'/t-junk.json', JSON.stringify({name:'my-package',version:'1.0.0'}));
+
+/* 1. the exact reported sequence: encrypted backup into the plain Import */
+said.length=0;
+await p.setInputFiles('#importFile', tmp+'/t-enc.acct');
+await p.waitForTimeout(900);
+const afterEnc = await p.evaluate(()=>({cats:state.categories.length,tx:state.transactions.length,onboarded:!!state.onboarded}));
+check('an encrypted backup pressed into Import does not wipe the app',
+      afterEnc.cats===2 && afterEnc.tx===37 && afterEnc.onboarded===true, JSON.stringify(afterEnc));
+check('...it asks for the passphrase instead of treating the envelope as data',
+      said.some(x=>/^prompt:[\s\S]*passphrase/i.test(x)), said.map(x=>x.slice(0,40).replace(/\n/g,' ')).join(' | '));
+
+/* 2. an unrelated JSON file must be refused, not imported */
+said.length=0;
+await p.setInputFiles('#importFile', tmp+'/t-junk.json');
+await p.waitForTimeout(700);
+const afterJunk = await p.evaluate(()=>({cats:state.categories.length,tx:state.transactions.length}));
+check('a JSON file that is not a backup changes nothing',
+      afterJunk.cats===2 && afterJunk.tx===37, JSON.stringify(afterJunk));
+check('...and says so rather than claiming it imported',
+      said.some(x=>/does not look like an Accountability backup/i.test(x)) &&
+      !said.some(x=>/^alert:Imported/i.test(x)), said.map(x=>x.slice(0,50)).join(' | '));
+
+/* 3. a real export still restores - and names what is being replaced first */
+const plain = await p.evaluate(()=>JSON.stringify({...state,
+  categories:[{id:'z',name:'Imported'}],
+  transactions:[{id:'q',type:'expense',amount:9,catId:'z',date:'2026-08-01'}]}));
+writeFileSync(tmp+'/t-plain.json', plain);
+said.length=0;
+await p.setInputFiles('#importFile', tmp+'/t-plain.json');
+await p.waitForTimeout(900);
+const afterPlain = await p.evaluate(()=>({cats:state.categories.length,tx:state.transactions.length,undo:hasImportUndo()}));
+check('a genuine export still restores', afterPlain.cats===1 && afterPlain.tx===1, JSON.stringify(afterPlain));
+check('...after naming what is here now and what is in the file',
+      said.some(x=>/REPLACES/.test(x) && /37 transactions/.test(x)),
+      (said.find(x=>/REPLACES/.test(x))||'').slice(0,110));
+
+/* 4. there is a way back - the thing that makes any of this survivable */
+check('an import can be undone', afterPlain.undo===true);
+const undone = await p.evaluate(()=>{ undoImport(); return {cats:state.categories.length,tx:state.transactions.length}; });
+check('...and undoing puts the original data back exactly',
+      undone.cats===2 && undone.tx===37, JSON.stringify(undone));
+p.off('dialog',onDialog);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
