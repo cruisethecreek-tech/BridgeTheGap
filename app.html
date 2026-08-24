@@ -745,6 +745,13 @@
   /* Progressive interface stages */
   [data-stage].stage-locked{display:none!important}
   .tab.area-off{display:none!important}
+  .retpick{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .retpick button{flex:1 1 90px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left}
+  .retpick button.on{border-color:var(--accent);background:rgba(var(--accent-rgb),.1)}
+  .rp-v{font-weight:900;font-size:16px;color:var(--text)}
+  .rp-t{font-size:11.5px;line-height:1.35;color:var(--muted)}
+  .iv-range{margin-top:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+  .iv-range b{color:var(--text)}
   .gatepick{display:flex;flex-direction:column;gap:9px;margin-top:6px}
   .gatepick button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;width:100%}
   .gatepick button:hover{border-color:var(--accent)}
@@ -1943,6 +1950,16 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub">Paying off debt earns a <b>guaranteed</b> return equal to its rate. Investing might earn more - but it's not guaranteed. Here's the honest comparison of aiming that same money at the market instead.</p>
         <div class="row">
           <label class="fld">Expected market return %/yr<input type="number" id="investReturn" min="0" step="0.5" placeholder="7" style="width:120px"></label>
+        </div>
+        <!-- "How is a 21-year-old supposed to know the expected market return?"
+             They are not, and neither is anyone else - it is a guess about the
+             future. The field asked for it with no anchor and no hint that it
+             was a guess. It offers the historical figures to pick from now, says
+             plainly that the past is not a promise, and shows how much the
+             answer even depends on the guess. -->
+        <div class="retpick" id="retPick"></div>
+        <p class="sub" id="retNote" style="margin:8px 0 0"></p>
+        <div class="row" style="margin-top:12px">
           <div class="uimode" id="investYears"><button data-y="5">5 yrs</button><button data-y="10">10 yrs</button><button data-y="20">20 yrs</button></div>
         </div>
         <div id="investResults"></div>
@@ -3503,8 +3520,26 @@ function investCompare(debts, monthly, retPct, horizon){
   };
   return { crush:run(true), investFirst:run(false) };
 }
+const RET_PRESETS=[
+  {v:5,  t:'Cautious',  why:'below the long-run average, on purpose'},
+  {v:7,  t:'Historical after inflation', why:'what a century of the US market averaged once inflation is taken out'},
+  {v:10, t:'Historical before inflation', why:'the headline number people usually quote'}
+];
+function renderReturnPicker(){
+  const box=document.getElementById('retPick'); if(!box) return;
+  const cur=state.investReturn||7;
+  box.innerHTML=RET_PRESETS.map(r=>`<button data-ret="${r.v}" class="${cur===r.v?'on':''}"><span class="rp-v">${r.v}%</span><span class="rp-t">${escapeHtml(r.t)}</span></button>`).join('');
+  box.querySelectorAll('button[data-ret]').forEach(b=>b.addEventListener('click',()=>{
+    state.investReturn=+b.dataset.ret; save();
+    const ri=document.getElementById('investReturn'); if(ri) ri.value=state.investReturn;
+    renderInvestCompare();
+  }));
+  const n=document.getElementById('retNote');
+  if(n) n.innerHTML=`Nobody knows this number - it is a guess about the future, and the comparison needs one. For scale: over roughly the last century the US stock market averaged about <b>${OUTSIDE.market.nominal}%</b> a year before inflation and about <b>${OUTSIDE.market.real}%</b> after it. That is history, not a promise, and any single decade can look nothing like it.`;
+}
 function renderInvestCompare(){
   const box=document.getElementById('investResults'); if(!box) return;
+  renderReturnPicker();
   const debts=state.debts.filter(d=>(+d.balance||0)>0);
   const budget=state.debtBudget||0, totalMin=debts.reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0);
   const ri=document.getElementById('investReturn'); if(ri&&document.activeElement!==ri) ri.value=state.investReturn||'';
@@ -3512,14 +3547,35 @@ function renderInvestCompare(){
   if(!debts.length || budget<totalMin-0.01){ box.innerHTML='<div class="sub" style="margin-top:12px">Add your debts and a monthly amount above to see how paying down compares to investing.</div>'; return; }
   const ret=state.investReturn||7, yrs=state.investYears||10, hz=yrs*12;
   const c=investCompare(debts, budget, ret, hz), crushNet=c.crush.net, invNet=c.investFirst.net, diff=invNet-crushNet;
+  /* Do not crown a winner over a rounding error. A $96 gap on $237,000 after
+     ten years is a tie, and highlighting one card green tells someone a
+     decision was made when the honest answer is that it does not matter - or
+     that it hinges entirely on a rate nobody can know. Either of those and
+     neither card wins. */
+  const lo5=investCompare(debts,budget,5,hz), hi10=investCompare(debts,budget,10,hz);
+  const flipsOnRate=((lo5.investFirst.net-lo5.crush.net)>0)!==((hi10.investFirst.net-hi10.crush.net)>0);
+  const tooClose = flipsOnRate || Math.abs(diff) < Math.max(crushNet,invNet)*0.02;
   const flags=debts.map(d=>({name:d.name, apr:+d.apr||0, invest:(+d.apr||0)<ret}));
   box.innerHTML=`
     <div class="iv-compare">
-      <div class="iv-card ${diff<=0?'win':''}"><div class="sp-k">Crush the debt first</div><div class="iv-net">${actMoney(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
-      <div class="iv-card ${diff>0?'win':''}"><div class="sp-k">Minimums + invest the rest</div><div class="iv-net">${actMoney(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      <div class="iv-card ${!tooClose&&diff<=0?'win':''}"><div class="sp-k">Crush the debt first</div><div class="iv-net">${actMoney(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      <div class="iv-card ${!tooClose&&diff>0?'win':''}"><div class="sp-k">Minimums + invest the rest</div><div class="iv-net">${actMoney(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
     </div>
-    <div class="iv-verdict">${diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years.` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years - your debt costs more than the market is likely to pay.` : `It's roughly a wash over ${yrs} years - the guaranteed route (crush the debt) is the safer call.`}</div>
+    <div class="iv-verdict">${tooClose ? `At ${ret}%/yr these land within <b>${money(Math.abs(diff))}</b> of each other after ${yrs} years - on numbers this size that is a tie, not a winner. Pick the one you will actually stick to.` : diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years.` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years - your debt costs more than the market is likely to pay.` : `It's roughly a wash over ${yrs} years - the guaranteed route (crush the debt) is the safer call.`}</div>
     <div class="iv-flags">${flags.map(f=>`<div class="iv-flag ${f.invest?'inv':'crush'}"><b>${escapeHtml(f.name)} · ${f.apr}%</b> - ${f.invest?`below ${ret}%, so investing the extra likely beats rushing this one`:`beats ${ret}%; crushing it is a guaranteed ${f.apr}% return`}</div>`).join('')}</div>
+    ${(()=>{
+      /* The honest answer to "how am I supposed to know?" is usually "it barely
+         matters" - and the app can prove that instead of asserting it. Run the
+         same comparison across the plausible range and show whether the guess
+         actually changes the decision. When it does not, that is the most
+         useful sentence on the screen. */
+      const lo=investCompare(debts,budget,5,hz), hi=investCompare(debts,budget,10,hz);
+      const dLo=lo.investFirst.net-lo.crush.net, dHi=hi.investFirst.net-hi.crush.net;
+      const flips=(dLo>0)!==(dHi>0);
+      return `<div class="iv-range"><b>Does the guess even change the answer?</b> ${flips
+        ? `Yes, here. At 5% ${dLo>0?'investing':'crushing the debt'} wins; at 10% ${dHi>0?'investing':'crushing the debt'} does. The honest read is that this one is close enough that the rate you assume decides it - so pick the cautious end and see if you still like the plan.`
+        : `Not really. Across the whole 5% to 10% range, ${dHi>0?'paying minimums and investing the rest':'crushing the debt first'} comes out ahead either way - by ${money(Math.abs(dLo))} at 5% and ${money(Math.abs(dHi))} at 10%. You do not need to predict the market to make this call.`}</div>`;
+    })()}
     <div class="iv-caveat"><b>Real talk:</b> paying off debt is a <b>guaranteed</b> return; investing is an <b>expected</b> one - the market can drop, and this is a simplified model that ignores <b>taxes and inflation</b> (a "7%" return is more like ~4% after inflation). Real returns are lumpy, never a straight line. Build a small emergency fund and grab any 401(k) match before either. Educational, not personalized financial advice.</div>`;
 }
 
@@ -6703,8 +6759,17 @@ function logRansom(name,amount,trap){
 }
 /* 24-hour cooling vault */
 function addToVault(name,amount,trap){
-  state.vault.push({id:uid(),name,amount,trap:trap||'scroll',unlocksAt:Date.now()+24*3600*1000,createdAt:Date.now()});
+  const item={id:uid(),name,amount,trap:trap||'scroll',unlocksAt:Date.now()+24*3600*1000,createdAt:Date.now()};
+  state.vault.push(item);
   save();
+  return item;   // the caller names the real unlock time rather than repeating the panel's copy
+}
+/* "tomorrow at 10:44 pm" - a specific moment beats "in 24 hours", because the
+   whole mechanism is waiting and a person needs to know what they are waiting for */
+function fmtUnlockWhen(ts){
+  const d=new Date(ts), now=new Date();
+  const t=d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+  return (d.toDateString()===now.toDateString() ? 'today' : 'tomorrow')+' at '+t;
 }
 function renderVault(){
   const box=document.getElementById('vaultList'); if(!box) return;
@@ -7816,9 +7881,14 @@ function renderCheckResult(){
   });
   document.getElementById('impVault').addEventListener('click',()=>{
     const nm=pendingCheck.name;
-    addToVault(pendingCheck.name,pendingCheck.amt,pendingCheck.trap);
+    /* This used to repeat the vault panel's own explainer word for word - both
+       ended "Most traps don't survive the wait." - so stacked on one screen it
+       read as the same message printed twice. The panel explains what the vault
+       IS; the confirmation says what just happened to THIS thing and when it
+       comes back, which is the one fact the panel below cannot tell you yet. */
+    const it=addToVault(pendingCheck.name,pendingCheck.amt,pendingCheck.trap);
     pendingCheck=null; clearScan();
-    document.getElementById('impResult').innerHTML=`<div class="checkcard"><div class="verdict">⏳Locked in the 24-Hour Vault.</div><p class="sub" style="margin:8px 0 0">“${escapeHtml(nm)}” is cooling off. If you still want it in 24 hours, the ransom option unlocks below. Most traps don't survive the wait.</p></div>`;
+    document.getElementById('impResult').innerHTML=`<div class="checkcard"><div class="verdict">⏳Locked in the vault.</div><p class="sub" style="margin:8px 0 0">“${escapeHtml(nm)}” unlocks <b>${escapeHtml(fmtUnlockWhen(it.unlocksAt))}</b>. Until then it sits below with a timer on it, and the ransom option stays shut.</p></div>`;
     renderVault();
     const vp=document.getElementById('vaultPanel'); if(vp) vp.scrollIntoView({behavior:'smooth',block:'center'});
   });
@@ -8688,6 +8758,11 @@ const OUTSIDE={
   food:{ yoy:2.7, asOf:'July 2026' },
   savings:{ avgApy:0.38, highApy:4.0, asOf:'August 2026' },
   card:{ avgApr:23.8, asOf:'August 2026' },
+  /* US stock market long-run averages, for the invest-vs-payoff comparison,
+     which cannot run without SOME assumption. History, never a forecast, and
+     labelled that way on screen. ~10%/yr before inflation and ~7% after it,
+     over roughly the last century. */
+  market:{ nominal:10, real:7, sinceYear:1926, asOf:'August 2026' },
   fedFunds:{ rate:3.63, asOf:'August 2026' }
 };
 function outsideFresh(){ return daysSince(OUTSIDE.built) <= 240; }

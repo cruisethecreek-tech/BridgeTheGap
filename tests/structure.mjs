@@ -1386,6 +1386,96 @@ check('the circulation ratio opens on the first tagged spend',
 const hooked = await p.evaluate(() => /applyPanelGates/.test(String(save)));
 check('every gate is re-checked wherever state is saved', hooked===true);
 
+/* ---- 28. the vault confirmation is not a second copy of the vault ----
+   Asked from a real phone: "is this a duplicate of the 24-hour vault?" Two
+   things made it look like one. The panel below was stuck showing its
+   empty-state note while the card above said something had just been vaulted
+   (the stale-gate bug in section 27), and both texts ended with the same
+   sentence, word for word: "Most traps don't survive the wait." The panel
+   explains what the vault IS. The confirmation should say what happened to
+   THIS thing and when it comes back - the one fact the panel cannot yet. ---- */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24});
+await p.reload(); await p.waitForTimeout(900);
+const vault = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('impulse'); await wait(400);
+  const gatedBefore=document.getElementById('vaultPanel').classList.contains('panel-waiting');
+  document.getElementById('impName').value='Amazon';
+  document.getElementById('impAmt').value='140';
+  document.getElementById('impRun').click(); await wait(450);
+  document.getElementById('impVault').click(); await wait(550);
+  const conf=document.getElementById('impResult').textContent.trim();
+  const desc=document.querySelector('#vaultPanel .sub').textContent.trim();
+  const list=document.getElementById('vaultList').textContent.replace(/\s+/g,' ').trim();
+  const sents=t=>t.split(/(?<=\.)\s+/).map(x=>x.trim()).filter(x=>x.length>25);
+  return { gatedBefore,
+    gatedAfter:document.getElementById('vaultPanel').classList.contains('panel-waiting'),
+    conf, shared:sents(conf).filter(c=>desc.includes(c)),
+    listHasItem:/Amazon/.test(list), listHasTimer:/left/i.test(list),
+    emptyNote:/Vault's empty/.test(list) };
+});
+check('vaulting something opens the vault panel immediately',
+      vault.gatedBefore===true && vault.gatedAfter===false);
+check('...and the item is actually in it, with its timer running',
+      vault.listHasItem===true && vault.listHasTimer===true && vault.emptyNote===false,
+      vault.listHasItem+'/'+vault.listHasTimer);
+check('the confirmation shares no sentence with the panel it sits above',
+      vault.shared.length===0, vault.shared.join(' | '));
+check('...and names when the thing actually comes back',
+      /unlocks .*(today|tomorrow) at /i.test(vault.conf), vault.conf.slice(0,110));
+
+/* ---- 29. nobody knows the expected market return ----
+   Asked from a real phone: "how is a 21-year-old supposed to know the estimated
+   market return?" They are not, and neither is anyone else - it is a guess
+   about the future, and the field asked for it with no anchor and no hint that
+   it was a guess. Worse, on the reporter's own debts the two outcomes came out
+   $96 apart on $237,000 and one card was still highlighted as the winner. ---- */
+const IVT={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24,
+  debts:[{id:'d1',name:'Visa',balance:5000,apr:7,minPayment:500},
+         {id:'d2',name:'Car loan',balance:6000,apr:10,minPayment:500}],
+  debtBudget:1200, investReturn:7, investYears:10};
+await seed(IVT); await p.reload(); await p.waitForTimeout(900);
+const iv = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('debt'); await wait(550);
+  const out={
+    presets:[...document.querySelectorAll('#retPick button')].map(b=>+b.dataset.ret),
+    note:document.getElementById('retNote').textContent,
+    range:(document.querySelector('.iv-range')||{}).textContent||'',
+    verdict:(document.querySelector('.iv-verdict')||{}).textContent||'',
+    wins:[...document.querySelectorAll('.iv-card')].filter(c=>c.classList.contains('win')).length };
+  document.querySelector('#retPick button[data-ret="10"]').click(); await wait(350);
+  out.pickedField=document.getElementById('investReturn').value;
+  return out;
+});
+check('the return field offers figures to pick from', iv.presets.join(',')==='5,7,10', iv.presets.join(','));
+check('...and tapping one drives the comparison', iv.pickedField==='10', iv.pickedField);
+check('it says plainly that nobody knows this number',
+      /nobody knows/i.test(iv.note) && /guess about the future/i.test(iv.note), iv.note.slice(0,70));
+check('...anchors it in history, before and after inflation',
+      /10%/.test(iv.note) && /7%/.test(iv.note) && /before inflation/.test(iv.note) && /after it/.test(iv.note));
+check('...and refuses to call history a promise',
+      /history, not a promise/i.test(iv.note));
+check('it shows whether the guess even changes the answer',
+      /Does the guess even change the answer/i.test(iv.range), iv.range.slice(0,60));
+check('a result that hinges on the rate is called a tie, not a win',
+      iv.wins===0 && /tie, not a winner/i.test(iv.verdict), `${iv.wins} winners · ${iv.verdict.slice(0,60)}`);
+
+/* a genuinely lopsided case must still name its winner - the point is honesty,
+   not refusing to answer */
+const CLEAR={...IVT, debts:[{id:'d',name:'Visa',balance:12000,apr:29.9,minPayment:250}], debtBudget:900};
+await seed(CLEAR); await p.reload(); await p.waitForTimeout(900);
+const clear = await p.evaluate(async () => {
+  activateTab('debt'); await new Promise(r=>setTimeout(r,550));
+  return { wins:[...document.querySelectorAll('.iv-card')].filter(c=>c.classList.contains('win')).length,
+           verdict:(document.querySelector('.iv-verdict')||{}).textContent||'',
+           range:(document.querySelector('.iv-range')||{}).textContent||'' };
+});
+check('a 29.9% card still gets a clear verdict', clear.wins===1 && /Crushing the debt wins/i.test(clear.verdict),
+      clear.verdict.slice(0,60));
+check('...and says the guess does not matter there',
+      /Not really/i.test(clear.range) && /do not need to predict/i.test(clear.range), clear.range.slice(0,70));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

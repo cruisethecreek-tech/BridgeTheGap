@@ -171,7 +171,10 @@ deploy is when they update.
 Before deploying:
 1. Check the latest BLS CPI release (all items and food-at-home, 12-month), the
    FDIC national savings average, a current new-card APR survey, and the Fed's
-   H.15 for the effective funds rate.
+   H.15 for the effective funds rate. `OUTSIDE.market` (the long-run stock
+   market averages behind the invest-vs-payoff comparison) moves slowly enough
+   to leave alone most deploys - it is a century-scale figure, not a monthly
+   print.
 2. Update the figures and their `asOf` labels in the `OUTSIDE` constant, and set
    `OUTSIDE.built` to today.
 3. Run `node tests/structure.mjs` - section 22 asserts the cards still show
