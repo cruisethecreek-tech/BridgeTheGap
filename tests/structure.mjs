@@ -1332,6 +1332,60 @@ check('...and undoing puts the original data back exactly',
       undone.cats===2 && undone.tx===37, JSON.stringify(undone));
 p.off('dialog',onDialog);
 
+/* ---- 27. a panel gate opens the moment its data arrives ----
+   Reported from a real phone: two debts entered, and the "Your way out" panel
+   still said "Add a debt above". applyPanelGates() ran in exactly two places -
+   boot() and renderAll() - and adding a debt calls save() and renderDebt(),
+   neither of which is either. So the panel kept the panel-waiting class it was
+   given at boot, hiding its own controls, until a reload.
+   All five gates had it, not just this one. The check is hooked to save() now,
+   the single place every state change passes through, so no future feature can
+   forget the way this one did. ---- */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24});
+await p.reload(); await p.waitForTimeout(900);
+const pgate = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const gated=id=>{ const e=document.getElementById(id); return e?e.classList.contains('panel-waiting'):null; };
+  const out={};
+  activateTab('debt'); await wait(350);
+  out.planBefore=gated('gate-debtplan'); out.investBefore=gated('investPanel');
+  const set=(id,v)=>{ const e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true})); };
+  set('debtName','Visa'); set('debtBal','5000'); set('debtApr','7'); set('debtMin','500');
+  document.getElementById('addDebt').click(); await wait(400);
+  out.planAfter=gated('gate-debtplan'); out.investAfter=gated('investPanel');
+  /* the controls have to come BACK, not just the class change - the gate hides
+     the monthly-amount field, which is the whole reason the screen was dead */
+  out.budgetUsable=getComputedStyle(document.getElementById('debtBudget')).display!=='none';
+  out.strategyUsable=getComputedStyle(document.getElementById('debtStrategy')).display!=='none';
+  // the other four, same class of bug
+  out.vaultBefore=gated('vaultPanel');
+  state.vault.push({id:'v',name:'Sneakers',amount:140,until:Date.now()+86400000}); save(); await wait(200);
+  out.vaultAfter=gated('vaultPanel');
+  out.csvBefore=gated('gate-csv'); out.circBefore=gated('gate-circ');
+  state.transactions.push({id:'t',type:'expense',amount:20,catId:null,date:'2026-08-05',energy:'growth'});
+  save(); await wait(200);
+  out.csvAfter=gated('gate-csv'); out.circAfter=gated('gate-circ');
+  return out;
+});
+check('the payoff planner opens as soon as a debt exists',
+      pgate.planBefore===true && pgate.planAfter===false,
+      `waiting ${pgate.planBefore} -> ${pgate.planAfter}`);
+check('...and its controls come back with it, not just the styling',
+      pgate.budgetUsable===true && pgate.strategyUsable===true,
+      `budget ${pgate.budgetUsable}, strategy ${pgate.strategyUsable}`);
+check('the invest comparison opens on the same event',
+      pgate.investBefore===true && pgate.investAfter===false);
+check('the vault opens when something is vaulted',
+      pgate.vaultBefore===true && pgate.vaultAfter===false);
+check('the CSV importer opens on the first logged transaction',
+      pgate.csvBefore===true && pgate.csvAfter===false);
+check('the circulation ratio opens on the first tagged spend',
+      pgate.circBefore===true && pgate.circAfter===false);
+
+/* the property behind all of it: saving state re-evaluates every gate */
+const hooked = await p.evaluate(() => /applyPanelGates/.test(String(save)));
+check('every gate is re-checked wherever state is saved', hooked===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
