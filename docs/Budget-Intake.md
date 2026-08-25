@@ -187,6 +187,18 @@ hardcoded while `recMonthly` and `monthHours` use exact `WEEKS_PER_YEAR/12`, so
 the same $100/wk read as $433.00 in the leak finder and $433.33 as a recurring
 item. Both now run on the same constants.
 
+**And nobody is paid on the 1st just because setup happened.** `commitIntake`
+wrote a paycheck dated `${M}-01` whether or not the person had been paid, so
+somebody setting up on the 26th who gets paid on the 29th was shown a month's
+income they did not have - and left-to-budget, the net tile and the glance panel
+all inherited it. That was the app breaking its own rule: `postRecurring` caps
+the current month at today precisely so that "spent has to be a fact, not a
+forecast". The `paidYet` step asks the one thing only they can answer. **Landed**
+logs it as of *today*, a date the app actually knows. **Not yet** and **some of
+it** log nothing - the recurring rule is still written, because it is a statement
+about what repeats rather than a claim that it happened, and the reply admits the
+1st was a guess and says where the real payday goes.
+
 **Nobody gets paid "in a normal month".** The intake had one income question and
 it wanted a monthly take-home. Anyone paid weekly, every two weeks, or by the
 hour had to either do the conversion themselves or guess - and the guess people
