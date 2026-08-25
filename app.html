@@ -817,6 +817,27 @@
   .rp-t{font-size:11.5px;line-height:1.35;color:var(--muted)}
   .iv-range{margin-top:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.6;color:var(--muted)}
   .iv-range b{color:var(--text)}
+  /* Borrowing to build. The two outcome cards are deliberately the same size and
+     the same weight: the downside is not a footnote here, it is the other half of
+     the same fact. Only the border colour changes with the verdict. */
+  .levcard{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .levcard.neg{border-color:rgba(224,102,60,.45)}
+  .levcard.thin{border-color:rgba(230,178,77,.45)}
+  .levcard.wide{border-color:rgba(53,201,154,.4)}
+  .verdict.lev{font-weight:900;font-size:18px;line-height:1.35;letter-spacing:-.3px}
+  .verdict.lev b{color:var(--accent)}
+  .lev-two{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .lev-card{flex:1;min-width:150px;background:var(--ink);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .lev-card.up{border-color:rgba(53,201,154,.3)}
+  .lev-card.down{border-color:rgba(224,102,60,.3)}
+  .lev-n{font-weight:900;font-size:22px;letter-spacing:-.4px;margin-top:4px}
+  .lev-card.up .lev-n{color:var(--good)}
+  .lev-card.down .lev-n{color:var(--accent-2)}
+  .lev-gap{margin-top:12px;font-size:13.5px;line-height:1.55;padding:11px 13px;border-radius:11px;border:1px solid rgba(224,102,60,.35);background:rgba(224,102,60,.07)}
+  .lev-gap.ok{border-color:rgba(53,201,154,.35);background:rgba(53,201,154,.06)}
+  .lev-bare{margin-top:12px;font-size:13.5px;line-height:1.55;padding:11px 13px;border-radius:11px;border:1px solid rgba(230,178,77,.4);background:rgba(230,178,77,.07)}
+  .lev-honest{margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.6;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .lev-honest b{color:var(--text)}
   .gatepick{display:flex;flex-direction:column;gap:9px;margin-top:6px}
   .gatepick button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;width:100%}
   .gatepick button:hover{border-color:var(--accent)}
@@ -2124,6 +2145,48 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div id="investResults"></div>
       </div>
+
+      <!-- Asked directly: is the philosophy to forbid leverage, or can it be used
+           for sound business plans? Neither. The app has never had a position on
+           borrowing - rung 3 of the Growth Ladder says "kill the interest", which
+           is about RATE, not about debt existing. What it could not do was tell a
+           6% HELOC from a 26% card, and it certainly could not price a borrowing
+           against the thing it funds.
+
+           This does the arithmetic and refuses to bless it. Same contract as the
+           payback lane on Shield: show the working, name the assumption, and be
+           perfectly willing to conclude that the numbers do not hold up. The one
+           thing it must never do is print an upside without the matching
+           downside, because magnifying both directions is the entire definition
+           of leverage and a tool that showed only one half would be the most
+           dangerous screen in the app.
+
+           Deliberately NOT stage-gated, though the first draft was. Gating it at
+           stage 3 hides it from everyone except people with a year of runway,
+           which is precisely the group that least needs to be told to be careful
+           - and it would have made the "you have under three months of cover"
+           warning unreachable, since stage 2 already requires three. A warning
+           that can never fire is not a warning. Anyone can open this; what they
+           find is arithmetic that says out loud when the numbers do not work. -->
+      <div class="panel" id="levPanel">
+        <h2>Borrowing to build</h2>
+        <p class="sub">A rate you pay against a return you hope for. The interest is a contract; the return is a guess - and this only ever does the arithmetic on both. It will not tell you whether to do it, because it cannot know, and anything that claims otherwise is selling you something.</p>
+        <div class="row">
+          <label class="fld">Amount borrowed<span class="fl-in">$<input type="number" id="levAmt" min="0" step="100" inputmode="decimal" placeholder="e.g. 40000" style="width:130px"></span></label>
+          <label class="fld">Rate you pay %/yr<input type="number" id="levApr" min="0" max="100" step="0.1" placeholder="6.5" style="width:110px"></label>
+          <label class="fld">You expect it to return %/yr<input type="number" id="levRet" min="-100" max="200" step="0.5" placeholder="9" style="width:130px"></label>
+          <label class="fld">Held for<select id="levYears"><option value="3">3 yrs</option><option value="5">5 yrs</option><option value="10">10 yrs</option><option value="20">20 yrs</option></select></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="ufld"><span class="fl-k">Payment you must make<span id="levPayUnit"></span></span>
+            <span class="fl-in">$<input type="number" id="levPay" min="0" step="10" inputmode="decimal" placeholder="optional" style="width:120px"></span>
+            <div class="unit-work" id="levPayW"></div></div>
+          <div class="ufld"><span class="fl-k">Cash it actually hands you<span id="levCashUnit"></span></span>
+            <span class="fl-in">$<input type="number" id="levCash" min="0" step="10" inputmode="decimal" placeholder="optional" style="width:120px"></span>
+            <div class="unit-work" id="levCashW"></div></div>
+        </div>
+        <div id="levResults"></div>
+      </div>
     </section>
 
     <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
@@ -2877,7 +2940,7 @@ function defaultState(){
            spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[],
-           investReturn:7, investYears:10, theme:'auto',
+           investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
@@ -2889,6 +2952,10 @@ function thisMonth(){ return localYMD(new Date()).slice(0,7); }
    records that point at things which no longer exist. */
 function normalizeState(s){
   if(!s||typeof s!=='object') return s;
+  /* Three rungs exist. A stageReached outside that range came from a hand-edited
+     backup or a future build, and it takes the whole stage bar down with it -
+     one clamp is cheaper than a defensive read at every place stages are drawn. */
+  s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
   const goalIds=new Set((s.goals||[]).map(g=>g.id));
   (s.goals||[]).forEach(g=>{ if(!(g.target>0)) g.target=Math.max(1,+g.target||1000); if(g.saved>g.target) g.saved=g.target; if(!(g.saved>=0)) g.saved=0; });
   if(s.sweptDays) Object.keys(s.sweptDays).forEach(k=>{ if(!goalIds.has(s.sweptDays[k].goalId)) delete s.sweptDays[k]; });
@@ -3747,6 +3814,15 @@ function renderDebt(){
     get:()=>state.debtBudget||0,
     set:v=>{ state.debtBudget=Math.round(v*100)/100; save(); renderDebtResults(); }});
   renderDebtResults();
+  /* Both of these hang off renderDebt, not off renderDebtResults, because
+     renderDebtResults returns early when there are no debts or the budget is
+     under the minimums - and neither of those has anything to do with whether
+     you are weighing a borrowing or comparing payoff to investing. Leaving them
+     downstream of that guard meant the two panels below could sit permanently
+     blank for exactly the person with no debt yet, which is the person most
+     likely to be asking whether to take one on. */
+  renderInvestCompare();
+  renderLeverage();
 }
 function renderDebtResults(){
   const box=document.getElementById('debtResults'); if(!box) return;
@@ -3893,6 +3969,146 @@ function renderInvestCompare(){
         : `Not really. Across the whole 5% to 10% range, ${dHi>0?'paying minimums and investing the rest':'crushing the debt first'} comes out ahead either way - by ${money(Math.abs(dLo))} at 5% and ${money(Math.abs(dHi))} at 10%. You do not need to predict the market to make this call.`}</div>`;
     })()}
     <div class="iv-caveat"><b>Real talk:</b> paying off debt is a <b>guaranteed</b> return; investing is an <b>expected</b> one - the market can drop, and this is a simplified model that ignores <b>taxes and inflation</b> (a "7%" return is more like ~4% after inflation). Real returns are lumpy, never a straight line. Build a small emergency fund and grab any 401(k) match before either. Educational, not personalized financial advice.</div>`;
+}
+
+/* ---------- Borrowing to build: the leverage arithmetic ----------
+   Asked directly: is the philosophy to forbid a HELOC or a low-rate card, or can
+   borrowing be used for a sound plan? Neither, and this is the tool that says so
+   in numbers. It prices a rate you PAY against a return you HOPE FOR, and the
+   whole design rests on one asymmetry: the interest is a contract and the return
+   is a guess. So the cost side is computed exactly and the gain side is always
+   printed next to what happens when the guess is wrong. There is no code path
+   here that produces an upside without the matching downside - magnifying both
+   directions is the entire definition of leverage, and a screen that showed only
+   one half would be the most dangerous one in the app.
+
+   Both sides compound annually on the same basis, which is what makes the
+   break-even come out clean: with the balance carried, a borrowing at r% needs
+   r% a year to stand still, no matter the horizon. When a payment is supplied
+   the balance shrinks, the interest total falls with it, and the break-even
+   falls too - so the one formula covers both. What a payment does NOT change is
+   that the interest was still paid; it changes when, not whether. The cash-flow
+   consequence of paying it monthly is handled on its own, as the servicing gap,
+   because that is a different question with a different failure mode. */
+function leverageMath(amount, aprPct, retPct, years, payMonthly, cashMonthly){
+  const A=Math.max(0,+amount||0), r=Math.max(0,+aprPct||0)/100, g=(+retPct||0)/100;
+  const Y=Math.max(1,+years||1), months=Math.round(Y*12);
+  const pay=Math.max(0,+payMonthly||0), cash=Math.max(0,+cashMonthly||0);
+  let interest=0, bal=A, payoffMonths=null;
+  if(pay>0){
+    const m=r/12;
+    for(let i=0;i<months;i++){
+      const ic=bal*m; interest+=ic;
+      bal=bal+ic-Math.min(pay, bal+ic);
+      if(bal<=0.005){ bal=0; payoffMonths=i+1; break; }
+    }
+  } else {
+    interest=A*(Math.pow(1+r,Y)-1);
+    bal=A+interest;
+  }
+  /* A payment that does not cover the month's interest is not a payment, it is a
+     subscription to a growing balance. Worth its own flag because the totals
+     alone look survivable right up until they do not. */
+  const underwater = pay>0 && r>0 && pay <= A*(r/12)+0.005;
+  const posValue=A*Math.pow(1+g,Y);
+  const gain=posValue-A;
+  const net=gain-interest;
+  const breakEven = A>0 ? (Math.pow(1+Math.max(0,interest)/A, 1/Y)-1)*100 : 0;
+  return {
+    A, aprPct:+aprPct||0, retPct:+retPct||0, years:Y, months,
+    interest, leftover:bal, payoffMonths, underwater, amortised:pay>0,
+    posValue, gain, net, breakEven, spread:(+retPct||0)-breakEven,
+    flatLoss:interest,                    // it returns nothing: the interest is still owed
+    dropLoss:interest+A*0.20,             // and a 20% drawdown on top of that
+    gapMonthly:pay-cash, pay, cash
+  };
+}
+function levVerdict(m){ return m.spread<=0 ? 'neg' : m.spread<2 ? 'thin' : 'wide'; }
+function renderLeverage(){
+  const box=document.getElementById('levResults'); if(!box) return;
+  const L=state.lev||(state.lev={});
+  /* Same rule as everywhere else in the workbook: people enter money in the
+     rhythm they actually feel it. A HELOC payment is monthly, rent from the
+     thing it bought might be weekly, and neither should have to be converted in
+     someone's head before the app will listen. Stored monthly, always. */
+  wireUnitField({id:'levPay', dflt:'month', kinds:['week','biweek','month','year'],
+    get:()=>+((state.lev||{}).pay)||0,
+    set:v=>{ (state.lev||(state.lev={})).pay=Math.round(v*100)/100; save(); renderLeverage(); }});
+  wireUnitField({id:'levCash', dflt:'month', kinds:['week','biweek','month','year'],
+    get:()=>+((state.lev||{}).cash)||0,
+    set:v=>{ (state.lev||(state.lev={})).cash=Math.round(v*100)/100; save(); renderLeverage(); }});
+  const setv=(id,v)=>{ const e=document.getElementById(id); if(e&&document.activeElement!==e) e.value=(+v)?v:''; };
+  setv('levAmt', L.amt);
+  setv('levApr', L.apr);
+  setv('levRet', L.ret);
+  const ys=document.getElementById('levYears'); if(ys) ys.value=String(L.years||5);
+  const A=+L.amt||0, apr=+L.apr||0;
+  if(!(A>0) || !(apr>0)){
+    box.innerHTML=`<div class="sub" style="margin-top:12px">Put in what you would borrow and the rate you would pay, and this prices it. It needs the rate above all - a borrowing without its rate is a story, not a plan.</div>`;
+    return;
+  }
+  const hasRet = L.ret!=null && L.ret!=='' && isFinite(+L.ret);
+  const m=leverageMath(A, apr, hasRet?+L.ret:0, +L.years||5, +L.pay||0, +L.cash||0);
+  const v=hasRet?levVerdict(m):'thin', H=effectiveHourly();
+  const yrs=m.years;
+  const head = `It has to return <b>${(Math.round(m.breakEven*100)/100)}%</b> a year, every year, just to break even.`;
+  const spreadLine = !hasRet
+    ? `That is the bar, and it is the only number here that is not a guess. Put what you actually expect the thing to return in the field above and this prices the gap both ways - what you make if you are right, and what it costs you if you are not.`
+    : m.spread<=0
+      ? `You expect <b>${m.retPct}%</b>. That is ${Math.abs(Math.round(m.spread*100)/100)} points <b>under</b> the line, so on your own numbers this loses money before anything goes wrong. ${voice(VOICE.levNeg,null)}`
+      : m.spread<2
+        ? `You expect <b>${m.retPct}%</b> - clear by <b>${Math.round(m.spread*100)/100}</b> points. That is a thin margin to carry a contract on. ${voice(VOICE.levThin,null)}`
+        : `You expect <b>${m.retPct}%</b> - clear by <b>${Math.round(m.spread*100)/100}</b> points. The arithmetic works, on the guess. ${voice(VOICE.levWide,null)}`;
+  const metrics=[
+    ['Break-even return', (Math.round(m.breakEven*100)/100)+'%/yr'],
+    ['Interest over '+yrs+' yrs', money(m.interest)]
+  ];
+  if(hasRet) metrics.push(['If it returns '+m.retPct+'%', (m.net>=0?'+':'')+money(m.net)]);
+  metrics.push(['If it returns nothing', '-'+money(m.flatLoss)]);
+  if(H>0) metrics.push(['Interest, in your hours', fmtHours(m.interest/H)]);
+  if(m.payoffMonths) metrics.push(['Paid off in', debtDur(m.payoffMonths)]);
+  /* The two cards are not optional and they are not ordered by which is nicer.
+     Whatever the spread says, both get drawn, because the only reason to borrow
+     is that it multiplies the outcome and the only reason not to is the same
+     sentence. */
+  const two=`<div class="lev-two">
+      ${hasRet?`<div class="lev-card ${m.net>=0?'up':'down'}"><div class="sp-k">If it returns ${m.retPct}%</div>
+        <div class="lev-n">${(m.net>=0?'+':'')+money(m.net)}</div>
+        <div class="sub" style="margin:2px 0 0">${money(m.posValue)} position, less ${money(m.interest)} of interest</div></div>`:''}
+      <div class="lev-card down"><div class="sp-k">If it returns nothing</div>
+        <div class="lev-n">-${money(m.flatLoss)}</div>
+        <div class="sub" style="margin:2px 0 0">the interest is owed either way; a 20% drop makes it -${money(m.dropLoss)}</div></div>
+    </div>`;
+  let gap='';
+  if(m.pay>0){
+    if(m.gapMonthly>0.5){
+      const share=essentialMonthly()>0 ? Math.round(m.gapMonthly/essentialMonthly()*100) : 0;
+      gap=`<div class="lev-gap"><b>${money(m.gapMonthly)}/mo comes out of your own income.</b> The payment is ${money(m.pay)} and the thing hands you ${m.cash>0?money(m.cash):'nothing'} - so the difference is on you every month whether or not the return ever shows up${share>0?`, about <b>${share}%</b> of your essentials`:''}. ${voice(VOICE.levGap,null)}</div>`;
+    } else if(m.cash>0){
+      gap=`<div class="lev-gap ok">The cash it hands you (<b>${money(m.cash)}/mo</b>) covers the payment (<b>${money(m.pay)}/mo</b>) with <b>${money(-m.gapMonthly)}</b> to spare. That is the version of this that does not need your paycheck to survive a bad year - as long as the cash keeps arriving.</div>`;
+    }
+  }
+  if(m.underwater) gap=`<div class="lev-gap"><b>That payment does not cover the interest.</b> At ${m.aprPct}% on ${money(m.A)} the interest alone is about ${money(m.A*m.aprPct/100/12)} a month. Paying less than that means the balance grows every month you hold it - after ${yrs} years you would owe about <b>${money(m.leftover)}</b>, more than you borrowed.</div>`+gap;
+  /* Borrowing with a buffer and borrowing without one are not the same act. The
+     app already knows which one this is, and staying quiet about it would be a
+     choice. */
+  let buffer='';
+  const rw=freedomRunway(), rs=riskStanding();
+  if(rw!=null && rw<3){
+    buffer=`<div class="lev-bare"><b>You have ${fmtRunway(rw)} of runway behind this.</b> Leverage does not care about your timing - it cares whether you can hold the position through a bad stretch. With under three months of cover, a bad stretch forces the sale, and a forced sale is where the loss gets locked in. ${voice(VOICE.levBare,null)}</div>`;
+  } else if(rs && rs.uncovered){
+    buffer=`<div class="lev-bare"><b>${rs.uncovered} thing${rs.uncovered>1?'s':''} went wrong on you in the last ${rs.months} month${rs.months>1?'s':''}</b> that your set-aside did not fully cover - ${usd0(rs.unfunded)} of it. That is not an argument against this. It is the number to hold the payment up against, because those months will happen again during the ${yrs} years.</div>`;
+  }
+  box.innerHTML=`
+    <div class="levcard ${v}">
+      <div class="verdict lev">${head}${whyBtn('levBreak')}</div>
+      <div class="qline">${spreadLine}</div>
+      ${two}
+      <div class="metrics">${metrics.map(x=>`<div class="metric"><div class="k">${escapeHtml(x[0])}</div><div class="v">${escapeHtml(String(x[1]))}</div></div>`).join('')}</div>
+      ${m.underwater||gap?gap:''}
+      ${buffer}
+      <div class="lev-honest">${m.amortised?`<b>Because you are paying it down,</b> the interest total is lower than a carried balance would cost, and the break-even drops with it. What that does not change is where the money came from: the payments left your income on schedule, and they left it whether or not the thing you bought was up that month. <br><br>`:''}<b>The asymmetry, said plainly:</b> the interest is a contract and the return is a guess. The lender's number is enforceable and yours is not, which is why the break-even is the headline and the expected return is only ever the second line. This ignores taxes, fees and the possibility that a line gets called or repriced, it assumes the rate holds for the whole ${yrs} years, and it will not tell you whether to do it. That was never something arithmetic could answer.</div>
+    </div>`;
 }
 
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
@@ -6688,6 +6904,17 @@ async function refreshSyncState(){
   if(ir) ir.addEventListener('input',()=>{ state.investReturn=parseFloat(ir.value)||0; save(); renderInvestCompare(); });
   const iy=document.getElementById('investYears');
   if(iy) iy.addEventListener('click',e=>{ const b=e.target.closest('button[data-y]'); if(!b) return; state.investYears=+b.dataset.y; save(); renderInvestCompare(); });
+  const levKeys={levAmt:'amt', levApr:'apr', levRet:'ret', levYears:'years'};
+  Object.keys(levKeys).forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{
+      /* Blank and zero are different answers here. "I expect nothing from it"
+         is a real position worth pricing; "I have not said" is a question the
+         screen should ask rather than answer on your behalf. */
+      (state.lev||(state.lev={}))[levKeys[id]] = el.value==='' ? null : (parseFloat(el.value)||0);
+      save(); renderLeverage();
+    });
+  });
 })();
 
 /* ---------- Funnel: Weekly Gut-Check newsletter + education/support offers ---------- */
@@ -7485,8 +7712,18 @@ function renderNetWorth(){
   const planned=(state.debts||[]).some(d=>+d.balance>0);
   const offerPlan = state.liabilities.length && liabTotal>0 && !planned
     && !(typeof areaOff==='function' && areaOff('debt'));
+  /* The question this answers: how does the app view a HELOC or a low-rate card
+     sitting in the Build column? It has never had a position on borrowing - rung
+     3 of the ladder says kill the INTEREST, which is about rate, not about debt
+     existing. So a cheap line gets named as what it is, a lever, and handed to
+     the one screen that prices it. The wording deliberately stops at "worth
+     pricing": whether it is worth DOING is not something this can know, and the
+     tool it points at refuses to say so too. */
+  const cheap=(state.liabilities||[]).filter(l=>(+l.apr||0)>0 && (+l.apr||0)<=10);
+  const offerLev = cheap.length && !(typeof areaOff==='function' && areaOff('debt'));
   document.getElementById('liabList').innerHTML=(state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>')
-    + (offerPlan?`<div class="nw-plan">That is <b>${money(liabTotal)}</b> owed. The payoff planner turns it into a date - which one to kill first, what the interest is costing you, and how much sooner an extra $50 gets you out.${trailBtn('debt','Plan the way out','solid')}</div>`:'');
+    + (offerPlan?`<div class="nw-plan">That is <b>${money(liabTotal)}</b> owed. The payoff planner turns it into a date - which one to kill first, what the interest is costing you, and how much sooner an extra $50 gets you out.${trailBtn('debt','Plan the way out','solid')}</div>`:'')
+    + (offerLev?`<div class="nw-plan">${cheap.length>1?`<b>${cheap.length}</b> of these are cheap money`:`<b>${escapeHtml(cheap[0].name)}</b> at <b>${+cheap[0].apr}%</b> is cheap money`} - low enough that it is a lever rather than a leak. That does not make it free, and it does not make it a good idea. It makes it worth pricing: what it has to return every year just to break even, and what it costs you if it returns nothing.${trailBtn('leverage','Price it as leverage','solid')}</div>`:'');
   renderDrain();
   if(typeof applyStage==='function') applyStage();
   /* a.cost is always MONTHLY. What is on screen is that figure divided into
@@ -8399,6 +8636,19 @@ function periodWork(v,k,unitWord){
    user's own live numbers rather than a worked example.
    ============================================================ */
 const FIELD_WHY={
+  levBreak:{ t:'How the break-even is worked out', b:()=>{
+      const L=state.lev||{}, m=leverageMath(+L.amt||0, +L.apr||0, +L.ret||0, +L.years||5, +L.pay||0, +L.cash||0);
+      if(!(m.A>0)) return 'Put an amount and a rate in and this shows its working.';
+      let out=`Borrowing <b>${money(m.A)}</b> at <b>${m.aprPct}%</b> for <b>${m.years}</b> years costs <b>${money(m.interest)}</b> in interest`;
+      out += m.amortised
+        ? ` - worked out month by month against your <b>${money(m.pay)}</b> payment, so the balance (and the interest with it) shrinks as you go.<br><br>`
+        : `, compounded annually, because nothing is paying it down: ${money(m.A)} &times; (1 + ${m.aprPct}%)<sup>${m.years}</sup> &minus; ${money(m.A)}.<br><br>`;
+      out += `To stand still, the thing you bought has to grow by that same ${money(m.interest)} over the same ${m.years} years. Turned back into a yearly rate:<br>`
+        + `(1 + ${money(m.interest)} / ${money(m.A)})<sup>1/${m.years}</sup> &minus; 1 = <b>${Math.round(m.breakEven*100)/100}%</b> a year.<br><br>`;
+      out += m.amortised
+        ? `Paying it down lowers that bar, which is exactly why the break-even here sits under the ${m.aprPct}% you were quoted.`
+        : `With the balance carried rather than paid down, the break-even always lands on the rate itself - a borrowing at ${m.aprPct}% needs ${m.aprPct}% just to stand still, no matter how long you hold it.`;
+      return out; } },
   txNet:{ t:'Where this number comes from', b:()=>{
       const M=state.activeMonth;
       const all=!!(typeof txAllMonths!=='undefined' && txAllMonths);
@@ -10018,7 +10268,28 @@ const VOICE={
   ivInvest:{
     middle:{clean:'On these numbers, investing the difference comes out ahead.',
             blunt:'On these numbers investing the difference comes out ahead - guaranteed cost against an expected return.',
-            savage:'Investing wins on these numbers. It is an expected return against a guaranteed cost, and expected is doing real work in that sentence.'}}
+            savage:'Investing wins on these numbers. It is an expected return against a guaranteed cost, and expected is doing real work in that sentence.'}},
+  /* --- borrowing to build --- */
+  levNeg:{
+    middle:{clean:'The spread is negative before anything goes wrong. That is the whole answer.',
+            blunt:'You are paying more for the money than you expect it to make. That is not leverage, it is a fee.',
+            savage:'You would be borrowing to lose slower. The lender already knows how this ends.'}},
+  levThin:{
+    middle:{clean:'A thin margin still has to survive a bad year.',
+            blunt:'A margin that thin gets erased by one bad year, and the interest keeps running.',
+            savage:'That margin is a rounding error with a contract attached. One flat year and you are working for the lender.'}},
+  levWide:{
+    middle:{clean:'The numbers work on the guess. The guess is still a guess.',
+            blunt:'It clears on paper. Paper does not make the payment.',
+            savage:'It clears - on a number you made up about the future. Hold that thought next to the one you signed.'}},
+  levGap:{
+    middle:{clean:'That gap is a fixed cost, not an investment.',
+            blunt:'That gap comes out of your life every month, return or no return.',
+            savage:'That is a bill with a story attached. The bill arrives whether or not the story comes true.'}},
+  levBare:{
+    middle:{clean:'Borrowing without a buffer turns a bad month into a forced decision.',
+            blunt:'With no buffer behind it, the market does not have to be wrong - you just have to need the money early.',
+            savage:'No cushion means you do not get to be patient, and patience was the only edge you had.'}}
 };
 const REPORT_SIGNALS=[
   /* ---- are you on track to blow this month, while you can still act on it ---- */
@@ -12424,6 +12695,7 @@ const TRAIL={
   account:  {tab:'goals',    focus:'acctName',     label:'Update my balances'},
   skill:    {tab:'goals',    focus:'skillName',    label:'Invest in a skill'},
   debt:     {tab:'debt',     focus:'debtName',     label:'Open the payoff planner'},
+  leverage: {tab:'debt',     focus:'levAmt',       label:'Price it as leverage'},
   hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},
   gutcheck: {tab:'impulse',  modal:true,           label:'Run a gut-check'}
 };

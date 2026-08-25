@@ -62,6 +62,10 @@ const HOUSE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,gu
  assets:[{id:'as',name:'Index fund at the brokerage',value:12000,kind:'real'}],
  liabilities:[{id:'l',name:'Credit card',value:2400}],
  debts:[{id:'d',name:'Credit card balance',balance:2400,minPayment:75,apr:23.9}],debtBudget:400,
+ /* filled in, because the leverage panel draws nothing until it has numbers -
+    and an empty panel measures beautifully at 320px while the real one, with a
+    two-card row and six-figure amounts in it, is the thing that can crush. */
+ lev:{amt:145000,apr:6.5,ret:9,years:20,pay:1250,cash:1800},
  diary:[],intake:{},lessons:[],vault:[],hours:[]};
 
 const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });

@@ -2974,6 +2974,141 @@ const talkFlat = await p.evaluate(() => {
 check('the talk-through stays clean by design - it is reached after something went wrong',
       talkFlat && talkFlat.voiced===false && talkFlat.gentle===true, JSON.stringify(talkFlat));
 
+/* ---- 50. borrowing to build ----
+   Asked whether the app forbids a HELOC or a cheap card, or lets you use one as
+   leverage. The answer it gives is arithmetic, and arithmetic has exactly one
+   way to be dishonest here: print the upside and skip the downside. Everything
+   below exists to make that impossible to ship by accident.
+
+   The properties, not the phrasing. Copy on this panel will change; what must
+   not change is that the break-even is correct, that the losing case is on the
+   screen in every state, that a payment which does not cover the interest gets
+   named, that a servicing gap is traced back to your own income, that the
+   no-buffer warning can actually fire, and that no path here ever tells someone
+   to do it. */
+const lev = await p.evaluate(() => {
+  const out={};
+  const M=(a,r,g,y,pay,cash)=>leverageMath(a,r,g,y,pay||0,cash||0);
+  // break-even on a carried balance is the rate itself, at every horizon
+  out.beHeld=[3,5,10,20].map(y=>Math.round(M(40000,6.5,9,y).breakEven*1000)/1000);
+  // paying it down lowers the bar, and it is still positive
+  const paid=M(40000,6.5,9,10,500,0);
+  out.bePaid=Math.round(paid.breakEven*100)/100;
+  out.paidOff=paid.payoffMonths;
+  // the losing case never depends on the guess: it is the interest, always
+  out.flatIsInterest=[4,9,25].every(g=>{ const m=M(40000,6.5,g,10); return Math.abs(m.flatLoss-m.interest)<0.01; });
+  // a payment under the monthly interest is named, and the balance grows
+  const uw=M(40000,20,9,10,100,0);
+  out.underwater=uw.underwater; out.owesMore=uw.leftover>40000;
+  // servicing gap is payment minus the cash it actually hands you
+  out.gap=M(40000,6.5,9,10,500,200).gapMonthly;
+  // zero years never divides by zero, and a zero balance never NaNs
+  out.guards=[M(0,6.5,9,10), M(40000,6.5,9,0)].every(m=>isFinite(m.breakEven)&&isFinite(m.net));
+  return out;
+});
+check('break-even on a carried balance is the rate itself, at every horizon',
+      lev.beHeld.every(x=>x===6.5), JSON.stringify(lev.beHeld));
+check('...paying it down lowers the bar rather than pretending it away',
+      lev.bePaid>0 && lev.bePaid<6.5 && lev.paidOff>0, `${lev.bePaid}% / paid off month ${lev.paidOff}`);
+check('...the losing case is the interest, whatever the guess was',
+      lev.flatIsInterest===true);
+check('...a payment under the monthly interest is flagged, and the balance grows',
+      lev.underwater===true && lev.owesMore===true, JSON.stringify(lev));
+check('...the servicing gap is the payment less the cash it hands you',
+      lev.gap===300, String(lev.gap));
+check('...zero amount and zero years produce numbers, not NaN',
+      lev.guards===true);
+
+const levUI = await p.evaluate(() => {
+  const grab=()=>{ const el=document.getElementById('levResults'); return {t:el.innerText, cards:el.querySelectorAll('.lev-card.down').length, up:el.querySelectorAll('.lev-card.up').length}; };
+  const out={};
+  state.accounts=[]; state.assets=[]; state.liabilities=[]; state.lev={};
+  renderLeverage(); out.empty=document.getElementById('levResults').innerText;
+  // 1. the winning case still prints the losing one
+  state.lev={amt:40000,apr:6.5,ret:12,years:10}; renderLeverage(); out.win=grab();
+  // 2. the losing case says so
+  state.lev={amt:40000,apr:6.5,ret:4,years:10}; renderLeverage(); out.lose=grab();
+  out.loseCls=document.querySelector('#levResults .levcard').className;
+  // 3. no expected return yet: the bar shows, the loss shows, nothing is invented
+  state.lev={amt:40000,apr:6.5,years:10}; renderLeverage(); out.blank=grab();
+  // 4. the no-buffer warning has to be reachable by a real user
+  state.categories=[{id:'c1',name:'Rent',essential:true}];
+  state.budgets[state.activeMonth]={c1:2000};
+  state.accounts=[{id:'a1',name:'Checking',balance:1500,kind:'checking'}];
+  state.lev={amt:40000,apr:6.5,ret:9,years:10}; renderLeverage();
+  out.bare=document.getElementById('levResults').innerText;
+  out.runway=freedomRunway();
+  // 5. the servicing gap traces back to your own income
+  state.lev={amt:40000,apr:6.5,ret:9,years:10,pay:500,cash:200}; renderLeverage();
+  out.gap=document.getElementById('levResults').innerText;
+  // 6. the panel is not stage-gated - the warning above would be unreachable if it were
+  out.gated=!!document.getElementById('levPanel').getAttribute('data-stage');
+  // 7. both money fields let people enter in their own rhythm
+  out.units=['levPayUnit','levCashUnit'].every(id=>!!document.querySelector('#'+id+' select'));
+  // 8. it shows its working
+  document.querySelector('#levResults [data-why="levBreak"]').click();
+  out.why=(document.querySelector('.why-note[data-forwhy="levBreak"]')||{}).innerText||'';
+  return out;
+});
+check('the panel asks for a rate before it says anything at all',
+      /rate/i.test(levUI.empty) && !/break even/i.test(levUI.empty), levUI.empty.slice(0,80));
+check('the winning case still prints the losing one beside it',
+      levUI.win.cards===1 && levUI.win.up===1 && /returns nothing/i.test(levUI.win.t));
+check('...and so does the losing case, which is marked as losing',
+      levUI.lose.cards>=1 && /\bneg\b/.test(levUI.loseCls), levUI.loseCls);
+check('...with no expected return entered, the loss is shown and no gain is invented',
+      levUI.blank.cards===1 && levUI.blank.up===0 && /returns nothing/i.test(levUI.blank.t));
+check('the no-buffer warning fires for someone who actually has no buffer',
+      levUI.runway<3 && /forced sale/i.test(levUI.bare), `runway ${levUI.runway}`);
+check('...the panel carries no stage gate, so that warning is reachable',
+      levUI.gated===false);
+check('a servicing gap is traced back to your own income, every month',
+      /\$300/.test(levUI.gap) && /own income/i.test(levUI.gap));
+check('both money fields accept the rhythm the user actually feels',
+      levUI.units===true);
+check('the break-even shows its working with live numbers',
+      /40,000/.test(levUI.why) && /6\.5/.test(levUI.why) && levUI.why.length>200, levUI.why.slice(0,90));
+/* The one thing it must never do. Scan the whole feature - panel copy, engine,
+   render, voice banks - for anything that reads as an instruction to borrow. */
+const levNeverBlesses = await p.evaluate(() => {
+  const src=document.documentElement.outerHTML;
+  const i=src.indexOf('id="levPanel"'), j=src.indexOf('function budgetFor');
+  const k=src.indexOf('levNeg:'), l=src.indexOf('levBare:');
+  const seg=src.slice(i, src.indexOf('</section>', i)) + src.slice(src.indexOf('function leverageMath'), j) + src.slice(k, l+600);
+  /* "do it" is deliberately NOT in this list: the feature's own refusal sentence
+     is "it will not tell you whether to do it", and a rule that fires on its own
+     disclaimer is a rule nobody can keep. These are the phrasings that would
+     actually constitute a recommendation. */
+  const bless=/\b(you should borrow|worth borrowing|go for it|take the loan|take this loan|we recommend|recommended|smart move|makes sense to borrow|this is a good bet)\b/i;
+  /* And the rule has to be able to fire, or it proves nothing. */
+  const control='Honestly, this is a smart move and you should borrow the lot.';
+  return {hit:(seg.match(bless)||[])[0]||null,
+          canFire:bless.test(control),
+          refuses:/will not tell you whether to do it/.test(seg)};
+});
+check('...the never-blesses rule can actually fire',
+      levNeverBlesses.canFire===true);
+check('nothing in the whole feature tells anyone to borrow',
+      levNeverBlesses.hit===null, levNeverBlesses.hit);
+check('...and it says out loud that it will not',
+      levNeverBlesses.refuses===true);
+/* Reachable, or it does not exist. The question that started this came from the
+   Build tab looking at a HELOC, so that is where the door has to be. */
+const levDoor = await p.evaluate(() => {
+  state.liabilities=[{id:'l1',name:'HELOC',value:40000,apr:6.5}];
+  renderNetWorth();
+  const cheap=document.querySelector('#liabList [data-trail="leverage"]');
+  const out={offered:!!cheap};
+  state.liabilities=[{id:'l2',name:'Store card',value:2000,apr:26}];
+  renderNetWorth();
+  out.notOfferedOnExpensive=!document.querySelector('#liabList [data-trail="leverage"]');
+  return out;
+});
+check('a cheap liability offers the door to the tool that prices it',
+      levDoor.offered===true);
+check('...and a 26% store card is not called a lever',
+      levDoor.notOfferedOnExpensive===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
