@@ -607,6 +607,14 @@
     background:transparent;color:var(--muted);font-size:13.5px;line-height:1.55}
   .sp-recent .am.put{color:rgb(var(--good-rgb))}
   .sp-recent .ce-put{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgb(var(--good-rgb));margin-left:5px}
+  .ac-stale{margin-top:10px;padding:10px 12px;border-radius:11px;border:1px solid var(--line);
+    background:rgba(var(--accent-rgb),.07);font-size:13px;line-height:1.55}
+  .trend-seg{flex-wrap:wrap;margin-bottom:10px}
+  .trend-wrap{margin-top:4px}
+  .li-apr{display:inline-flex;align-items:center;gap:2px;color:var(--muted);font-size:12px;font-weight:700;flex:none}
+  .li-apr .apredit{width:52px;background:transparent;border:1px solid var(--line);border-radius:7px;
+    color:var(--text);font:inherit;font-size:12px;font-weight:700;padding:3px 5px;text-align:right}
+  .li-yield{margin-top:4px;font-size:12px;color:rgb(var(--good-rgb));font-weight:700}
   .cal-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .cal-head h2{margin:0}
   .cal-mo{display:flex;align-items:center;gap:4px}
@@ -2126,6 +2134,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <summary><span class="acc-hd">Accounts<span class="acc-sub">What's actually in the bank, in your words</span></span></summary>
         <div class="acc-body">
           <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what's really sitting in each account today. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
+          <p class="sub"><b>And it is the scoreboard.</b> This app never connects to your bank, which means every other figure in it is built from what you chose to type - log less and it looks calmer. This number is the exception, because it comes from outside and you have nothing to gain by inflating it. What it does over months is the honest answer to whether any of this is working. Keep it current and the app can tell you the truth; let it go stale and it can only tell you about your typing.</p>
           <div class="row" style="gap:8px;margin-top:12px">
             <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
             <select id="acctKind" style="min-width:120px"></select>
@@ -2160,7 +2169,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             </div>
             <div>
               <label class="fld" style="width:100%">Add liability
-                <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" inputmode="decimal" min="0" step="0.01" style="width:84px"><button class="btn sm primary" id="addLiab">＋</button></div>
+                <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" inputmode="decimal" min="0" step="0.01" style="width:84px"><input type="number" id="liabApr" placeholder="APR%" inputmode="decimal" min="0" max="100" step="0.1" style="width:74px" title="Interest rate, if you know it"><button class="btn sm primary" id="addLiab">＋</button></div>
               </label>
               <div id="liabList"></div>
             </div>
@@ -2757,14 +2766,32 @@ const ENERGY=[
 ];
 function energyOf(k){ return ENERGY.find(e=>e.k===k)||null; }
 /* Offense / Income-creation engine */
+/* The app teaches "own things that pay you" as the top rung of the Growth
+   Ladder, and defines an asset as the thing that "feeds you while you sleep" -
+   and then offered five income types, every one of which is a form of LABOUR.
+   There was no way to record a dividend, a bond coupon, a savings-account
+   interest payment or a month's rent. The independent-income ladder that
+   celebrates escaping wage work could only be fed by more work.
+
+   These are marked `yield`: money that arrived because capital did the working.
+   They count as independent income (the purest kind), and they carry no hours,
+   so they never touch the true hourly rate - which is the correct treatment
+   already applied to any income with no hours against it. */
 const INCOME_SOURCES=[
   {k:'primary', label:'Primary Job'},
   {k:'side', label:'Side Hustle'},
   {k:'freelance', label:'Freelance / Service'},
   {k:'sale', label:'Asset / Item Sale'},
-  {k:'skillmon', label:'Skill Monetization'}
+  {k:'skillmon', label:'Skill Monetization'},
+  {k:'yield', label:'Dividends / interest', yield:true},
+  {k:'rent', label:'Rent / royalties', yield:true}
 ];
 function isIndependent(srcType){ return !!srcType && srcType!=='primary'; }
+function isYieldSrc(k){ return !!(INCOME_SOURCES.find(x=>x.k===k)||{}).yield; }
+function yieldTotal(month){
+  const list=month?txnsInMonth(month):state.transactions;
+  return list.filter(t=>t.type==='income'&&isYieldSrc(t.srcType)).reduce((s,t)=>s+t.amount,0);
+}
 function indieTotal(){ return state.transactions.filter(t=>t.type==='income'&&isIndependent(t.srcType)).reduce((s,t)=>s+t.amount,0); }
 const INDIE_MILES=[50,500,1000,5000];
 function offenseDefense(M){
@@ -4257,6 +4284,14 @@ function metricSnapshot(m){
            netWorth:(typeof netWorth==='function')?Math.round(netWorth()):null,
            income:(typeof monthIncome==='function')?Math.round(monthIncome(m)):null,
            essentials:(typeof essentialMonthly==='function')?Math.round(essentialMonthly()):null,
+           /* Balance-sheet figures have no history of their own: editing an
+              account overwrites the number and the old one is gone. The monthly
+              snapshot is the only place they can ever become a trend, so it has
+              to carry them. Spending and investing are NOT stored here - they
+              are recomputable from the ledger for any month, so storing them
+              would just create a second version that could disagree. */
+           bank:(typeof bankTotal==='function')?Math.round(bankTotal()):null,
+           goalTarget: Math.round((state.goals||[]).reduce((s,g)=>s+(+g.target||0),0)),
            saved: Math.round((state.goals||[]).reduce((s,g)=>s+(g.saved||0),0)) };
 }
 /* Auto-capture: upsert the current month (keeps "now" fresh); past months freeze. */
@@ -6640,7 +6675,7 @@ async function refreshSyncState(){
   if(imp) imp.addEventListener('click',()=>{
     const existing=new Set(state.debts.map(d=>d.name.toLowerCase()));
     let n=0;
-    (state.liabilities||[]).forEach(l=>{ if((+l.value||0)>0 && !existing.has((l.name||'').toLowerCase())){ state.debts.push({id:uid(),name:l.name||'Debt',balance:+l.value||0,apr:0,minPayment:0}); n++; } });
+    (state.liabilities||[]).forEach(l=>{ if((+l.value||0)>0 && !existing.has((l.name||'').toLowerCase())){ state.debts.push({id:uid(),name:l.name||'Debt',balance:+l.value||0,apr:+l.apr||0,minPayment:0}); n++; } });   // the rate travels with it now
     save(); renderDebt();
     if(!n) alert('No new liabilities to import (they may already be here, or you have none with a balance).');
     else alert('Imported '+n+' debt'+(n>1?'s':'')+'. Add each one’s rate and minimum payment for an accurate plan.');
@@ -7284,6 +7319,12 @@ function loggedSince(dateStr){
   return state.transactions.filter(t=>t.date>dateStr).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
 }
 function oldestAcctUpdate(){ const d=(state.accounts||[]).map(a=>a.updated).filter(Boolean).sort(); return d[0]||''; }
+/* The whole scoreboard depends on this being retyped from time to time, so how
+   long it has been is a fact worth showing. Nagging would be the wrong move -
+   this app does not nag - but silence lets a balance quietly become fiction. */
+function newestAcctUpdate(){ const d=(state.accounts||[]).map(a=>a.updated).filter(Boolean).sort(); return d[d.length-1]||''; }
+function daysSinceBalance(){ const d=newestAcctUpdate(); if(!d) return null;
+  return Math.max(0, Math.round((Date.parse(todayStr()+'T00:00:00')-Date.parse(d+'T00:00:00'))/86400000)); }
 function netWorth(){ return sumAssets()+bankTotal()-sumLiab(); }
 function avgMonthlyIncome(){
   const byM={}; state.transactions.filter(t=>t.type==='income').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
@@ -7388,7 +7429,18 @@ function ensureImpulseCategory(){
 }
 
 /* --- net worth panel --- */
-function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
+/* A 3% mortgage and a 29% card were the same thing here: a name and a number.
+   The rate is the entire difference between borrowing that is working for you
+   and borrowing that is eating you, and the app already knew the concept - the
+   payoff planner has had an APR field all along. It just never travelled, so
+   "import from my liabilities" pushed every one of them across at apr:0 and the
+   planner then warned that its own numbers were understated. */
+function lineItem(o,cls){
+  const rate = cls==='liab'
+    ? `<span class="li-apr" title="Interest rate - the difference between debt that works for you and debt that eats you"><input class="apredit" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="${o.apr!=null?o.apr:''}" data-editapr="${o.id}" placeholder="APR">%</span>`
+    : '';
+  return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span>${rate}<span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`;
+}
 function renderNetWorth(){
   const realA=sumAssetsKind('real'), stuffA=sumAssetsKind('stuff'), A=realA+stuffA, L=sumLiab(), NW=A-L, working=realA-L, total=A+L;
   const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
@@ -7417,6 +7469,8 @@ function renderNetWorth(){
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
       <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'Works':'Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
       <div class="li-cost">Drains $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.cost?Math.round((a.cost/periodMeta(a.costUnit||'month').per)*100)/100:0}" data-cost="${a.id}"><select class="unit-sel" data-costunit="${a.id}" aria-label="Per what?">${['month','year','week'].map(periodMeta).map(pp=>`<option value="${pp.k}"${(a.costUnit||'month')===pp.k?' selected':''}>${pp.label}</option>`).join('')}</select>${whyBtn('assetDrain')} <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
+      ${k==='real'?`<div class="li-cost">Pays $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.pays?Math.round((a.pays/periodMeta(a.paysUnit||'month').per)*100)/100:0}" data-pays="${a.id}"><select class="unit-sel" data-paysunit="${a.id}" aria-label="Per what?">${['month','year','week'].map(periodMeta).map(pp=>`<option value="${pp.k}"${(a.paysUnit||'month')===pp.k?' selected':''}>${pp.label}</option>`).join('')}</select>${whyBtn('assetPays')} <span class="li-yr" data-paysyr="${a.id}">${a.pays?'= '+money((a.pays||0)*12)+'/yr back':''}</span></div>
+      ${(a.pays||a.cost)?`<div class="li-yield">${(a.pays||0)>(a.cost||0)?`Net <b>+${money(((a.pays||0)-(a.cost||0))*12)}</b> a year - this one genuinely pays you.`:((a.cost||0)>(a.pays||0)?`Net <b>&minus;${money(((a.cost||0)-(a.pays||0))*12)}</b> a year. It costs more to hold than it returns.`:'Pays exactly what it costs to hold.')}</div>`:''}`:''}
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet. An asset is anything that puts money in your pocket - savings, investments, a rental. Add one above.</div>';
   /* You type in a $12,000 car loan and the app - which owns a payoff planner
@@ -7447,6 +7501,19 @@ function renderNetWorth(){
     a.cost=Math.round(toMonthly(parseFloat(inp.value)||0, a.costUnit||'month')*100)/100; save();
     drainSync(a);
   }));
+  document.querySelectorAll('#assetList input[data-pays]').forEach(inp=>inp.addEventListener('input',()=>{
+    const a=state.assets.find(x=>x.id===inp.dataset.pays); if(!a) return;
+    a.pays=Math.round(toMonthly(parseFloat(inp.value)||0, a.paysUnit||'month')*100)/100; save();
+    const yl=document.querySelector(`#assetList [data-paysyr="${a.id}"]`);
+    if(yl) yl.textContent=a.pays?'= '+money(a.pays*12)+'/yr back':'';
+    renderDrain();
+  }));
+  document.querySelectorAll('#assetList select[data-paysunit]').forEach(sel=>sel.addEventListener('change',()=>{
+    const a=state.assets.find(x=>x.id===sel.dataset.paysunit); if(!a) return;
+    a.paysUnit=sel.value;
+    const inp=document.querySelector(`#assetList input[data-pays="${a.id}"]`);
+    a.pays=Math.round(toMonthly(parseFloat(inp?inp.value:0)||0, a.paysUnit)*100)/100; save(); renderNetWorth();
+  }));
   document.querySelectorAll('#assetList select[data-costunit]').forEach(sel=>sel.addEventListener('change',()=>{
     const a=state.assets.find(x=>x.id===sel.dataset.costunit); if(!a) return;
     a.costUnit=sel.value;                                   // the number stays; what it means changes
@@ -7463,6 +7530,11 @@ function renderNetWorth(){
     const [cls,id]=b.dataset.delitem.split(':');
     if(cls==='asset') state.assets=state.assets.filter(x=>x.id!==id); else state.liabilities=state.liabilities.filter(x=>x.id!==id);
     save(); renderNetWorth();
+  }));
+  document.querySelectorAll('#liabList input[data-editapr]').forEach(inp=>inp.addEventListener('input',()=>{
+    const l=state.liabilities.find(x=>x.id===inp.dataset.editapr); if(!l) return;
+    const v=parseFloat(inp.value);
+    l.apr=(v>=0&&v<=100)?v:null; save(); renderNetWorth(); renderSovereignty&&renderSovereignty();
   }));
   document.querySelectorAll('#assetList input[data-editval], #liabList input[data-editval]').forEach(inp=>{
     inp.addEventListener('input',()=>{ const [cls,id]=inp.dataset.editval.split(':'); const arr=cls==='asset'?state.assets:state.liabilities; const o=arr.find(x=>x.id===id); if(!o) return; o.value=parseFloat(inp.value)||0; save(); });
@@ -7632,10 +7704,19 @@ function renderAccounts(){
   }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
-    a.balance=parseFloat(i.value)||0; a.updated=todayStr(); save(); renderAccounts(); renderNetWorth(); renderHome();
+    a.balance=parseFloat(i.value)||0; a.updated=todayStr(); save();
+    /* "As those bank balances change it should be logged to form a trend." The
+       snapshot is the only place a balance can leave a trace - editing this box
+       overwrites the number and the old one is gone - and it was only taken at
+       boot, so a change made today would not reach the trend until tomorrow.
+       captureSnapshot upserts the current month, so this just keeps it current. */
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    renderAccounts(); renderNetWorth(); renderHome();
   }));
   box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{
-    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdel); save(); renderAccounts(); renderNetWorth(); renderHome();
+    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdel); save();
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    renderAccounts(); renderNetWorth(); renderHome();
   }));
   const sum=document.getElementById('acctSummary'); if(!sum) return;
   if(!accts.length){ sum.innerHTML=''; return; }
@@ -7646,6 +7727,9 @@ function renderAccounts(){
   if(em>0) bits.push(`<div class="ac-line">Emergency fund: <b>${usd(em)}</b>${ess>0?` - that's <b>${(Math.round(em/ess*10)/10)} month${(Math.round(em/ess*10)/10)===1?'':'s'}</b> of your essentials`:''}.</div>`);
   if(col>0) bits.push(`<div class="ac-line">College / kids: <b>${usd(col)}</b>.</div>`);
   if(Math.abs(drift)>0.005) bits.push(`<div class="ac-line sub">Since you last updated a balance you've logged <b>${usd(drift)}</b> of movement. If reality has drifted, retype the real number - the app will never quietly change it for you.</div>`);
+  /* Not a nag - a fact, and the reason it matters, stated once. */
+  const age=daysSinceBalance();
+  if(age!=null && age>=10) bits.push(`<div class="ac-stale">Last checked <b>${age} days ago</b>. This is the one number in the whole app that does not come from your own typing - you read it off your bank, with nothing to gain by being generous, which is exactly why it is the honest measure of whether any of this is working. Two minutes to retype it is the whole cost.</div>`);
   sum.innerHTML=bits.join('');
 }
 (function(){
@@ -7659,7 +7743,9 @@ function renderAccounts(){
     state.accounts.push({id:uid(),name:n,kind:document.getElementById('acctKind').value||'checking',
       purpose:document.getElementById('acctPurpose').value||'',balance:bal,updated:todayStr()});
     document.getElementById('acctName').value=''; document.getElementById('acctBal').value='';
-    save(); renderAccounts(); renderNetWorth(); renderHome();
+    save();
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    renderAccounts(); renderNetWorth(); renderHome();
   });
 })();
 let assetKind='real';
@@ -7684,10 +7770,21 @@ function showAssetChallenge(id,word){
 function renderDrain(){
   const box=document.getElementById('nwDrain'); if(!box) return;
   const drain=state.assets.reduce((s,a)=>s+(a.cost||0),0);
-  if(drain<=0){ box.innerHTML=''; return; }
+  const paysAll=state.assets.reduce((s,a)=>s+(+a.pays||0),0);
+  /* Bailing on drain alone hid the whole panel for the person whose assets pay
+     and cost nothing - which is the best case, and the one the app most wants to
+     be able to show them. */
+  if(drain<=0 && paysAll<=0){ box.innerHTML=''; return; }
   const H=effectiveHourly();
   const hrs=H>0?' · '+fmtHours(drain/H)+' of work/mo':'';
-  box.innerHTML=`<div class="drainbox"><div class="db-k">The cost of keeping it all</div><div class="db-v">${actMoney(drain)}/mo <span class="db-sub">· ${actMoney(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month - before you buy a single new thing. That's the part nobody calls an "asset."</div></div>`;
+  /* The lesson says the test is whether a thing puts money IN your pocket, and
+     the panel could only ever measure it taking money out. Both sides now. */
+  const pays=(state.assets||[]).reduce((s,a)=>s+(+a.pays||0),0);
+  const net=pays-drain;
+  box.innerHTML=`<div class="drainbox">`
+    +(drain>0?`<div class="db-k">The cost of keeping it all</div><div class="db-v">${actMoney(drain)}/mo <span class="db-sub">· ${actMoney(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month - before you buy a single new thing. That's the part nobody calls an "asset."</div>`:'')
+    +(pays>0?`<div class="db-k" style="margin-top:12px">And what it pays back</div><div class="db-v" style="color:rgb(var(--good-rgb))">${actMoney(pays)}/mo <span class="db-sub">· ${actMoney(pays*12)}/yr</span></div><div class="db-note">${net>=0?`Net <b>+${money(net*12)}</b> a year. What you own is carrying itself and then some - that is the whole definition, and most people never get a number for it.`:`Net <b>&minus;${money(-net*12)}</b> a year. It pays, but not enough to cover what it costs to hold.`}</div>`:'')
+    +`</div>`;
 }
 document.getElementById('addAsset').addEventListener('click',()=>{
   const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
@@ -7699,8 +7796,12 @@ document.getElementById('addAsset').addEventListener('click',()=>{
 });
 document.getElementById('addLiab').addEventListener('click',()=>{
   const n=document.getElementById('liabName').value.trim(), v=parseFloat(document.getElementById('liabVal').value);
-  if(!n||!v||v<0) return; state.liabilities.push({id:uid(),name:n,value:v});
-  document.getElementById('liabName').value=''; document.getElementById('liabVal').value=''; save(); renderNetWorth();
+  if(!n||!v||v<0) return;
+  const ap=parseFloat((document.getElementById('liabApr')||{}).value);
+  state.liabilities.push({id:uid(),name:n,value:v,apr:(ap>=0&&ap<=100)?ap:null});
+  document.getElementById('liabName').value=''; document.getElementById('liabVal').value='';
+  { const el=document.getElementById('liabApr'); if(el) el.value=''; }
+  save(); renderNetWorth();
 });
 
 /* --- hourly wage --- */
@@ -8348,6 +8449,22 @@ const FIELD_WHY={
         ? `<b>${money(lim)} &divide; ${dim} days = ${money(lim/dim)} a day.</b> Every day you come in under that goes green; a day with nothing logged earns a star. It is split evenly rather than by weekday, because a rule you can predict is a rule you can beat.`
         : `Whatever you set is divided by the days in the month to make a daily allowance. Beat it and the day goes green.`; } },
   enough:{ t:'What "Enough" is for', b:()=>`The monthly spend where more money stops buying you a better life. It is not a budget and nothing enforces it - it is the line that tells you when a raise should turn into freedom instead of quietly turning into a bigger normal.<br><br>The app compares it against what you actually spend and says so when the two drift apart.` },
+  loggedNet:{ t:'Why this is not your net worth', b:()=>{
+      const led=state.transactions.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+      const nw=netWorth(), bank=bankTotal();
+      return `Three different numbers live on this screen and they are supposed to differ.<br><br>`
+        + `<b>${money(led)}</b> is this line: every dollar you have <b>logged as coming in</b>, minus everything you logged going out, since the first entry. It is a record of your typing, not of your wealth - it knows nothing that happened before you started, and nothing you never logged.<br><br>`
+        + `<b>${money(nw)}</b> is net worth: what you <b>own</b> minus what you <b>owe</b>, taken from your accounts, assets and liabilities. It is a statement about today.<br><br>`
+        + `<b>${money(bank)}</b> is what your accounts actually say.<br><br>`
+        + `If this line is much larger than the other two, the usual reason is <b>income logged twice</b> - a paycheck entered by hand that a recurring rule also posted. Open Track, expand Money in, and look for the same amount on the same day.`; } },
+  assetPays:{ t:'The other half of the test', b:()=>{
+      const pays=(state.assets||[]).reduce((s,a)=>s+(+a.pays||0),0);
+      const cost=(state.assets||[]).reduce((s,a)=>s+(+a.cost||0),0);
+      return `What this thing hands you every month, without you selling an hour for it: rent, a dividend, interest, a royalty.<br><br>The app's own definition of an asset is that it <b>puts money in your pocket</b> - and until this field existed it could only ever record things taking money out, which made every single thing you own look like a drain. `
+        + (pays>0
+            ? `Across everything you own: <b>${money(pays)}</b> a month in, <b>${money(cost)}</b> a month out.`
+            : `Nothing you have listed pays you yet. That is not a failing - it is the number the top rung of the Growth Ladder exists to move.`)
+        + `<br><br>Only real assets get this field. A depreciating thing that somehow pays you is a real asset wearing the wrong label - flip it with the tag on the left.`; } },
   assetDrain:{ t:'Why a thing you own has a cost', b:()=>`What this costs you every month just to keep: insurance, storage, fees, servicing, registration. An asset that drains more than it returns is a liability wearing an asset's name, and this is the field that tells you which one you have.<br><br>Shown &times; 12 beside it, because the yearly number is the one that changes minds.` },
   recHours:{ t:'Why it asks for hours', b:()=>`Only income you sell hours for counts toward your true hourly rate. Money that costs you no time - benefits, rent from a property, a partner's pay - is still counted in your budget total, it just does not drag your rate around.<br><br>Give hours here and this source joins the blend: total worked income &divide; total worked hours.` }
 };
@@ -9769,6 +9886,18 @@ const RP_TONE={
     middle:{clean:'From what you told setup, not from what has landed yet.',
             blunt:'That is your own figure times twelve, not a measurement. Two full months and it becomes real.',
             savage:'That is your number times twelve - a claim, not a measurement. Log two months and it stops being a claim.'}},
+  bankUp:{
+    middle:{clean:'The app cannot take credit for that, and neither can it be blamed if it turns. It is just the number.',
+            blunt:'That is the only scoreboard here the app cannot flatter itself with - it comes from your bank, not from your typing.',
+            savage:'Every other number here is built from what you chose to type. That one is not. It is the only honest scoreboard in the building.'}},
+  bankDown:{
+    middle:{clean:'Down is information, not a verdict. Plenty of good reasons a balance falls.',
+            blunt:'Down is not automatically failure - a planned purchase looks identical to a bad month from here. Only you know which it was.',
+            savage:'Down. A planned move and a bad month look exactly the same from here, and the app is not going to guess which one you had.'}},
+  bankFlat:{
+    middle:{clean:'Level across the whole stretch.',
+            blunt:'Level. Not falling is worth something; it is not the same as building.',
+            savage:'Flat. Holding the line beats sliding, and it is still not the same as getting anywhere.'}},
   timeWeek:{
     middle:{clean:'Hours are the other budget.', blunt:'Hours are the other budget, and it does not roll over.',
             savage:'Hours are the one budget with no overdraft. Spent is spent.'}}
@@ -10033,6 +10162,42 @@ function outsideFresh(){ return daysSince(OUTSIDE.built) <= 240; }
 /* the outside signals ride the same rails as the personal ones: silent below
    their data, working shown, never first (context waits behind the person's own
    month). They are declared after the personal signals for exactly that reason. */
+/* ============================================================
+   THE ONLY SCOREBOARD THE APP CANNOT FLATTER ITSELF WITH
+
+   Every other figure in here is built from what somebody chose to type. Log
+   less and the app looks calmer; log nothing and it has nothing bad to say.
+   That is the structural weakness of a tool with no bank connection.
+
+   The account balance is the exception, and it is the exception precisely
+   BECAUSE the app cannot reach it. It is typed in freely, from outside, against
+   no incentive - so its movement over time is the one honest answer to "is any
+   of this working". That is the whole thesis of an accountability app rather
+   than a budgeting one: the budget is the process, the balance is the outcome.
+
+   Which is exactly why it has to be reported carefully. A rising balance is not
+   proof the app worked - a raise, a refund or an unpaid bill look identical from
+   here. A falling one is not proof of failure. It says what moved, it says what
+   it cannot know, and it stops there.
+   ============================================================ */
+REPORT_SIGNALS.push(
+  { k:'bankTrend', run(){
+      const snaps=(state.snapshots||[]).filter(s=>s.bank!=null).slice().sort((a,b)=>a.month<b.month?-1:1);
+      if(snaps.length<2) return {locked:'A second month of balances - the one number the app cannot make up needs two readings before it is a trend.', do:'account'};
+      const first=snaps[0], last=snaps[snaps.length-1];
+      const move=last.bank-first.bank, months=snaps.length;
+      const flat=Math.abs(move) < Math.max(25, Math.abs(first.bank)*0.01);
+      const H=effectiveHourly();
+      const per=move/Math.max(1,months-1);
+      return { t: flat ? 'What you actually hold has held level'
+                 : move>0 ? `What you actually hold is up ${money(move)}`
+                          : `What you actually hold is down ${money(-move)}`,
+        body:`Across ${months} month${months>1?'s':''} of readings, the money in your accounts went from <b>${money(first.bank)}</b> in ${fmtMonth(first.month)} to <b>${money(last.bank)}</b> in ${fmtMonth(last.month)}.${flat?'':` That is about <b>${money(Math.abs(per))}</b> a month${move>0?' gained':' gone'}.`}`,
+        work:`${money(last.bank)} − ${money(first.bank)} = ${move>=0?'+':'−'}${money(Math.abs(move))} over ${months-1} month${months-1===1?'':'s'}`,
+        nudge:`This is the only figure here that did not come from your own typing - you read it off your bank and put it in, with nothing to gain by being generous. It also cannot tell you WHY it moved: a raise, a refund, a bill you have not paid yet and a month of genuine discipline all look the same from this height.${(move>0&&H>0)?` For scale, ${money(move)} is ${fmtHours(move/H)} of your life you did not have to sell again.`:''} ${rpSay(move>0?RP_TONE.bankUp:(flat?RP_TONE.bankFlat:RP_TONE.bankDown),null)}`,
+        bad: move<0 && !flat };
+    }}
+);
 REPORT_SIGNALS.push(
   { k:'oCpi', run(){
       if(!outsideFresh()) return null;
@@ -10152,8 +10317,9 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
     body.innerHTML=`<div id="bdBox"></div>`;
     renderBreakdown();   // carries its own 1/3/6/12 control, which IS the period here
   } else if(rfTab==='trends'){
-    bar.innerHTML=monthBar+`<p class="sub rf-lead">Every category you spent in during <span id="chartMonth">this month</span>, biggest first. Use the arrows to walk back through the months.</p>`;
-    body.innerHTML=`<div id="catChart"></div>`;
+    bar.innerHTML=monthBar+`<p class="sub rf-lead">How each thing has moved, month by month - then every category you spent in during <span id="chartMonth">this month</span>, biggest first.</p>`;
+    body.innerHTML=`<div id="trendPick"></div><div id="trendBody"></div><div id="catChart"></div>`;
+    renderTrendSeries();
     renderCharts();
   } else if(rfTab==='worth'){
     const nw=netWorth(), a=sumAssets()+bankTotal(), l=sumLiab();   // the same three the netWorth() identity uses, so the split always adds up to the headline
@@ -10209,6 +10375,80 @@ function renderBreakdown(){
   if(bk) bk.onclick=()=>{ const c=state.categories.find(x=>x.id===bdDrill); bdDrill=c&&c.parentId?c.parentId:null; renderBreakdown(); };
 }
 
+/* ============================================================
+   TRENDS - all of them, not just the spending
+
+   Trends showed one month of categories and called itself Trends. Asked for
+   directly: spending AND investing, bank balances as they change, and goals.
+
+   Two different kinds of series, and the difference is worth stating on screen
+   rather than hiding:
+
+   - Spending and investing are RECOMPUTED from the ledger for any month, so
+     they go back as far as the entries do.
+   - Bank, goals and net worth have no history of their own - editing an account
+     overwrites the number and the previous one is gone forever. They can only
+     come from the monthly snapshot, so they start when you did. Saying so is the
+     difference between a short line and a wrong one.
+   ============================================================ */
+const TREND_SERIES=[
+  {k:'spent',  label:'Spending',  color:'#e0663c', from:'ledger',
+   val:m=>monthExpense(m), note:'What went out each month.'},
+  {k:'invest', label:'Investing', color:'#35c99a', from:'ledger',
+   val:m=>investedUpTo(m), note:'Everything you have put away, adding up as it goes.'},
+  {k:'bank',   label:'In the bank', color:'#5b9bd5', from:'snap', field:'bank',
+   note:'What your accounts said at each month end.'},
+  {k:'saved',  label:'Goals',     color:'#e6b24d', from:'snap', field:'saved',
+   note:'Money sitting against your dreams.'},
+  {k:'nw',     label:'Net worth', color:'#b47ee0', from:'snap', field:'netWorth',
+   note:'What you own minus what you owe.'}
+];
+function investedUpTo(m){ return state.transactions.filter(t=>t.type==='invest'&&monthOf(t.date)<=m).reduce((s,t)=>s+t.amount,0); }
+let trendPick='spent';
+function trendMonths(n){ const a=[]; let m=state.activeMonth; for(let i=0;i<n;i++){ a.unshift(m); m=shiftMonth(m,-1); } return a; }
+/* One line chart, reused. Returns '' when there is nothing honest to draw. */
+function trendSVG(pts,color){
+  const real=pts.filter(p=>p.v!=null);
+  if(real.length<2) return '';
+  const w=600,h=150,pad=14;
+  const vals=real.map(p=>p.v), mn=Math.min(0,...vals), mx=Math.max(1,...vals);
+  const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad);
+  const Y=v=>h-pad-((v-mn)/((mx-mn)||1))*(h-2*pad);
+  let d='', started=false, dots='';
+  pts.forEach((p,i)=>{
+    if(p.v==null) return;                       // a month with no snapshot is a gap, not a zero
+    d+=`${started?'L':'M'}${X(i).toFixed(1)},${Y(p.v).toFixed(1)} `; started=true;
+    dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3" fill="${color}"/>`;
+  });
+  const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto" role="img"><path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg>`;
+}
+function renderTrendSeries(){
+  const pick=document.getElementById('trendPick'), body=document.getElementById('trendBody');
+  if(!pick||!body) return;
+  pick.innerHTML=`<div class="bd-seg trend-seg">${TREND_SERIES.map(x=>`<button data-trend="${x.k}" class="${trendPick===x.k?'on':''}">${escapeHtml(x.label)}</button>`).join('')}</div>`;
+  pick.querySelectorAll('[data-trend]').forEach(b=>b.onclick=()=>{ trendPick=b.dataset.trend; renderTrendSeries(); });
+  const S=TREND_SERIES.find(x=>x.k===trendPick)||TREND_SERIES[0];
+  const months=trendMonths(6);
+  const snaps=state.snapshots||[];
+  const pts=months.map(m=>{
+    if(S.from==='ledger') return {m, v:S.val(m)};
+    const sn=snaps.find(x=>x.month===m);
+    return {m, v: sn && sn[S.field]!=null ? sn[S.field] : null};
+  });
+  const svg=trendSVG(pts,S.color);
+  const have=pts.filter(p=>p.v!=null);
+  const last=have.length?have[have.length-1]:null;
+  const first=have.length?have[0]:null;
+  const move=(last&&first&&have.length>1)?last.v-first.v:null;
+  body.innerHTML = svg
+    ? `<div class="trend-wrap">${svg}</div>
+       <div class="legend"><span class="k">${escapeHtml(S.label)} now: <b style="color:${S.color}">${money(last.v)}</b>${move!=null?` &middot; ${move>=0?'up':'down'} <b>${money(Math.abs(move))}</b> across ${have.length} months`:''}</span></div>
+       <p class="sub" style="margin-top:6px">${escapeHtml(S.note)}${S.from==='snap'?' Read from the monthly snapshot the app takes, so it starts when you did - an account edit overwrites the old number, and nothing can recover what was never recorded.':''}</p>`
+    : `<div class="empty">${S.from==='snap'
+        ? `Not enough snapshots yet. The app records ${escapeHtml(S.label.toLowerCase())} once a month, so this line needs a second month before it can be a line at all.`
+        : `Nothing logged yet for ${escapeHtml(S.label.toLowerCase())} across these months.`}</div>`;
+}
 function renderCharts(){
   const M=state.activeMonth;
   const ml=document.getElementById('chartMonth'); if(ml) ml.textContent=fmtMonth(M);
@@ -10233,7 +10473,12 @@ function renderCharts(){
   const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.bal).toFixed(1)}" r="3" fill="#e6b24d"/>`).join('');
   const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
   const tc=document.getElementById('trendChart'), latest=pts[pts.length-1].bal;
-  if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Latest balance: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b></span></div>`;
+  /* "Latest balance" sat under "Net worth today" as a second big number with no
+     stated relationship to it, and it is a third thing entirely: not net worth,
+     not what is in the bank, but everything the LEDGER has net-added since the
+     first thing was logged. Three numbers, three meanings, one card. Named for
+     what it is, with the reconciliation one tap away. */
+  if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Logged in minus logged out, all time: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b>${whyBtn('loggedNet')}</span></div>`;
   renderBreakdown();
   renderCirculation();
   renderGlance();
@@ -12053,6 +12298,7 @@ const TRAIL={
   give:     {tab:'goals',    focus:'giveName',     label:'Give something'},
   asset:    {tab:'goals',    focus:'assetName',    label:'Add an asset'},
   liab:     {tab:'goals',    focus:'liabName',     label:'Add what you owe'},
+  account:  {tab:'goals',    focus:'acctName',     label:'Update my balances'},
   skill:    {tab:'goals',    focus:'skillName',    label:'Invest in a skill'},
   debt:     {tab:'debt',     focus:'debtName',     label:'Open the payoff planner'},
   hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},

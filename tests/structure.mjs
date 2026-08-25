@@ -2691,6 +2691,201 @@ check('the link that was the only way in promises only what it can deliver',
       reach.linkSpend==='Edit my accounts →' && reach.linkFull==='Edit what you own and owe →',
       `${reach.linkSpend} | ${reach.linkFull}`);
 
+/* ---- 46. the app could not record being paid ----
+   Asked directly: how are HELOCs and cards viewed in Build, why is there no area
+   for dividends or interest, and is the philosophy to forbid leverage?
+
+   Three answers, all checkable, all gaps rather than positions. The app teaches
+   that an asset is the thing that "puts money IN your pocket" and that the top
+   rung of the Growth Ladder is "own things that pay you" - and then offered five
+   income types, every one of them a form of LABOUR, and an asset model whose
+   only recurring field was what the thing DRAINS. A liability was a name and a
+   number, so a 3% mortgage and a 29% card were the same object, and "import from
+   my liabilities" pushed every one into the payoff planner at apr:0 - after
+   which the planner warned that its own figures were understated. ---- */
+const cap = await p.evaluate(() => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22; state.trueRateSkipped=true;
+  save(); activateTab('goals'); renderAll();
+  o.yieldKinds=INCOME_SOURCES.filter(x=>x.yield).map(x=>x.k).sort();
+  /* money capital earned is the purest independent income there is */
+  o.indie={y:isIndependent('yield'), r:isIndependent('rent'), p:isIndependent('primary')};
+  const M=state.activeMonth;
+  state.transactions.push({id:'y1',type:'income',amount:180,source:'VTI dividend',srcType:'yield',date:M+'-05'});
+  state.transactions.push({id:'y2',type:'income',amount:1400,source:'Rental',srcType:'rent',date:M+'-01'});
+  state.transactions.push({id:'w1',type:'income',amount:3200,source:'Pay',srcType:'primary',date:M+'-02'});
+  save();
+  o.yieldMonth=yieldTotal(M);
+  o.offense=offenseDefense(M).offense;
+  /* it must not touch the hourly rate - no hours were sold for it */
+  recomputeBlendedWage();
+  o.wageUntouched=state.hourlyWage;
+  /* an asset that pays, and one that cannot */
+  state.assets.push({id:'a1',name:'Rental duplex',value:240000,kind:'real',cost:900,pays:1400});
+  state.assets.push({id:'a2',name:'Truck',value:22000,kind:'stuff',cost:400});
+  save(); renderNetWorth();
+  o.paysOnReal=!!document.querySelector('input[data-pays="a1"]');
+  o.noPaysOnStuff=!document.querySelector('input[data-pays="a2"]');
+  o.net=(document.getElementById('assetList').innerText.match(/Net \+[^\n-]*/)||[''])[0].trim();
+  o.bothSides=/And what it pays back/.test((document.getElementById('nwDrain')||{}).innerText||'');
+  /* a rate on a liability, and it has to travel */
+  state.liabilities.push({id:'l1',name:'HELOC',value:40000,apr:6.5});
+  state.liabilities.push({id:'l2',name:'Visa',value:3000,apr:26.9});
+  save(); renderNetWorth();
+  o.aprField=!!document.querySelector('input[data-editapr="l1"]');
+  document.getElementById('importLiab').click();
+  o.imported=state.debts.map(d=>d.name+'@'+d.apr).sort().join(',');
+  /* and the planner orders them by what they actually cost */
+  state.debtStrategy='avalanche'; state.debtBudget=1200; save();
+  const sim=simulateDebts(state.debts.map(d=>({name:d.name,balance:d.balance,apr:d.apr,minPayment:100})),1200,'avalanche');
+  o.killsDearestFirst=sim.order?sim.order[0]:(sim.error||'');
+  return o;
+});
+check('the app can record money that capital earned', cap.yieldKinds.join(',')==='rent,yield', cap.yieldKinds.join(','));
+check('...and counts it as independent income, which is what it is',
+      cap.indie.y===true && cap.indie.r===true && cap.indie.p===false);
+check('...it reaches the Offense meter', cap.yieldMonth===1580 && cap.offense===1580,
+      `${cap.yieldMonth} / ${cap.offense}`);
+check('...without touching the hourly rate, because no hours were sold for it',
+      cap.wageUntouched===22, String(cap.wageUntouched));
+check('an asset can finally say what it pays, not only what it drains',
+      cap.paysOnReal===true && /Net \+\$6,000 a year/.test(cap.net), cap.net);
+check('...only for things that could actually pay you', cap.noPaysOnStuff===true);
+check('...and the panel shows both sides', cap.bothSides===true);
+check('a liability carries its rate, so 3% and 29% stop being the same object',
+      cap.aprField===true);
+check('...and the rate travels into the payoff planner instead of arriving as 0%',
+      cap.imported==='HELOC@6.5,Visa@26.9', cap.imported);
+
+/* ---- 47. Trends showed one thing and called itself Trends ----
+   Three asks in one note: where does "Latest balance $13,362" come from when net
+   worth says $4,843; Trends should cover investing as well as spending; bank
+   balances should leave a trace as they change; and goals belong there too.
+
+   The first was a naming failure - that line is neither net worth nor the bank,
+   it is everything the LEDGER has net-added since the first entry, sitting
+   unlabelled under a number it is supposed to differ from. The rest were real
+   gaps: Trends drew one month of spending categories, and bank, goals and net
+   worth have no history of their own at all, because editing an account
+   overwrites the number and the old one is gone forever. ---- */
+const trends = await p.evaluate(async () => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22; state.trueRateSkipped=true;
+  const M=thisMonth(); state.activeMonth=M;
+  const c=findOrCreateCat('Food');
+  for(let i=5;i>=0;i--){ const m=shiftMonth(M,-i);
+    state.transactions.push({id:'e'+i,type:'expense',amount:300+i*40,catId:c.id,date:m+'-10',note:'Food'});
+    state.transactions.push({id:'v'+i,type:'invest',amount:200,source:'Index',date:m+'-12',ikind:'holds'});
+  }
+  state.snapshots=[shiftMonth(M,-2),shiftMonth(M,-1),M].map((m,i)=>({month:m,date:m+'-28',
+    bank:2000+i*500, saved:300+i*250, netWorth:4000+i*900}));
+  save(); activateTab('reflect'); rfTab='trends'; renderReflectTab();
+  o.series=[...document.querySelectorAll('[data-trend]')].map(x=>x.dataset.trend);
+  const read=()=>({legend:((document.querySelector('#trendBody .legend')||{}).innerText||'').replace(/\n/g,' '),
+                   svg:!!document.querySelector('#trendBody svg'),
+                   empty:(document.querySelector('#trendBody .empty')||{}).innerText||''});
+  o.spent=read();
+  for(const k of ['invest','bank','saved','nw']){ document.querySelector(`[data-trend="${k}"]`).click(); o[k]=read(); }
+  /* one snapshot is a dot, not a line, and it must say so rather than draw one */
+  state.snapshots=[{month:M,date:M+'-28',bank:2000}];
+  save(); document.querySelector('[data-trend="bank"]').click();
+  o.oneSnap=read();
+  /* the snapshot has to carry what the trends read */
+  o.snapFields=Object.keys(metricSnapshot(M));
+  /* editing a balance has to reach the trend the same day, not at next boot */
+  state.snapshots=[]; state.accounts=[{id:'a',name:'Checking',kind:'checking',balance:1000,updated:todayStr()}];
+  save(); activateTab('goals'); renderAccounts();
+  const inp=document.querySelector('input[data-acctbal="a"]');
+  inp.value='4321'; inp.dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(x=>setTimeout(x,60));
+  const sn=(state.snapshots||[]).find(x=>x.month===M);
+  o.snapped=sn?sn.bank:null;
+  return o;
+});
+check('Trends covers all of them, not just spending',
+      trends.series.join(',')==='spent,invest,bank,saved,nw', trends.series.join(','));
+check('...spending and investing go back as far as the ledger does',
+      /across 6 months/.test(trends.spent.legend) && /across 6 months/.test(trends.invest.legend),
+      trends.invest.legend);
+check('...bank, goals and net worth come from the snapshots',
+      /across 3 months/.test(trends.bank.legend) && /across 3 months/.test(trends.saved.legend)
+        && /across 3 months/.test(trends.nw.legend), trends.bank.legend);
+check('...and investing is cumulative, because that is what growing means',
+      /Investing now: \$1,200/.test(trends.invest.legend), trends.invest.legend);
+check('one snapshot is a dot, not a line, and it says so',
+      trends.oneSnap.svg===false && /needs a second month/.test(trends.oneSnap.empty),
+      trends.oneSnap.empty.slice(0,60));
+check('the monthly snapshot carries what the trends read',
+      ['bank','saved','netWorth','goalTarget'].every(f=>trends.snapFields.includes(f)),
+      trends.snapFields.join(','));
+check('changing a balance reaches the trend the same day',
+      trends.snapped===4321, String(trends.snapped));
+
+/* ---- 48. the only scoreboard the app cannot flatter itself with ----
+   The framing, in the user's words: this is not really a budgeting app, it is an
+   accountability app - and since it never pulls bank data, whatever is actually
+   in their accounts is the reflection of how well it works. Them freely updating
+   that balance is the measurement.
+
+   That is structurally true and worth the app saying out loud. Every other
+   figure in here is built from what somebody chose to type: log less and the app
+   looks calmer, log nothing and it has nothing bad to say. The account balance
+   is the exception precisely BECAUSE the app cannot reach it - typed in freely,
+   from outside, against no incentive.
+
+   Which is exactly why it has to be reported carefully. A rising balance is not
+   proof the app worked; a raise, a refund and an unpaid bill look identical from
+   here. It says what moved, says what it cannot know, and stops. ---- */
+const score = await p.evaluate(() => {
+  const o={};
+  const seed=(banks,intensity)=>{
+    state=JSON.parse(JSON.stringify(defaultState()));
+    state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22; state.trueRateSkipped=true;
+    state.intensity=intensity||'blunt';
+    state.intake={name:'Pat',income:3200,reflections:{situation:'ok'}};
+    const M=thisMonth(); state.activeMonth=M;
+    state.snapshots=banks.map((v,i)=>({month:shiftMonth(M,-(banks.length-1-i)),date:'x',bank:v}));
+    state.accounts=[{id:'a',name:'Checking',kind:'checking',balance:banks[banks.length-1],updated:todayStr()}];
+    save();
+  };
+  const sig=()=>{ const r=buildReport(); const g=r.signals.find(x=>x.k==='bankTrend');
+    return g ? {t:g.t, work:g.work, nudge:String(g.nudge).replace(/<[^>]*>/g,''), bad:!!g.bad}
+             : {locked:(r.locked.find(l=>/cannot make up/.test(l.t))||{}).t, do:(r.locked.find(l=>/cannot make up/.test(l.t))||{}).do}; };
+  seed([2000,2600,3400],'savage'); o.up=sig();
+  seed([5000,4200,3100]);          o.down=sig();
+  seed([3000,3010,2995]);          o.flat=sig();
+  seed([3000]);                    o.one=sig();
+  /* staleness is a fact, not a nag - shown late, gone the moment it is current */
+  seed([2000,2600,3400]);
+  state.accounts[0].updated=shiftDays(todayStr(),-23); save();
+  activateTab('goals'); renderAccounts();
+  o.stale=(document.querySelector('.ac-stale')||{}).innerText||'';
+  state.accounts[0].updated=shiftDays(todayStr(),-3); save(); renderAccounts();
+  o.recent=!document.querySelector('.ac-stale');
+  /* and the panel itself has to say why this number is different */
+  o.thesis=/it is the scoreboard/i.test(document.getElementById('view-goals').innerText);
+  return o;
+});
+check('two readings of the real balance become a verdict',
+      /up \$1,400/.test(score.up.t) && /\$3,400 − \$2,000 = \+\$1,400/.test(score.up.work),
+      `${score.up.t} | ${score.up.work}`);
+check('...one reading is not a trend, and it says what would make it one',
+      /needs two readings/.test(score.one.locked||'') && score.one.do==='account', score.one.locked);
+check('...a fall is not called a failure', /not automatically failure/.test(score.down.nudge) && score.down.bad===true,
+      score.down.nudge.slice(-80));
+check('...and level is called level', /held level/.test(score.flat.t) && /Not falling is worth something/.test(score.flat.nudge));
+check('it says what it cannot know, every time',
+      ['up','down','flat'].every(k=>/cannot tell you WHY it moved/.test(score[k].nudge)));
+check('...and why this one number is different from all the others',
+      /did not come from your own typing/.test(score.up.nudge)
+        && /only honest scoreboard/.test(score.up.nudge), score.up.nudge.slice(-60));
+check('a stale balance is named, with the reason it matters', /Last checked 23 days ago/.test(score.stale)
+        && /honest measure of whether any of this is working/.test(score.stale), score.stale.slice(0,50));
+check('...and it is a fact, not a nag - gone once it is current', score.recent===true);
+check('the panel where the number lives says why it is the scoreboard', score.thesis===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
