@@ -2252,6 +2252,65 @@ check('the buy button stops calling it a ransom',
 check('the four trap lanes are untouched',
       /Scroll Trap detected/.test(tool.scroll.text) && !/tool/.test(tool.scroll.cls), tool.scroll.tag);
 
+/* ---- 40. the number nobody could trace ----
+   Asked after three days of use: "where does the net in Balance come from?"
+   Two faults behind one question. The Track strip printed the SAME arithmetic
+   twice - "Net" and "Balance (all time)" are both income minus spending minus
+   investing, differing only by window, and on the all-months view they are
+   identical by construction. And nothing said that most of the income side was
+   written by the SETUP CHAT: it dates a paycheck to the 1st because the person
+   told it their monthly take-home, which is reasonable to do and terrible to
+   leave unexplained to someone on day three. ---- */
+const netTile = await p.evaluate(async () => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3;
+  state.hourlyWage=22; state.trueRateSkipped=true;
+  const M=state.activeMonth;
+  state.transactions.push({id:'i1',type:'income',amount:3200,source:'Paycheck',owner:'a',date:M+'-01',note:'Intake'});
+  const c=findOrCreateCat('Coffee / drinks out');
+  state.transactions.push({id:'e1',type:'expense',amount:6,catId:c.id,date:M+'-23',note:'Latte'});
+  state.transactions.push({id:'e2',type:'expense',amount:9,catId:c.id,date:M+'-24',note:'Coffee'});
+  save(); activateTab('tx'); renderTx();
+  const keys=()=>[...document.querySelectorAll('#txSummary .stat .k')].map(x=>x.textContent.replace('?',''));
+  const o={};
+  o.dayThree=keys();
+  /* the working, on the spot */
+  document.querySelector('#txSummary [data-why]').click();
+  await new Promise(x=>setTimeout(x,60));
+  o.why=(document.querySelector('.why-note[data-forwhy="txNet"]')||{}).textContent||'';
+  /* the tile earns its place again once there IS history outside this month */
+  state.transactions.push({id:'i0',type:'income',amount:500,source:'Old',date:shiftMonth(M,-2)+'-05'});
+  save(); renderTx();
+  o.withHistory=keys();
+  /* but on the all-months view it is a duplicate by construction, always */
+  txAllMonths=true; renderTx();
+  o.allMonths=keys();
+  txAllMonths=false; renderTx();
+  /* and the two really are the same arithmetic - this is the claim being made */
+  const inc=state.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const exp=state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const inv=state.transactions.filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0);
+  o.sameMath=Math.abs(allTimeBalance()-(inc-exp-inv))<0.005;
+  return o;
+});
+check('the strip never prints the same number twice under two labels',
+      netTile.dayThree.join(',')==='Income,Spent,Net (month)', netTile.dayThree.join(','));
+check('...which it was, because they are the same arithmetic', netTile.sameMath===true);
+check('...and never on the all-months view, where it always duplicates',
+      netTile.allMonths.join(',')==='All-time Income,All-time Spent,Net (all time)', netTile.allMonths.join(','));
+check('...but it comes back when there is history outside this month',
+      netTile.withHistory.includes('Balance (all time)'), netTile.withHistory.join(','));
+check('the net shows its own arithmetic on the spot',
+      /Income − spending/.test(netTile.why) && /\$3,200 in − \$15 out = \$3,185/.test(netTile.why),
+      netTile.why.slice(0,90));
+check('...and names the part the setup chat wrote rather than the person',
+      /written by the setup chat/i.test(netTile.why) && /\$3,200 of the income side \(100%\)/.test(netTile.why));
+check('...says plainly that it reads high if that money has not landed',
+      /has not actually arrived yet, this reads high/.test(netTile.why));
+check('...and says how to correct it', /delete or correct it/.test(netTile.why));
+check('...while still separating logged money from bank money',
+      /does not know your real bank balance/.test(netTile.why));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
