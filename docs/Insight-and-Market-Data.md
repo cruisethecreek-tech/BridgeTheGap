@@ -100,6 +100,7 @@ Each one below is cheap - the data is already in `state`.
 | Habit ended | a note that stopped | "No 'Cigarettes' logged in 34 days. That is $190 and 7.8 hours kept." |
 | Essentials drift | walls + 2 months | "Your essentials took 68% of income, up from 61%." |
 | Hours traded | wage + spend | "You spent 94 hours of your life this month. 12 of them on things you called a trap." |
+| The year | 2 months logged, or a stated take-home | "Hold this and the year lands at $44,460 of take-home." Shipped later, on the same rails: never annualises the month in progress or a single month, and says whether it measured or repeated. |
 
 The last one is the app's actual thesis and nothing currently states it as a
 monthly figure.
