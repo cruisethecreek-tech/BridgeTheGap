@@ -1458,8 +1458,12 @@ check('...and refuses to call history a promise',
       /history, not a promise/i.test(iv.note));
 check('it shows whether the guess even changes the answer',
       /Does the guess even change the answer/i.test(iv.range), iv.range.slice(0,60));
+/* The property is that neither side is CROWNED and the copy says so - not that
+   one particular sentence survives. The wording moved when this verdict gained a
+   voice, and an assertion pinned to one phrasing would have blocked that for no
+   reason. It has to hold at every intensity, which is the real guarantee. */
 check('a result that hinges on the rate is called a tie, not a win',
-      iv.wins===0 && /tie, not a winner/i.test(iv.verdict), `${iv.wins} winners · ${iv.verdict.slice(0,60)}`);
+      iv.wins===0 && /\btie\b/i.test(iv.verdict), `${iv.wins} winners · ${iv.verdict.slice(0,60)}`);
 
 /* a genuinely lopsided case must still name its winner - the point is honesty,
    not refusing to answer */
@@ -2240,7 +2244,7 @@ check('...and it says out loud which one it set aside',
       tool.mulcher.body.slice(-160));
 check('...the payback is right to the month', tool.math.years===0.379, String(tool.math.years));
 check('replacing nothing is called a want, not an investment',
-      /No cost replaced/.test(tool.want.tag) && /this is a want/.test(tool.want.body)
+      /No cost replaced/.test(tool.want.tag) && /\bwant\b/.test(tool.want.body)
         && !/pays/.test(tool.want.cls), tool.want.tag);
 check('...and the needle swings back toward Trap', tool.want.needle>50, String(tool.want.needle));
 check('a slow payback is called slow', /slow payback/.test(tool.slow.body), tool.slow.body.slice(-90));
@@ -2885,6 +2889,90 @@ check('a stale balance is named, with the reason it matters', /Last checked 23 d
         && /honest measure of whether any of this is working/.test(score.stale), score.stale.slice(0,50));
 check('...and it is a fact, not a nag - gone once it is current', score.recent===true);
 check('the panel where the number lives says why it is the scoreboard', score.thesis===true);
+
+/* ---- 49. the rest of the voice ----
+   The audit found 21 of 24 surfaces reaching no voice engine. The report went
+   first; this is the rest of the ones that carry an OPINION rather than a fact.
+
+   One of the twelve was reclassified while wiring it: the talk-through is
+   reached when money left because something HAPPENED - the car, the hospital -
+   and every line in it is an interview prompt or a gentle reframe ("it stung
+   instead of wrecking you"). Savage there is the exact failure the sensitive
+   lock exists to prevent, so it stays clean by design rather than by neglect. ---- */
+const v11 = await p.evaluate(() => {
+  const seed=(lvl,sit)=>{
+    state=JSON.parse(JSON.stringify(defaultState()));
+    state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22;
+    state.trueRateSkipped=true; state.intensity=lvl; state.register='middle';
+    state.intake={name:'Pat',income:3200,reflections:{situation:sit||'ok'}};
+    const M=state.activeMonth, c=findOrCreateCat('Food');
+    budgetFor(M)[c.id]=600; state.spendLimit=1500; state.trackStart=M+'-01'; state.enough=3000;
+    state.transactions.push({id:'i',type:'income',amount:5000,source:'Pay',date:M+'-02'});
+    state.transactions.push({id:'e',type:'expense',amount:80,catId:c.id,date:M+'-03',energy:'growth'});
+    state.transactions.push({id:'f',type:'expense',amount:20,catId:c.id,date:M+'-04',energy:'fear'});
+    state.goals=[{id:'g',name:'Cushion',target:5000,saved:500}];
+    state.impulse=[{id:'p',name:'Shoes',amount:200,trap:'scroll',date:M+'-06',type:'skip'}];
+    state.debts=[{id:'d',name:'Card',balance:9000,apr:26,minPayment:200}];
+    state.debtBudget=800; state.investReturn=7; state.investYears=10;
+    save(); applyStage({silent:true});
+  };
+  const grab=()=>{
+    const g=id=>{const e=document.getElementById(id); return e?e.innerText.replace(/\s+/g,' ').trim():'';};
+    const o={};
+    o.reward=[spendRewardRec(0,500), spendRewardRec(0,-500), spendRewardRec(40,0), spendRewardRec(0,0)].join(' || ');
+    o.kept=putAwayLine(400,100,22);
+    activateTab('home'); renderHome();
+    o.next=g('nextSteps'); o.enough=g('enoughCard');
+    activateTab('impulse'); renderImpulse(); o.chest=g('impCelebrate');
+    pendingCheck={name:'Mulcher',amt:100,trap:'tool',repAmt:600,repHrs:0,repPer:'year',hrsPer:'year'};
+    renderToolResult(); o.toolPays=g('impResult');
+    pendingCheck={name:'Rake',amt:100,trap:'tool',repAmt:0,repHrs:0,repPer:'year',hrsPer:'year'};
+    renderToolResult(); o.toolWant=g('impResult');
+    activateTab('debt'); renderDebt(); renderInvestCompare();
+    o.debt=g('debtResults'); o.iv=(document.querySelector('.iv-verdict')||{}).innerText||'';
+    activateTab('learn'); renderCirculation(); o.circ=g('circChart');
+    activateTab('home'); state.spendingMode=true; save(); applySpending();
+    const M=state.activeMonth;
+    state.transactions.push({id:'big',type:'expense',amount:900,catId:state.categories[0].id,date:M+'-03'});
+    save(); calSelDay=3; renderRewardCalendar();
+    o.dayCard=g('calDay');
+    o.msNote=(moneyStoryNote()||{}).t||'';
+    return o;
+  };
+  const out={};
+  seed('clean');  out.clean=grab();
+  seed('savage'); out.savage=grab();
+  seed('savage','survive'); out.survival=grab();
+  return out;
+});
+const SURFACES=['reward','kept','next','enough','chest','toolPays','toolWant','debt','iv','circ','dayCard'];
+const moved=SURFACES.filter(k=>v11.clean[k] && v11.clean[k]!==v11.savage[k]);
+check('every remaining opinion surface now speaks in the app\'s voice',
+      moved.length===SURFACES.length, `${moved.length}/${SURFACES.length} moved; flat: ${SURFACES.filter(k=>!moved.includes(k)).join(',')||'none'}`);
+check('...the reward calendar moves on all four of its branches',
+      v11.clean.reward.split(' || ').every((x,i)=>x!==v11.savage.reward.split(' || ')[i]));
+check('...savage bites on the crush-vs-invest verdict',
+      /surest return you will ever be offered/.test(v11.savage.iv), v11.savage.iv.slice(-60));
+check('...and clean stays measured on the same verdict',
+      /more than the market is likely to pay\./.test(v11.clean.iv), v11.clean.iv.slice(-50));
+check('...a want is still called a want at every intensity',
+      /want/i.test(v11.clean.toolWant) && /want/i.test(v11.savage.toolWant));
+/* The floor beats the dial, everywhere. Do this next is exempt from the string
+   compare because survival deliberately CHANGES which steps appear - that is the
+   situation logic one layer above the voice, and it is the correct behaviour. */
+const floored=SURFACES.filter(k=>k!=='next').filter(k=>v11.survival[k]===v11.clean[k]);
+check('the survival floor beats the intensity dial on every one of them',
+      floored.length===SURFACES.length-1,
+      `flooring failed on: ${SURFACES.filter(k=>k!=='next'&&v11.survival[k]!==v11.clean[k]).join(',')||'none'}`);
+/* And the one that must never gain a voice. */
+const talkFlat = await p.evaluate(() => {
+  const src=document.documentElement.outerHTML.replace(/\/\*[\s\S]*?\*\//g,' ');
+  const i=src.indexOf('function renderTalk'); if(i<0) return null;
+  const seg=src.slice(i, src.indexOf('\nfunction ', i+2000));
+  return {voiced:/voice\(/.test(seg), gentle:/inconvenience, not a crisis/.test(seg)};
+});
+check('the talk-through stays clean by design - it is reached after something went wrong',
+      talkFlat && talkFlat.voiced===false && talkFlat.gentle===true, JSON.stringify(talkFlat));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
