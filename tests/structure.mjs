@@ -2311,6 +2311,95 @@ check('...and says how to correct it', /delete or correct it/.test(netTile.why))
 check('...while still separating logged money from bank money',
       /does not know your real bank balance/.test(netTile.why));
 
+/* ---- 41. money you have not been paid is not income ----
+   From a phone: "money should not be assumed either if it hasn't been accounted
+   for. Say I don't get paid til the 29th - it shouldn't be income not yet
+   received if it's only the 26th."
+
+   Correct, and the app already agreed with itself everywhere except one place.
+   postRecurring caps the current month at today on purpose ("spent has to be a
+   fact, not a forecast"), so a paycheck due on the 29th does not post on the
+   26th. But commitIntake wrote a paycheck dated the 1st whether or not the
+   person had been paid, and every figure built on it inherited that. ---- */
+const paid = await p.evaluate(() => {
+  const o={};
+  const run=(ans)=>{
+    state=JSON.parse(JSON.stringify(defaultState()));
+    state.onboarded=true; state.uiMode='all'; state.stageReached=3; save();
+    iaAns={name:'Pat',acct:'full',income:3200,hoursPerWeek:40,wage:20,paidYet:ans,
+           roof:1200,situation:'ok',register:'middle',tone:'blunt'};
+    iaCommitted=false; commitIntake();
+    const M=state.activeMonth;
+    return { inc:monthIncome(M),
+             dates:state.transactions.filter(t=>t.type==='income').map(t=>t.date),
+             repeats:state.recurring.filter(r=>r.type==='income').length };
+  };
+  o.landed=run('yes'); o.notYet=run('no'); o.part=run('part');
+  o.today=todayStr();
+  /* the rule the app already had, restated so it cannot be lost */
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; save();
+  const M=state.activeMonth, dim=daysInMonth(M);
+  const future=Math.min(dim, new Date().getDate()+3);
+  state.recurring.push({id:'r1',type:'income',amount:3200,day:future,
+    anchor:M+'-'+String(future).padStart(2,'0'),source:'Paycheck',src:'intake'});
+  save();
+  o.future={posted:postRecurring(M), income:monthIncome(M)};
+  const st=INTAKE.find(x=>x.id==='paidYet');
+  o.step={ exists:!!st, opts:st?st.options.map(x=>x.value).join(','):'',
+           withIncome:st?st.showIf({income:3200}):null, without:st?st.showIf({income:0}):null,
+           noReply:st?st.options.find(x=>x.value==='no').reply:'' };
+  return o;
+});
+check('the intake asks whether the money has actually landed',
+      paid.step.exists===true && paid.step.opts==='yes,no,part', paid.step.opts);
+check('...and only when there is income to ask about',
+      paid.step.withIncome===true && paid.step.without===false);
+check('"it landed" logs it as of today, not the 1st of the month',
+      paid.landed.inc===3200 && paid.landed.dates[0]===paid.today, paid.landed.dates.join(','));
+check('"not yet" logs no income at all', paid.notYet.inc===0 && paid.notYet.dates.length===0,
+      String(paid.notYet.inc));
+check('...and "some of it" refuses to guess the split too', paid.part.inc===0, String(paid.part.inc));
+check('...but the repeat is still recorded, because it does repeat',
+      paid.notYet.repeats===1 && paid.part.repeats===1, `${paid.notYet.repeats}/${paid.part.repeats}`);
+check('...and it says the payday was a guess, and where to correct it',
+      /guess the 1st as your payday/.test(paid.step.noReply) && /Recurring/.test(paid.step.noReply));
+check('a paycheck due later this month does not post today',
+      paid.future.posted===0 && paid.future.income===0, JSON.stringify(paid.future));
+
+/* ---- and the totals open, because a total with nothing behind it is faith ---- */
+const glance = await p.evaluate(() => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22; save();
+  const M=state.activeMonth, c=findOrCreateCat('Coffee / drinks out');
+  for(let i=1;i<=7;i++) state.transactions.push({id:'e'+i,type:'expense',amount:i,catId:c.id,date:M+'-'+String(i+1).padStart(2,'0'),note:'Buy '+i});
+  state.transactions.push({id:'i1',type:'income',amount:3200,source:'Paycheck',date:M+'-05'});
+  save(); glanceFold=null; renderGlance();
+  const o={};
+  const box=()=>document.getElementById('glanceBody');
+  o.foldable=[...box().querySelectorAll('[data-glfold]')].map(x=>x.dataset.glfold);
+  o.closed=box().querySelectorAll('.gl-sub').length;
+  box().querySelector('[data-glfold="expense"]').click();
+  o.rows=[...box().querySelectorAll('.gl-sub-r')].map(r=>r.querySelector('.n').textContent);
+  o.more=(box().querySelector('.gl-sub-more')||{}).textContent||'';
+  o.newestFirst=o.rows[0];
+  /* one side at a time, so the panel cannot outgrow the screen */
+  box().querySelector('[data-glfold="income"]').click();
+  o.onlyOne=box().querySelectorAll('.gl-sub').length;
+  o.incomeRow=(box().querySelector('.gl-sub-r .n')||{}).textContent||'';
+  box().querySelector('[data-glfold="income"]').click();
+  o.closesAgain=box().querySelectorAll('.gl-sub').length;
+  return o;
+});
+check('each side of the glance opens', glance.foldable.join(',')==='income,expense', glance.foldable.join(','));
+check('...closed by default', glance.closed===0, String(glance.closed));
+check('...showing the last five, newest first',
+      glance.rows.length===5 && glance.newestFirst==='Buy 7', glance.rows.join(','));
+check('...and saying how many it did not show', /\+ 2 more this month/.test(glance.more), glance.more);
+check('...one side at a time, so it cannot outgrow the phone',
+      glance.onlyOne===1 && glance.incomeRow==='Paycheck', String(glance.onlyOne));
+check('...and it closes again', glance.closesAgain===0, String(glance.closesAgain));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

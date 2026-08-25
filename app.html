@@ -575,6 +575,18 @@
   /* The payback card. Green-edged, because the verdict is genuinely different -
      but it still renders the "no cost replaced" version without the green, so
      the colour is never doing the arguing. */
+  /* The glance rows open. They are buttons now, so they have to shed the button
+     look entirely and keep the row layout they had as divs. */
+  .gl-row.fold{width:100%;background:transparent;border:0;padding:0;margin:0;font:inherit;
+    color:inherit;cursor:pointer;text-align:left;display:flex;align-items:baseline;justify-content:space-between}
+  .gl-caret{margin-left:5px;font-size:10px;opacity:.55}
+  .gl-sub{margin:2px 0 8px;padding:7px 9px;border-radius:9px;background:rgba(var(--accent-rgb),.06);
+    border:1px solid var(--line)}
+  .gl-sub-r{display:flex;align-items:baseline;gap:8px;font-size:12.5px;line-height:1.7}
+  .gl-sub-r .d{color:var(--muted);font-variant-numeric:tabular-nums;flex:none;font-size:11px}
+  .gl-sub-r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gl-sub-r .a{flex:none;font-weight:800;font-variant-numeric:tabular-nums}
+  .gl-sub-more,.gl-sub-empty{font-size:11.5px;color:var(--muted);margin-top:4px}
   .imp-tool{margin-top:12px;padding:13px;border-radius:12px;border:1px solid var(--line);
     background:rgba(var(--accent-rgb),.05)}
   .imp-tool.hide{display:none}
@@ -7975,6 +7987,7 @@ function glanceSetOpen(v){
   const t=document.getElementById('glanceTab'); if(t) t.setAttribute('aria-expanded',glanceOpen?'true':'false');
   if(glanceOpen) renderGlance();
 }
+let glanceFold=null;   // which side is expanded, if any
 function renderGlance(){
   const g=document.getElementById('glance'); if(!g) return;
   const show=glanceReady();
@@ -7989,15 +8002,41 @@ function renderGlance(){
   const lim=+state.spendLimit||0;
   const [y,mo]=M.split('-').map(Number), dim=new Date(y,mo,0).getDate();
   const allow=lim>0?lim/dim:0;
+  /* A total with nothing behind it is a number you have to take on faith. Each
+     side opens to the last five that made it, newest first, so "money in
+     $13,700" can be checked in one tap instead of a trip to another tab. */
+  const lastFive=(f)=>txnsInMonth(M).filter(f).slice()
+    .sort((a,b)=>(a.date<b.date?1:a.date>b.date?-1:0)).slice(0,5);
+  const rowsFor=(list,kind)=>{
+    if(!list.length) return `<div class="gl-sub-empty">Nothing logged yet this month.</div>`;
+    const total=txnsInMonth(M).filter(t=>t.type===kind).length;
+    return list.map(t=>{
+      const nm=(kind==='expense') ? (t.note||catName(t.catId)||'Purchase') : (t.source||t.note||(kind==='invest'?'Put away':'Income'));
+      const sign=kind==='income'?'+':kind==='invest'?'\u2192':'\u2212';
+      return `<div class="gl-sub-r"><span class="d">${escapeHtml((t.date||'').slice(5))}</span><span class="n">${escapeHtml(nm)}</span><span class="a">${sign}${escapeHtml(money(t.amount))}</span></div>`;
+    }).join('') + (total>5?`<div class="gl-sub-more">+ ${total-5} more this month</div>`:'');
+  };
+  const foldRow=(kind,label,val,cls)=>{
+    const list=lastFive(t=>t.type===kind);
+    const open=glanceFold===kind;
+    return `<button class="gl-row ${cls} fold${open?' open':''}" data-glfold="${kind}" aria-expanded="${open?'true':'false'}">
+        <span>${label}<span class="gl-caret">${open?'\u25be':'\u25b8'}</span></span><b>${escapeHtml(money(val))}</b></button>
+      ${open?`<div class="gl-sub">${rowsFor(list,kind)}</div>`:''}`;
+  };
   body.innerHTML=`
     <div class="gl-h">${escapeHtml(fmtMonth(M))}</div>
-    <div class="gl-row in"><span>Money in</span><b>${escapeHtml(money(inc))}</b></div>
-    <div class="gl-row out"><span>Money out</span><b>${escapeHtml(money(out))}</b></div>
-    ${inv>0?`<div class="gl-row inv"><span>Invested</span><b>${escapeHtml(money(inv))}</b></div>`:''}
+    ${foldRow('income','Money in',inc,'in')}
+    ${foldRow('expense','Money out',out,'out')}
+    ${inv>0?foldRow('invest','Invested',inv,'inv'):''}
     <div class="gl-row bal ${bal<0?'neg':'pos'}"><span>${bal<0?'Short by':'Left over'}</span><b>${escapeHtml(money(Math.abs(bal)))}</b></div>
     ${inv>0?`<div class="gl-note">Invested money is not spending, so it sits on its own line.</div>`:''}
     ${state.spendingMode&&allow>0?`<div class="gl-today ${todaySpend<=allow?'ok':'over'}">Today: ${escapeHtml(money(todaySpend))} of ${escapeHtml(money(allow))}</div>`:''}
     <button class="gl-go" id="glanceGo">Open Track →</button>`;
+  body.querySelectorAll('[data-glfold]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();                       // the panel closes on any outside click - this is inside
+    glanceFold = (glanceFold===b.dataset.glfold) ? null : b.dataset.glfold;
+    renderGlance();
+  });
   const go=document.getElementById('glanceGo');
   if(go) go.onclick=()=>{ glanceSetOpen(false); activateTab('tx'); };
 }
@@ -10071,7 +10110,7 @@ const INTAKE=[
     const light=surv
       ? `Given where you're at, I'd start light: keep your own spending honest against a daily allowance, small wins you can feel, no full-budget homework.`
       : `**Just track my spending** - keep your spending honest against a daily allowance, and see every dollar that leaves.`;
-    const cost=`That's about **6 minutes** and 16 questions. The whole budget is about **10 minutes** and 23 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
+    const cost=`That's about **6 minutes** and 17 questions. The whole budget is about **10 minutes** and 24 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
     switch(iaTone(a)){
       case 'savage':
         return `Two ways in${nm}. Real numbers, no pitch. ${light} ${cost} Neither one is padded. And if six minutes is too much to spend on the thing that decides where your life actually goes, stop here - you won't do the hard part either, and I'd rather you keep the six minutes. Still in? Pick one.`;
@@ -10189,6 +10228,24 @@ const INTAKE=[
     namePlaceholder:'Name the source (e.g. Rental, Freelance, Child support)',
     amountPrompt:n=>`Roughly how much from ${n.toLowerCase()==='partner'?'your partner':n.toLowerCase()} a month, take-home?`,
     done:"Done - that's all my income →"},
+  /* The app already refuses to forecast money: postRecurring caps the current
+     month at today, so a paycheck due on the 29th does not post on the 26th -
+     "spent has to be a fact, not a forecast". The one place it broke its own
+     rule was here. commitIntake wrote a paycheck dated the 1st whether or not
+     the person had actually been paid, so someone who sets up on the 26th and
+     gets paid on the 29th was shown a month's income they do not have, and
+     every figure built on it - left to budget, net, the glance panel - inherited
+     the lie. It is the only question that can settle it, so it gets asked. */
+  {id:'paidYet', input:'reflect', key:'paidYet', showIf:a=>intakeIncomeTotal(a)>0,
+    bot:a=>`One thing I won't guess at${a.name?', '+a.name:''}: has that money actually landed this month, or is it still coming? I'd rather show you nothing than show you money you haven't been paid.`,
+    options:[
+      {label:'Yes, it has landed', value:'yes',
+       reply:"Good - I'll log it as of today so the month starts from something real."},
+      {label:"Not yet this month", value:'no',
+       reply:"Then it isn't income yet, and I won't count it. Your budget will read as unfunded until it lands - that's not a fault, it's the truth showing. I've set it to repeat, but I've had to guess the 1st as your payday. Set the real day on Plan under Recurring and it will post itself, on time, every month."},
+      {label:'Some of it has', value:'part',
+       reply:"I'll leave it out rather than guess at the split - log what actually landed on Track and the numbers will be yours instead of mine. I've set the pay to repeat on the 1st as a placeholder; the real day goes on Plan under Recurring."}
+    ]},
   {id:'householdOffer', input:'reflect', key:'wantHousehold', optional:true,
     showIf:a=>a.acct!=='spend' && (a.extraIncome||[]).some(x=>/partner/i.test(x.name)),
     bot:"You've got a partner bringing money in too. Want the full couples view? It tags who earns what, prices purchases in your partner's life-hours as well, and splits the essentials income-fairly (not just 50/50).",
@@ -11318,7 +11375,20 @@ function commitIntake(){
   state.transactions=state.transactions.filter(t=>!(t.note==='Intake' && monthOf(t.date)===M));
   state.goals=state.goals.filter(g=>!(g.src==='intake' && !(g.saved>0)));   // keep any intake goal with real progress
   state.liabilities=state.liabilities.filter(l=>l.src!=='intake');
-  const addIncome=(amount,source,owner,hours)=>{ const rec={id:uid(),type:'income',amount,day:1,source,src:'intake'}; if(owner) rec.owner=owner; if(hours>0) rec.hours=hours; state.recurring.push(rec); const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:`${M}-01`,note:'Intake',recId:rec.id}; if(hours>0) tx.hours=hours; state.transactions.push(tx); };
+  const addIncome=(amount,source,owner,hours)=>{
+    const rec={id:uid(),type:'income',amount,day:1,source,src:'intake'};
+    if(owner) rec.owner=owner; if(hours>0) rec.hours=hours;
+    state.recurring.push(rec);
+    if(!landed) return;                      // it repeats, but it has not happened - see paidYet
+    const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:todayStr(),note:'Intake',recId:rec.id};
+    if(hours>0) tx.hours=hours;
+    state.transactions.push(tx);
+  };
+  /* "Landed" decides whether a TRANSACTION is written at all. The recurring rule
+     is written either way - it is a statement about what repeats, not a claim
+     that it has happened - so the money posts by itself the day it is due.
+     Dated today rather than the 1st, because today is a date we actually know. */
+  const landed = a.paidYet==='yes';
   // main-job hours: the hours they TOLD us beat any figure derived from a rounded rate
   if(a.income>0) addIncome(a.income,'Paycheck','a', a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0));   // spend path too - otherwise any recurring edit later zeroes an auto wage
   // A partner's hours are kept, not dropped: recomputeBlendedWage only ever reads
