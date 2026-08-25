@@ -238,6 +238,21 @@ It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.
 
+It holds **the trail** - the rule that a panel must never name a destination it
+cannot take you to. Every entry in `TRAIL` has to resolve to a field that exists
+in the dom (a breadcrumb that navigates and then does nothing is worse than no
+button), the walk has to end **in the field** rather than on the tab, and it must
+refuse to walk into an area switched off in Settings. Then the specific dead ends
+- the report's locked list, a plan with no income behind it, telling the app you
+owe money, a funded goal, the circulation panel, Freedom Mode without a rate -
+each has to carry its own door, and the offer to plan a debt has to **stop** once
+the planner has it, so it is an offer rather than a nag. Finally the phrasings
+that were the fault (*"Set a dream on the Goals tab"*, *"Add a category first
+(Budget tab)"*) are banned strings, so writing one again fails the build. That
+check strips block and HTML comments first - the paragraph explaining why those
+phrasings were wrong contains every one of them, and a checker that trips over
+its own documentation teaches people to delete the documentation.
+
 And three properties that came from one phone note about getting paid. **The
 cadence helper**: every real pay frequency is offered, weekly converts on 52
 weeks rather than four per month, biweekly on 26 paydays rather than 24, and both

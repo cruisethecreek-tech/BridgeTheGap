@@ -1096,7 +1096,7 @@ const outside = await p.evaluate(async () => {
     frame:!!document.querySelector('.rp-frame'),
     afterPersonal:firstOutsideIdx>lastPersonalIdx && lastPersonalIdx>=0,
     staleOutside:stale.signals.filter(g=>g.outside).length,
-    staleSaysSo:stale.locked.some(l=>/too old to show as current/.test(l))
+    staleSaysSo:stale.locked.some(l=>/too old to show as current/.test(l.t))
   };
 });
 check('the outside numbers appear, tied to this household', outside.n===4, String(outside.n));
@@ -1743,6 +1743,114 @@ check('today never gets two buttons for the same thing',
 check('no limit set is still a screen you can log from', callog.noLimit===1, String(callog.noLimit));
 check('a month that is not this one never offers to log "today" into it',
       callog.pastMonth===0, String(callog.pastMonth));
+
+/* ---- 35. the trail, and the dead ends it exists to stop ----
+   "Just because each section has a dedicated section there should be a
+   gingerbread trail leading to each - you shouldn't have to search for a
+   section, it should just naturally be there when an opportunity is provided."
+   The app kept growing sentences that named a next move and gave you no way to
+   make it: "Set a dream on the Goals tab", "Log your paycheck on Track and this
+   flips", "Add a category first (Budget tab)" - the last one an alert that
+   stopped you mid-log, named a tab, and left you where you were. The root cause
+   was four private copies of "take me there" and no shared one, so writing a
+   plain sentence was always the cheaper option. ---- */
+const trail = await p.evaluate(async () => {
+  const r={};
+  /* every destination has to resolve to something that exists in the dom, or a
+     breadcrumb navigates and then does nothing, which is worse than no button */
+  r.broken=Object.entries(TRAIL).filter(([k,t])=>t.focus && !document.getElementById(t.focus)).map(([k])=>k);
+  r.count=Object.keys(TRAIL).length;
+  /* it must walk the WHOLE way - tab, then the field, not just the tab */
+  activateTab('home'); goTrail('debt');
+  await new Promise(x=>setTimeout(x,300));
+  r.walk={tab:(document.querySelector('.view.on')||{}).id, focus:(document.activeElement||{}).id};
+  /* and it must never walk into an area someone switched off - that hands back
+     the exact feature they said they did not want */
+  setAreaOff('debt',true); activateTab('home'); goTrail('debt');
+  await new Promise(x=>setTimeout(x,220));
+  r.blocked=(document.querySelector('.view.on')||{}).id;
+  setAreaOff('debt',false);
+  return r;
+});
+check('every trail leads to a field that exists', trail.broken.length===0, trail.broken.join(','));
+check('...and it walks the whole way, not just to the tab',
+      trail.walk.tab==='view-debt' && trail.walk.focus==='debtName', `${trail.walk.tab} / ${trail.walk.focus}`);
+check('...but never into an area that was switched off', trail.blocked==='view-home', trail.blocked);
+
+/* the specific dead ends, each one a place that named a move and offered none */
+const ends = await p.evaluate(async () => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.trueRateSkipped=true;
+  save(); renderAll();
+  const r={};
+  const pick=sel=>[...document.querySelectorAll(sel+' [data-trail]')].map(b=>b.dataset.trail);
+  /* the report names exactly what is missing; that list used to be complaints */
+  state.transactions.push({id:'x1',type:'expense',amount:40,catId:null,date:todayStr(),note:'Coffee'});
+  save(); rfTab='report'; renderReflectTab();
+  r.report=pick('#rpBody');
+  r.reportEmptyHasDoors=/Nothing worth saying yet/.test(document.getElementById('rpBody').innerText)
+    && pick('#rpBody').includes('income');
+  /* a plan with no income behind it */
+  const M=state.activeMonth, c=findOrCreateCat('Rent');
+  budgetFor(M)[c.id]=1200; save(); renderHome();
+  r.ltb=pick('#lifeKeyHome');
+  /* you told the app you owe money; it owns a planner and never said so */
+  state.liabilities.push({id:'l1',name:'Car loan',value:12000}); save(); renderNetWorth();
+  r.owed=pick('#liabList');
+  state.debts.push({id:'d1',name:'Car loan',balance:12000,apr:6,minPayment:250}); save(); renderNetWorth();
+  r.owedOncePlanned=pick('#liabList').length;    // an offer, not a nag
+  /* "Now set a bigger one" with nothing to press */
+  state.goals.push({id:'g1',name:'Cushion',target:1000,saved:1000,date:''}); save(); renderGoals();
+  r.fundedGoal=pick('#goals');
+  /* the circulation panel told you which tab to go to */
+  renderCirculation();
+  r.circ=pick('#circChart');
+  /* Freedom Mode with no rate used to alert and drop you at the top of Settings */
+  state.hourlyWage=0; state.transactions=state.transactions.filter(t=>t.type!=='income'); save();
+  activateTab('home');
+  document.querySelector('#freedomToggle button[data-mode="life"]').click();
+  await new Promise(x=>setTimeout(x,300));
+  r.freedom={tab:(document.querySelector('.view.on')||{}).id, focus:(document.activeElement||{}).id, mode:!!state.freedomMode};
+  return r;
+});
+check('the report offers a way to unlock what it says is missing',
+      ends.report.includes('income') && ends.report.includes('wage') && ends.report.includes('hours'),
+      ends.report.join(','));
+check('...and its empty state is not the one screen in Reflect with no door',
+      ends.reportEmptyHasDoors===true);
+check('a plan with no income behind it offers to log the paycheck',
+      ends.ltb.includes('income'), ends.ltb.join(','));
+check('telling the app you owe money offers the payoff planner',
+      ends.owed.includes('debt'), ends.owed.join(','));
+check('...and it stops offering once the planner has them', ends.owedOncePlanned===0, String(ends.owedOncePlanned));
+check('a funded goal can name the next one from where it says to',
+      ends.fundedGoal.includes('dream'), ends.fundedGoal.join(','));
+check('the circulation panel offers the tagging it depends on',
+      ends.circ.includes('logspend'), ends.circ.join(','));
+check('Freedom Mode without a rate walks you to the rate instead of alerting',
+      ends.freedom.tab==='view-settings' && ends.freedom.focus==='wage' && ends.freedom.mode===false,
+      `${ends.freedom.tab} / ${ends.freedom.focus}`);
+
+/* And the rule that keeps it from rotting: copy must not name a destination the
+   panel it sits in cannot reach. These are the exact phrasings that were the
+   fault, so a new one reintroduces the bug the moment it is written. */
+const phrasing = await p.evaluate(() => {
+  /* Strip the comments first. The paragraph explaining WHY these phrasings were
+     wrong contains every one of them, and a checker that trips over its own
+     documentation teaches people to delete the documentation. Line comments are
+     left alone deliberately - stripping to end-of-line would eat any URL after
+     the "//". */
+  const src=document.documentElement.outerHTML
+    .replace(/<!--[\s\S]*?-->/g,' ')
+    .replace(/\/\*[\s\S]*?\*\//g,' ');
+  const banned=[/Set a dream on the Goals tab/, /Log your paycheck on Track/,
+                /Add a category first \(Budget tab\)/, /Add a category first on the Budget tab/,
+                /log something on Track/, /as you log them on the Track tab/,
+                /Set a monthly spending limit in Settings/,
+                /Set your hourly wage first \(in Settings\)/];
+  return banned.filter(re=>re.test(src)).map(String);
+});
+check('no panel points at a tab it cannot take you to', phrasing.length===0, phrasing.join(' | '));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
