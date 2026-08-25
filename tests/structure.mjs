@@ -2572,6 +2572,65 @@ check('the calendar moves months on its own, without leaving Home',
       preCal.next===preCal.wantNext && preCal.back===preCal.before,
       `${preCal.before} -> ${preCal.next} -> ${preCal.back}`);
 
+/* ---- 44. the report had no voice ----
+   "These words have lost its savage." Fourteen signals in the Accountability
+   Report - the verdict layer, the part that tells you what your month means -
+   and not one of them called a voice picker. Everyone got the same flat prose
+   whether they had asked for clean, blunt or savage. The whole differentiator of
+   this app is that it talks like something with an opinion, and its flagship
+   surface did not.
+
+   The arithmetic stays untouched: body and work are facts and facts have no
+   tone. What gained a voice is the CLOSER, which was always an opinion. ---- */
+const rpVoice = await p.evaluate(() => {
+  const seed=()=>{
+    state=JSON.parse(JSON.stringify(defaultState()));
+    state.onboarded=true; state.uiMode='all'; state.stageReached=3;
+    state.hourlyWage=22; state.hoursPerWeek=40; state.trueRateSkipped=true;
+    state.intake={name:'Pat',income:3200,reflections:{situation:'ok'}};
+    const M=state.activeMonth, P=shiftMonth(M,-1);
+    const c=findOrCreateCat('Takeout'), g=findOrCreateCat('Groceries');
+    budgetFor(M)[g.id]=745;
+    state.transactions.push({id:'i1',type:'income',amount:3200,source:'Pay',date:M+'-02'});
+    state.transactions.push({id:'i0',type:'income',amount:3200,source:'Pay',date:P+'-02'});
+    state.transactions.push({id:'e1',type:'expense',amount:310,catId:c.id,date:M+'-10',note:'DoorDash'});
+    state.transactions.push({id:'e0',type:'expense',amount:220,catId:c.id,date:P+'-10',note:'DoorDash'});
+    state.debts.push({id:'d',name:'Car loan',balance:9000,apr:10,minPayment:200});
+    state.accounts.push({id:'a',name:'Checking',kind:'checking',balance:5000});
+    save();
+  };
+  const nudges=()=>{ const o={}; buildReport().signals.forEach(g=>{ o[g.k]=String(g.nudge||'').replace(/<[^>]*>/g,'').trim(); }); return o; };
+  const out={};
+  for(const lvl of ['clean','blunt','savage']){ seed(); state.intensity=lvl; state.register='middle'; save(); out[lvl]=nudges(); }
+  /* the tone lock is not optional: someone in survival gets clean whatever they
+     picked, and the report must obey the same floor as everything else */
+  seed(); state.intensity='savage'; state.intake.reflections.situation='survive'; save();
+  out.survival=nudges();
+  /* the arithmetic must NOT move when the voice does */
+  seed(); state.intensity='clean'; save(); const wc=buildReport().signals.map(g=>g.work||'');
+  seed(); state.intensity='savage'; save(); const ws=buildReport().signals.map(g=>g.work||'');
+  out.workSame=wc.join('|')===ws.join('|');
+  out.keys=Object.keys(out.clean);
+  return out;
+});
+const varies=k=>rpVoice.clean[k]!==rpVoice.savage[k] && rpVoice.blunt[k]!==rpVoice.savage[k];
+const voiced=rpVoice.keys.filter(varies);
+check('the report speaks in the voice the app is set to',
+      voiced.length>=8, `${voiced.length} of ${rpVoice.keys.length} signals vary: ${voiced.join(',')}`);
+check('...every signal on screen has a closer that moves',
+      rpVoice.keys.every(k=>varies(k)||!rpVoice.clean[k]),
+      rpVoice.keys.filter(k=>!varies(k)&&rpVoice.clean[k]).join(',')||'(all)');
+check('...savage actually bites where it is allowed to',
+      /pay cut wearing a raise's clothes/.test(rpVoice.savage.oCpi||'')
+        && /you already took a cut/.test(rpVoice.savage.oFood||''),
+      (rpVoice.savage.oFood||'').slice(0,70));
+check('...and clean stays measured on the same card',
+      !/took a cut/.test(rpVoice.clean.oFood||''), (rpVoice.clean.oFood||'').slice(0,60));
+check('the survival floor holds, whatever intensity was picked',
+      rpVoice.keys.every(k=>rpVoice.survival[k]===rpVoice.clean[k]),
+      rpVoice.keys.filter(k=>rpVoice.survival[k]!==rpVoice.clean[k]).join(',')||'(all clean)');
+check('the arithmetic does not move when the voice does', rpVoice.workSame===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

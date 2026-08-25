@@ -9620,6 +9620,127 @@ function rpAgo(days){ return shiftDays(todayStr(),-days); }
 /* "$90, which is 3.7 hrs of your life" - the app's own unit, only when it knows the rate */
 function rpLife(amount){ const H=effectiveHourly(); return H>0 ? ` - ${fmtHours(amount/H)} of your life` : ''; }
 
+/* ============================================================
+   THE REPORT'S VOICE
+
+   Fourteen signals, and not one of them knew what voice the app was set to. The
+   whole differentiator is that this thing talks like a person with an opinion,
+   and its flagship surface - the verdict layer, the part that actually tells you
+   what your month means - was written in the same flat register whether you had
+   asked for Loose, Plain or Measured, clean or blunt or savage.
+
+   The arithmetic stays untouched. `body` and `work` are facts and facts have no
+   tone; what gains a voice is the CLOSER - the line that says what the number
+   means to you, which is the only part that was ever an opinion.
+
+   Two things the picker has to get right, and they pull in opposite directions:
+
+   - The tone lock. Roasting someone over a hospital bill is how you lose them.
+     Signals that judge THEIR spending pass a context and get floored to clean on
+     anything sensitive.
+   - But an outside number is not a judgement of them. Nobody is being roasted
+     for the price of bread. Those pass ctx:null deliberately, so the app can
+     still have teeth about the world without ever turning them on the person.
+
+   Deterministic, not random: a report that reworded itself every time you
+   navigated back to it would feel unstable, and this is a page people re-read.
+   ============================================================ */
+function rpSay(bank, ctx){
+  if(!bank) return '';
+  const r=bank[state.register]||bank.middle;
+  const lvl=(ctx===null||ctx===undefined) ? baseInt() : effInt(ctx);
+  const a=r[lvl]||r.blunt||r.clean;
+  return Array.isArray(a)?a[0]:a;
+}
+/* Closers, per signal. Where a register genuinely does not change the words, the
+   entry is `middle` only and pickVoice's own fallback handles the rest - a thin
+   table beats three copies of one sentence pretending to be different. */
+const RP_TONE={
+  paceOver:{
+    genz:{clean:'There is still time in the month to change that number.',
+          blunt:'The month is not over. That number is still yours to move.',
+          savage:'That is the pace you set. Nobody else picked it, and nobody else gets to fix it.'},
+    middle:{clean:'There is still time in the month to change that number.',
+            blunt:'The month is not over, and that number is still yours to move.',
+            savage:'That is the pace you chose. It only becomes a fact if you let the rest of the month agree with it.'},
+    mature:{clean:'There is time yet in the month to alter that figure.',
+            blunt:'The month is not finished. That number is still within your control.',
+            savage:'That is the pace you have set. It becomes a fact only if the rest of the month confirms it.'}},
+  paceUnder:{
+    middle:{clean:'Under the plan, with the month still running.',
+            blunt:'Under plan and still going. Do not spend the good news.',
+            savage:'Under plan. The only way to waste that is to treat it as permission.'}},
+  keptBad:{
+    middle:{clean:'More went out than came in. It is a number, and numbers can be changed.',
+            blunt:'More went out than came in. That gap gets funded by something - savings, a card, or next month.',
+            savage:'More went out than came in. That does not vanish; it just moves somewhere you have not looked yet.'}},
+  keptGood:{
+    genz:{clean:'That is money that stayed yours.', blunt:'That stayed yours. Give it a job before it wanders.',
+          savage:'It stayed yours this month. Unassigned money does not stay anywhere for long.'},
+    middle:{clean:'That is money that stayed yours.',
+            blunt:'That stayed yours. Money with no job tends to find one.',
+            savage:'That stayed yours - for now. Money nobody assigned has a habit of assigning itself.'},
+    mature:{clean:'That is money you retained.', blunt:'That stayed yours. Give it a purpose before something else does.',
+            savage:'That stayed yours this month. Unassigned money rarely stays that way.'}},
+  driftUp:{
+    middle:{clean:'Worth knowing, if it was not deliberate.',
+            blunt:'If that was a decision, fine. If it was drift, this is the month you noticed.',
+            savage:'Nobody decides to spend 40% more on anything. That is what drift is - it happens while you are not counting.'}},
+  driftDown:{
+    middle:{clean:'That is a real change.', blunt:'That is a real change, and you made it.',
+            savage:'That did not happen to you. You did that.'}},
+  started:{
+    middle:{clean:'New this month, so worth a look while it is still new.',
+            blunt:'That is a habit forming, not a one-off. Habits are cheapest to change early.',
+            savage:'That is a habit being born. It will not be this cheap to kill again.'}},
+  stopped:{
+    middle:{clean:'That is money and time you kept.', blunt:'You stopped, and it shows up as a number. That is the proof.',
+            savage:'You stopped, and here is the receipt. Nobody can argue with a number you earned.'}},
+  essentials:{
+    middle:{clean:'That is what the basics take before anything else is decided.',
+            blunt:'That is the share gone before you get a say in any of it.',
+            savage:'That is the share of your money that was spoken for before you woke up.'}},
+  investing:{
+    middle:{clean:'Consistency matters more than the amount.',
+            blunt:'The amount matters less than whether it happens every month.',
+            savage:'Investing once is a story. Investing every month is a plan.'}},
+  hours:{
+    middle:{clean:'That is the month, priced in your own time.',
+            blunt:'That is what the month cost you in hours you cannot get back.',
+            savage:'That is the month billed in your life, not your money. You already paid it.'}},
+  /* Outside numbers: ctx is null on purpose - the app is allowed teeth about the
+     world, never about the person reading it. */
+  oCpi:{
+    middle:{clean:'Same hour, slightly less of it.',
+            blunt:'Same hour, less to show for it. A raise under that number is not a raise.',
+            savage:"Same hour, less of it. A raise below that is a pay cut wearing a raise's clothes - arithmetic, not advice."}},
+  oFood:{
+    middle:{clean:'If that line has not grown to match, the same money is buying slightly less food.',
+            blunt:'If your food line did not grow with it, you are buying less food for the same money - before that reads as overspending.',
+            savage:'If your food line stayed flat, you already took a cut. The shelf moved; your budget did not, and the app will call it overspending unless you say otherwise.'}},
+  oSavings:{
+    middle:{clean:'That is the difference between two accounts, for the same money.',
+            blunt:'Same money, two accounts, that much a year between them. No product named, no bank endorsed.',
+            savage:'That is the price of leaving it where it is. Same cash, same you, different account - the gap is just what nobody told you.'}},
+  oCardAbove:{
+    middle:{clean:'Paying it down returns that rate, guaranteed.',
+            blunt:'Paying that down is a guaranteed return at that rate. Very little else is guaranteed.',
+            savage:'That rate is the surest return in your whole financial life, and it is pointed at somebody else.'}},
+  oCardBelow:{
+    middle:{clean:'Below the going rate.', blunt:'Below the going rate - the planner already ordered it that way.',
+            savage:'Cheaper than the going rate, which makes it the least urgent thing you owe. The order on Debt already knows.'}},
+  yearMeasured:{
+    middle:{clean:'That is the twelve-month total, from what actually landed.',
+            blunt:'That is what passes through your hands in a year. Most people never work it out.',
+            savage:'That is what runs through your hands in a year. Where it ends up is the only question that has ever mattered.'}},
+  yearStated:{
+    middle:{clean:'From what you told setup, not from what has landed yet.',
+            blunt:'That is your own figure times twelve, not a measurement. Two full months and it becomes real.',
+            savage:'That is your number times twelve - a claim, not a measurement. Log two months and it stops being a claim.'}},
+  timeWeek:{
+    middle:{clean:'Hours are the other budget.', blunt:'Hours are the other budget, and it does not roll over.',
+            savage:'Hours are the one budget with no overdraft. Spent is spent.'}}
+};
 const REPORT_SIGNALS=[
   /* ---- are you on track to blow this month, while you can still act on it ---- */
   { k:'pace', run(){
@@ -9636,8 +9757,8 @@ const REPORT_SIGNALS=[
       return { t: over?'You are on pace to go over':'You are on pace to come in under',
         body:`${day} day${day>1?'s':''} into ${fmtMonth(M)} you have spent <b>${money(spent)}</b>. Carry on at that rate and you land at about <b>${money(proj)}</b> against a plan of <b>${money(planned)}</b>.`,
         work:`${money(spent)} ÷ ${day} days × ${dim} days = ${money(proj)}`,
-        nudge: over ? `That is <b>${money(proj-planned)}</b> past the plan${rpLife(proj-planned)}. There are ${dim-day} days left to change the number.`
-                    : `That is <b>${money(planned-proj)}</b> under${rpLife(planned-proj)}.`,
+        nudge: over ? `That is <b>${money(proj-planned)}</b> past the plan${rpLife(proj-planned)}, with ${dim-day} days still to run. ${rpSay(RP_TONE.paceOver,null)}`
+                    : `That is <b>${money(planned-proj)}</b> under${rpLife(planned-proj)}. ${rpSay(RP_TONE.paceUnder,null)}`,
         bad:over };
     }},
 
@@ -9663,7 +9784,7 @@ const REPORT_SIGNALS=[
           ? `<b>${money(inc)}</b> came in and <b>${money(exp)}</b> went out. That is <b>${money(-kept)}</b> more than you had${rpLife(-kept)}.`
           : `<b>${money(inc)}</b> came in, <b>${money(exp)}</b> went out, so <b>${money(kept)}</b> stayed yours.${invested>0?` <b>${money(invested)}</b> of it went into investments.`:''}`,
         work:`(${money(inc)} − ${money(exp)}) ÷ ${money(inc)} = ${rate}%`,
-        nudge: trend, bad: kept<0 };
+        nudge: (trend?trend+' ':'')+rpSay(kept<0?RP_TONE.keptBad:RP_TONE.keptGood,null), bad: kept<0 };
     }},
 
   /* ---- the year, which nobody ever works out for themselves ----
@@ -9708,6 +9829,7 @@ const REPORT_SIGNALS=[
       } else {
         bits.push('Measured off what you said, not what landed. Two full months of logged income and this switches to the real thing.');
       }
+      bits.push(rpSay(measured?RP_TONE.yearMeasured:RP_TONE.yearStated,null));
       return { t:`On this pace you handle ${money(year)} this year`, body, work, nudge:bits.join(' ') };
     }},
 
@@ -9727,8 +9849,8 @@ const REPORT_SIGNALS=[
       return { t:`${escapeHtml(best.n)} is ${up?'up':'down'} ${pct}%`,
         body:`<b>${money(best.a)}</b> in ${fmtMonth(M)}, against <b>${money(best.b)}</b> in ${fmtMonth(P)}. That is <b>${money(Math.abs(best.d))}</b> ${up?'more':'less'}${rpLife(Math.abs(best.d))}.`,
         work:`${money(best.a)} − ${money(best.b)} = ${up?'+':'−'}${money(Math.abs(best.d))}`,
-        nudge: up ? `One category moving ${money(Math.abs(best.d))} in a month is the kind of thing that is invisible until someone puts the two numbers next to each other.`
-                  : `Whatever you did there, it held for a whole month.`,
+        nudge: up ? `One category moving ${money(Math.abs(best.d))} in a month stays invisible until someone puts the two numbers side by side. ${rpSay(RP_TONE.driftUp,best.n)}`
+                  : `Whatever you did there, it held for a whole month. ${rpSay(RP_TONE.driftDown,best.n)}`,
         bad: up };
     }},
 
@@ -9744,7 +9866,7 @@ const REPORT_SIGNALS=[
       return { t:`"${escapeHtml(best.label)}" is new`,
         body:`It shows up <b>${best.n} times</b> in the last 30 days, and not once in the 30 before that. <b>${money(best.total)}</b> so far${rpLife(best.total)}.`,
         work:`${money(best.total)} ÷ ${best.n} entries ≈ ${money(best.total/best.n)} each`,
-        nudge:`At this rate that is about <b>${money(best.total*12)}</b> a year${rpLife(best.total*12)}. New habits are cheapest to look at while they are still new.`,
+        nudge:`At this rate that is about <b>${money(best.total*12)}</b> a year${rpLife(best.total*12)}. ${rpSay(RP_TONE.started,best.name)}`,
         bad:true };
     }},
 
@@ -9762,7 +9884,7 @@ const REPORT_SIGNALS=[
       return { t:`"${escapeHtml(best.label)}" has stopped`,
         body:`Nothing logged under it for <b>${days} days</b>. Before that it ran <b>${best.n} times</b> for <b>${money(best.total)}</b>.`,
         work:`${money(best.total)} over the 60 days it appeared ≈ ${money(perMonth)} a month`,
-        nudge:`That is roughly <b>${money(perMonth)}</b> a month you are no longer spending${rpLife(perMonth)}. Worth knowing you did that.`,
+        nudge:`That is roughly <b>${money(perMonth)}</b> a month you are no longer spending${rpLife(perMonth)}. ${rpSay(RP_TONE.stopped,null)}`,
         bad:false };
     }},
 
@@ -9779,7 +9901,7 @@ const REPORT_SIGNALS=[
       return { t:`Your essentials are taking ${up?'more':'less'} of what you earn`,
         body:`<b>${a}%</b> of income in ${fmtMonth(M)}, against <b>${b}%</b> in ${fmtMonth(P)}.`,
         work:`essentials assigned ÷ income logged, both months`,
-        nudge: up ? `The four walls moving up ${a-b} points is the number that decides how much room everything else gets.`
+        nudge: up ? `The four walls moving up ${a-b} points decides how much room everything else gets. ${rpSay(RP_TONE.essentials,'rent')}`
                   : `That is ${b-a} points of your income handed back to everything else.`,
         bad:up };
     }},
@@ -9798,7 +9920,7 @@ const REPORT_SIGNALS=[
       return { t:`You invested in ${hit} of the last 3 months`, bad:hit<3,
         body:`<b>${money(total)}</b> across ${fmtMonth(ms[0])} to ${fmtMonth(M)}, out of <b>${money(inc)}</b> earned - about <b>${rpPct(total,inc)}%</b>.`,
         work:`${money(total)} ÷ ${money(inc)} = ${rpPct(total,inc)}%`,
-        nudge: hit===3 ? `Three months in a row is the part almost nobody manages.` : `The months it happened are worth more than the amount that happened.` };
+        nudge: (hit===3 ? `Three months in a row is the part almost nobody manages. ` : `The months it happened are worth more than the amount that happened. `)+rpSay(RP_TONE.investing,null) };
     }},
 
   /* ---- the app's own thesis, stated once a month ---- */
@@ -9818,9 +9940,9 @@ const REPORT_SIGNALS=[
       return { t: leak>invested ? 'More of your week leaked than you invested' : `${fmtHours(invested)} of your week went into you`,
         body:`Out of the hours you logged: <b>${fmtHours(invested)}</b> invested in health, learning, building or people${leak>0?`, and <b>${fmtHours(leak)}</b> to the screen`:''}.${sold>0?` You sold another <b>${fmtHours(sold)}</b> to work.`:''}`,
         work:`${logged} logged = ${invested} invested + ${leak} leaked`,
-        nudge: (leak>0&&H>0)
-          ? `Those ${fmtHours(leak)} are worth <b>${money(leak*H)}</b> at your own rate - the feed monetises them whether you do or not.`
-          : (leak>0?`Those ${fmtHours(leak)} are the ones nobody bills you for.`:''),
+        nudge: ((leak>0&&H>0)
+          ? `Those ${fmtHours(leak)} are worth <b>${money(leak*H)}</b> at your own rate - the feed monetises them whether you do or not. `
+          : (leak>0?`Those ${fmtHours(leak)} are the ones nobody bills you for. `:''))+rpSay(RP_TONE.timeWeek,null),
         bad: leak>invested };
     }},
   { k:'hours', run(){
@@ -9832,7 +9954,7 @@ const REPORT_SIGNALS=[
       return { t:`${fmtHours(exp/H)} of your life went out this month`, bad:false,
         body:`<b>${money(exp)}</b> spent at <b>${money(H)}</b> an hour is <b>${fmtHours(exp/H)}</b> you already worked for.${traps>0?` <b>${fmtHours(traps/H)}</b> of it went on things you yourself called a trap.`:''}`,
         work:`${money(exp)} ÷ ${money(H)}/hr = ${fmtHours(exp/H)}`,
-        nudge:`` };
+        nudge: rpSay(RP_TONE.hours,null) };
     }}
 ];
 
@@ -9892,7 +10014,7 @@ REPORT_SIGNALS.push(
       return { t:'Prices moved. Did your rate?', outside:OUTSIDE.cpi.asOf,
         body:`Prices are up <b>${OUTSIDE.cpi.yoy}%</b> over the last year. Your hour earns <b>${money(H)}</b> today${since}, so in last year's money it buys about <b>${money(then)}</b> worth.`,
         work:`${money(H)} ÷ ${(1+OUTSIDE.cpi.yoy/100).toFixed(3)} = ${money(then)}`,
-        nudge:`Same hour, ${money(H-then)} less of it. A raise below ${OUTSIDE.cpi.yoy}% this year is a pay cut wearing a raise's clothes - that is arithmetic, not advice.` };
+        nudge:`${money(H-then)} of it, gone to prices alone. ${rpSay(RP_TONE.oCpi,null)}` };
     }},
   { k:'oFood', run(){
       if(!outsideFresh()) return null;
@@ -9904,7 +10026,7 @@ REPORT_SIGNALS.push(
       return { t:'The same cart costs more than it did', outside:OUTSIDE.food.asOf,
         body:`Grocery prices are up <b>${OUTSIDE.food.yoy}%</b> over the year. Your food money this month is <b>${money(groc)}</b> - a year ago about <b>${money(then)}</b> bought the same cart.`,
         work:`${money(groc)} ÷ ${(1+OUTSIDE.food.yoy/100).toFixed(3)} = ${money(then)}`,
-        nudge:`If that line has not grown ${OUTSIDE.food.yoy}% in your plan, you are buying slightly less food for the same money - worth knowing before it reads as overspending.` };
+        nudge: rpSay(RP_TONE.oFood,null) };
     }},
   { k:'oSavings', run(){
       if(!outsideFresh()) return null;
@@ -9913,7 +10035,7 @@ REPORT_SIGNALS.push(
       return { t:'What idle cash pays right now', outside:OUTSIDE.savings.asOf,
         body:`You hold <b>${money(cash)}</b> you could spend today. The national average savings account pays <b>${OUTSIDE.savings.avgApy}%</b> - about <b>${money(atAvg)}</b> a year on that. Widely available high-yield accounts run near <b>${OUTSIDE.savings.highApy}%</b> - about <b>${money(atHigh)}</b> a year.`,
         work:`${money(cash)} × ${OUTSIDE.savings.avgApy}% = ${money(atAvg)}/yr · × ${OUTSIDE.savings.highApy}% = ${money(atHigh)}/yr`,
-        nudge:`That is the gap between the two, per year, for the same cash${rpLife(atHigh-atAvg)}. No account named, nothing endorsed - just what the rates are.` };
+        nudge:`${money(atHigh-atAvg)} a year between them, for the same cash${rpLife(atHigh-atAvg)}. ${rpSay(RP_TONE.oSavings,null)}` };
     }},
   { k:'oCard', run(){
       if(!outsideFresh()) return null;
@@ -9925,8 +10047,8 @@ REPORT_SIGNALS.push(
         body:`Your dearest debt runs <b>${worst.apr}%</b>. The average new card offer is about <b>${OUTSIDE.card.avgApr}%</b>, so yours is <b>${Math.abs(worst.apr-OUTSIDE.card.avgApr).toFixed(1)} points ${above?'above':'below'}</b> it.`,
         work:`${worst.apr}% − ${OUTSIDE.card.avgApr}% = ${(worst.apr-OUTSIDE.card.avgApr).toFixed(1)}`,
         nudge: above
-          ? `Paying it down earns a guaranteed ${worst.apr}% - the planner on Debt already prices what each extra dollar buys back.`
-          : `Below the going rate - the order the Debt planner picked already accounts for that.` };
+          ? `Paying it down earns a guaranteed ${worst.apr}%. ${rpSay(RP_TONE.oCardAbove,null)}`
+          : rpSay(RP_TONE.oCardBelow,null) };
     }}
 );
 
