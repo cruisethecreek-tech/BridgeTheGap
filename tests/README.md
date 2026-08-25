@@ -238,6 +238,21 @@ It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.
 
+And three properties that came from one phone note about getting paid. **The
+cadence helper**: every real pay frequency is offered, weekly converts on 52
+weeks rather than four per month, biweekly on 26 paydays rather than 24, and both
+conversions land on exactly the figure `recMonthly` gives the same money - one
+app, one set of multipliers. The working names the wrong answer out loud
+(`$3,360`), because that is the number the person would otherwise have typed. An
+hourly rate someone typed comes back to the rate question unrounded instead of
+being re-derived from the monthly figure built out of it. **The yearly
+projection** must say which of two things it is doing - measuring what landed, or
+repeating what they told setup - and it must never annualise the month in
+progress or a single logged month. **The true-rate card** has to appear on Home
+with their own take-home already in the field, compute to the cent what the
+Settings panel computes, name what the commute and overhead were costing per
+hour, and then leave for good once it has been used or waved off.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

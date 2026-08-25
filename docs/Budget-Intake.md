@@ -187,6 +187,30 @@ hardcoded while `recMonthly` and `monthHours` use exact `WEEKS_PER_YEAR/12`, so
 the same $100/wk read as $433.00 in the leak finder and $433.33 as a recurring
 item. Both now run on the same constants.
 
+**Nobody gets paid "in a normal month".** The intake had one income question and
+it wanted a monthly take-home. Anyone paid weekly, every two weeks, or by the
+hour had to either do the conversion themselves or guess - and the guess people
+reach for is a round multiplier. Weekly x 4 misses four paychecks a year.
+Biweekly x 2 misses two. That is a month and a half of income missing from a
+budget whose entire claim is that every dollar has a job.
+
+`income` now carries a helper (`help:{mode:'pay'}` -> `runPayHelper`) offering
+the six real cadences in `PAY_FREQS`: **by the hour** (times the hours they
+actually work), **every week**, **every 2 weeks**, **twice a month**, **once a
+month**, and **I only know the salary**. `payToMonthly` does the conversion on
+the same multipliers `REC_FREQS` uses, so a paycheck and a recurring bill of the
+same cadence can never disagree, and `payWorkings` shows the arithmetic **and
+names the wrong answer out loud**: *"$1,680 x 26 / 12 = $3,640 a month - not
+$3,360."* The two conversions people get wrong are the two the copy calls out.
+
+The cadence and the per-paycheck amount are kept (`iaAns.payFreq`, `payAmt`,
+persisted as `state.intake.pay`). Two things read them. The **rate question**
+confirms an hourly rate instead of asking for it again - someone who typed
+$19.50 gets *"You told me $19.50 an hour"*, and `suggest` hands the exact figure
+back rather than the rounded re-derivation from the monthly number that was built
+out of it, which is how $19.50 comes back as $20 and reads like nobody was
+listening. And **Reflect** names the cadence when it projects the year.
+
 **One income at a time, each with its own rate.** The hourly-rate question used
 to sit *after* the whole income loop, so you listed a paycheck, a partner's pay
 and a side gig and only then got asked "what do you make per hour" - about which

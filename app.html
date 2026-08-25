@@ -1015,6 +1015,11 @@
   .snap .v{font-size:22px;font-weight:900;margin-top:5px;letter-spacing:-.4px}
   .paths-head{margin:28px 0 4px;text-align:center}
   .ph-eye{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);font-weight:800}
+  /* The true-rate prompt on Home. Edged rather than loud: it is the first thing
+     after setup and it has to read as one more useful question, not an upsell. */
+  .panel.trc{border-left:3px solid var(--accent)}
+  .panel.trc h2{margin:4px 0 0}
+  .panel.trc.done{border-left-color:rgb(var(--good-rgb))}
   .ph-title{font-size:26px;font-weight:900;letter-spacing:-.5px}
   .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
   @media(max-width:600px){.paths{grid-template-columns:repeat(2,1fr)}}
@@ -1673,6 +1678,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div id="dataGuard"></div>
       <div id="whyCard"></div>
+      <div id="trueRateCard"></div>
       <div id="moneyStoryCard"></div>
       <div id="spendingBox" class="show-in-spending"></div>
       <div id="rewardCalBox" class="show-in-spending"></div>
@@ -2693,7 +2699,7 @@ function defaultState(){
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[], seenGuide:{}, guidesOff:false,
            onboarded:false, intake:{}, register:'middle', vault:[],
-           freedomMode:false, trueRate:{}, network:[], enough:0, skills:[],
+           freedomMode:false, trueRate:{}, trueRateSkipped:false, network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
@@ -7732,23 +7738,87 @@ document.getElementById('freedomToggle').addEventListener('click',e=>{
   state.freedomMode=want; save(); renderAll();
 });
 
-/* --- True Net Hourly Wage engine --- */
+/* --- True Net Hourly Wage engine ---
+   One computation, two doors: the Settings panel and the card that meets people
+   the moment setup ends. Two copies of this arithmetic would drift, and a rate
+   that differs depending on where you typed it is worse than no rate at all. */
+function applyTrueRate(take,commute,overhead){
+  const workHrs=(state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS);
+  const denom=workHrs+(commute*(WEEKS_PER_YEAR/12));   // YOUR month + commute hrs/wk converted to hrs/mo
+  const rate=Math.max(0,(take-overhead)/denom);
+  const before=state.hourlyWage||0;
+  state.hourlyWage=Math.round(rate*100)/100; state.wageAuto=false;   // an explicit true-rate calc is a manual set
+  state.trueRate={take,commute,overhead};
+  save();
+  const w=document.getElementById('wage'); if(w) w.value=state.hourlyWage;
+  updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
+  return {rate:state.hourlyWage, before, denom, workHrs, naive:take/WORKMONTH_HRS};
+}
 document.getElementById('trCompute').addEventListener('click',()=>{
   const take=parseFloat(document.getElementById('trTakeHome').value)||0;
   const commute=parseFloat(document.getElementById('trCommute').value)||0;
   const overhead=parseFloat(document.getElementById('trOverhead').value)||0;
   if(take<=0){ alert('Enter your take-home pay per month.'); return; }
-  const denom=(state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS)+(commute*(52/12));   // YOUR month + commute hrs/wk converted to hrs/mo
-  const rate=Math.max(0,(take-overhead)/denom);
-  state.hourlyWage=Math.round(rate*100)/100; state.wageAuto=false;   // an explicit true-rate calc is a manual set
-  state.trueRate={take,commute,overhead};
-  save();
-  document.getElementById('wage').value=state.hourlyWage;
-  const naive=take/WORKMONTH_HRS;
+  const r=applyTrueRate(take,commute,overhead);
   document.getElementById('trResult').style.display='';
-  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(state.hourlyWage)}/hr</b><br><span style="color:var(--muted)">The naive paycheck-per-hour rate was ${usd(naive)}/hr (a full-time month is about ${Math.round(WORKMONTH_HRS)} hrs). The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
-  updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
+  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(r.rate)}/hr</b><br><span style="color:var(--muted)">The naive paycheck-per-hour rate was ${usd(r.naive)}/hr (a full-time month is about ${Math.round(WORKMONTH_HRS)} hrs). The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
 });
+/* The true rate used to live in a collapsed <details> inside Settings, which is
+   the same as not existing: the one number the entire app prices against sat
+   two taps and a scroll behind a summary nobody opens. It now meets people the
+   moment setup ends, on Home, with their own figures already in the fields -
+   and it leaves for good once they have either used it or said their rate is
+   already right. Settings keeps its copy for anyone who wants to redo it. */
+function trueRateDue(){
+  return !!state.onboarded && effectiveHourly()>0
+    && !(state.trueRate && +state.trueRate.take>0)
+    && !state.trueRateSkipped;
+}
+function renderTrueRateCard(){
+  const box=document.getElementById('trueRateCard'); if(!box) return;
+  if(!trueRateDue()){ box.innerHTML=''; return; }
+  const H=effectiveHourly();
+  const take=Math.round(personalMonthlyIncome()>0 ? personalMonthlyIncome() : (+((state.intake||{}).income)||0));
+  const hrs=state.hoursPerWeek>0?state.hoursPerWeek:40;
+  box.innerHTML=`<div class="panel trc">
+    <div class="ph-eye">One number, before you go further</div>
+    <h2>The job pays ${usd(H)} an hour. Your hour costs more than that.</h2>
+    <p class="sub">Every purchase in this app is priced in hours of your life, and that pricing is only as honest as this rate. Right now it is your pay divided by the hours on your timesheet - which ignores the commute you don't get paid for, the prep, and the money the job itself costs you in gas, lunches and clothes. Two questions and it's the real number.</p>
+    <div class="row" style="margin-top:12px">
+      <label class="fld">Take-home / month<input type="number" id="trcTake" min="0" step="50" value="${take>0?take:''}" placeholder="e.g. 3200" style="width:130px"></label>
+      <label class="fld">Commute + prep (hrs/week)<input type="number" id="trcCommute" min="0" max="80" step="0.5" placeholder="e.g. 7" style="width:150px"></label>
+      <label class="fld">Work overhead / month $<input type="number" id="trcOver" min="0" step="10" placeholder="gas, lunches, outfits" style="width:170px"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="trcGo">Show me my real rate</button>
+      <button class="btn ghost" id="trcSkip">My rate's already right</button>
+    </div>
+    <p class="sub" style="margin-top:10px">Working: (take-home − overhead) ÷ (${Math.round(monthHours(hrs))} work hours a month + your commute hours). Nothing here leaves the device, same as everything else.</p>
+  </div>`;
+  document.getElementById('trcGo').onclick=()=>{
+    const take=parseFloat(document.getElementById('trcTake').value)||0;
+    const commute=parseFloat(document.getElementById('trcCommute').value)||0;
+    const over=parseFloat(document.getElementById('trcOver').value)||0;
+    if(take<=0){ document.getElementById('trcTake').focus(); return; }
+    const r=applyTrueRate(take,commute,over);       // this repaints Home, which empties this box
+    const drop=r.before>0 ? r.before-r.rate : 0;
+    box.innerHTML=`<div class="panel trc done">
+      <div class="ph-eye">Set</div>
+      <h2>Your real rate is ${usd(r.rate)} an hour</h2>
+      <p class="sub">${drop>0.005
+        ? `You were pricing your life at ${usd(r.before)}. The commute and the overhead were costing you <b>${usd(drop)}</b> an hour and nobody was billing you for it. Every hours-of-life figure in the app now uses the honest number, so things will look more expensive - because they were.`
+        : drop<-0.005
+        ? `That is higher than the ${usd(r.before)} the app was using, so purchases will price out in fewer hours from here. Either way it is now your number rather than an estimate.`
+        : `Same as the estimate the app was already using - which means the estimate was right. Now it is confirmed rather than assumed.`}</p>
+      <p class="sub">Change it any time in Settings under Your True Hourly Wage.</p>
+    </div>`;
+  };
+  document.getElementById('trcSkip').onclick=()=>{
+    state.trueRateSkipped=true; save();
+    box.innerHTML='';
+    toast('Kept your rate. The calculator lives in Settings if you change your mind.');
+  };
+}
 function fillTrueRate(){
   if(!state.trueRate) return;
   const t=state.trueRate;
@@ -8602,6 +8672,51 @@ const REPORT_SIGNALS=[
         nudge: trend, bad: kept<0 };
     }},
 
+  /* ---- the year, which nobody ever works out for themselves ----
+     People know what lands on Friday. Almost nobody knows what that adds up to
+     over twelve months, and the gap between "I make $840 a week" and "I handle
+     $43,680 a year" is the difference between feeling broke and knowing exactly
+     what you are working with. Measured off what actually landed where there is
+     enough history; off what they told setup where there is not - and it says
+     which of the two it is doing, because a projection that hides its source is
+     just a confident number. */
+  { k:'year', run(){
+      const M=state.activeMonth;
+      /* Full months only, and never the month in progress: annualising a month
+         that is four days old reports a salary of four days. */
+      const hist=[shiftMonth(M,-3),shiftMonth(M,-2),shiftMonth(M,-1)]
+        .map(m=>({m, inc:monthIncome(m)})).filter(x=>x.inc>0);
+      const measured=hist.length>=2;
+      const pay=(state.intake&&state.intake.pay)||{};
+      const stated=+((state.intake&&state.intake.income)||0);
+      let year, body, work, src;
+      if(measured){
+        const avg=hist.reduce((s,x)=>s+x.inc,0)/hist.length;
+        year=avg*12; src='measured';
+        body=`Your last ${hist.length} full months brought in ${hist.map(h=>`<b>${money(h.inc)}</b>`).join(', ')} - an average of <b>${money(avg)}</b> a month. Hold that and the year lands at <b>${money(year)}</b> of take-home.`;
+        work=`(${hist.map(h=>money(h.inc)).join(' + ')}) ÷ ${hist.length} × 12 = ${money(year)}`;
+      } else if(stated>0){
+        year=stated*12; src='stated';
+        body=`You told setup about <b>${money(stated)}</b> lands in a normal month. Over twelve of them that is <b>${money(year)}</b> of take-home - the number nobody works out for themselves.`;
+        work=`${money(stated)} × 12 = ${money(year)}`;
+      } else {
+        return {locked:'Two full months of income logged, or a take-home figure from setup - a year projected off one part-finished month is a guess with a decimal point on it.'};
+      }
+      const bits=[];
+      const H=effectiveHourly();
+      if(H>0) bits.push(`At ${money(H)} an hour that is about <b>${Math.round(year/H).toLocaleString()}</b> hours of your life a year.`);
+      const fm=payFreqMeta(pay.freq);
+      if(fm && (pay.freq==='weekly'||pay.freq==='biweekly'))
+        bits.push(`You are paid ${fm.label.toLowerCase()}, so ${pay.freq==='weekly'?'52':'26'} paydays make that year - and ${pay.freq==='weekly'?'four':'two'} of your months carry an extra one.`);
+      if(measured){
+        const lo=Math.min(...hist.map(h=>h.inc)), hi=Math.max(...hist.map(h=>h.inc));
+        if(hi-lo > year/12*0.2) bits.push(`Those months ran from ${money(lo)} to ${money(hi)}, so treat the year as a range rather than a promise.`);
+      } else {
+        bits.push('Measured off what you said, not what landed. Two full months of logged income and this switches to the real thing.');
+      }
+      return { t:`On this pace you handle ${money(year)} this year`, body, work, nudge:bits.join(' ') };
+    }},
+
   /* ---- the comparison the app never made ---- */
   { k:'drift', run(){
       const M=state.activeMonth, P=shiftMonth(M,-1);
@@ -9125,9 +9240,13 @@ const INTAKE=[
     options:[{label:'Just track my spending · ~6 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
   {id:'income', bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
-      : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. ★`,
+      : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. Paid weekly, every two weeks, or by the hour? Tap below and I'll work the month out for you - most people get that conversion wrong, and it costs them a month and a half of income a year. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'3200',
-    hint:'Dollars per month, after taxes - what actually lands in your account. Type 3200 for $3,200.', sum:'Take-home a month'},
+    hint:'Dollars per month, after taxes - what actually lands in your account. Type 3200 for $3,200.', sum:'Take-home a month',
+    /* Same button, different flow: mode 'pay' hands off to the cadence picker
+       instead of the salary-to-hourly helper. Nobody should have to know their
+       monthly number to use a monthly budget. */
+    help:{ mode:'pay', cta:"I'm not paid monthly" }},
   {id:'incomeAvoid', input:'reflect', key:'incomeAvoid', optional:true,
     showIf:a=>a.acct==='spend' && !(a.income>0),
     bot:"No pressure at all. I did notice you'd rather not put the income in, though. Mind if I ask what's behind that? Not nosy, it just helps me meet you where you are.",
@@ -9138,7 +9257,12 @@ const INTAKE=[
       {label:'I just want to watch spending', value:'watch', reply:"Fair. It might also be the highest-leverage thing you could do. Spending is the part you actually control, minute to minute."}
     ]},
   {id:'wage',
-    bot:a=> a.acct==='spend'
+    bot:a=> (a.payFreq==='hourly' && +a.payAmt>0)
+      /* They already told the cadence picker their hourly rate. Asking again as
+         though we never heard it is how an app teaches people it isn't
+         listening; confirm what they said instead. */
+      ? `You told me ${usd(+a.payAmt)} an hour${a.hoursPerWeek>0?` across a ${a.hoursPerWeek}-hour week`:''}, so that's the rate behind every "hours of your life" figure from here on. Change it if that number was before tax rather than after - what actually lands is the one that counts. ★`
+      : a.acct==='spend'
       /* This said "Last setup question" - written when the wage step really was
          near the end. Moving it up so each income gets its own rate left the
          claim behind, asserting the finish line seven questions early. Copy that
@@ -9149,7 +9273,12 @@ const INTAKE=[
       ? `One number powers the whole "hours of your life" feature - your take-home per hour on your MAIN job. You said about ${usd(a.income)} lands from it each month; ${a.hoursPerWeek>0?`at the ${a.hoursPerWeek} hours a week you actually work, that's`:`assuming a standard 40-hour week, that works out to`} about ${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr. Sound right?${a.hoursPerWeek>0?'':` (If your week isn't 40 hours, tell me - guessing your hours is the one thing this app shouldn't do.)`}${(a.extraIncome||[]).some(x=>+x.hours>0)?` (Just your main paycheck for now - I'll blend in your side-gig hours next, so your true rate counts every hour you actually work.)`:(intakeIncomeTotal(a)>a.income+1?` (This is just your own main paycheck - your partner's pay and any passive income are still counted in the budget total, they just don't cost you hours.)`:'')} ★`
       : `Roughly what do you make per hour, take-home? This lets me show you what a purchase really costs - in hours of your life. Not sure? Tap “Help me work it out” below. ★`,
     input:'money', key:'wage', optional:true, placeholder:'22', hint:'Dollars per hour, take-home. Type 22 for $22 an hour.', sum:'Your hourly rate',
-    suggest:a=> a.income>0 ? estHourlyFromMonthly(a.income, a.hoursPerWeek) : null,
+    /* If they told the cadence picker an hourly rate, that IS the answer - do not
+       hand it back a rounded re-derivation of the monthly figure we built FROM
+       it, which is how $19.50 comes back as $20 and reads like the app wasn't
+       listening. */
+    suggest:a=> (a.payFreq==='hourly' && +a.payAmt>0) ? Math.round(+a.payAmt*100)/100
+              : a.income>0 ? estHourlyFromMonthly(a.income, a.hoursPerWeek) : null,
     help:{ cta:"Help me work it out",
       ask:"No stress - almost nobody knows this off the top of their head. Easiest way: what do you make in a year, before taxes? A ballpark is fine.",
       placeholder:"e.g. 52000",
@@ -9396,6 +9525,59 @@ function monthHours(hpw){ return Math.max(1,(+hpw||40))*WEEKS_PER_YEAR/12; }
    get added in. Passive income (partner, benefits, rental) stays out - it costs
    no time. A low-paying side gig drags the blended rate down, so purchases cost
    MORE hours of life, priced against the whole truth. */
+/* ---- How people actually get paid ----------------------------------------
+   The intake asked for take-home "in a normal month" and left everyone else to
+   do the conversion in their head. Two problems with that. First, a lot of
+   people genuinely do not know their monthly number - they know $19 an hour, or
+   $840 on a Friday. Second, the arithmetic people do in their heads is wrong in
+   a predictable direction: weekly x 4 and biweekly x 2 both quietly delete a
+   month and a half of income a year, and a budget built on the shrunk figure
+   spends the missing paychecks without ever accounting for them.
+
+   So the app converts, and shows its working. The multipliers are the ones
+   REC_FREQS already uses, so a paycheck and a recurring bill of the same
+   cadence can never disagree. */
+const PAY_FREQS=[
+  {k:'hourly',      label:'By the hour',
+   ask:"What do you make an hour, take-home? Roughly is fine - after tax if you know it.", ph:'e.g. 19'},
+  {k:'weekly',      label:'Every week',        per:52/12,
+   ask:"How much lands each week, after taxes?", ph:'e.g. 840'},
+  {k:'biweekly',    label:'Every 2 weeks',     per:26/12,
+   ask:"How much lands each payday, after taxes?", ph:'e.g. 1680'},
+  {k:'semimonthly', label:'Twice a month',     per:2,
+   ask:"How much lands each payday, after taxes?", ph:'e.g. 1600'},
+  {k:'monthly',     label:'Once a month',      per:1,
+   ask:"How much lands each month, after taxes?", ph:'e.g. 3200'},
+  {k:'yearly',      label:'I only know the salary', per:1/12,
+   ask:"What's the salary? A year's worth. If you only know the number before tax, give me that - a real gross beats a blank.", ph:'e.g. 52000'}
+];
+function payFreqMeta(k){ return PAY_FREQS.find(x=>x.k===k)||null; }
+function payToMonthly(k,amt,hpw){
+  const f=payFreqMeta(k); if(!f) return 0;
+  const a=+amt||0;
+  if(k==='hourly') return a*Math.max(1,+hpw||40)*WEEKS_PER_YEAR/12;
+  return a*f.per;
+}
+/* The working, in words, because a number that appears out of nowhere is a
+   number nobody can check - and the ones people get wrong are worth naming. */
+function payWorkings(k,amt,hpw,monthly){
+  const m=`**${usd(monthly)}** a month`;
+  switch(k){
+    case 'hourly':
+      return `${usd(amt)} an hour x ${hpw} hours a week x 52 weeks / 12 months = ${m}. That is what I will budget against, and ${usd(amt)} is the rate I will price purchases in - so I won't ask you the same thing twice.`;
+    case 'weekly':
+      return `${usd(amt)} a week x 52 weeks / 12 months = ${m}. Note it is not ${usd(amt*4)}: four weeks is not a month. There are 52 paydays a year, not 48, so four of your months carry a fifth one. Budget on ${usd(amt*4)} and those four paychecks never get a job - they just get spent.`;
+    case 'biweekly':
+      return `${usd(amt)} every two weeks is 26 paydays a year, not 24. ${usd(amt)} x 26 / 12 = ${m} - not ${usd(amt*2)}. Twice a year a third paycheck lands in the same month. Budget on ${usd(amt*2)} and those two extra paychecks, ${usd(amt*2)} a year, never appear in your own plan.`;
+    case 'semimonthly':
+      return `${usd(amt)} twice a month = ${m}, exactly 24 paydays a year. That is the tidiest cadence there is - what lands is what you planned, every month.`;
+    case 'monthly':
+      return `${m} it is. No conversion needed.`;
+    case 'yearly':
+      return `${usd(amt)} a year / 12 months = ${m}. If that was the number before tax, this will read high - what actually lands is smaller, and you can correct it any time in Settings.`;
+  }
+  return `${m}.`;
+}
 function intakeWorkHours(a){ return (a.extraIncome||[]).reduce((s,x)=>s+(+x.hours||0),0); }
 function intakeBlendedHourly(a){
   const mr=+a.wage||0; if(mr<=0) return 0;
@@ -9749,23 +9931,76 @@ function renderIntakeDock(s){
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
   const sk=document.getElementById('iaSkip2'); if(sk) sk.onclick=()=>{ iaStore(s.key,isMoney?0:''); iaBub('Skip','me'); iaAdvance(); };
 }
+/* One numeric question inside a helper flow. Shared by every helper so they all
+   behave the same way, including the part that matters: Back retracts the
+   question it abandoned, so the log never keeps an orphan asking something
+   nobody is going to answer. */
+function iaNumberPrompt(ask,ph,label,onOK,backFn,max){
+  const dock=document.getElementById('intakeDock');
+  iaBub(ask,'bot');
+  const qb=document.getElementById('intakeLog').lastElementChild;
+  dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(ph||'')}"><button class="intake-send" id="iaHelpGo">${escapeHtml(label)}</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
+  const inp=document.getElementById('iaHelpInput'); setTimeout(()=>inp.focus(),60);
+  let done=false;
+  const go=()=>{ if(done) return; const n=parseFloat(inp.value); if(isNaN(n)||n<=0||(max&&n>max)){ inp.focus(); return; } done=true; onOK(n); };
+  document.getElementById('iaHelpGo').onclick=go;
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  document.getElementById('iaHelpBack').onclick=()=>{ if(qb&&qb.parentNode) qb.remove(); backFn(); };
+}
+/* Drop the last n bubbles - used when a Back restarts a branch, so the restart
+   does not stack a second copy of the same exchange underneath the first. */
+function iaRewind(n){ const log=document.getElementById('intakeLog'); for(let i=0;i<n&&log&&log.lastElementChild;i++) log.lastElementChild.remove(); }
+/* Cadence helper: ask how they are actually paid, then do the conversion for
+   them. This is the whole point - a monthly budget should not require you to
+   already know your monthly number, and the two conversions people get wrong
+   (weekly, biweekly) are exactly the two this names out loud. */
+function runPayHelper(s){
+  const dock=document.getElementById('intakeDock');
+  const askFreq=()=>{
+    iaBub("How do you actually get paid? Pick the one you KNOW - I'll do the conversion and show you the working, so you can check my math rather than take my word for it.",'bot');
+    const qb=document.getElementById('intakeLog').lastElementChild;
+    dock.innerHTML=`<div class="intake-chips">${PAY_FREQS.map((f,i)=>`<button data-pf="${i}">${escapeHtml(f.label)}</button>`).join('')}</div>`
+      +`<div class="intake-underrow"><button class="intake-skip" id="iaPayBack">← Back</button></div>`;
+    dock.querySelectorAll('button[data-pf]').forEach(b=>b.onclick=()=>{
+      const f=PAY_FREQS[+b.dataset.pf];
+      iaBub(f.label,'me');
+      askAmount(f, ()=>{ iaRewind(2); askFreq(); });   // retract the question and their pick, then re-ask
+    });
+    const bk=document.getElementById('iaPayBack');
+    if(bk) bk.onclick=()=>{ if(qb&&qb.parentNode) qb.remove(); renderIntakeDock(s); };
+  };
+  const askAmount=(f,back)=>{
+    iaNumberPrompt(f.ask, f.ph, f.k==='hourly'?'Next':'Work it out', amt=>{
+      iaBub(usd(amt)+(f.k==='hourly'?' an hour':''),'me');
+      if(f.k!=='hourly') return finish(f,amt,0);
+      iaNumberPrompt("And how many hours a week do you actually work? The real ones - the early start, the late night, the weekend that wasn't. Most people work more than they'd say.",
+        'e.g. 38', 'Work it out',
+        hpw=>{ iaBub(hpw+' hrs/week','me'); finish(f,amt,hpw); },
+        ()=>{ iaRewind(2); askAmount(f,back); }, 120);
+    }, back);
+  };
+  const finish=(f,amt,hpw)=>{
+    const monthly=Math.round(payToMonthly(f.k,amt,hpw)*100)/100;
+    iaBub(payWorkings(f.k,amt,hpw,monthly),'bot');
+    /* Kept so the rate question can confirm what they said instead of
+       re-deriving it, and so Reflect can name the cadence when it projects the
+       year. */
+    iaAns.payFreq=f.k; iaAns.payAmt=amt;
+    if(hpw>0) iaAns.hoursPerWeek=hpw;
+    iaStore(s.key,monthly);
+    dock.querySelectorAll('button,input').forEach(el=>el.disabled=true);
+    setTimeout(iaAdvance,900);
+  };
+  askFreq();
+}
 /* Teach-me helper: instead of just skipping, walk them to the answer (e.g. hourly from salary) */
 function runIntakeHelper(s){
   const h=s.help, dock=document.getElementById('intakeDock');
+  if(h && h.mode==='pay') return runPayHelper(s);
   // Step 1: the salary. Step 2 (when the helper defines ask2): the hours actually
   // worked - because dividing by an assumed 2,080 is how people end up believing
   // a rate they never earned.
-  const prompt=(ask,ph,label,onOK,backFn)=>{
-    iaBub(ask,'bot');
-    const qb=document.getElementById('intakeLog').lastElementChild;   // Back retracts the question it abandons - no orphan bubbles
-    dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(ph||'')}"><button class="intake-send" id="iaHelpGo">${escapeHtml(label)}</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
-    const inp=document.getElementById('iaHelpInput'); setTimeout(()=>inp.focus(),60);
-    let done=false;
-    const go=()=>{ if(done) return; const n=parseFloat(inp.value); if(isNaN(n)||n<=0){ inp.focus(); return; } done=true; onOK(n); };
-    document.getElementById('iaHelpGo').onclick=go;
-    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
-    document.getElementById('iaHelpBack').onclick=()=>{ if(qb&&qb.parentNode) qb.remove(); backFn(); };
-  };
+  const prompt=iaNumberPrompt;
   const finish=(annual,hpw)=>{
     const res=h.run(annual,hpw);
     iaBub(res.teach,'bot');
@@ -9780,7 +10015,7 @@ function runIntakeHelper(s){
     prompt(h.ask2, h.placeholder2, 'Work it out', hpw=>{
       iaBub(hpw+' hrs/week','me');
       finish(annual,hpw);
-    }, ()=>{ const log=document.getElementById('intakeLog'); for(let i=0;i<2&&log.lastElementChild;i++) log.lastElementChild.remove(); runIntakeHelper(s); });   // also retract the salary echo + question so the restart doesn't duplicate them
+    }, ()=>{ iaRewind(2); runIntakeHelper(s); });   // also retract the salary echo + question so the restart doesn't duplicate them
   }, ()=>renderIntakeDock(s));
 }
 /* Reflection: a quick pain-point / aspiration question between sections. Each
@@ -10286,6 +10521,11 @@ function commitIntake(){
   (a.comfort||[]).forEach(v=>{ state.comfortMenu=state.comfortMenu||[];
     if(v && !state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); });
   state.intake={name:a.name||'',why:a.why||'',
+    /* How they are actually paid, kept verbatim. The budget runs monthly, so
+       the monthly figure is what got committed - but Reflect projects the year
+       from the cadence, and "26 paydays" reads very differently to "x 12". */
+    income:+a.income||0,
+    pay:{ freq:a.payFreq||(+a.income>0?'monthly':''), amt:+a.payAmt||0, hoursPerWeek:+a.hoursPerWeek||0 },
     reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', incomeAvoid:a.incomeAvoid||'', budgetPast:a.budgetPast||'', budgetPastNote:a.budgetPastNote||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
@@ -10439,6 +10679,7 @@ function renderHome(){
   const lkh=document.getElementById('lifeKeyHome');
   if(lkh) lkh.innerHTML=ltbNoteHTML(income,assigned,ltb)+flipHintHTML();
   renderWhyCard();
+  renderTrueRateCard();
   renderMoneyStoryNote();
   renderEnough(income);
   renderOffenseDefense();

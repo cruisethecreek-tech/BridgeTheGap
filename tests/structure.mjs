@@ -1522,6 +1522,167 @@ check('...it counts as money you could reach today', ledger.liquid===8000, Strin
 check('...and the savings context card finally has something to work with',
       ledger.savingsCard===true);
 
+/* ---- 31. nobody gets paid "in a normal month" ----
+   Asked from a real phone: "some people get paid biweekly or only know their
+   hourly rate - let the engine compute their monthly, we must not assume they
+   all know math." The intake had exactly one income question and it wanted a
+   monthly take-home. A person paid every two weeks had to either do the
+   conversion or guess, and the guess people reach for is amount x 2 - which is
+   two whole paychecks a year missing from a budget that claims to account for
+   every dollar. Same for weekly and x 4, worth four paychecks. ---- */
+const pay = await p.evaluate(() => {
+  const step=INTAKE.find(s=>s.id==='income');
+  const wage=INTAKE.find(s=>s.id==='wage');
+  const round=n=>Math.round(n*100)/100;
+  return {
+    offered: !!(step.help && step.help.mode==='pay'),
+    cta: (step.help||{}).cta||'',
+    invited: /weekly|hour/i.test(step.bot({acct:'full',name:'Pat'})),
+    kinds: PAY_FREQS.map(f=>f.k),
+    /* every cadence lands on the same monthly figure the recurring engine would
+       give the same money - one app, one set of multipliers */
+    weekly: round(payToMonthly('weekly',840,0)),
+    biweekly: round(payToMonthly('biweekly',1680,0)),
+    semi: round(payToMonthly('semimonthly',1600,0)),
+    monthly: round(payToMonthly('monthly',3200,0)),
+    yearly: round(payToMonthly('yearly',52000,0)),
+    hourly: round(payToMonthly('hourly',19.5,38)),
+    recWeekly: round(recMonthly({amount:840,freq:'weekly'})),
+    recBiweekly: round(recMonthly({amount:1680,freq:'biweekly'})),
+    /* the working names the wrong answer people would otherwise have used */
+    wWeek: payWorkings('weekly',840,0,3640),
+    wBiweek: payWorkings('biweekly',1680,0,3640),
+    /* an hourly rate they typed comes back as itself, not a rounded re-derivation */
+    suggestExact: wage.suggest({payFreq:'hourly',payAmt:19.5,income:3211,hoursPerWeek:38}),
+    suggestDerived: wage.suggest({income:3200,hoursPerWeek:40}),
+    heard: wage.bot({payFreq:'hourly',payAmt:19.5,hoursPerWeek:38,acct:'full'})
+  };
+});
+check('the income question offers a way in for people not paid monthly', pay.offered===true);
+check('...and the question itself says so', pay.invited===true, pay.cta);
+check('...every real cadence is on the list',
+      ['hourly','weekly','biweekly','semimonthly','monthly','yearly'].every(k=>pay.kinds.includes(k)),
+      pay.kinds.join(','));
+check('a weekly paycheck converts on 52 weeks, not 4 per month',
+      pay.weekly===3640 && pay.weekly===pay.recWeekly, `${pay.weekly} vs recurring ${pay.recWeekly}`);
+check('a biweekly paycheck converts on 26 paydays, not 24',
+      pay.biweekly===3640 && pay.biweekly===pay.recBiweekly, `${pay.biweekly} vs recurring ${pay.recBiweekly}`);
+check('twice a month is exactly twice, and a month is exactly once',
+      pay.semi===3200 && pay.monthly===3200, `${pay.semi} / ${pay.monthly}`);
+check('a salary divides by twelve', pay.yearly===4333.33, String(pay.yearly));
+check('an hourly rate goes through the hours they actually work',
+      pay.hourly===3211, String(pay.hourly));
+check('the weekly working names the wrong answer out loud',
+      /\$3,360/.test(pay.wWeek) && /52/.test(pay.wWeek), pay.wWeek.slice(0,80));
+check('the biweekly working names the wrong answer out loud',
+      /\$3,360/.test(pay.wBiweek) && /26/.test(pay.wBiweek), pay.wBiweek.slice(0,80));
+check('a rate they typed is handed back unrounded, not re-derived',
+      pay.suggestExact===19.5, String(pay.suggestExact));
+check('...while everyone else still gets the estimate from their monthly',
+      pay.suggestDerived===18, String(pay.suggestDerived));
+check('...and the rate question confirms what it heard instead of asking twice',
+      /You told me/.test(pay.heard) && /19\.50/.test(pay.heard), pay.heard.slice(0,60));
+
+/* ---- 32. the year nobody works out for themselves ----
+   Second half of the same phone note: "let reflect compute their projected
+   salaries by year." People know what lands on Friday. Almost nobody knows the
+   twelve-month total, and the projection has to say whether it is measured off
+   what landed or off what they told setup - a projection that hides its source
+   is just a confident number. ---- */
+const yr = await p.evaluate(() => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.hourlyWage=19.5; state.hoursPerWeek=38;
+  state.intake={name:'Pat',income:3211,pay:{freq:'biweekly',amt:1482,hoursPerWeek:38}};
+  save();
+  const sig=REPORT_SIGNALS.find(s=>s.k==='year');
+  const stated=sig.run();
+  const M=state.activeMonth;
+  state.transactions.push({id:'y1',type:'income',amount:2964,date:shiftMonth(M,-1)+'-05',source:'Pay'});
+  const one=sig.run();
+  state.transactions.push({id:'y2',type:'income',amount:4446,date:shiftMonth(M,-2)+'-05',source:'Pay'});
+  save();
+  const measured=sig.run();
+  /* the month in progress must never be annualised: four days of income is not
+     a salary, and this is the trap the whole signal exists to avoid */
+  state.transactions.push({id:'y3',type:'income',amount:12,date:M+'-01',source:'Pay'});
+  save();
+  const withPartial=sig.run();
+  state.transactions=[]; state.intake={};
+  save();
+  const nothing=sig.run();
+  return {stated, one, measured, withPartial, nothing};
+});
+check('a fresh user still gets the yearly number from what they told setup',
+      /38,532/.test(yr.stated.body), yr.stated.t);
+check('...and it says out loud that it is their figure, not a measurement',
+      /not what landed/i.test(yr.stated.nudge));
+check('...it prices the year in hours of their life', /1,976/.test(yr.stated.nudge));
+check('...and it names the cadence, because 26 paydays is not 24',
+      /26 paydays/.test(yr.stated.nudge));
+/* One month is not a trend. With a stated figure to fall back on it keeps using
+   that and keeps saying so; it must never annualise a single month, which is how
+   one big commission month becomes a salary. */
+check('one logged month is never annualised on its own',
+      /38,532/.test(yr.one.body) && /not what landed/i.test(yr.one.nudge) && !/35,568/.test(yr.one.body),
+      yr.one.t);
+check('two full months switch it to what actually landed',
+      /44,460/.test(yr.measured.body) && /last 2 full months/.test(yr.measured.body), yr.measured.t);
+check('...and a spread that wide is reported as a range, not a promise',
+      /range rather than a promise/.test(yr.measured.nudge));
+check('the month in progress is never annualised',
+      yr.withPartial.work===yr.measured.work, yr.withPartial.work);
+check('with nothing at all, it says nothing', !!yr.nothing.locked, yr.nothing.locked);
+
+/* ---- 33. the one number the app prices against was hidden in Settings ----
+   Third part of the same note: "this lives nowhere besides settings and is
+   hidden." It did - the True Net Hourly Wage calculator sat inside a collapsed
+   <details>, two taps and a scroll behind a summary nobody opens, while every
+   hours-of-life figure in the app depended on it. It now meets people on Home
+   the moment setup ends, and leaves for good once used or waved off. ---- */
+const tr = await p.evaluate(async () => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.hourlyWage=19.5; state.hoursPerWeek=38;
+  state.intake={name:'Pat',income:3211};
+  save(); renderHome();
+  const shown=document.getElementById('trueRateCard').innerText;
+  const fields=['trcTake','trcCommute','trcOver'].every(id=>!!document.getElementById(id));
+  const prefilled=(document.getElementById('trcTake')||{}).value;
+  document.getElementById('trcCommute').value='7';
+  document.getElementById('trcOver').value='260';
+  document.getElementById('trcGo').click();
+  await new Promise(r=>setTimeout(r,150));
+  const after=document.getElementById('trueRateCard').innerText;
+  const wage=state.hourlyWage;
+  renderHome();
+  const gone=document.getElementById('trueRateCard').innerText;
+  /* the Settings panel and the Home card must be the same arithmetic - a rate
+     that differs by where you typed it is worse than no rate */
+  state.trueRate={}; state.hourlyWage=19.5; save();
+  const viaSettings=(()=>{
+    document.getElementById('trTakeHome').value='3211';
+    document.getElementById('trCommute').value='7';
+    document.getElementById('trOverhead').value='260';
+    document.getElementById('trCompute').click();
+    return state.hourlyWage;
+  })();
+  /* waving it off has to stick, or it is nagging rather than offering */
+  state.trueRate={}; state.hourlyWage=19.5; state.trueRateSkipped=false; save(); renderHome();
+  document.getElementById('trcSkip').click();
+  renderHome();
+  const afterSkip=document.getElementById('trueRateCard').innerText;
+  return {shown, fields, prefilled, after, wage, gone, viaSettings, afterSkip, skipped:state.trueRateSkipped};
+});
+check('the true-rate calculator meets people on Home, not buried in Settings',
+      /costs more than that/i.test(tr.shown) && tr.fields===true, tr.shown.split('\n')[1]||'');
+check('...with their own take-home already in the field', tr.prefilled==='3211', tr.prefilled);
+check('...and it computes the real rate', tr.wage===15.13, String(tr.wage));
+check('...names what the commute and overhead were costing per hour',
+      /\$4\.37 an hour/.test(tr.after), tr.after.split('\n')[1]||'');
+check('...then leaves for good once it has been used', tr.gone.trim()==='', tr.gone.slice(0,40));
+check('Home and Settings run the same arithmetic, to the cent',
+      tr.viaSettings===tr.wage, `${tr.viaSettings} vs ${tr.wage}`);
+check('...and waving it off sticks', tr.skipped===true && tr.afterSkip.trim()==='');
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
