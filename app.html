@@ -572,6 +572,19 @@
   .panel.spending .sp-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .panel.spending .sp-spent{font-weight:900;font-size:30px;letter-spacing:-.5px}
   .panel.spending .sp-k{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px}
+  /* The payback card. Green-edged, because the verdict is genuinely different -
+     but it still renders the "no cost replaced" version without the green, so
+     the colour is never doing the arguing. */
+  .imp-tool{margin-top:12px;padding:13px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(var(--accent-rgb),.05)}
+  .imp-tool.hide{display:none}
+  .checkcard.tool.pays{border-color:rgba(var(--good-rgb),.45)}
+  .verdict.tool{font-weight:900;font-size:21px;line-height:1.3}
+  .checkcard.tool.pays .verdict.tool{color:rgb(var(--good-rgb))}
+  .trap-tag.tool{border-color:var(--line);color:var(--muted)}
+  .checkcard.tool.pays .trap-tag.tool{border-color:rgba(var(--good-rgb),.45);color:rgb(var(--good-rgb))}
+  .tool-honest{margin-top:14px;padding:11px 13px;border-radius:11px;border:1px solid var(--line);
+    background:transparent;color:var(--muted);font-size:13.5px;line-height:1.55}
   .sp-recent .am.put{color:rgb(var(--good-rgb))}
   .sp-recent .ce-put{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgb(var(--good-rgb));margin-left:5px}
   .cal-entries .ce-put{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
@@ -1945,11 +1958,20 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </label>
           <label class="fld" style="flex:1;min-width:230px">How'd it find you?
             <select id="impTrap"></select>
-            <span class="trap-hint">The four ways money gets pulled out of you. Not sure? Pick the closest - it only changes which advice you get back.</span>
+            <span class="trap-hint">Four ways money gets pulled out of you, and one honest answer that isn't a trap at all. Not sure? Pick the closest - it only changes which advice you get back.</span>
           </label>
           <button class="btn primary" id="impRun">Scan target</button>
         </div>
-        <details class="traplegend" id="trapLegend"><summary>What are the four traps?</summary><div id="trapLegendBody"></div></details>
+        <div id="impTool" class="imp-tool hide">
+          <p class="sub" style="margin:0 0 10px"><b>Then let's find out.</b> A thing that replaces a cost pays for itself or it doesn't, and that is arithmetic rather than an opinion. Leave either blank if it doesn't apply - and if both are blank, this is a want, which is a fine thing to be.</p>
+          <div class="row">
+            <div class="ufld"><span class="fl-k">What you'd otherwise pay<span id="impRepAmtUnit"></span></span>
+              <span class="fl-in">$<input type="number" id="impRepAmt" min="0" step="1" inputmode="decimal" placeholder="e.g. 80" style="width:110px"></span></div>
+            <div class="ufld"><span class="fl-k">Hours it saves you<span id="impRepHrsUnit"></span></span>
+              <span class="fl-in"><input type="number" id="impRepHrs" min="0" step="0.5" inputmode="decimal" placeholder="e.g. 4" style="width:100px"></span></div>
+          </div>
+        </div>
+        <details class="traplegend" id="trapLegend"><summary>What are the traps - and what isn't one?</summary><div id="trapLegendBody"></div></details>
         <div id="impResult"></div>
         <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
@@ -6895,18 +6917,65 @@ const TRAPS=[
   {v:'status', icon:'', label:'Status Trap', sub:"Clout or an upgrade you don't need",
    pick:"it's about how it looks to other people"},
   {v:'leak', icon:'', label:'Leak Trap', sub:'Trial, auto-renew, micro-sub',
-   pick:'small and recurring - a sub, a trial, an auto-renew'}
+   pick:'small and recurring - a sub, a trial, an auto-renew'},
+  /* The fifth answer, and it is not a trap.
+
+     Someone scanned a $100 leaf mulcher. They had fought the leaves every autumn
+     with a rake that could not do it, the alternative was paying somebody, and
+     the tool solved it. The app called it a Scroll Trap and told them Meta had
+     bet they would cave. That is not a gut-check, it is an accusation - and an
+     app that calls every purchase a trap is worth exactly as much as one that
+     calls none of them a trap, because neither is telling you anything.
+
+     It does NOT hand out permission. It asks what the thing replaces, in money
+     or in hours, and does the payback arithmetic. Answer "nothing" and it says
+     so plainly: then it is a want, wants are allowed, and it will not be dressed
+     up as an investment. */
+  {v:'tool', icon:'', label:'Not a trap', sub:'It replaces a cost you already carry', tool:true,
+   pick:'none of these - it replaces something I already pay for, in money or in hours'}
 ];
+/* The payback engine. Everything converts to a YEAR, because that is the unit a
+   tool is actually judged in, and because a season of leaves is a yearly thing
+   however you phrase it. */
+function toolPayback(price, repAmt, repPer, hrs, hrsPer, H){
+  const perYear=k=>periodMeta(k).per*12;
+  const cashYear=(+repAmt||0)*perYear(repPer||'year');
+  const hoursYear=(+hrs||0)*perYear(hrsPer||'year');
+  const hoursCash=H>0?hoursYear*H:0;
+  /* Adding these together would DOUBLE-COUNT, and it is the exact species of
+     flattering arithmetic this app exists to call out. If you would have hired
+     someone, you were not also spending the hours; if you were spending the
+     hours, you were not also paying someone. Whichever you would really have
+     done is the cost being displaced - so take the larger and say out loud that
+     the other was set aside. A payback number that quietly doubles itself is
+     how a want gets sold to you as an investment. */
+  const both = cashYear>0 && hoursCash>0;
+  const totalYear = Math.max(cashYear, hoursCash);
+  const usedHours = hoursCash>=cashYear;
+  const p=+price||0;
+  return { cashYear, hoursYear, hoursCash, totalYear, both, usedHours,
+    years: totalYear>0 ? p/totalYear : null,
+    yearOne: totalYear-p,
+    fiveYear: totalYear*5-p };
+}
+function fmtPayback(years){
+  if(years==null) return '';
+  const months=years*12;
+  if(months<1) return 'under a month';
+  if(months<24) return Math.round(months)+' month'+(Math.round(months)===1?'':'s');
+  return (Math.round(years*10)/10)+' years';
+}
 function trapOptions(sel){ return TRAPS.map(t=>`<option value="${t.v}"${t.v===sel?' selected':''}>${t.icon} ${t.label} - ${t.pick}</option>`).join(''); }
 /* fill both pickers from one source, so the wording can never drift apart */
 function fillTrapPickers(){
   ['impTrap','mTrap'].forEach(id=>{ const el=document.getElementById(id); if(el){ const cur=el.value||'scroll'; el.innerHTML=trapOptions(cur); } });
   const leg=document.getElementById('trapLegendBody');
-  if(leg) leg.innerHTML=`<p class="tl-lead">Four ways money gets pulled out of you. They're not character flaws - they're designs, built by people who are paid to be good at this. Naming which one you're in is how you stop arguing with yourself and start seeing the mechanism.</p>`
+  if(leg) leg.innerHTML=`<p class="tl-lead">Four ways money gets pulled out of you. They're not character flaws - they're designs, built by people who are paid to be good at this. Naming which one you're in is how you stop arguing with yourself and start seeing the mechanism. And a fifth answer that is <b>not</b> a trap, because an app that calls every purchase a trap is telling you exactly as much as one that calls none of them a trap.</p>`
     +TRAPS.map(t=>`<div class="tl-row"><span class="tl-ic">${t.icon}</span><div><div class="tl-n">${escapeHtml(t.label)}</div><div class="tl-d">${escapeHtml(TRAP_MEANS[t.v])}</div></div></div>`).join('');
 }
 /* the full explanation, for the legend - longer than the dropdown one-liners */
 const TRAP_MEANS={
+  tool:"Not a trap - a thing that takes over a cost you already carry, in money or in hours. The rake that cannot do the job, the service you keep hiring, the Saturday it keeps eating. Pick this and the app stops arguing and starts calculating: what it displaces a year, how long until it has paid for itself, and what five years of it looks like. It will also tell you when the answer is that it displaces nothing - because that makes it a want, and a want dressed as an investment is the most expensive kind.",
   scroll:"You weren't looking for it - it was served to you. An ad, a feed, a suggested buy, a creator's link. The want didn't exist ten seconds ago; something engineered it. Tell: you can name the app you were in when you found it.",
   friction:"You paid extra to make something easier because you were tired, busy, hungry or fried. Delivery instead of cooking, the closer pricier option, one-tap checkout. The convenience is real - so is the markup. Tell: an hour earlier, you'd have done it yourself.",
   status:"The purchase is doing a job for how you're seen - keeping up, looking successful, the upgrade nobody asked for. Tell: you can picture who you'd want to notice it.",
@@ -8272,12 +8341,32 @@ function fillTrueRate(){
 
 /* --- impulse check --- */
 let pendingCheck=null;
+/* The "not a trap" lane asks two more questions, and only then. Everyone else
+   sees the same three fields they always did. */
+function syncImpTool(){
+  const sel=document.getElementById('impTrap'), box=document.getElementById('impTool');
+  if(!sel||!box) return;
+  const on=(TRAPS.find(t=>t.v===sel.value)||{}).tool===true;
+  box.classList.toggle('hide',!on);
+  if(on){
+    wireUnitField({id:'impRepAmt', dflt:'year', kinds:['week','month','year']});
+    wireUnitField({id:'impRepHrs', dflt:'year', kinds:['week','month','year'], unitWord:'hrs'});
+  }
+}
+(function(){ const sel=document.getElementById('impTrap'); if(sel) sel.addEventListener('change',syncImpTool); })();
 document.getElementById('impRun').addEventListener('click',()=>{
   const name=document.getElementById('impName').value.trim()||'This purchase';
   const amt=parseFloat(document.getElementById('impAmt').value);
   const trap=document.getElementById('impTrap').value;
   if(!amt||amt<=0){ alert('Enter a price.'); return; }
-  pendingCheck={name,amt,trap}; renderCheckResult();
+  pendingCheck={name,amt,trap};
+  if((TRAPS.find(t=>t.v===trap)||{}).tool){
+    pendingCheck.repAmt=parseFloat((document.getElementById('impRepAmt')||{}).value)||0;
+    pendingCheck.repPer=unitOf('impRepAmt','year');
+    pendingCheck.repHrs=parseFloat((document.getElementById('impRepHrs')||{}).value)||0;
+    pendingCheck.hrsPer=unitOf('impRepHrs','year');
+  }
+  renderCheckResult();
 });
 document.getElementById('impAmt').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('impRun').click(); });
 
@@ -8311,8 +8400,76 @@ function wireWhyEdit(){
     if(pendingCheck) renderCheckResult(); renderHome();
   }; });
 }
+/* The payback card. Same screen, opposite job: instead of pricing what a want
+   costs you, it prices what a tool saves you - and it is perfectly willing to
+   conclude that the answer is nothing. */
+function renderToolResult(){
+  const {name,amt,repAmt,repPer,repHrs,hrsPer}=pendingCheck;
+  const H=effectiveHourly();
+  const pb=toolPayback(amt,repAmt,repPer,repHrs,hrsPer,H);
+  const displaces = pb.totalYear>0;
+  const fast = pb.years!=null && pb.years<=1;
+  const ok   = pb.years!=null && pb.years<=3;
+
+  /* The meter is the whole tell. On every other lane the needle points at Trap;
+     here it points where the arithmetic points, and it can still point at Trap. */
+  const left = !displaces ? 68 : fast ? 14 : ok ? 32 : 55;
+
+  const metrics=[];
+  if(H>0) metrics.push([state.hourlyWage>0?'Hours of your life':'Hours of life (est.)', fmtHours(amt/H)]);
+  if(pb.cashYear>0) metrics.push(['Money it displaces a year', money(pb.cashYear)]);
+  if(pb.hoursYear>0) metrics.push(['Hours it gives back a year', fmtHours(pb.hoursYear)]);
+  if(displaces) metrics.push(['Pays for itself in', fmtPayback(pb.years)]);
+  if(displaces) metrics.push(['Five-year net', (pb.fiveYear>=0?'+':'')+money(pb.fiveYear)]);
+
+  let head, body, honest;
+  if(!displaces){
+    head=`${escapeHtml(name)} - ${money(amt)}`;
+    body=`You said it replaces nothing you currently pay for and saves no hours. That is an honest answer, and it means this is a <b>want</b> - which is allowed. Wants are why the money is worth having. But it will not be filed as an investment, because calling it one is how people talk themselves into things.${H>0?` Priced straight: <b>${fmtHours(amt/H)}</b> of your life.`:''}`;
+    honest=`If it does replace something - a service you hire, a job that eats your Saturday - go back and say so. The arithmetic changes completely, and it is the arithmetic that decides this, not the app's opinion of you.`;
+  } else {
+    head=`${escapeHtml(name)} pays for itself in ${fmtPayback(pb.years)}`;
+    const useLine = pb.usedHours
+      ? `<b>${fmtHours(pb.hoursYear)}</b> a year of your own life${H>0?`, worth <b>${money(pb.hoursCash)}</b> at your rate`:''}`
+      : `<b>${money(pb.cashYear)}</b> a year you would otherwise hand to somebody else`;
+    body=`Against ${money(amt)} once, it displaces ${useLine}. `
+      + (fast ? `It clears its own cost inside the first year and every year after that is profit.`
+        : ok  ? `That is a real payback window. After it, the thing is just working for you.`
+        : `That is a slow payback - real, but slow enough that it is worth asking whether the cheaper version does the same job.`);
+    body += ` Year one lands at <b>${(pb.yearOne>=0?'+':'')+money(pb.yearOne)}</b>, five years at <b>${(pb.fiveYear>=0?'+':'')+money(pb.fiveYear)}</b>.`;
+    /* The caveat is not optional. This lane would otherwise become a
+       rationalisation button, which is the failure mode it was built to avoid. */
+    if(pb.both){
+      const dropped = pb.usedHours ? `${money(pb.cashYear)} a year of hired help` : `${fmtHours(pb.hoursYear)} a year of your own time`;
+      const kept = pb.usedHours ? 'your hours' : 'the money';
+      body += ` You gave me both a cost and the hours - but you would have done <b>one</b> of them, not both, so this counts ${kept} (the bigger of the two) and leaves ${dropped} out. Adding them together would flatter the number, which is the trick this app exists to catch.`;
+    }
+    honest=`Two things this maths cannot check. It only pays back <b>if you actually use it</b> - a tool in a shed displaces nothing. And the cost it replaces has to be one you would genuinely have paid; "I would have hired someone" is only true if you were really going to.`;
+  }
+
+  const goalSelect='';   // routing money to a dream is for a skip, and this is not one
+  document.getElementById('impResult').innerHTML=`
+    <div class="checkcard tool${displaces?' pays':''}">
+      <div class="verdict tool">${head}</div>
+      <div class="trap-tag tool">${displaces?'Replaces a real cost':'No cost replaced'}</div>
+      <div class="qline">${body}</div>
+      <div class="meter-lbl"><span class="cl">&#9668; Freedom</span><span>${displaces?'Payback':'Trap pull'}</span><span class="fr">Trap &#9658;</span></div>
+      <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:${displaces?'rgb(var(--good-rgb))':'var(--accent-2)'}"></div></div>
+      <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
+      <div class="tool-honest">${honest}</div>
+      ${whyReminderHTML()}
+      <div class="check-actions">
+        <button class="btn primary" id="impRansom">${displaces?'Buy it - it pays back':'Buy it anyway'}</button>
+        <button class="btn" id="impVault">&#9203;24-Hour Vault</button>
+        <button class="btn income" id="impNeutralize">Skip it</button>
+      </div>
+    </div>`;
+  wireWhyEdit();
+  wireCheckActions();
+}
 function renderCheckResult(){
   const {name,amt,trap}=pendingCheck;
+  if((TRAPS.find(t=>t.v===trap)||{}).tool) return renderToolResult();
   const avg=personalMonthlyIncome()||avgMonthlyIncome(), g=topGoal(), NW=netWorth(), H=effectiveHourly();   // YOUR income sizes the pull, not the household's
   const size=Math.min(1, avg>0? amt/avg : amt/500);
   const left=Math.max(5,Math.min(95, 60+size*34));
@@ -8368,7 +8525,12 @@ function renderCheckResult(){
       </div>
     </div>`;
   wireWhyEdit(); wireComfortLinks(); wireDiaryEcho();
-
+  wireCheckActions();
+}
+/* The three decisions, shared. The payback card offers the same three moves in a
+   different order and with different words, and two copies of this would drift
+   on which one logs a ransom - so there is one copy. */
+function wireCheckActions(){
   document.getElementById('impNeutralize').addEventListener('click',()=>{
     const sel=document.getElementById('impGoal'); let goalId=sel?sel.value:'';
     const total=pendingCheck.amt;
