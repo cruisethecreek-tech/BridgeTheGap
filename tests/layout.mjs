@@ -47,7 +47,14 @@ const HOUSE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,gu
   {id:'t5',type:'invest',amount:500,date:'2026-08-06',note:'Index fund'}],
  goals:[{id:'g',name:'Emergency fund that covers three months',target:9000,saved:2400}],
  impulse:[{id:'p',name:'Mechanical keyboard',amount:189,trap:'scroll',date:'2026-08-03',type:'skip'}],
- recurring:[{id:'r',type:'expense',amount:1250,catId:'roof',freq:'monthly',anchor:'2026-08-01'}],
+ /* A biweekly income with cents is the row that broke: the amount cannot shrink
+    (no break opportunity in "+$2,435.22"), the name could break to a single
+    character, so flex crushed "Partner's pay" into a one-letter column while the
+    meta line - "every 2 wks · next Aug 28 · ≈$5,276/mo · 8.7 days" - stacked
+    beside it. The fixture needs BOTH: a wide amount and a long meta. */
+ recurring:[{id:'r',type:'expense',amount:1250,catId:'roof',freq:'monthly',anchor:'2026-08-01'},
+   {id:'r2',type:'income',amount:2435.22,source:"Partner's pay from the hospital",freq:'biweekly',anchor:'2026-08-14',owner:'b'},
+   {id:'r3',type:'income',amount:1500,source:'The Creek',freq:'biweekly',anchor:'2026-08-15'}],
  accounts:[{id:'a',name:'Checking',kind:'checking',balance:2150}],
  assets:[{id:'as',name:'Index fund at the brokerage',value:12000,kind:'real'}],
  liabilities:[{id:'l',name:'Credit card',value:2400}],
@@ -56,7 +63,7 @@ const HOUSE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,gu
 
 const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
 const errs=[];
-const overlaps=[], offscreen=[], crushed=[], sideways=[];
+const overlaps=[], offscreen=[], crushed=[], sideways=[], midword=[];
 
 for(const w of WIDTHS){
   const p = await b.newPage({ viewport:{width:w,height:900} });
@@ -99,12 +106,44 @@ for(const w of WIDTHS){
       const off=leaves.filter(e=>{const r=e.getBoundingClientRect(); return r.right>innerWidth+1||r.left<-1;}).map(id);
       const cr=leaves.filter(e=>e.scrollWidth>e.clientWidth+1 && e.clientWidth<60 && getComputedStyle(e).overflow!=='visible')
         .map(e=>id(e)+' in '+e.clientWidth+'px of '+e.scrollWidth);
-      return { ov, off, cr, hscroll: document.documentElement.scrollWidth>innerWidth+1 ? document.documentElement.scrollWidth : 0 };
+      /* A box squeezed narrower than its own words does not OVERFLOW - it wraps,
+         one letter at a time, and grows tall instead of wide. "Partner" became
+         "Par / tne / r" and every check above was blind to it, because nothing
+         overlapped, nothing left the glass and nothing scrolled. The symptom
+         that actually defines it is a mid-word break: an ordinary word split
+         across lines means the column is too narrow, not that the word is long.
+         Words over 20 characters are exempt - a long URL or a hash genuinely has
+         to break somewhere, and that is the browser doing its job. */
+      const mid=[];
+      for(const e of leaves){
+        const cs=getComputedStyle(e);
+        /* nowrap text cannot wrap by definition, so any multi-rect there is a
+           clipping artifact of overflow:hidden + ellipsis, not a crushed column */
+        if(cs.whiteSpace==='nowrap'||cs.whiteSpace==='pre') continue;
+        for(const node of e.childNodes){
+          if(node.nodeType!==3) continue;
+          const txt=node.textContent; if(txt.trim().length<4) continue;
+          /* no hyphen or slash: those are legitimate break opportunities, and
+             "Wi-Fi" splitting after the hyphen is typography, not a fault */
+          const re=/[A-Za-z0-9'’]{4,20}/g; let m, hits=0;
+          while((m=re.exec(txt)) && hits<2){
+            const rg=document.createRange();
+            rg.setStart(node,m.index); rg.setEnd(node,m.index+m[0].length);
+            const rects=[...rg.getClientRects()].filter(r=>r.width>0.5);
+            /* two rects on the SAME line is a clip or a fragment; two rects on
+               different lines is the word actually broken in half */
+            const lines=new Set(rects.map(r=>Math.round(r.top)));
+            if(lines.size>1){ mid.push(id(e)+' broke "'+m[0]+'" across '+lines.size+' lines'); hits++; }
+          }
+        }
+      }
+      return { ov, off, cr, mid, hscroll: document.documentElement.scrollWidth>innerWidth+1 ? document.documentElement.scrollWidth : 0 };
     },v);
     if(!r) continue;
     r.ov.forEach(x=>overlaps.push(`${v}@${w}: ${x}`));
     r.off.forEach(x=>offscreen.push(`${v}@${w}: ${x}`));
     r.cr.forEach(x=>crushed.push(`${v}@${w}: ${x}`));
+    r.mid.forEach(x=>midword.push(`${v}@${w}: ${x}`));
     if(r.hscroll) sideways.push(`${v}@${w}: page is ${r.hscroll}px wide`);
   }
   await p.close();
@@ -114,6 +153,8 @@ check('no two pieces of text share pixels', overlaps.length===0, overlaps.slice(
 check('nothing is pushed off the side of the glass', offscreen.length===0, offscreen.slice(0,6).join(' | '));
 check('the page never scrolls sideways', sideways.length===0, sideways.slice(0,6).join(' | '));
 check('no label is crushed into a sliver', crushed.length===0, crushed.slice(0,6).join(' | '));
+check('no ordinary word is broken across lines by a column too narrow for it',
+      midword.length===0, midword.slice(0,5).join(' | '));
 
 /* INVISIBLE TEXT. The Reorder button carried `.btn ghost primary`. `.ghost` is
    declared after `.primary` at the same specificity, so it won the background

@@ -341,6 +341,17 @@ cents, a note longer than its row:
 - nothing is pushed off the side of the glass, and the page never scrolls
   sideways
 - no label is crushed into a sliver - `"Mechanic..."` in 45px is not a label
+- **no ordinary word is broken across lines.** A box squeezed narrower than its
+  own words does not *overflow* - it wraps, one letter at a time, and grows tall
+  instead of wide. `"Partner"` became `"Par / tne / r"` and every other check here
+  was blind to it: nothing overlapped, nothing left the glass, nothing scrolled.
+  The symptom that defines it is a **mid-word break**. Words over 20 characters
+  are exempt (a long URL genuinely has to break), `nowrap` text is skipped (it
+  cannot wrap, so multiple rects there are a clipping artifact), and hyphens and
+  slashes are excluded because `"Wi-Fi"` splitting after the hyphen is typography
+  rather than a fault. Verified the only way that counts: reverting the CSS fix
+  makes it fail, and the fixture that triggers it - a biweekly income with cents
+  and a long name - is now in `HOUSE`.
 - an amount can never be squeezed below the number inside it, and the category
   chip is never shaved to fit beside it
 
