@@ -238,6 +238,15 @@ It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.
 
+It holds **money that did not leave** - the rule that the fast way to log must
+never be able to write only one kind of entry again. A Roth contribution is never
+guessed as shopping, a put-away line writes an investment rather than an expense,
+it reaches net worth (it is still your money), it never counts as spending, the
+confirmation does not call it a purchase, and spend mode has to show what was
+kept beside what was spent - in the headline, in the list underneath it, in the
+week pace, and on the day itself. With nothing put away yet the screen still has
+to name the door.
+
 It holds **the tripwires**, where the most important properties are about copy
 rather than code: the panel must deny, in its own words, that the app can see
 which apps you open, and must say it is a nudge and not a block. Then the

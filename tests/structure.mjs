@@ -2069,6 +2069,99 @@ check('...and the shared title does not linger in the address bar', tripBoot.sha
 check('a brand-new user gets set up, not dropped into a scan of nothing',
       tripBoot.cold.open===false && tripBoot.cold.intake===true, JSON.stringify(tripBoot.cold));
 
+/* ---- 38. money that did not leave ----
+   From a phone: "the track category still assumes expense even though investing
+   should be an option. Say I used the $145 towards savings or investment,
+   there's really no indication - it just has a big expense column. Its
+   connotations are destructive not rewarding."
+
+   Both halves were true. The quick log hard-coded type:'expense' on every line
+   and offered only places money GOES, so someone who moved $145 into savings
+   either could not record it or had their best month filed as a purchase. And
+   spend mode counted one number, the accusing one: a week of funding a Roth read
+   exactly like a week of doing nothing. ---- */
+const put = await p.evaluate(async () => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.spendingMode=true;
+  state.spendLimit=1500; state.hourlyWage=22; state.trueRateSkipped=true;
+  state.activeMonth=thisMonth(); state.trackStart=thisMonth()+'-01';
+  state.categories.push({id:'c1',name:'Coffee / drinks out'});
+  save(); applySpending(); renderAll();
+  /* a Roth contribution must never score against a spending category - that is
+     the one misfiling that turns a good month into an accusation */
+  o.guess=['Roth IRA','401k contribution','transfer to savings','emergency fund','index fund','Coffee']
+    .map(x=>suggestCatFor(x));
+  quickLogOpen=true; renderQuickLog();
+  const rows=[...document.querySelectorAll('.ql-row')];
+  o.options=[...rows[0].querySelectorAll('.ql-cat option')].map(x=>x.value);
+  const set=(row,what,amt,cat)=>{ row.querySelector('.ql-what').value=what;
+    row.querySelector('.ql-amt').value=amt; row.querySelector('.ql-cat').value=cat; };
+  set(rows[0],'Coffee','5','c1');
+  set(rows[1],'Roth IRA','145','__invest');
+  set(rows[2],'Side gig','200','__income');
+  document.getElementById('qlSave').click();
+  await new Promise(x=>setTimeout(x,120));
+  o.written=state.transactions.map(t=>t.type+':'+t.amount+':'+(t.source||t.note)).sort();
+  /* money you still own has to reach net worth, or "put away" is just a label */
+  o.asset=(state.assets||[]).map(a=>a.name+':'+a.value).join(',');
+  o.toast=(document.getElementById('toastEl')||{}).textContent;
+  applySpending(); renderHome();
+  /* calSelDay is module state and an earlier section left a different day
+     selected on this shared page - point it at today, which is where the
+     entries just landed. */
+  calSelDay=new Date().getDate(); renderRewardCalendar();
+  const sp=document.getElementById('spendingBox').innerText;
+  o.headline=/Put away/.test(sp);
+  o.kept=(sp.match(/[^\n]*stayed yours[^\n]*/)||[''])[0];
+  o.recentShowsIt=/Roth IRA/.test(sp);
+  const cal=document.getElementById('rewardCalBox').innerText;
+  o.week=(cal.match(/[^\n]*put away this week[^\n]*/)||[''])[0];
+  o.day=(cal.match(/[^\n]*put away this day[^\n]*/)||[''])[0];
+  o.dayRow=/Roth IRA/.test(cal);
+  /* and it must not be counted as spending anywhere */
+  o.spent=monthExpense(state.activeMonth);
+  o.invested=monthInvested(state.activeMonth);
+  /* with nothing put away yet, the screen still says the door exists */
+  state.transactions=state.transactions.filter(t=>t.type==='expense'); save(); renderSpending();
+  o.quietPrompt=/Put away/.test(document.getElementById('spendingBox').innerText);
+  return o;
+});
+check('the quick log offers somewhere for money that did not leave',
+      put.options.includes('__invest') && put.options.includes('__income'), put.options.join(','));
+check('...and a Roth is never guessed as shopping',
+      put.guess.slice(0,5).every(g=>g==='__invest') && put.guess[5]==='c1', put.guess.join(','));
+check('a put-away line writes an investment, not an expense',
+      put.written.join(' | ')==='expense:5:Coffee | income:200:Side gig | invest:145:Roth IRA',
+      put.written.join(' | '));
+check('...and it reaches net worth, because it is still your money',
+      put.asset==='Invested capital:145', put.asset);
+check('...and it never counts as spending', put.spent===5 && put.invested===145, `${put.spent} / ${put.invested}`);
+check('the confirmation names what actually happened',
+      /put away/.test(put.toast) && !/3 purchases/.test(put.toast), put.toast);
+check('spend mode shows what you kept beside what you spent', put.headline===true);
+check('...with the arithmetic, not just a compliment',
+      /97% of it stayed yours/.test(put.kept) && /bought back/.test(put.kept), put.kept);
+check('...and the list underneath matches the headline', put.recentShowsIt===true);
+check('the week pace counts money moved, not only money gone',
+      /\$145 put away this week/.test(put.week), put.week);
+check('the day card says a funded day was a funded day',
+      /\$145 put away this day/.test(put.day), put.day);
+check('...and draws it as put away, never as a purchase', put.dayRow===true);
+check('with nothing put away yet, the door is still named', put.quietPrompt===true);
+
+/* The rule that keeps the framing from sliding back: the fast way to log must
+   never be able to write only one kind of entry again. */
+const oneKind = await p.evaluate(() => {
+  const src=document.documentElement.outerHTML.replace(/\/\*[\s\S]*?\*\//g,' ');
+  /* the quick log's writer used to be a single hard-coded expense push */
+  const inv=/type:'invest'[^}]*ikind:'holds'/.test(src);
+  const inc=/__income/.test(src) && /type:'income'/.test(src);
+  return {inv, inc};
+});
+check('all three kinds of entry survive in the fast log', oneKind.inv===true && oneKind.inc===true,
+      JSON.stringify(oneKind));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
