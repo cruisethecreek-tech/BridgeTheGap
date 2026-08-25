@@ -2505,6 +2505,73 @@ check('...and the frequency beside it keeps the date',
       repDate.freqKeepsDate.freq==='biweekly' && repDate.freqKeepsDate.anchor.endsWith('-01'),
       JSON.stringify(repDate.freqKeepsDate));
 
+/* ---- 43. a rule that had not started cannot be broken ----
+   From a phone: "if the days prior to August 23rd are greyed out, am I to assume
+   the red 1 is for September? The logic is wrong."
+
+   It was August 1, and it was scarlet and alone in a wall of grey. calIsPre made
+   an exception for days that had spending on them - so the calendar gave no
+   credit for anything before the start date and handed out every penalty. The
+   sentence above the grid said earlier days were "not counted" while counting
+   that one, the streak read 0, and the month read $1,842 over pace, on a day
+   whose entries were mostly the app's own seeded recurring posts. Asymmetric
+   scoring is not accountability, it is retroactive blame. ---- */
+const preCal = await p.evaluate(async () => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.spendingMode=true;
+  state.spendLimit=1500; state.hourlyWage=22; state.trueRateSkipped=true;
+  const M=thisMonth(); state.activeMonth=M; state.trackStart=M+'-23';
+  const c=findOrCreateCat('Roof');
+  state.transactions.push({id:'x1',type:'expense',amount:848.38,catId:c.id,date:M+'-01',note:'Roof'});
+  state.transactions.push({id:'x2',type:'expense',amount:850,catId:c.id,date:M+'-01',note:'Roof'});
+  state.transactions.push({id:'x3',type:'income',amount:6000,source:'Partner',date:M+'-01'});
+  save(); applySpending(); renderHome();
+  const txt=()=>document.getElementById('rewardCalBox').innerText;
+  const cell1=()=>[...document.querySelectorAll('.cal-cell')]
+    .find(x=>x.querySelector('.cd') && x.querySelector('.cd').textContent==='1');
+  o.cls=cell1().className;
+  o.tappable=!!document.querySelector('.cal-cell[data-day="1"]');
+  o.streak=(()=>{ const st=[...document.querySelectorAll('#rewardCalBox .cal-stat')]
+    .find(x=>/streak/i.test(x.textContent)); return st?st.querySelector('.v').textContent.trim():''; })();
+  o.ahead=/Ahead this month/.test(txt());
+  /* the money is still real everywhere it was real before */
+  o.stillCounted={month:Math.round(monthExpense(M)*100)/100};
+  /* the sentence above the grid has to be true of what the grid does */
+  o.saysNotScored=/greyed out and not scored/.test(txt());
+  o.explainsDot=/carries a dot/.test(txt()) || /carry a dot/.test(txt());
+  document.querySelector('.cal-cell[data-day="1"]').click();
+  await new Promise(x=>setTimeout(x,80));
+  const day=document.getElementById('calDay').innerText;
+  o.card={pre:/Before you started tracking/.test(day), judged:/over allowance here/.test(day),
+          entries:/Partner/.test(day), bank:/Bank \$/.test(day)};
+  /* and the calendar can move months on its own now */
+  o.before=state.activeMonth;
+  o.wantNext=shiftMonth(state.activeMonth,1);
+  document.getElementById('calNext').click(); await new Promise(x=>setTimeout(x,140));
+  o.next=state.activeMonth;
+  document.getElementById('calPrev').click(); await new Promise(x=>setTimeout(x,140));
+  o.back=state.activeMonth;
+  return o;
+});
+check('a day before you started is greyed, whatever is on it',
+      /\bpre\b/.test(preCal.cls) && !/\bover\b/.test(preCal.cls), preCal.cls);
+check('...and it is not scored, so the streak survives it',
+      preCal.streak==='3' && preCal.ahead===true, `streak "${preCal.streak}"`);
+check('...but the money still counts everywhere it counted before',
+      preCal.stillCounted.month===1698.38, String(preCal.stillCounted.month));
+check('...it is still tappable, and marked, so nothing is hidden',
+      preCal.tappable===true && /prehas/.test(preCal.cls), preCal.cls);
+check('the sentence above the grid says what the grid actually does',
+      preCal.saysNotScored===true && preCal.explainsDot===true);
+check('tapping it explains rather than judges',
+      preCal.card.pre===true && preCal.card.judged===false && preCal.card.entries===true,
+      JSON.stringify(preCal.card));
+check('...and offers nothing to bank on a day that predates the rule', preCal.card.bank===false);
+check('the calendar moves months on its own, without leaving Home',
+      preCal.next===preCal.wantNext && preCal.back===preCal.before,
+      `${preCal.before} -> ${preCal.next} -> ${preCal.back}`);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

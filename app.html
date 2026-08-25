@@ -607,6 +607,16 @@
     background:transparent;color:var(--muted);font-size:13.5px;line-height:1.55}
   .sp-recent .am.put{color:rgb(var(--good-rgb))}
   .sp-recent .ce-put{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgb(var(--good-rgb));margin-left:5px}
+  .cal-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .cal-head h2{margin:0}
+  .cal-mo{display:flex;align-items:center;gap:4px}
+  .cal-mo-l{font-weight:800;font-size:13.5px;white-space:nowrap}
+  .cal-mo-l small{color:var(--muted);font-weight:700}
+  .cal-cell.prehas{opacity:.72}
+  .cal-cell .cpre{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+    font-size:14px;line-height:1;color:var(--muted)}
+  .cal-day.pre .cd-pre{margin:6px 0 2px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);
+    color:var(--muted);font-size:13px;line-height:1.55}
   .cal-entries .ce-put{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
     color:rgb(var(--good-rgb));margin-left:5px}
   .cal-entries .am.put{color:rgb(var(--good-rgb))}
@@ -649,7 +659,7 @@
   /* reward calendar */
   .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:14px}
   .cal-dow{text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
-  .cal-cell{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel-2);font-size:12px;gap:1px}
+  .cal-cell{position:relative;aspect-ratio:1;border-radius:8px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel-2);font-size:12px;gap:1px}
   .cal-cell.empty{border:none;background:none}
   .cal-cell .cd{font-weight:800;color:var(--muted)}
   .cal-cell.win{background:rgba(var(--good-rgb),.16);border-color:rgba(var(--good-rgb),.4)}
@@ -3286,6 +3296,7 @@ function renderCalDay(M, allowance){
   const entries=dayEntries(M,d);
   const spent=entries.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const dayPut=entries.filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0);
+  const isPre = calIsPre(M+'-'+String(d).padStart(2,'0'));   // declared before anything that reads it
   const saved=allowance-spent;
   const label=new Date(y,mo-1,d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   let rows;
@@ -3351,6 +3362,7 @@ function renderCalDay(M, allowance){
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
   }
+  if(isPre) action='';   // nothing to bank and nothing to answer for on a day that predates the rule
   /* A day you tapped that is not today is the forgotten-receipt case, and it is
      the whole reason the 30-day money map works at all: you jot it Saturday and
      punch it in Monday. The button carries the day with it - logging Saturday's
@@ -3367,11 +3379,13 @@ function renderCalDay(M, allowance){
   const putLine = dayPut>0
     ? `<div class="cd-put">\u2192 <b>${money(dayPut)}</b> put away this day.${effectiveHourly()>0?` ${fmtHours(dayPut/effectiveHourly())} of your life, kept rather than spent.`:''}</div>`
     : '';
-  el.innerHTML=`<div class="cal-day">
+  el.innerHTML=`<div class="cal-day${isPre?' pre':''}">
     <h3>${label}</h3>
-    <div class="cd-save ${saved>=0?'good':'bad'}">${saved>=0?money(saved)+' saved':money(-saved)+' over'}</div>
-    <div class="sub" style="font-size:12px">${money(spent)} spent of ${money(allowance)} allowance</div>
-    ${putLine}
+    ${isPre
+      ? `<div class="cd-pre">Before you started tracking${state.trackStart?` on ${fmtDayShort(state.trackStart)}`:''}. Here is what is on it - it counts in your ledger and every total on Reflect, and it is not scored here, because there was no allowance to beat yet.</div>`
+      : `<div class="cd-save ${saved>=0?'good':'bad'}">${saved>=0?money(saved)+' saved':money(-saved)+' over'}</div>
+         <div class="sub" style="font-size:12px">${money(spent)} spent of ${money(allowance)} allowance</div>`}
+    ${isPre?'':putLine}
     ${rows}
     ${logHTML}
     ${action}
@@ -3407,7 +3421,21 @@ function renderCalDay(M, allowance){
    artifacts, and neither is evidence that anyone was tracking that day. */
 function genuineTxDates(st){ return (st.transactions||[]).filter(t=>t.note!=='Intake' && !t.recId).map(t=>t.date).filter(Boolean).sort(); }
 function ensureTrackStart(){ if(!state.trackStart){ state.trackStart=genuineTxDates(state)[0]||todayStr(); } }
-function calIsPre(dateStr, hasSpend){ return !!state.trackStart && dateStr<state.trackStart && !hasSpend; }
+/* A day before you started tracking is not scored. Full stop.
+
+   It used to make an exception for days with spending on them - which meant the
+   calendar gave you no credit for anything before you started and handed out
+   every penalty, and the sentence above the grid ("earlier days are greyed out,
+   not counted") was simply false. On a real screen it produced Aug 1 sitting
+   scarlet and alone in a wall of grey, judged against an allowance that did not
+   exist yet, resetting the streak to zero and putting the month $1,842 over pace
+   - on a day whose entries were mostly the app's own seeded recurring posts.
+
+   Asymmetric scoring is not accountability, it is retroactive blame. The money
+   is still in the ledger, still on Track, still in every total in Reflect; it
+   just is not marked against a rule that had not started. The second argument is
+   kept so old call sites stay valid, and deliberately ignored. */
+function calIsPre(dateStr, _hasSpend){ return !!state.trackStart && dateStr<state.trackStart; }
 function calElapsedDays(M){
   const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate();
   const tm=(typeof thisMonth==='function')?thisMonth():M;
@@ -3480,9 +3508,15 @@ function renderRewardCalendar(){
       if(isCur && d===todayDay) bankedToday=Math.max(0,surplus);
     }
     const scored = isPast && !pre;
-    const extra = scored ? ` clk${d===calSelDay?' sel':''}` : '';
-    const dd = scored ? ` data-day="${d}"` : '';
-    cells+=`<div class="cal-cell ${cls}${(isCur&&d===todayDay)?' today':''}${extra}"${dd}${pre?' title="Before your budget began"':''}><span class="cd">${d}</span>${mark?`<span class="cm">${mark}</span>`:''}</div>`;
+    /* Not scored is not the same as not there. A pre-start day that HAS entries
+       stays tappable and carries a dot, so the money is findable rather than
+       hidden - it just is not judged. */
+    const preHas = pre && (spentByDay[d]>0 || dayEntries(M,d).length>0);
+    const open = scored || preHas;
+    const extra = open ? ` clk${d===calSelDay?' sel':''}` : '';
+    const dd = open ? ` data-day="${d}"` : '';
+    const tip = pre ? (preHas?'Before you started - tap to see it, but it is not scored':'Before you started tracking') : '';
+    cells+=`<div class="cal-cell ${cls}${preHas?' prehas':''}${(isCur&&d===todayDay)?' today':''}${extra}"${dd}${tip?` title="${tip}"`:''}><span class="cd">${d}</span>${mark?`<span class="cm">${mark}</span>`:''}${preHas?'<span class="cpre">·</span>':''}</div>`;
   }
   let streak=0; for(let d=Math.min(dim,todayDay); d>=1; d--){ if(calIsPre(dayStr(d), spentByDay[d])) break; if((spentByDay[d]||0)<=allowance) streak++; else break; }
   // weekly pacing: the calendar week (Sun..today) that contains today, within this month - scored days only
@@ -3515,10 +3549,29 @@ function renderRewardCalendar(){
   let orgNote='';
   if(org && org.slice(0,7)===M && +org.slice(8,10)>1){
     const od=new Date(org+'T00:00:00');
-    orgNote=` You started on <b>${od.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</b> - earlier days are greyed out, not counted. No fake green here.`;
+    /* Whether any earlier day actually HAS something on it decides what this
+       sentence is allowed to say. It used to claim earlier days were "not
+       counted" while quietly counting every one that had spending on it - which
+       is how a single scarlet Aug 1 ended up alone in a wall of grey, judged
+       against an allowance that did not exist yet. */
+    const preDays=[...Array(dim).keys()].map(i=>i+1)
+      .filter(d=>calIsPre(dayStr(d)) && (spentByDay[d]>0 || dayEntries(M,d).length>0)).length;
+    orgNote=` You started on <b>${od.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</b> - earlier days are greyed out and not scored, green or red. No fake green, and no blame for a rule that hadn't started.`
+      + (preDays?` ${preDays} earlier day${preDays>1?'s':''} carr${preDays>1?'y':'ies'} a dot: there is money on ${preDays>1?'them':'it'}, and you can tap to see it. It still counts everywhere else - Track, the totals, Reflect.`:'');
   }
+  /* The grid showed state.activeMonth and had no way to move it - so the only
+     month control was on Plan and Reflect, tabs away from the calendar people
+     actually live on. Same arrows, same shared activeMonth, so Home, Plan, Track
+     and Reflect stay one truth. */
   box.innerHTML=`<div class="panel">
-    <h2>Reward calendar</h2>
+    <div class="cal-head">
+      <h2>Reward calendar</h2>
+      <div class="cal-mo">
+        <button class="rf-arrow" id="calPrev" title="Previous month" aria-label="Previous month">&#8249;</button>
+        <span class="cal-mo-l">${escapeHtml(fmtMonth(M))}${isCur?' <small>this month</small>':''}</span>
+        <button class="rf-arrow" id="calNext" title="Next month" aria-label="Next month">&#8250;</button>
+      </div>
+    </div>
     <p class="sub">Your daily allowance is <b>${money(allowance)}</b> (${actMoney(lim)} ÷ ${dim} days). Beat it and the day goes green; a no-spend day earns a ★. <b>Tap any day</b> for what you logged and saved.${orgNote}</p>
     <div class="cal-grid">${['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}${cells}</div>
     ${weekHTML}
@@ -3531,6 +3584,9 @@ function renderRewardCalendar(){
     <div class="cal-rec">${spendRewardRec(bankedToday, aheadNet)}</div>
   </div>`;
   renderCalDay(M, allowance);
+  const stepMonth=n=>{ state.activeMonth=shiftMonth(state.activeMonth,n); calSelDay=null; save(); renderAll(); };
+  const pv=document.getElementById('calPrev'); if(pv) pv.onclick=()=>stepMonth(-1);
+  const nx=document.getElementById('calNext'); if(nx) nx.onclick=()=>stepMonth(1);
   const grid=box.querySelector('.cal-grid');
   if(grid) grid.addEventListener('click',e=>{ const c=e.target.closest('.cal-cell[data-day]'); if(!c) return; calSelDay=+c.dataset.day; renderRewardCalendar(); });
   box.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>{
