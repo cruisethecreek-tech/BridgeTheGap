@@ -238,6 +238,20 @@ It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.
 
+It holds **the tripwires**, where the most important properties are about copy
+rather than code: the panel must deny, in its own words, that the app can see
+which apps you open, and must say it is a nudge and not a block. Then the
+mechanics - the link carries the shop name url-encoded, the trap guess is right
+for a food app and a resale app and a renewal, the same shop cannot be armed
+twice, Test does exactly what the automation will do, and both platform recipes
+name the thing the person will actually open. The entry points run in fresh
+pages because they are boot paths: a link opens the scan with the cursor on the
+price, a **second firing works when the app is already open** (a same-document
+hash change does not re-run boot, which is the common case and was a real bug),
+a shared product yields its name and its price, the shared title does not linger
+in the address bar, and a brand-new user gets the setup chat rather than a scan
+of nothing.
+
 It holds **the period pickers** - the rule that a field asking for a *rate* must
 let the person choose the period. Every multiplier has to agree with the rest of
 the app (a bill, a paycheck, a leak and an overhead of the same cadence cannot

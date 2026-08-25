@@ -1,5 +1,9 @@
 /* ACCOUNTABILITY service worker - offline shell + fresh updates */
-const CACHE = 'accountability-v5';   // bumped for the restyle: stale shots and the old palette must not survive in cache
+/* Bump this whenever a PRECACHED file changes in a way that matters. The
+   manifest is served cache-first, so an already-installed user keeps whatever
+   copy they installed with - v6 is for the share_target, which without a bump
+   would never reach anyone who already had the app. */
+const CACHE = 'accountability-v6';
 const ASSETS = [
   './',
   './index.html',

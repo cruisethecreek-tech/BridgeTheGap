@@ -1965,6 +1965,110 @@ const bakedIn = await p.evaluate(() => {
 });
 check('no field hard-codes a period into its label any more', bakedIn.length===0, bakedIn.join(' | '));
 
+/* ---- 37. tripwires - the nudge at the door of the shop ----
+   A user's idea: opt in to a warning when you open the app that usually gets
+   you. The honest half is buildable and the dishonest half must never be built:
+   this app CANNOT see which apps you open, no web page can, and something that
+   could would need the always-watching permission the app exists to argue
+   against. What both phones already ship is an automation engine that can watch
+   for an app opening, so the app hands it a link that lands on the gut-check
+   with the shop already named. The watching stays in the OS. ---- */
+const trip = await p.evaluate(() => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22;
+  save(); activateTab('impulse'); renderTripwires();
+  const body=()=>document.getElementById('tripwireBody');
+  const r={};
+  /* the claim that would be a lie has to be denied in the panel itself, not
+     buried in a doc nobody opens */
+  r.saysItCannotWatch=/cannot see which apps you open/i.test(body().innerText);
+  r.saysNudgeNotBlock=/never a lock|not a block|nudge/i.test(body().innerText);
+  r.seeds=document.querySelectorAll('[data-twseed]').length;
+  document.querySelector('[data-twseed="Amazon"]').click();
+  document.querySelector('[data-twseed="DoorDash"]').click();
+  r.added=state.tripwires.map(t=>t.name+':'+t.trap);
+  /* a food app is a friction trap, a shopping feed is a scroll trap - a guess,
+     but a guess that is right more often than "scroll" for everything */
+  r.guesses=['Amazon','DoorDash','StockX','Prime renewal'].map(trapForName);
+  r.url=tripwireURL('Uber Eats');
+  r.dupe=(()=>{ const n=state.tripwires.length; twAdd('Amazon'); return state.tripwires.length===n; })();
+  /* the recipe has to name the thing the person will actually open */
+  r.recipe=/Shortcuts/.test(body().innerText) || /Modes and Routines/.test(body().innerText);
+  document.querySelectorAll('[data-twplat]')[0].click();
+  r.iosRecipe=/Shortcuts/.test(body().innerText) && /Is Opened/i.test(body().innerText);
+  document.querySelectorAll('[data-twplat]')[1].click();
+  r.androidRecipe=/Modes and Routines|MacroDroid|Tasker/.test(body().innerText);
+  /* Test does exactly what the automation will do */
+  document.querySelector('[data-twtest]').click();
+  r.test={open:document.getElementById('modal').classList.contains('on'),
+          name:document.getElementById('mName').value,
+          trap:document.getElementById('mTrap').value};
+  document.getElementById('modal').classList.remove('on');
+  return r;
+});
+check('the panel denies the thing it cannot do, in its own words', trip.saysItCannotWatch===true);
+check('...and says out loud that it is a nudge, not a block', trip.saysNudgeNotBlock===true);
+check('the shops that actually get people are one tap each', trip.seeds>=10, String(trip.seeds));
+check('adding one guesses which trap it is', trip.added.join(',')==='Amazon:scroll,DoorDash:friction', trip.added.join(','));
+check('...a food app is friction, a resale app is status, a renewal is a leak',
+      trip.guesses.join(',')==='scroll,friction,status,leak', trip.guesses.join(','));
+check('the same shop cannot be armed twice', trip.dupe===true);
+check('the link carries the shop name, url-encoded', /#check=Uber%20Eats$/.test(trip.url), trip.url);
+check('the iPhone recipe names Shortcuts and the trigger', trip.iosRecipe===true);
+check('the Android recipe names a routines app', trip.androidRecipe===true);
+check('Test does exactly what the automation will do',
+      trip.test.open===true && trip.test.name==='Amazon' && trip.test.trap==='scroll', JSON.stringify(trip.test));
+
+/* Now the entry points, in a fresh page each time, because these are BOOT paths
+   and a same-document hash change does not re-run boot. */
+const tripBoot = await (async () => {
+  const out={};
+  const seed = async pg => { await pg.evaluate(()=>{ const st=JSON.parse(localStorage.getItem('unfiltered_budget_v2')||'{}');
+    st.onboarded=true; st.uiMode='all'; st.stageReached=3; localStorage.setItem('unfiltered_budget_v2',JSON.stringify(st)); }); };
+  const base='file://'+process.cwd()+'/app.html';
+  const read = pg => pg.evaluate(()=>({ open:document.getElementById('modal').classList.contains('on'),
+    name:document.getElementById('mName').value, amt:document.getElementById('mAmt').value,
+    trap:document.getElementById('mTrap').value, focus:(document.activeElement||{}).id,
+    intake:document.getElementById('intake').classList.contains('on'), q:location.search }));
+  let pg=await b.newPage({viewport:{width:390,height:844}});
+  await pg.goto(base); await pg.waitForTimeout(500); await seed(pg);
+  await pg.goto(base+'#check=Amazon'); await pg.reload(); await pg.waitForTimeout(800);
+  out.fresh=await read(pg);
+  /* the SECOND firing usually finds the app already open, so the OS hands over
+     the link without a reload - boot never runs and the nudge silently does
+     nothing. That is the common case, not the edge case. */
+  await pg.evaluate(()=>document.getElementById('modal').classList.remove('on'));
+  await pg.evaluate(()=>{ location.hash='#check=Etsy'; });
+  await pg.waitForTimeout(300);
+  out.again=await read(pg);
+  await pg.close();
+  /* Android's share sheet: already looking at the thing, price and all */
+  pg=await b.newPage({viewport:{width:390,height:844}});
+  await pg.goto(base); await pg.waitForTimeout(500); await seed(pg);
+  await pg.goto(base+'?share_title=Sony%20WH-1000XM5&share_text=Sony%20headphones%20%24348.00&share_url=https%3A%2F%2Fwww.amazon.com%2Fdp%2FB09');
+  await pg.waitForTimeout(800);
+  out.shared=await read(pg);
+  await pg.close();
+  /* a brand-new user must get set up, not dropped into a scan of nothing */
+  pg=await b.newPage({viewport:{width:390,height:844}});
+  await pg.goto(base+'#check=Amazon'); await pg.waitForTimeout(800);
+  out.cold=await read(pg);
+  await pg.close();
+  return out;
+})();
+check('a tripwire link opens the scan with the shop named',
+      tripBoot.fresh.open===true && tripBoot.fresh.name==='Amazon', JSON.stringify(tripBoot.fresh));
+check('...and puts the cursor on the price, the one thing still missing',
+      tripBoot.fresh.focus==='mAmt', tripBoot.fresh.focus);
+check('a second firing works when the app is already open',
+      tripBoot.again.open===true && tripBoot.again.name==='Etsy', JSON.stringify(tripBoot.again));
+check('sharing a product in reads its name and its price',
+      tripBoot.shared.open===true && tripBoot.shared.name==='Sony WH-1000XM5' && tripBoot.shared.amt==='348',
+      JSON.stringify(tripBoot.shared));
+check('...and the shared title does not linger in the address bar', tripBoot.shared.q==='', tripBoot.shared.q);
+check('a brand-new user gets set up, not dropped into a scan of nothing',
+      tripBoot.cold.open===false && tripBoot.cold.intake===true, JSON.stringify(tripBoot.cold));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
