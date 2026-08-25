@@ -2758,6 +2758,71 @@ check('a liability carries its rate, so 3% and 29% stop being the same object',
 check('...and the rate travels into the payoff planner instead of arriving as 0%',
       cap.imported==='HELOC@6.5,Visa@26.9', cap.imported);
 
+/* ---- 47. Trends showed one thing and called itself Trends ----
+   Three asks in one note: where does "Latest balance $13,362" come from when net
+   worth says $4,843; Trends should cover investing as well as spending; bank
+   balances should leave a trace as they change; and goals belong there too.
+
+   The first was a naming failure - that line is neither net worth nor the bank,
+   it is everything the LEDGER has net-added since the first entry, sitting
+   unlabelled under a number it is supposed to differ from. The rest were real
+   gaps: Trends drew one month of spending categories, and bank, goals and net
+   worth have no history of their own at all, because editing an account
+   overwrites the number and the old one is gone forever. ---- */
+const trends = await p.evaluate(async () => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22; state.trueRateSkipped=true;
+  const M=thisMonth(); state.activeMonth=M;
+  const c=findOrCreateCat('Food');
+  for(let i=5;i>=0;i--){ const m=shiftMonth(M,-i);
+    state.transactions.push({id:'e'+i,type:'expense',amount:300+i*40,catId:c.id,date:m+'-10',note:'Food'});
+    state.transactions.push({id:'v'+i,type:'invest',amount:200,source:'Index',date:m+'-12',ikind:'holds'});
+  }
+  state.snapshots=[shiftMonth(M,-2),shiftMonth(M,-1),M].map((m,i)=>({month:m,date:m+'-28',
+    bank:2000+i*500, saved:300+i*250, netWorth:4000+i*900}));
+  save(); activateTab('reflect'); rfTab='trends'; renderReflectTab();
+  o.series=[...document.querySelectorAll('[data-trend]')].map(x=>x.dataset.trend);
+  const read=()=>({legend:((document.querySelector('#trendBody .legend')||{}).innerText||'').replace(/\n/g,' '),
+                   svg:!!document.querySelector('#trendBody svg'),
+                   empty:(document.querySelector('#trendBody .empty')||{}).innerText||''});
+  o.spent=read();
+  for(const k of ['invest','bank','saved','nw']){ document.querySelector(`[data-trend="${k}"]`).click(); o[k]=read(); }
+  /* one snapshot is a dot, not a line, and it must say so rather than draw one */
+  state.snapshots=[{month:M,date:M+'-28',bank:2000}];
+  save(); document.querySelector('[data-trend="bank"]').click();
+  o.oneSnap=read();
+  /* the snapshot has to carry what the trends read */
+  o.snapFields=Object.keys(metricSnapshot(M));
+  /* editing a balance has to reach the trend the same day, not at next boot */
+  state.snapshots=[]; state.accounts=[{id:'a',name:'Checking',kind:'checking',balance:1000,updated:todayStr()}];
+  save(); activateTab('goals'); renderAccounts();
+  const inp=document.querySelector('input[data-acctbal="a"]');
+  inp.value='4321'; inp.dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(x=>setTimeout(x,60));
+  const sn=(state.snapshots||[]).find(x=>x.month===M);
+  o.snapped=sn?sn.bank:null;
+  return o;
+});
+check('Trends covers all of them, not just spending',
+      trends.series.join(',')==='spent,invest,bank,saved,nw', trends.series.join(','));
+check('...spending and investing go back as far as the ledger does',
+      /across 6 months/.test(trends.spent.legend) && /across 6 months/.test(trends.invest.legend),
+      trends.invest.legend);
+check('...bank, goals and net worth come from the snapshots',
+      /across 3 months/.test(trends.bank.legend) && /across 3 months/.test(trends.saved.legend)
+        && /across 3 months/.test(trends.nw.legend), trends.bank.legend);
+check('...and investing is cumulative, because that is what growing means',
+      /Investing now: \$1,200/.test(trends.invest.legend), trends.invest.legend);
+check('one snapshot is a dot, not a line, and it says so',
+      trends.oneSnap.svg===false && /needs a second month/.test(trends.oneSnap.empty),
+      trends.oneSnap.empty.slice(0,60));
+check('the monthly snapshot carries what the trends read',
+      ['bank','saved','netWorth','goalTarget'].every(f=>trends.snapFields.includes(f)),
+      trends.snapFields.join(','));
+check('changing a balance reaches the trend the same day',
+      trends.snapped===4321, String(trends.snapped));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
