@@ -49,6 +49,37 @@ engine at all:
 
 **21 of 24 flat, of which about 12 should not be.**
 
+### After the second pass
+
+**15 of 24 voiced. The nine still flat are all flat by design**, and the reasons
+are in the table above: a factual disclosure, timers, charts, forms, labels, and
+the user's own words.
+
+One of the twelve was **reclassified while wiring it**. The talk-through is
+reached when money left because something *happened* - the car, the hospital -
+and every line in it is either an interview prompt or a gentle reframe (*"an
+inconvenience, not a crisis - which is exactly what the money was for"*, *"it
+stung instead of wrecking you"*). Savage there is the precise failure the
+sensitive lock exists to prevent. It stays clean by design rather than by
+neglect, and `tests/structure.mjs` section 49 now asserts it contains **no**
+voice call at all.
+
+Two things the wiring exposed:
+
+- **The picker was report-named.** `rpSay` became `voice`, because it is the
+  general one now - nineteen call sites moved with it.
+- **A step nobody sees is not a fix.** "Do this next" got its voice on the
+  all-clear line first, which almost never fires - the giving step beats it for
+  nearly everyone. The voice moved to the **assign** step, which is the one
+  people actually read, and the existing survival branch was left alone: that is
+  the tone floor doing its job one layer earlier, and it has to win over the
+  intensity dial.
+
+Two older assertions broke and both were **pinned to exact phrasing rather than
+to the property** - the crush-vs-invest tie and the payback card's "want". They
+now check that the verdict is *called* a tie and *called* a want, at every
+intensity, which is what they were always trying to protect.
+
 ## What this pass fixed
 
 The Report - the flagship, and the one that was screenshotted. Fourteen signals,
@@ -89,11 +120,8 @@ arithmetic must not move when the voice does**.
 
 ## Still to do
 
-The twelve flat surfaces above that should not be. Roughly in order of how often
-a person sees them: the reward nudge, the calendar day card, Do this next, the
-spend-mode kept line, the money story note, the payback card, the circulation
-verdict, the impulse celebration, the debt and invest verdicts, Enough, and the
-talk-through.
+Nothing on the intensity axis - every surface that carries an opinion now moves
+with it.
 
 One caveat worth stating rather than discovering later: the Report's new table
 is written properly for **middle** at all three intensities, with genz and mature

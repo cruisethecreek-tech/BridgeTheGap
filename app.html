@@ -3209,9 +3209,10 @@ function putAwayLine(put,spent,H){
   const total=put+spent;
   const share=total>0?Math.round(put/total*100):0;
   const hrs=H>0?` That is ${fmtHours(put/H)} of your life you bought back.`:'';
-  if(spent<=0) return `${usd(put)} put away and nothing logged as spent yet.${hrs}`;
-  if(share>=50) return `Of the ${usd(total)} you moved this month, ${share}% of it stayed yours.${hrs}`;
-  return `${usd(put)} put away against ${usd(spent)} spent - ${share}% of what moved this month, kept.${hrs}`;
+  const say=' '+voice(VOICE.keptShare,null);
+  if(spent<=0) return `${usd(put)} put away and nothing logged as spent yet.${hrs}${say}`;
+  if(share>=50) return `Of the ${usd(total)} you moved this month, ${share}% of it stayed yours.${hrs}${say}`;
+  return `${usd(put)} put away against ${usd(spent)} spent - ${share}% of what moved this month, kept.${hrs}${say}`;
 }
 function renderSpending(){
   renderRewardCalendar();
@@ -3310,10 +3311,10 @@ function renderSpending(){
    saved, and where to put the difference. Plus a live weekly pace strip. */
 let calSelDay=null;
 function spendRewardRec(bankedToday, ahead){
-  if(ahead>0.5) return `You're <b>${money(ahead)}</b> ahead of pace this month - money you chose to keep, not leak. Tap a green day to decide where it goes.`;
-  if(ahead<-0.5) return `You're <b>${money(-ahead)}</b> over pace this month. Not a verdict, just today's number - beat the allowance and it turns around.`;
-  if(bankedToday>0) return `You came in <b>${money(bankedToday)}</b> under today. Bank a few of these and one guilt-free treat is genuinely earned.`;
-  return `Clean slate. Beat today's allowance and the streak starts.`;
+  if(ahead>0.5) return `You're <b>${money(ahead)}</b> ahead of pace this month. ${voice(VOICE.aheadPace,null)}`;
+  if(ahead<-0.5) return `You're <b>${money(-ahead)}</b> over pace this month. ${voice(VOICE.overPace,null)}`;
+  if(bankedToday>0) return `You came in <b>${money(bankedToday)}</b> under today. ${voice(VOICE.bankedToday,null)}`;
+  return voice(VOICE.cleanSlate,null);
 }
 function dayEntries(M,d){ const dd=M+'-'+String(d).padStart(2,'0'); return state.transactions.filter(t=>t.date===dd); }
 function renderCalDay(M, allowance){
@@ -3387,7 +3388,7 @@ function renderCalDay(M, allowance){
         <button class="cal-bank" data-calgoal="${dd}" data-calamt="${bankable}">Create it and bank ${asMoney(bankable)}</button>`;
     }
   } else if(spent>allowance){
-    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
+    action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - ${voice(VOICE.dayOver,null)}</div>`;
   }
   if(isPre) action='';   // nothing to bank and nothing to answer for on a day that predates the rule
   /* A day you tapped that is not today is the forgotten-receipt case, and it is
@@ -3569,7 +3570,7 @@ function renderRewardCalendar(){
       <div class="wk-row"><span>${money(wkSpent)} spent</span><span style="color:${wkOver?'var(--bad)':'var(--good)'}">${wkOver?money(-wkDiff)+' over pace':money(wkDiff)+' ahead'}</span></div>
       <div class="wk-bar ${wkOver?'over':''}"><span style="width:${wkPct}%"></span></div>
       <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays===1?'':'s'} so far this week.${(isCur&&wkSpent===0&&wkPut===0)?' Nothing logged yet - a zero only counts if it is true.':''}</div>
-      ${wkPut>0?`<div class="wk-put">\u2192 <b>${money(wkPut)}</b> put away this week. Not spending is good; moving it somewhere is better.</div>`:''}
+      ${wkPut>0?`<div class="wk-put">\u2192 <b>${money(wkPut)}</b> put away this week. ${voice(VOICE.movedIt,null)}</div>`:''}
       ${isCur?`<button class="btn primary cal-log" data-callog="today">Log an expense</button>`:''}
     </div>` : '';
   const org=state.trackStart||'';
@@ -3810,6 +3811,7 @@ function renderDebtResults(){
     </div>
     ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
     ${cmp?`<div class="debt-cmp">${cmp}</div>`:''}
+    <div class="debt-cmp">${voice(VOICE.debtOut,null)}</div>
     <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/></svg>
     <div class="po-head">Payoff order</div>
     <div class="po-list">${orderHTML}</div>
@@ -3875,7 +3877,7 @@ function renderInvestCompare(){
       <div class="iv-card ${!tooClose&&diff<=0?'win':''}"><div class="sp-k">Crush the debt first</div><div class="iv-net">${actMoney(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
       <div class="iv-card ${!tooClose&&diff>0?'win':''}"><div class="sp-k">Minimums + invest the rest</div><div class="iv-net">${actMoney(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
     </div>
-    <div class="iv-verdict">${tooClose ? `At ${ret}%/yr these land within <b>${money(Math.abs(diff))}</b> of each other after ${yrs} years - on numbers this size that is a tie, not a winner. Pick the one you will actually stick to.` : diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years.` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years - your debt costs more than the market is likely to pay.` : `It's roughly a wash over ${yrs} years - the guaranteed route (crush the debt) is the safer call.`}</div>
+    <div class="iv-verdict">${tooClose ? `At ${ret}%/yr these land within <b>${money(Math.abs(diff))}</b> of each other after ${yrs} years. ${voice(VOICE.ivTie,null)}` : diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years. ${voice(VOICE.ivInvest,null)}` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years. ${voice(VOICE.ivCrush,null)}` : `It's roughly a wash over ${yrs} years. ${voice(VOICE.ivTie,null)}`}</div>
     <div class="iv-flags">${flags.map(f=>`<div class="iv-flag ${f.invest?'inv':'crush'}"><b>${escapeHtml(f.name)} · ${f.apr}%</b> - ${f.invest?`below ${ret}%, so investing the extra likely beats rushing this one`:`beats ${ret}%; crushing it is a guaranteed ${f.apr}% return`}</div>`).join('')}</div>
     ${(()=>{
       /* The honest answer to "how am I supposed to know?" is usually "it barely
@@ -8753,7 +8755,7 @@ function renderToolResult(){
   let head, body, honest;
   if(!displaces){
     head=`${escapeHtml(name)} - ${money(amt)}`;
-    body=`You said it replaces nothing you currently pay for and saves no hours. That is an honest answer, and it means this is a <b>want</b> - which is allowed. Wants are why the money is worth having. But it will not be filed as an investment, because calling it one is how people talk themselves into things.${H>0?` Priced straight: <b>${fmtHours(amt/H)}</b> of your life.`:''}`;
+    body=`You said it replaces nothing you currently pay for and saves no hours. That is an honest answer. ${voice(VOICE.toolWant,name)}${H>0?` Priced straight: <b>${fmtHours(amt/H)}</b> of your life.`:''}`;
     honest=`If it does replace something - a service you hire, a job that eats your Saturday - go back and say so. The arithmetic changes completely, and it is the arithmetic that decides this, not the app's opinion of you.`;
   } else {
     head=`${escapeHtml(name)} pays for itself in ${fmtPayback(pb.years)}`;
@@ -8761,7 +8763,7 @@ function renderToolResult(){
       ? `<b>${fmtHours(pb.hoursYear)}</b> a year of your own life${H>0?`, worth <b>${money(pb.hoursCash)}</b> at your rate`:''}`
       : `<b>${money(pb.cashYear)}</b> a year you would otherwise hand to somebody else`;
     body=`Against ${money(amt)} once, it displaces ${useLine}. `
-      + (fast ? `It clears its own cost inside the first year and every year after that is profit.`
+      + (fast ? voice(VOICE.toolPays,null)
         : ok  ? `That is a real payback window. After it, the thing is just working for you.`
         : `That is a slow payback - real, but slow enough that it is worth asking whether the cheaper version does the same job.`);
     body += ` Year one lands at <b>${(pb.yearOne>=0?'+':'')+money(pb.yearOne)}</b>, five years at <b>${(pb.fiveYear>=0?'+':'')+money(pb.fiveYear)}</b>.`;
@@ -8922,7 +8924,7 @@ function renderImpulse(){
   const monthSkipped=state.impulse.filter(i=>i.type==='skip'&&monthOf(i.date)===thisMonth()).reduce((s,i)=>s+i.amount,0);
   if(monthSkipped>0){
     const g=topGoal(); let line;
-    if(g){ const pct=Math.round(monthSkipped/g.target*100); line=`That's <b>${pct}%</b> of your dream “${escapeHtml(g.name)}.” Keep neutralizing, keep building.`; }
+    if(g){ const pct=Math.round(monthSkipped/g.target*100); line=`That's <b>${pct}%</b> of your dream “${escapeHtml(g.name)}.” ${voice(VOICE.chestMonth,null)}`; }
     else line=`Nothing to point it at yet. Name a dream and watch your War Chest fund it. ${trailBtn('dream','Name a dream')}`;
     cel.innerHTML=`<div class="celebrate"><div class="big">${money(monthSkipped)} in traps neutralized this month</div><div class="small">${line} <span style="opacity:.75">(Counts everything defended - including what you routed to dreams.)</span></div></div>`;
   } else cel.innerHTML='';
@@ -9770,7 +9772,10 @@ function rpAgo(days){ return shiftDays(todayStr(),-days); }
 function rpLife(amount){ const H=effectiveHourly(); return H>0 ? ` - ${fmtHours(amount/H)} of your life` : ''; }
 
 /* ============================================================
-   THE REPORT'S VOICE
+   THE VOICE PICKER
+
+   Started life inside the report; it is the general one now, used by every
+   surface that says something rather than counts something.
 
    Fourteen signals, and not one of them knew what voice the app was set to. The
    whole differentiator is that this thing talks like a person with an opinion,
@@ -9794,7 +9799,7 @@ function rpLife(amount){ const H=effectiveHourly(); return H>0 ? ` - ${fmtHours(
    Deterministic, not random: a report that reworded itself every time you
    navigated back to it would feel unstable, and this is a page people re-read.
    ============================================================ */
-function rpSay(bank, ctx){
+function voice(bank, ctx){
   if(!bank) return '';
   const r=bank[state.register]||bank.middle;
   const lvl=(ctx===null||ctx===undefined) ? baseInt() : effInt(ctx);
@@ -9902,6 +9907,119 @@ const RP_TONE={
     middle:{clean:'Hours are the other budget.', blunt:'Hours are the other budget, and it does not roll over.',
             savage:'Hours are the one budget with no overdraft. Spent is spent.'}}
 };
+/* ============================================================
+   THE REST OF THE VOICE
+
+   The audit found 21 of 24 surfaces reaching no voice engine at all. The report
+   was the flagship and went first; these are the other eleven that carry an
+   OPINION rather than a fact. The ones left deliberately flat - the tripwire
+   disclosure, vault timers, charts, forms, the user's own diary - are listed in
+   docs/Voice-Audit.md with the reason.
+
+   Same two rules as the report. Anything judging a person's own spending passes
+   a context so the sensitive lock can floor it to clean; anything about the
+   world or about arithmetic passes null. The situation floor applies to both.
+   ============================================================ */
+const VOICE={
+  /* --- the reward calendar --- */
+  aheadPace:{
+    middle:{clean:'Money you chose to keep. Tap a green day to decide where it goes.',
+            blunt:'That is money you kept on purpose. Give it a job before it finds one.',
+            savage:'You kept that. Now decide where it goes, or the month will decide for you.'}},
+  overPace:{
+    middle:{clean:'Not a verdict, just today’s number - beat the allowance and it turns around.',
+            blunt:'Today’s number, not a verdict. Beat the allowance tomorrow and it moves.',
+            savage:'That is today’s number and nothing more. It only becomes the month if you let it.'}},
+  bankedToday:{
+    middle:{clean:'Bank a few of these and one guilt-free treat is genuinely earned.',
+            blunt:'A few of these and a treat is earned rather than taken.',
+            savage:'String a few of these together and the treat is bought, not stolen from later.'}},
+  cleanSlate:{
+    middle:{clean:'Beat today’s allowance and the streak starts.',
+            blunt:'Nothing logged yet. Beat today and the streak starts here.',
+            savage:'Blank slate. It stays blank until you either beat today or do not.'}},
+  dayOver:{
+    middle:{clean:'One day does not sink the month. Tomorrow resets green.',
+            blunt:'One day does not sink a month. Tomorrow is a fresh allowance.',
+            savage:'One day is one day. The month is decided by what you do with the next twenty.'}},
+  /* --- money you put away, in spend mode --- */
+  movedIt:{
+    middle:{clean:'Not spending is good; moving it somewhere is better.',
+            blunt:'Not spending it is half. Moving it somewhere is the half that counts.',
+            savage:'Not spending is the easy half. Moving it is the half that survives the month.'}},
+  keptShare:{
+    middle:{clean:'That is money that stayed yours.',
+            blunt:'That stayed yours, and it was a choice.',
+            savage:'That stayed yours. Nobody handed it to you and nobody talked you out of it.'}},
+  /* --- Do this next --- */
+  assignAll:{
+    middle:{clean:'Budget to zero: every dollar gets a job.',
+            blunt:'Every dollar gets a job, including the boring ones. Unassigned money is the money that vanishes.',
+            savage:'Give every dollar a job. The ones you skip are the ones that disappear and you never find out where.'}},
+  onTrack:{
+    middle:{clean:'Essentials covered, budget balanced. Keep logging.',
+            blunt:'Covered and balanced. The job now is not letting it slide.',
+            savage:'Covered and balanced. This is where most people stop paying attention.'}},
+  /* --- the money story nudge --- */
+  msSurplus:{
+    middle:{clean:'Give this surplus a job before it evaporates.',
+            blunt:'Give it a job now. Feast money spends itself.',
+            savage:'Name a job for it today. Feast money has never once waited to be asked.'}},
+  /* --- Enough --- */
+  enoughOver:{
+    middle:{clean:'Past that line, more money should buy freedom rather than upgrades.',
+            blunt:'That is freedom money, not spend-more money. It only stays freedom if you route it.',
+            savage:'Past your own line. That money buys freedom or it buys upgrades, and it will not ask which.'}},
+  enoughWithin:{
+    middle:{clean:'Every dollar above this is freedom fuel.',
+            blunt:'Inside your own line. Everything above it from here is fuel, not lifestyle.',
+            savage:'Inside the line you drew. The test is not getting here - it is staying here when the income moves.'}},
+  /* --- the payback card --- */
+  toolPays:{
+    middle:{clean:'It clears its own cost, then keeps going.',
+            blunt:'It clears its own cost and every year after that is profit.',
+            savage:'It pays for itself and then it just keeps paying. That is the whole point of a tool.'}},
+  toolWant:{
+    middle:{clean:'A want, and wants are allowed.',
+            blunt:'That makes it a want. Wants are allowed - they just are not investments.',
+            savage:'Then it is a want. Fine. Just do not file it as an investment, because that is how people talk themselves into anything.'}},
+  /* --- circulation --- */
+  circFlow:{
+    middle:{clean:'Far more moves toward growth than leaks to fear.',
+            blunt:'More goes to growth than leaks to fear. Keep it circulating.',
+            savage:'Growth is beating fear in your own ledger. That is rarer than it sounds.'}},
+  circFear:{
+    middle:{clean:'More is going to scarcity than to building. Worth a look.',
+            blunt:'More leaks to fear than builds you. Redirect one of them this week.',
+            savage:'Fear is winning the flow. Not the economy, not the prices - the flow you control.'}},
+  circEven:{
+    middle:{clean:'Balanced. A nudge toward growth is where compounding lives.',
+            blunt:'Balanced flow. Nudge it toward growth - that is where compounding lives.',
+            savage:'Dead even. Even is not neutral over ten years; it is a decision you keep making.'}},
+  /* --- the War Chest celebration --- */
+  chestMonth:{
+    middle:{clean:'Keep neutralizing, keep building.',
+            blunt:'That is money that never left. Keep going.',
+            savage:'That is money somebody engineered a plan to take, and did not.'}},
+  /* --- the debt planner --- */
+  debtOut:{
+    middle:{clean:'That is the way out, on the numbers you gave.',
+            blunt:'That is the way out on your own numbers. The date only moves if the payment does.',
+            savage:'That is the way out. The date is not a prediction - it is arithmetic, and it moves only when you move the payment.'}},
+  /* --- crush vs invest --- */
+  ivTie:{
+    middle:{clean:'Close enough to be a tie. Pick the one you will stick to.',
+            blunt:'That is a tie on numbers this size. Pick the one you will actually stick to.',
+            savage:'A tie. Which means the maths has nothing more to tell you and the answer is whichever you will not quit.'}},
+  ivCrush:{
+    middle:{clean:'Your debt costs more than the market is likely to pay.',
+            blunt:'Your debt costs more than the market is likely to pay you. That one is not close.',
+            savage:'Your debt is charging you more than the market is likely to hand back. Paying it is the surest return you will ever be offered.'}},
+  ivInvest:{
+    middle:{clean:'On these numbers, investing the difference comes out ahead.',
+            blunt:'On these numbers investing the difference comes out ahead - guaranteed cost against an expected return.',
+            savage:'Investing wins on these numbers. It is an expected return against a guaranteed cost, and expected is doing real work in that sentence.'}}
+};
 const REPORT_SIGNALS=[
   /* ---- are you on track to blow this month, while you can still act on it ---- */
   { k:'pace', run(){
@@ -9918,8 +10036,8 @@ const REPORT_SIGNALS=[
       return { t: over?'You are on pace to go over':'You are on pace to come in under',
         body:`${day} day${day>1?'s':''} into ${fmtMonth(M)} you have spent <b>${money(spent)}</b>. Carry on at that rate and you land at about <b>${money(proj)}</b> against a plan of <b>${money(planned)}</b>.`,
         work:`${money(spent)} ÷ ${day} days × ${dim} days = ${money(proj)}`,
-        nudge: over ? `That is <b>${money(proj-planned)}</b> past the plan${rpLife(proj-planned)}, with ${dim-day} days still to run. ${rpSay(RP_TONE.paceOver,null)}`
-                    : `That is <b>${money(planned-proj)}</b> under${rpLife(planned-proj)}. ${rpSay(RP_TONE.paceUnder,null)}`,
+        nudge: over ? `That is <b>${money(proj-planned)}</b> past the plan${rpLife(proj-planned)}, with ${dim-day} days still to run. ${voice(RP_TONE.paceOver,null)}`
+                    : `That is <b>${money(planned-proj)}</b> under${rpLife(planned-proj)}. ${voice(RP_TONE.paceUnder,null)}`,
         bad:over };
     }},
 
@@ -9945,7 +10063,7 @@ const REPORT_SIGNALS=[
           ? `<b>${money(inc)}</b> came in and <b>${money(exp)}</b> went out. That is <b>${money(-kept)}</b> more than you had${rpLife(-kept)}.`
           : `<b>${money(inc)}</b> came in, <b>${money(exp)}</b> went out, so <b>${money(kept)}</b> stayed yours.${invested>0?` <b>${money(invested)}</b> of it went into investments.`:''}`,
         work:`(${money(inc)} − ${money(exp)}) ÷ ${money(inc)} = ${rate}%`,
-        nudge: (trend?trend+' ':'')+rpSay(kept<0?RP_TONE.keptBad:RP_TONE.keptGood,null), bad: kept<0 };
+        nudge: (trend?trend+' ':'')+voice(kept<0?RP_TONE.keptBad:RP_TONE.keptGood,null), bad: kept<0 };
     }},
 
   /* ---- the year, which nobody ever works out for themselves ----
@@ -9990,7 +10108,7 @@ const REPORT_SIGNALS=[
       } else {
         bits.push('Measured off what you said, not what landed. Two full months of logged income and this switches to the real thing.');
       }
-      bits.push(rpSay(measured?RP_TONE.yearMeasured:RP_TONE.yearStated,null));
+      bits.push(voice(measured?RP_TONE.yearMeasured:RP_TONE.yearStated,null));
       return { t:`On this pace you handle ${money(year)} this year`, body, work, nudge:bits.join(' ') };
     }},
 
@@ -10010,8 +10128,8 @@ const REPORT_SIGNALS=[
       return { t:`${escapeHtml(best.n)} is ${up?'up':'down'} ${pct}%`,
         body:`<b>${money(best.a)}</b> in ${fmtMonth(M)}, against <b>${money(best.b)}</b> in ${fmtMonth(P)}. That is <b>${money(Math.abs(best.d))}</b> ${up?'more':'less'}${rpLife(Math.abs(best.d))}.`,
         work:`${money(best.a)} − ${money(best.b)} = ${up?'+':'−'}${money(Math.abs(best.d))}`,
-        nudge: up ? `One category moving ${money(Math.abs(best.d))} in a month stays invisible until someone puts the two numbers side by side. ${rpSay(RP_TONE.driftUp,best.n)}`
-                  : `Whatever you did there, it held for a whole month. ${rpSay(RP_TONE.driftDown,best.n)}`,
+        nudge: up ? `One category moving ${money(Math.abs(best.d))} in a month stays invisible until someone puts the two numbers side by side. ${voice(RP_TONE.driftUp,best.n)}`
+                  : `Whatever you did there, it held for a whole month. ${voice(RP_TONE.driftDown,best.n)}`,
         bad: up };
     }},
 
@@ -10027,7 +10145,7 @@ const REPORT_SIGNALS=[
       return { t:`"${escapeHtml(best.label)}" is new`,
         body:`It shows up <b>${best.n} times</b> in the last 30 days, and not once in the 30 before that. <b>${money(best.total)}</b> so far${rpLife(best.total)}.`,
         work:`${money(best.total)} ÷ ${best.n} entries ≈ ${money(best.total/best.n)} each`,
-        nudge:`At this rate that is about <b>${money(best.total*12)}</b> a year${rpLife(best.total*12)}. ${rpSay(RP_TONE.started,best.name)}`,
+        nudge:`At this rate that is about <b>${money(best.total*12)}</b> a year${rpLife(best.total*12)}. ${voice(RP_TONE.started,best.name)}`,
         bad:true };
     }},
 
@@ -10045,7 +10163,7 @@ const REPORT_SIGNALS=[
       return { t:`"${escapeHtml(best.label)}" has stopped`,
         body:`Nothing logged under it for <b>${days} days</b>. Before that it ran <b>${best.n} times</b> for <b>${money(best.total)}</b>.`,
         work:`${money(best.total)} over the 60 days it appeared ≈ ${money(perMonth)} a month`,
-        nudge:`That is roughly <b>${money(perMonth)}</b> a month you are no longer spending${rpLife(perMonth)}. ${rpSay(RP_TONE.stopped,null)}`,
+        nudge:`That is roughly <b>${money(perMonth)}</b> a month you are no longer spending${rpLife(perMonth)}. ${voice(RP_TONE.stopped,null)}`,
         bad:false };
     }},
 
@@ -10062,7 +10180,7 @@ const REPORT_SIGNALS=[
       return { t:`Your essentials are taking ${up?'more':'less'} of what you earn`,
         body:`<b>${a}%</b> of income in ${fmtMonth(M)}, against <b>${b}%</b> in ${fmtMonth(P)}.`,
         work:`essentials assigned ÷ income logged, both months`,
-        nudge: up ? `The four walls moving up ${a-b} points decides how much room everything else gets. ${rpSay(RP_TONE.essentials,'rent')}`
+        nudge: up ? `The four walls moving up ${a-b} points decides how much room everything else gets. ${voice(RP_TONE.essentials,'rent')}`
                   : `That is ${b-a} points of your income handed back to everything else.`,
         bad:up };
     }},
@@ -10081,7 +10199,7 @@ const REPORT_SIGNALS=[
       return { t:`You invested in ${hit} of the last 3 months`, bad:hit<3,
         body:`<b>${money(total)}</b> across ${fmtMonth(ms[0])} to ${fmtMonth(M)}, out of <b>${money(inc)}</b> earned - about <b>${rpPct(total,inc)}%</b>.`,
         work:`${money(total)} ÷ ${money(inc)} = ${rpPct(total,inc)}%`,
-        nudge: (hit===3 ? `Three months in a row is the part almost nobody manages. ` : `The months it happened are worth more than the amount that happened. `)+rpSay(RP_TONE.investing,null) };
+        nudge: (hit===3 ? `Three months in a row is the part almost nobody manages. ` : `The months it happened are worth more than the amount that happened. `)+voice(RP_TONE.investing,null) };
     }},
 
   /* ---- the app's own thesis, stated once a month ---- */
@@ -10103,7 +10221,7 @@ const REPORT_SIGNALS=[
         work:`${logged} logged = ${invested} invested + ${leak} leaked`,
         nudge: ((leak>0&&H>0)
           ? `Those ${fmtHours(leak)} are worth <b>${money(leak*H)}</b> at your own rate - the feed monetises them whether you do or not. `
-          : (leak>0?`Those ${fmtHours(leak)} are the ones nobody bills you for. `:''))+rpSay(RP_TONE.timeWeek,null),
+          : (leak>0?`Those ${fmtHours(leak)} are the ones nobody bills you for. `:''))+voice(RP_TONE.timeWeek,null),
         bad: leak>invested };
     }},
   { k:'hours', run(){
@@ -10115,7 +10233,7 @@ const REPORT_SIGNALS=[
       return { t:`${fmtHours(exp/H)} of your life went out this month`, bad:false,
         body:`<b>${money(exp)}</b> spent at <b>${money(H)}</b> an hour is <b>${fmtHours(exp/H)}</b> you already worked for.${traps>0?` <b>${fmtHours(traps/H)}</b> of it went on things you yourself called a trap.`:''}`,
         work:`${money(exp)} ÷ ${money(H)}/hr = ${fmtHours(exp/H)}`,
-        nudge: rpSay(RP_TONE.hours,null) };
+        nudge: voice(RP_TONE.hours,null) };
     }}
 ];
 
@@ -10194,7 +10312,7 @@ REPORT_SIGNALS.push(
                           : `What you actually hold is down ${money(-move)}`,
         body:`Across ${months} month${months>1?'s':''} of readings, the money in your accounts went from <b>${money(first.bank)}</b> in ${fmtMonth(first.month)} to <b>${money(last.bank)}</b> in ${fmtMonth(last.month)}.${flat?'':` That is about <b>${money(Math.abs(per))}</b> a month${move>0?' gained':' gone'}.`}`,
         work:`${money(last.bank)} − ${money(first.bank)} = ${move>=0?'+':'−'}${money(Math.abs(move))} over ${months-1} month${months-1===1?'':'s'}`,
-        nudge:`This is the only figure here that did not come from your own typing - you read it off your bank and put it in, with nothing to gain by being generous. It also cannot tell you WHY it moved: a raise, a refund, a bill you have not paid yet and a month of genuine discipline all look the same from this height.${(move>0&&H>0)?` For scale, ${money(move)} is ${fmtHours(move/H)} of your life you did not have to sell again.`:''} ${rpSay(move>0?RP_TONE.bankUp:(flat?RP_TONE.bankFlat:RP_TONE.bankDown),null)}`,
+        nudge:`This is the only figure here that did not come from your own typing - you read it off your bank and put it in, with nothing to gain by being generous. It also cannot tell you WHY it moved: a raise, a refund, a bill you have not paid yet and a month of genuine discipline all look the same from this height.${(move>0&&H>0)?` For scale, ${money(move)} is ${fmtHours(move/H)} of your life you did not have to sell again.`:''} ${voice(move>0?RP_TONE.bankUp:(flat?RP_TONE.bankFlat:RP_TONE.bankDown),null)}`,
         bad: move<0 && !flat };
     }}
 );
@@ -10211,7 +10329,7 @@ REPORT_SIGNALS.push(
       return { t:'Prices moved. Did your rate?', outside:OUTSIDE.cpi.asOf,
         body:`Prices are up <b>${OUTSIDE.cpi.yoy}%</b> over the last year. Your hour earns <b>${money(H)}</b> today${since}, so in last year's money it buys about <b>${money(then)}</b> worth.`,
         work:`${money(H)} ÷ ${(1+OUTSIDE.cpi.yoy/100).toFixed(3)} = ${money(then)}`,
-        nudge:`${money(H-then)} of it, gone to prices alone. ${rpSay(RP_TONE.oCpi,null)}` };
+        nudge:`${money(H-then)} of it, gone to prices alone. ${voice(RP_TONE.oCpi,null)}` };
     }},
   { k:'oFood', run(){
       if(!outsideFresh()) return null;
@@ -10223,7 +10341,7 @@ REPORT_SIGNALS.push(
       return { t:'The same cart costs more than it did', outside:OUTSIDE.food.asOf,
         body:`Grocery prices are up <b>${OUTSIDE.food.yoy}%</b> over the year. Your food money this month is <b>${money(groc)}</b> - a year ago about <b>${money(then)}</b> bought the same cart.`,
         work:`${money(groc)} ÷ ${(1+OUTSIDE.food.yoy/100).toFixed(3)} = ${money(then)}`,
-        nudge: rpSay(RP_TONE.oFood,null) };
+        nudge: voice(RP_TONE.oFood,null) };
     }},
   { k:'oSavings', run(){
       if(!outsideFresh()) return null;
@@ -10232,7 +10350,7 @@ REPORT_SIGNALS.push(
       return { t:'What idle cash pays right now', outside:OUTSIDE.savings.asOf,
         body:`You hold <b>${money(cash)}</b> you could spend today. The national average savings account pays <b>${OUTSIDE.savings.avgApy}%</b> - about <b>${money(atAvg)}</b> a year on that. Widely available high-yield accounts run near <b>${OUTSIDE.savings.highApy}%</b> - about <b>${money(atHigh)}</b> a year.`,
         work:`${money(cash)} × ${OUTSIDE.savings.avgApy}% = ${money(atAvg)}/yr · × ${OUTSIDE.savings.highApy}% = ${money(atHigh)}/yr`,
-        nudge:`${money(atHigh-atAvg)} a year between them, for the same cash${rpLife(atHigh-atAvg)}. ${rpSay(RP_TONE.oSavings,null)}` };
+        nudge:`${money(atHigh-atAvg)} a year between them, for the same cash${rpLife(atHigh-atAvg)}. ${voice(RP_TONE.oSavings,null)}` };
     }},
   { k:'oCard', run(){
       if(!outsideFresh()) return null;
@@ -10244,8 +10362,8 @@ REPORT_SIGNALS.push(
         body:`Your dearest debt runs <b>${worst.apr}%</b>. The average new card offer is about <b>${OUTSIDE.card.avgApr}%</b>, so yours is <b>${Math.abs(worst.apr-OUTSIDE.card.avgApr).toFixed(1)} points ${above?'above':'below'}</b> it.`,
         work:`${worst.apr}% − ${OUTSIDE.card.avgApr}% = ${(worst.apr-OUTSIDE.card.avgApr).toFixed(1)}`,
         nudge: above
-          ? `Paying it down earns a guaranteed ${worst.apr}%. ${rpSay(RP_TONE.oCardAbove,null)}`
-          : rpSay(RP_TONE.oCardBelow,null) };
+          ? `Paying it down earns a guaranteed ${worst.apr}%. ${voice(RP_TONE.oCardAbove,null)}`
+          : voice(RP_TONE.oCardBelow,null) };
     }}
 );
 
@@ -10493,9 +10611,9 @@ function renderCirculation(){
   const f=tagged.filter(t=>t.energy==='fear').reduce((s,t)=>s+t.amount,0);
   const total=g+b+f||1;
   const gp=Math.round(g/total*100), fp=Math.round(f/total*100);
-  const verdict = gp>=fp*2 ? `<b style="color:var(--good)">Capital is flowing.</b> Far more of your money moves toward growth than leaks to fear. Keep circulating.`
-    : fp>gp ? `<b style="color:var(--accent-2)">Fear is winning the flow.</b> More is leaking to scarcity and status than building you. Redirect one fear-spend into growth this week.`
-    : `Balanced flow. Nudge a little more toward growth and giving - that's where compounding lives.`;
+  const verdict = gp>=fp*2 ? `<b style="color:var(--good)">Capital is flowing.</b> ${voice(VOICE.circFlow,null)}`
+    : fp>gp ? `<b style="color:var(--accent-2)">Fear is winning the flow.</b> ${voice(VOICE.circFear,null)}`
+    : voice(VOICE.circEven,null);
   box.innerHTML=`
     <div class="circ-bar"><div class="g" style="width:${g/total*100}%"></div><div class="b" style="width:${b/total*100}%"></div><div class="f" style="width:${f/total*100}%"></div></div>
     <div class="circ-legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Growth ${money(g)}</span><span class="k"><span class="sw" style="background:#6b7d8f"></span>Baseline ${money(b)}</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Fear ${money(f)}</span></div>
@@ -12218,7 +12336,7 @@ function moneyStoryNote(){
     return {ic:'', t:`A word from your own story: "never enough" is old wiring, not today's math. You're not behind - you're building. Trust the numbers over the fear.`};
   }
   if(ms==='chaos'){
-    if(avg>0 && inc>avg*1.2) return {ic:'', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here - so let's give this surplus a job first, before it evaporates and future-you is the one scrambling.`, do:'assign'};
+    if(avg>0 && inc>avg*1.2) return {ic:'', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here. ${voice(VOICE.msSurplus,null)}`, do:'assign'};
     return {ic:'', t:`Your money's calmer with a plan than on the swing. Every dollar you assign now is one that won't vanish in the next "feast".`, do:'assign'};
   }
   if(ms==='tight') return {ic:'', t:`You learned to stretch a dollar the hard way - that's a real edge most people never build. Point that resourcefulness at building now, not only surviving.`};
@@ -12250,7 +12368,12 @@ function renderNextSteps(){
   const hasCushion = state.goals.some(g=>/cushion|emergency|buffer|rainy|safety/i.test(g.name));
   const steps=[];
   if(income<=0) steps.push(['','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
-  else if(Math.abs(ltb)>=1) steps.push(['', ltb>0?`Assign your last ${actMoney(ltb)}`:`You're ${actMoney(-ltb)} over - trim a category`, survival?'One small move at a time - assign what you can. No pressure to be perfect.':'Budget to zero: every dollar gets a job.','assign']);
+  /* The all-clear line below is nearly unreachable - the giving step fires for
+     almost everyone - so the voice belongs on the step people actually see. The
+     survival branch stays exactly as it was: it is the tone floor doing its job
+     one layer earlier, and it must win over the intensity picker. */
+  else if(Math.abs(ltb)>=1) steps.push(['', ltb>0?`Assign your last ${actMoney(ltb)}`:`You're ${actMoney(-ltb)} over - trim a category`,
+    survival?'One small move at a time - assign what you can. No pressure to be perfect.':voice(VOICE.assignAll,null),'assign']);
   // Situation-aware: survival mode leads with one small, real win, not a full-budget lecture
   if(survival && !hasCushion) steps.unshift(['','Start a $100 cushion','In survival mode this is the whole game - one small buffer so a flat tire is an annoyance, not a crisis.','dream']);
   if(wallsCovered<4) steps.push(['',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
@@ -12262,7 +12385,7 @@ function renderNextSteps(){
   const giveReachable = !state.spendingMode && (typeof activeStage!=='function' || activeStage()>=2);   // the Giving panel is stage-2, full-mode UI
   if(giveReachable && giveTarget>0 && givenM<giveTarget) steps.push(['',`Give ${actMoney(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
   else if(giveReachable && !state.giving.length && income>0) steps.push(['','Give something forward','Even a small amount, on purpose, changes your relationship with money.','give']);
-  if(!steps.length) steps.push(['','You\'re on track','Essentials covered, budget balanced. Keep logging and defending.','tab:tx']);
+  if(!steps.length) steps.push(['','You\'re on track', voice(VOICE.onTrack,null), 'tab:tx']);
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
     steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`).join('');
 }
@@ -12373,8 +12496,8 @@ function renderEnough(income){
   let msg;
   if(!enough) msg=`Set the monthly income that covers a genuinely good, comfortable life. Past that line, more money should buy <b>freedom</b>, not lifestyle creep.`;
   else if(income<=0) msg=`Your Enough line is ${money(enough)}/mo. Log income to see where you stand against it.`;
-  else if(creep) msg=`You're <b>${money(surplus)}</b> over your Enough line this month. That's not "spend more" money - that's <b>freedom</b> money. Route it to a Skill or Leverage goal, or <b>give some forward</b> - before it evaporates into upgrades.`;
-  else msg=`You're within your Enough line (${money(enough)}/mo). Solid. Every dollar you lift income above this is pure freedom fuel.`;
+  else if(creep) msg=`You're <b>${money(surplus)}</b> over your Enough line this month. ${voice(VOICE.enoughOver,null)} Route it to a Skill or Leverage goal, or <b>give some forward</b>.`;
+  else msg=`You're within your Enough line (${money(enough)}/mo). ${voice(VOICE.enoughWithin,null)}`;
   box.innerHTML=`<div class="enoughcard ${creep?'creep':''}">
     <div class="ec-k">The "Enough" anchor</div>
     <div class="ec-row"><span class="sub" style="margin:0">Enough is $</span><input type="number" min="0" step="50" inputmode="decimal" id="enoughInput" placeholder="e.g. 3500"><span id="enoughInputUnit"></span>${creep?`<button class="btn sm primary" data-goto="goals">Route surplus to a goal →</button>`:''}</div>
