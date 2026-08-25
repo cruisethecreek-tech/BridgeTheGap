@@ -54,7 +54,10 @@ const HOUSE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,gu
     beside it. The fixture needs BOTH: a wide amount and a long meta. */
  recurring:[{id:'r',type:'expense',amount:1250,catId:'roof',freq:'monthly',anchor:'2026-08-01'},
    {id:'r2',type:'income',amount:2435.22,source:"Partner's pay from the hospital",freq:'biweekly',anchor:'2026-08-14',owner:'b'},
-   {id:'r3',type:'income',amount:1500,source:'The Creek',freq:'biweekly',anchor:'2026-08-15'}],
+   {id:'r3',type:'income',amount:1500,source:'The Creek',freq:'biweekly',anchor:'2026-08-15'},
+   /* a repeating CATEGORY, so the Plan row carries all three inline controls -
+      the tick, the frequency and the date - at every phone width */
+   {id:'r4',type:'expense',amount:848.38,catId:'roof',freq:'monthly',anchor:'2026-08-01',day:1,src:'row'}],
  accounts:[{id:'a',name:'Checking',kind:'checking',balance:2150}],
  assets:[{id:'as',name:'Index fund at the brokerage',value:12000,kind:'real'}],
  liabilities:[{id:'l',name:'Credit card',value:2400}],
