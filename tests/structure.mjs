@@ -2631,6 +2631,66 @@ check('the survival floor holds, whatever intensity was picked',
       rpVoice.keys.filter(k=>rpVoice.survival[k]!==rpVoice.clean[k]).join(',')||'(all clean)');
 check('the arithmetic does not move when the voice does', rpVoice.workSame===true);
 
+/* ---- 45. a door to every room that still has something in it ----
+   From a phone, having reached the Accounts panel: "where does this page live? I
+   was only able to find it because of this" - pointing at a link on Reflect's
+   net-worth view.
+
+   Accounts lives on Build, and it is deliberately UNGATED: "what's in the bank"
+   is a fact, not a wealth-stage tool, and Home already shows spend-mode users
+   their bank total. But the Build BUTTON carries data-stage="2", and spending
+   mode locks every [data-stage] element - so the tab vanished and took the one
+   ungated panel inside it with it. The only way in was that one link on another
+   tab, which deep-linked into a room with no door: reachable once, never
+   findable again. ---- */
+const reach = await p.evaluate(async () => {
+  const o={};
+  const setup=(mode)=>{
+    state=JSON.parse(JSON.stringify(defaultState()));
+    state.onboarded=true; state.hourlyWage=22; state.trueRateSkipped=true;
+    if(mode==='spend'){ state.spendingMode=true; state.uiMode='guided'; state.stageReached=1; }
+    else if(mode==='stage1'){ state.uiMode='guided'; state.stageReached=1; }
+    else { state.uiMode='all'; state.stageReached=3; }
+    save(); applySpending(); applyStage(); renderAll();
+  };
+  const shown=v=>{ const b=document.querySelector(`#tabs .tab[data-view="${v}"]`);
+    return !!b && !b.classList.contains('stage-locked'); };
+  const open=v=>[...document.querySelectorAll(`#view-${v} .panel`)]
+    .filter(x=>!x.classList.contains('stage-locked')).length;
+  setup('spend');
+  o.spend={tab:shown('goals'), panels:open('goals'), form:!!document.getElementById('acctName')};
+  setup('stage1');  o.stage1={tab:shown('goals'), panels:open('goals')};
+  setup('all');     o.all={tab:shown('goals'), panels:open('goals')};
+  /* and the other direction: a tab whose contents ALL close must close too, or
+     it is a door to an empty room */
+  setup('spend');
+  document.querySelectorAll('#view-goals .panel').forEach(x=>x.classList.add('stage-locked'));
+  unlockReachableTabs();
+  o.emptyRoom=shown('goals');
+  activateTab('goals'); await new Promise(x=>setTimeout(x,80));
+  o.bounced=(document.querySelector('.view.on')||{}).id;
+  /* the link that was the only way in must promise only what it can deliver */
+  const linkFor=(spend)=>{ setup(spend?'spend':'all');
+    state.transactions.push({id:'t',type:'expense',amount:10,date:todayStr(),note:'x'}); save();
+    activateTab('reflect'); rfTab='worth'; renderReflectTab();
+    const el=document.getElementById('rfEditNW'); return el?el.textContent.trim():''; };
+  o.linkSpend=linkFor(true); o.linkFull=linkFor(false);
+  return o;
+});
+check('Build is reachable in spending mode, because Accounts lives there',
+      reach.spend.tab===true && reach.spend.panels>=1 && reach.spend.form===true,
+      JSON.stringify(reach.spend));
+check('...and at stage 1, for the same reason', reach.stage1.tab===true && reach.stage1.panels>=1,
+      JSON.stringify(reach.stage1));
+check('...while the wealth-ladder panels inside it stay shut',
+      reach.spend.panels < reach.all.panels, `${reach.spend.panels} of ${reach.all.panels}`);
+check('a tab whose contents all close, closes too', reach.emptyRoom===false);
+check('...and navigating to it lands on Home rather than nowhere',
+      reach.bounced==='view-home', reach.bounced);
+check('the link that was the only way in promises only what it can deliver',
+      reach.linkSpend==='Edit my accounts →' && reach.linkFull==='Edit what you own and owe →',
+      `${reach.linkSpend} | ${reach.linkFull}`);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
