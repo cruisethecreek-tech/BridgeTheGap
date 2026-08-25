@@ -1019,6 +1019,15 @@
      after setup and it has to read as one more useful question, not an upsell. */
   /* The log action on the reward calendar. Full width because it is the one
      thing this mode is for, and the panel it sits in is a wall of days. */
+  /* Every breadcrumb in the app. Deliberately quiet - it is an offer at the end
+     of a sentence, not a call to action competing with the panel it sits in. */
+  .nw-plan{margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(var(--accent-rgb),.07);font-size:14px;line-height:1.5}
+  .trail-btn{display:inline-block;margin-top:8px;padding:7px 12px;border-radius:999px;
+    border:1px solid var(--line);background:transparent;color:var(--accent);
+    font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+  .trail-btn:hover{background:rgba(var(--accent-rgb),.10);border-color:var(--accent)}
+  .trail-btn.solid{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
   .cal-log{width:100%;margin-top:12px}
   .cal-log.sm{margin-top:10px;font-size:14px;padding:9px 12px}
   .panel.trc{border-left:3px solid var(--accent)}
@@ -2131,7 +2140,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
       <div class="panel" id="gate-circ">
         <h2>Abundance &amp; Circulation</h2>
-        <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. Tag spends as you log them on the Track tab.</p>
+        <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. You tag a spend as you log it.</p>
         <div id="circChart"></div>
       </div>
     </section>
@@ -3286,7 +3295,7 @@ function renderRewardCalendar(){
   if(lim<=0){
     /* No limit means no calendar, which used to mean no way to log from here
        either - the emptiest version of the screen was also the most useless. */
-    box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p><button class="btn primary cal-log" data-callog="today">Log an expense</button></div>`;
+    box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit and this turns into a daily allowance - beat it each day to build a reward streak.</p>${trailBtn('limit','Set my monthly limit','solid')}<button class="btn primary cal-log" data-callog="today">Log an expense</button></div>`;
     box.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>openQuickLogFor());
     return;
   }
@@ -4984,7 +4993,10 @@ document.getElementById('addTx').addEventListener('click',()=>{
   let indieCrossed=null;
   if(txType==='expense'){
     const catId=document.getElementById('txCat').value;
-    if(!catId){ alert('Add a category first (Budget tab).'); return; }
+    /* A hard stop in the middle of logging that names a tab and leaves you on
+       this one is the worst version of this fault: the person has already typed
+       the amount. Take them to it. */
+    if(!catId){ if(typeof toast==='function') toast('Needs a category first - taking you to Plan. Add one and come straight back.'); goTrail('category'); return; }
     const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy; state.transactions.push(tx);
   } else if(txType==='invest'){
     const dest=document.getElementById('txInv').value.trim()||'Investment';
@@ -5446,7 +5458,7 @@ function renderQuickLog(){
     if(namedNoAmt){ if(typeof toast==='function') toast('Logged '+added+' - fix the highlighted line'+(namedNoAmt>1?'s':'')+' and log again.'); }
     else { quickLogOpen=false; renderQuickLog();
       if(typeof toast==='function') toast('Logged '+added+' purchase'+(added>1?'s':'')
-        +(uncat?' - '+uncat+' with no category yet, findable under Uncategorized.':'.')); }
+        +(uncat?' - '+uncat+' with no category yet. Search "Uncategorized" in the log below to find them.':'.')); }
   };
 }
 /* Every posted recurring entry was noted "Recurring" - so four bills in a row
@@ -5629,7 +5641,7 @@ function renderGoals(){
       </div>`;
     }
     const pct=g.target>0?Math.min(100,(g.saved/g.target)*100):0, done=g.target>0&&g.saved>=g.target;
-    const nudge=done?"Funded. You actually did it. Now set a bigger one.":GOAL_NUDGES[i%GOAL_NUDGES.length];
+    const nudge=done?`Funded. You actually did it. Now set a bigger one. ${trailBtn('dream','Name the next one')}`:escapeHtml(GOAL_NUDGES[i%GOAL_NUDGES.length]);
     const deadline=g.date?`Target date: ${g.date}`:'No deadline set';
     const gt=goalTypeOf(g.goalType);
     const typeBadge = gt ? `<span class="goal-type">${gt.ic} ${gt.label}</span>` : '';
@@ -5774,17 +5786,10 @@ const LESSON_ACTIONS={
   'The Other Paycheck: 168 Hours':{label:'Log my week in hours', run:()=>lessonGo('tx','timeRows')},
   "Wealth Isn't the Money":    {label:'Invest in a skill',       run:()=>lessonGo('goals','skillName')}
 };
-function lessonGo(tab,focusId){
-  activateTab(tab);
-  if(!focusId) return;
-  setTimeout(()=>{
-    const el=document.getElementById(focusId); if(!el) return;
-    const d=el.closest('details'); if(d) d.open=true;
-    el.scrollIntoView({behavior:'auto',block:'center'});
-    if(el.tagName==='INPUT'||el.tagName==='SELECT'){ try{ el.focus({preventScroll:true}); }catch(_){} }
-    else { el.classList.add('cat-flash'); setTimeout(()=>el.classList.remove('cat-flash'),1600); }
-  },170);
-}
+/* Money School's own deep-links run the one routine too - it was a second
+   near-identical copy, which is how two of them ended up drifting on whether to
+   open the <details> a field lives in. */
+function lessonGo(tab,focusId){ activateTab(tab); trailFocus(focusId); }
 function lessonInvest(){
   activateTab('tx');
   setTimeout(()=>{
@@ -7036,7 +7041,18 @@ function renderNetWorth(){
       <div class="li-cost">Drains $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet. An asset is anything that puts money in your pocket - savings, investments, a rental. Add one above.</div>';
-  document.getElementById('liabList').innerHTML=state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>';
+  /* You type in a $12,000 car loan and the app - which owns a payoff planner
+     that would give you a date, an order and the interest priced in hours of
+     your life - says nothing at all. The planner even has an "import from my
+     liabilities" button, so the trail existed in one direction only, from the
+     screen you had to already know about. It offers itself here now, and stops
+     the moment the planner has them, so it is an offer rather than a nag. */
+  const liabTotal=sumLiab();
+  const planned=(state.debts||[]).some(d=>+d.balance>0);
+  const offerPlan = state.liabilities.length && liabTotal>0 && !planned
+    && !(typeof areaOff==='function' && areaOff('debt'));
+  document.getElementById('liabList').innerHTML=(state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>')
+    + (offerPlan?`<div class="nw-plan">That is <b>${money(liabTotal)}</b> owed. The payoff planner turns it into a date - which one to kill first, what the interest is costing you, and how much sooner an extra $50 gets you out.${trailBtn('debt','Plan the way out','solid')}</div>`:'');
   renderDrain();
   if(typeof applyStage==='function') applyStage();
   document.querySelectorAll('#assetList input[data-cost]').forEach(inp=>inp.addEventListener('input',()=>{
@@ -7353,7 +7369,7 @@ function freedomExplainHTML(){
   const moHrs=(state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS);
   const dayHrs=moHrs/21.7;
   if(!(H>0)) return `<p class="sub">There is no rate set yet, so every figure stays in dollars. Add your take-home pay per hour in Settings and the whole app can reprice itself in hours of your life.</p>
-    <button class="btn sm" id="ftGoWage">Set my rate in Settings</button>`;
+    <button class="btn sm" id="ftGoWage">Set my rate →</button>`;
   const src = state.hourlyWage>0
     ? (state.wageAuto ? 'worked out from the income you logged and the hours it takes' : 'the rate you entered yourself')
     : 'estimated from your monthly income divided by the hours you work';
@@ -7388,8 +7404,7 @@ function openFreedomHelp(){
   body.innerHTML=freedomExplainHTML();
   document.getElementById('ftHelp').classList.add('on');
   const go=document.getElementById('ftGoWage');
-  if(go) go.onclick=()=>{ document.getElementById('ftHelp').classList.remove('on'); activateTab('settings');
-    setTimeout(()=>{ const w=document.getElementById('wage'); if(w){ w.scrollIntoView({block:'center'}); w.focus(); } },180); };
+  if(go) go.onclick=()=>{ document.getElementById('ftHelp').classList.remove('on'); goTrail('wage'); };   // a fourth private copy of "take me there" - now the one
 }
 (function(){
   const b=document.getElementById('ftHelpBtn'); if(b) b.addEventListener('click',openFreedomHelp);
@@ -7780,7 +7795,13 @@ function applyTheme(){
 document.getElementById('freedomToggle').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   const want=b.dataset.mode==='life';
-  if(want && effectiveHourly()<=0){ alert('Set your hourly wage first (in Settings) so I can convert dollars into hours of your life.'); activateTab('settings'); return; }
+  /* This used to alert and drop you at the top of Settings to hunt for the
+     field. It walks you to it instead - the rate is two screens from the toggle
+     that needs it, which is exactly the distance nobody crosses. */
+  if(want && effectiveHourly()<=0){
+    if(typeof toast==='function') toast('Needs your hourly rate first - taking you to it. Set it and Freedom Mode prices everything in hours of your life.');
+    goTrail('wage'); return;
+  }
   state.freedomMode=want; save(); renderAll();
 });
 
@@ -8036,7 +8057,7 @@ function renderImpulse(){
   if(monthSkipped>0){
     const g=topGoal(); let line;
     if(g){ const pct=Math.round(monthSkipped/g.target*100); line=`That's <b>${pct}%</b> of your dream “${escapeHtml(g.name)}.” Keep neutralizing, keep building.`; }
-    else line='Set a dream on the Goals tab and watch your War Chest fund it.';
+    else line=`Nothing to point it at yet. Name a dream and watch your War Chest fund it. ${trailBtn('dream','Name a dream')}`;
     cel.innerHTML=`<div class="celebrate"><div class="big">${money(monthSkipped)} in traps neutralized this month</div><div class="small">${line} <span style="opacity:.75">(Counts everything defended - including what you routed to dreams.)</span></div></div>`;
   } else cel.innerHTML='';
   // badges
@@ -8215,7 +8236,7 @@ document.getElementById('addRec').addEventListener('click',()=>{
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
   // day is kept in sync for anything still reading the old field
   const item={id:uid(),type,amount:amt,freq,anchor,day:Math.min(28,Math.max(1,+anchor.slice(8,10)||1))};
-  if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ alert('Add a category first on the Budget tab.'); return; } item.catId=catId; }
+  if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ if(typeof toast==='function') toast('Needs a category first - taking you to Plan. Add one and come straight back.'); goTrail('category'); return; } item.catId=catId; }
   else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
@@ -8681,7 +8702,7 @@ const REPORT_SIGNALS=[
       if(day<5) return {locked:'A few more days of this month - a pace read before day 5 is noise.'};
       const spent=monthExpense(M); if(!(spent>0)) return null;
       const planned=state.categories.filter(c=>!c.parentId).reduce((s,c)=>s+catAssigned(c.id,M),0);
-      if(!(planned>0)) return {locked:'A plan on the Plan tab - pace needs something to be measured against.'};
+      if(!(planned>0)) return {locked:'A plan - pace needs something to be measured against.', do:'assign'};
       const proj=spent/day*dim;
       if(Math.abs(proj-planned)/planned<0.05) return null;    // dead on, nothing to say
       const over=proj>planned;
@@ -8696,13 +8717,13 @@ const REPORT_SIGNALS=[
   /* ---- the single most honest summary of a month ---- */
   { k:'kept', run(){
       const M=state.activeMonth, inc=monthIncome(M);
-      if(!(inc>0)) return {locked:'Income logged for this month - a keep rate needs something to divide by.'};
+      if(!(inc>0)) return {locked:'Income logged for this month - a keep rate needs something to divide by.', do:'income'};
       const exp=monthExpense(M), kept=inc-exp, rate=rpPct(kept,inc);
       /* "You kept 100% of what you earned" after one paycheck and no spending
          yet is not a compliment, it is a measurement of what has not been typed
          in. Praise for an empty ledger is exactly the kind of hollow line this
          app refuses everywhere else. */
-      if(!(exp>0)) return {locked:'Some spending logged this month - a keep rate with nothing spent measures what you have not logged yet, not what you kept.'};
+      if(!(exp>0)) return {locked:'Some spending logged this month - a keep rate with nothing spent measures what you have not logged yet, not what you kept.', do:'logspend'};
       const hist=[shiftMonth(M,-2),shiftMonth(M,-1),M]
         .map(m=>({m, inc:monthIncome(m), exp:monthExpense(m)}))
         .filter(x=>x.inc>0).map(x=>({m:x.m, r:rpPct(x.inc-x.exp,x.inc)}));
@@ -8746,7 +8767,7 @@ const REPORT_SIGNALS=[
         body=`You told setup about <b>${money(stated)}</b> lands in a normal month. Over twelve of them that is <b>${money(year)}</b> of take-home - the number nobody works out for themselves.`;
         work=`${money(stated)} × 12 = ${money(year)}`;
       } else {
-        return {locked:'Two full months of income logged, or a take-home figure from setup - a year projected off one part-finished month is a guess with a decimal point on it.'};
+        return {locked:'Two full months of income logged, or a take-home figure from setup - a year projected off one part-finished month is a guess with a decimal point on it.', do:'income'};
       }
       const bits=[];
       const H=effectiveHourly();
@@ -8840,7 +8861,7 @@ const REPORT_SIGNALS=[
   { k:'investing', run(){
       const M=state.activeMonth, ms=[shiftMonth(M,-2),shiftMonth(M,-1),M];
       const withIncome=ms.filter(m=>monthIncome(m)>0);
-      if(withIncome.length<3) return {locked:'Three months of income logged - consistency is a pattern, and a pattern needs three points.'};
+      if(withIncome.length<3) return {locked:'Three months of income logged - consistency is a pattern, and a pattern needs three points.', do:'income'};
       const invested=ms.map(m=>monthInvested(m)), hit=invested.filter(v=>v>0).length;
       const total=invested.reduce((s,v)=>s+v,0), inc=ms.reduce((s,m)=>s+monthIncome(m),0);
       if(total<=0) return { t:'Nothing has gone into investing', bad:true,
@@ -8863,7 +8884,7 @@ const REPORT_SIGNALS=[
   { k:'timeWeek', run(){
       const tot=timeWeekTotals();
       const logged=Object.values(tot).reduce((s,v)=>s+v,0);
-      if(logged<5) return {locked:'A week of hours logged on Track - the time ledger needs a few days before a week means anything.'};
+      if(logged<5) return {locked:'A week of hours logged - the time ledger needs a few days before a week means anything.', do:'hours'};
       const leak=+tot.leak||0, invested=logged-leak;
       const H=effectiveHourly();
       const sold=state.hoursPerWeek>0?state.hoursPerWeek:0;
@@ -8877,7 +8898,7 @@ const REPORT_SIGNALS=[
     }},
   { k:'hours', run(){
       const M=state.activeMonth, H=effectiveHourly();
-      if(!(H>0)) return {locked:'Your hourly rate in Settings - every figure in hours of your life comes from it.'};
+      if(!(H>0)) return {locked:'Your hourly rate - every figure in hours of your life comes from it.', do:'wage'};
       const exp=monthExpense(M); if(!(exp>0)) return null;
       const traps=(state.impulse||[]).filter(i=>i.type==='buy'&&monthOf(i.date)===M)   // the impulse log writes type:, not decision: - my test seeded the same wrong field, so it passed while the real clause never fired
         .reduce((s,i)=>s+(+i.amount||0),0);
@@ -8988,11 +9009,11 @@ function buildReport(){
     let r=null;
     try{ r=sig.run(); }catch(e){ return; }   // one broken signal must never take the page with it
     if(!r) return;
-    if(r.locked){ locked.push(r.locked); return; }
+    if(r.locked){ locked.push({t:r.locked, do:r.do||null}); return; }   // the way to unlock it travels WITH the reason, or it is just a complaint
     out.push(Object.assign({k:sig.k}, r));
   });
   if(!outsideFresh() && effectiveHourly()>0)
-    locked.push(`Outside numbers (inflation, rates) were baked into this build on ${OUTSIDE.built} and are too old to show as current - they return when the app updates.`);
+    locked.push({t:`Outside numbers (inflation, rates) were baked into this build on ${OUTSIDE.built} and are too old to show as current - they return when the app updates.`, do:null});
   /* Bad news leads. A month where more went out than came in must not open with
      a compliment about something else that happened to go well - that is the
      same rule iaTone() enforces on the intake, applied to the report. Stable
@@ -9012,14 +9033,17 @@ function renderReport(){
       ${g.work?`<div class="rp-w" title="The arithmetic behind the line above">${escapeHtml(g.work)}</div>`:''}
       ${g.nudge?`<div class="rp-n">${g.nudge}</div>`:''}
     </div>`).join('');
+  /* This list names exactly what is missing and used to stop there, which makes
+     it a list of complaints. Anything the person can actually go and do now
+     carries the way to do it. */
   const lockHTML = locked.length
-    ? `<details class="rp-lock"><summary>${locked.length} more would appear with a little more logged</summary><ul>${locked.map(l=>`<li>${escapeHtml(l)}</li>`).join('')}</ul></details>`
+    ? `<details class="rp-lock"><summary>${locked.length} more would appear with a little more logged</summary><ul>${locked.map(l=>`<li>${escapeHtml(l.t)}${l.do?' '+trailBtn(l.do,null,'sm'):''}</li>`).join('')}</ul></details>`
     : '';
   const outsideFoot = signals.some(g=>g.outside)
     ? `<p class="rp-frame">The outside numbers say what is, not what to do. They name no bank, no fund and no product - context for your own figures, nothing more.</p>` : '';
   box.innerHTML = signals.length
     ? cards+outsideFoot+lockHTML
-    : `<div class="empty rf-empty">Nothing worth saying yet - and saying something anyway would be worse than saying nothing. Log a month of money in and out and this fills itself in.</div>`+lockHTML;
+    : `<div class="empty rf-empty">Nothing worth saying yet - and saying something anyway would be worse than saying nothing. Log a month of money in and out and this fills itself in.<div class="rf-cta">${trailBtn('income','Log income','solid')}${trailBtn('logspend','Log an expense')}</div></div>`+lockHTML;
 }
 function renderReflectTab(){
   const body=document.getElementById('rfBody'), bar=document.getElementById('rfBar');
@@ -9089,7 +9113,7 @@ function renderBreakdown(){
             <span class="bd-v">${escapeHtml(money(r.val))}<i>${pct}%</i></span>
           </${can?'button':'div'}>`;
         }).join('')}</div></div>${per}`
-    : `<div class="empty">Nothing logged in this window yet. Try a wider one above, or log something on Track.</div>`;
+    : `<div class="empty">Nothing logged in this window yet. Try a wider one above, or start the log.<div class="rf-cta">${trailBtn('logspend','Log an expense','solid')}${trailBtn('income','Log income')}</div></div>`;
   box.innerHTML=`
     <div class="bd-ctl">
       <div class="bd-seg">${['out','in'].map(k=>`<button data-bdside="${k}" class="${bdSide===k?'on':''}">${k==='out'?'Where it went':'Where it came from'}</button>`).join('')}</div>
@@ -9137,7 +9161,7 @@ function renderCharts(){
 function renderCirculation(){
   const box=document.getElementById('circChart'); if(!box) return;
   const tagged=state.transactions.filter(t=>t.type==='expense'&&t.energy);
-  if(!tagged.length){ box.innerHTML=`<div class="empty">No energy-tagged spends yet. When you log an expense, tap / / to see your circulation ratio here.</div>`; return; }
+  if(!tagged.length){ box.innerHTML=`<div class="empty">No energy-tagged spends yet. Tag one as you log it and the ratio appears here.<div class="rf-cta">${trailBtn('logspend','Log and tag one','solid')}</div></div>`; return; }
   const g=tagged.filter(t=>t.energy==='growth').reduce((s,t)=>s+t.amount,0);
   const b=tagged.filter(t=>t.energy==='baseline').reduce((s,t)=>s+t.amount,0);
   const f=tagged.filter(t=>t.energy==='fear').reduce((s,t)=>s+t.amount,0);
@@ -10683,10 +10707,10 @@ function renderDataGuard(){
    given jobs to more dollars than you have logged arriving. Say that plainly,
    with the actual arithmetic, wherever the number appears. */
 function ltbNoteHTML(income,assigned,ltb){
-  if(income<=0 && assigned>0) return `<div class="ltb-note">You've given <b>${money(assigned)}</b> a job but haven't logged any income yet, so it reads as <b>${money(ltb)}</b> left to budget. Nothing is overspent - the plan just doesn't have money behind it yet. Log your paycheck on Track and this flips.</div>`;
-  if(ltb<-0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than has come in. That's not overspending - it's a plan that needs either more income logged or a category trimmed.</div>`;
+  if(income<=0 && assigned>0) return `<div class="ltb-note">You've given <b>${money(assigned)}</b> a job but haven't logged any income yet, so it reads as <b>${money(ltb)}</b> left to budget. Nothing is overspent - the plan just doesn't have money behind it yet. Log your paycheck and this flips.${trailBtn('income','Log my paycheck')}</div>`;
+  if(ltb<-0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than has come in. That's not overspending - it's a plan that needs either more income logged or a category trimmed.${trailBtn('income','Log more income')}${trailBtn('plan','Trim a category')}</div>`;
   if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every logged dollar has a job. That's zero-based, done right.</div>`;
-  if(ltb>0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.</div>`;
+  if(ltb>0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.${trailBtn('assign','Give it a job')}</div>`;
   return '';
 }
 function renderHome(){
@@ -10776,8 +10800,8 @@ function moneyStoryNote(){
     return {ic:'', t:`A word from your own story: "never enough" is old wiring, not today's math. You're not behind - you're building. Trust the numbers over the fear.`};
   }
   if(ms==='chaos'){
-    if(avg>0 && inc>avg*1.2) return {ic:'', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here - so let's give this surplus a job first, before it evaporates and future-you is the one scrambling.`};
-    return {ic:'', t:`Your money's calmer with a plan than on the swing. Every dollar you assign now is one that won't vanish in the next "feast".`};
+    if(avg>0 && inc>avg*1.2) return {ic:'', t:`Bigger month than usual landing. Feast-or-famine says spend it while it's here - so let's give this surplus a job first, before it evaporates and future-you is the one scrambling.`, do:'assign'};
+    return {ic:'', t:`Your money's calmer with a plan than on the swing. Every dollar you assign now is one that won't vanish in the next "feast".`, do:'assign'};
   }
   if(ms==='tight') return {ic:'', t:`You learned to stretch a dollar the hard way - that's a real edge most people never build. Point that resourcefulness at building now, not only surviving.`};
   if(ms==='stable') return {ic:'', t:`A steady start is a gift most don't get. The only trap is coasting on it - stability is the launchpad, not the finish line.`};
@@ -10789,7 +10813,7 @@ function renderMoneyStoryNote(){
   if(state.msNoteDismissed===M){ box.innerHTML=''; return; }
   const n=moneyStoryNote();
   if(!n){ box.innerHTML=''; return; }
-  box.innerHTML=`<div class="ms-note"><span class="ms-ic">${n.ic}</span><span class="ms-t">${escapeHtml(n.t)}</span><button class="ms-x" id="msNoteX" title="Dismiss for this month">✕</button></div>`;
+  box.innerHTML=`<div class="ms-note"><span class="ms-ic">${n.ic}</span><span class="ms-t">${escapeHtml(n.t)}${n.do?' '+trailBtn(n.do):''}</span><button class="ms-x" id="msNoteX" title="Dismiss for this month">✕</button></div>`;
   const x=document.getElementById('msNoteX'); if(x) x.onclick=()=>{ state.msNoteDismissed=M; save(); renderMoneyStoryNote(); };
 }
 /* guided "do this next" - computes the user's most useful next moves */
@@ -10824,15 +10848,80 @@ function renderNextSteps(){
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
     steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`).join('');
 }
+/* ============================================================
+   THE TRAIL - one map of every "next move" in the app.
+
+   The app kept growing dead ends: a card that named exactly what to do and gave
+   you no way to do it. "Set a dream on the Goals tab." "Log your paycheck on
+   Track and this flips." "Add a category first (Budget tab)." Each one asks a
+   person to remember where something lives, leave what they were reading, find
+   it, and come back - which most people simply do not do, so the feature the
+   sentence was advertising never gets used.
+
+   The reason the gaps kept appearing is that there were THREE separate ways to
+   send someone somewhere - runNextStep's private map for "Do this next",
+   lessonGo for Money School, and the hub's intentTarget - so nothing ever felt
+   like the obvious thing to reach for, and writing a plain sentence was always
+   the path of least resistance. One map now. A destination is added once and
+   every surface can point at it, and `data-trail` on any button in any panel
+   walks the whole way: switch tab, open the accordion it lives inside, scroll it
+   into view, and put the cursor in the field.
+   ============================================================ */
+const TRAIL={
+  income:   {tab:'tx',       focus:'txAmt',        label:'Log income'},
+  logspend: {tab:'tx',       focus:'txAmt',        label:'Log an expense'},
+  assign:   {tab:'budget',   focus:'catName',      label:'Give it a job'},
+  category: {tab:'budget',   focus:'catName',      label:'Add a category'},
+  plan:     {tab:'budget',                         label:'Open my plan'},
+  wage:     {tab:'settings', focus:'wage',         label:'Set my rate'},
+  limit:    {tab:'settings', focus:'spendLimit',   label:'Set a monthly limit'},
+  comfort:  {tab:'settings', focus:'comfortInput', label:'Build my comfort list'},
+  dream:    {tab:'goals',    focus:'goalName',     label:'Name a dream'},
+  give:     {tab:'goals',    focus:'giveName',     label:'Give something'},
+  asset:    {tab:'goals',    focus:'assetName',    label:'Add an asset'},
+  liab:     {tab:'goals',    focus:'liabName',     label:'Add what you owe'},
+  skill:    {tab:'goals',    focus:'skillName',    label:'Invest in a skill'},
+  debt:     {tab:'debt',     focus:'debtName',     label:'Open the payoff planner'},
+  hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},
+  gutcheck: {tab:'impulse',  modal:true,           label:'Run a gut-check'}
+};
+/* Walk one. The delay is for the tab switch to paint - focusing a field inside a
+   view that is still display:none scrolls nothing and puts the cursor nowhere. */
+function trailFocus(focusId){
+  if(!focusId) return;
+  setTimeout(()=>{
+    const el=document.getElementById(focusId); if(!el) return;
+    const d=el.closest('details'); if(d) d.open=true;         // open the accordion the target lives inside
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    if(el.tagName==='INPUT'||el.tagName==='SELECT'||el.tagName==='TEXTAREA'){ try{ el.focus({preventScroll:true}); }catch(_){} }
+    else { el.classList.add('cat-flash'); setTimeout(()=>el.classList.remove('cat-flash'),1600); }
+  },150);
+}
+function goTrail(k){
+  const t=TRAIL[k]; if(!t) return;
+  /* An area someone switched off in Settings must not be walked into by a
+     breadcrumb - that would hand back the exact feature they said they did not
+     want. The panels that offer these already hide with their area; this is the
+     backstop for anything that does not. */
+  if(typeof areaOff==='function' && areaOff(t.tab)) return;
+  activateTab(t.tab);
+  if(t.modal){ setTimeout(()=>{ if(typeof openModal==='function') openModal(); },160); return; }
+  trailFocus(t.focus);
+}
+/* The button itself, so every trail on every surface looks and reads the same.
+   Label defaults to the destination's own name - a caller only overrides it when
+   the sentence above it has already said what the button is for. */
+function trailBtn(k,label,cls){
+  const t=TRAIL[k]; if(!t) return '';
+  return `<button class="trail-btn${cls?' '+cls:''}" data-trail="${k}">${escapeHtml(label||t.label)} →</button>`;
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-trail]'); if(b) goTrail(b.dataset.trail); });
 /* deep-link a "Do this next" card to the exact spot + focus */
 function runNextStep(act){
   if(!act) return;
   if(act.indexOf('wall:')===0){ const c=act.slice(5); c?goToWall(c):activateTab('budget'); return; }
   if(act.indexOf('tab:')===0){ activateTab(act.slice(4)); return; }
-  const map={ income:['tx','txAmt'], assign:['budget','catName'], wage:['settings','wage'], dream:['goals','goalName'], give:['goals','giveName'] };
-  const t=map[act]; if(!t){ return; }
-  activateTab(t[0]);
-  setTimeout(()=>{ const el=document.getElementById(t[1]); if(el){ const d=el.closest('details'); if(d) d.open=true; el.scrollIntoView({behavior:'smooth',block:'center'}); try{ el.focus({preventScroll:true}); }catch(_){} } },140);   // open the accordion the target lives in
+  goTrail(act);
 }
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
 document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.addEventListener('click',()=>{ rfTab=b.dataset.rf; renderReflectTab(); }));
