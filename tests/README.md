@@ -229,6 +229,24 @@ mouse, and leaving the mode leaves no ghost, line or greyed row behind. The
 section runs at a 2,400px viewport so the test is about dragging rather than
 about auto-scrolling; real phones get the auto-scroll.
 
+It also holds **borrowing to build**, the leverage tool, where the arithmetic has
+exactly one way to be dishonest: print the upside and skip the downside. The
+break-even on a carried balance has to land on the rate itself at every horizon,
+paying it down has to lower that bar rather than pretend it away, the losing case
+has to equal the interest whatever the guess was, a payment under the monthly
+interest has to be flagged with a balance that grows, and a servicing gap has to
+trace back to the user's own income. On the screen: the winning case still prints
+the losing one beside it, no gain is invented when no expected return has been
+entered, the under-three-months warning fires for someone who actually has no
+buffer, the panel carries no stage gate (it would make that warning unreachable),
+both money fields take any period, and the `?` shows live working. Two doors have
+to exist and one has to stay shut: a cheap liability offers the trail to it, a 26%
+store card is not called a lever. And a regex sweep of the whole feature - panel,
+engine, render, voice banks - asserts nothing in it tells anyone to borrow. That
+last one carries a control string it must match, because a never-fires rule
+proves nothing; the feature's own "it will not tell you whether to do it" is
+deliberately outside the pattern.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
