@@ -1017,6 +1017,10 @@
   .ph-eye{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);font-weight:800}
   /* The true-rate prompt on Home. Edged rather than loud: it is the first thing
      after setup and it has to read as one more useful question, not an upsell. */
+  /* The log action on the reward calendar. Full width because it is the one
+     thing this mode is for, and the panel it sits in is a wall of days. */
+  .cal-log{width:100%;margin-top:12px}
+  .cal-log.sm{margin-top:10px;font-size:14px;padding:9px 12px}
   .panel.trc{border-left:3px solid var(--accent)}
   .panel.trc h2{margin:4px 0 0}
   .panel.trc.done{border-left-color:rgb(var(--good-rgb))}
@@ -3016,6 +3020,22 @@ function spendTendencies(){
   return lines.slice(0,3);
 }
 /* ---------- "Just my spending" mode: drop the Four Walls, track purchases ---------- */
+/* Every "log what I spent" entry point in the app goes through here, so they all
+   behave the same way: never wipe rows (or a photo) already in progress, land on
+   the first empty field, and honour a date when the caller has one. The calendar
+   is the caller that needs the date - tapping Saturday and then logging to today
+   is the kind of quiet wrong entry that makes a person distrust the whole log. */
+let qlDatePrefill=null;
+function openQuickLogFor(date, fromOverlay){
+  if(date) qlDatePrefill=date;
+  quickLogOpen=true;
+  if(fromOverlay) closeOverlayThenTab('tx'); else activateTab('tx');
+  setTimeout(()=>{
+    if(!document.querySelector('#quickLog .ql-row')) renderQuickLog();
+    else if(date){ const d=document.getElementById('qlDate'); if(d) d.value=date; qlDatePrefill=null; }   // panel already open: retarget it rather than losing the day
+    const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus();
+  }, fromOverlay?160:60);
+}
 function renderSpending(){
   renderRewardCalendar();
   const box=document.getElementById('spendingBox'); if(!box) return;
@@ -3086,9 +3106,8 @@ function renderSpending(){
     ${gatewayHTML}
   </div>`;
   const sc=document.getElementById('spendScan'); if(sc) sc.addEventListener('click',openModal);
-  const openQL=()=>{ quickLogOpen=true; activateTab('tx'); setTimeout(()=>{ if(!document.querySelector('#quickLog .ql-row')) renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },60); };   // never wipe rows already typed
-  const sql=document.getElementById('spendQuickLog'); if(sql) sql.onclick=openQL;
-  const rl=document.getElementById('remindLog'); if(rl) rl.onclick=openQL;
+  const sql=document.getElementById('spendQuickLog'); if(sql) sql.onclick=()=>openQuickLogFor();
+  const rl=document.getElementById('remindLog'); if(rl) rl.onclick=()=>openQuickLogFor();
   const sm=document.getElementById('startMap'); if(sm) sm.onclick=()=>{ state.trackChallenge={start:todayStr(),days:30}; save(); renderSpending(); };
   const tx=box.querySelector('[data-tcstop]'); if(tx) tx.onclick=()=>{ if(confirm('End the 30-day money map? Your logged spending stays.')){ state.trackChallenge=null; save(); renderSpending(); } };
   const tb=document.getElementById('toBudget'); if(tb) tb.onclick=()=>{ state.spendingMode=false; save(); applySpending(); renderHome(); activateTab('budget'); };
@@ -3172,13 +3191,24 @@ function renderCalDay(M, allowance){
   } else if(spent>allowance){
     action=`<div style="margin-top:10px;font-size:14px;line-height:1.5">You went <b>${money(spent-allowance)}</b> over allowance here. No shame - one day doesn't sink the month. Tomorrow resets green.</div>`;
   }
+  /* A day you tapped that is not today is the forgotten-receipt case, and it is
+     the whole reason the 30-day money map works at all: you jot it Saturday and
+     punch it in Monday. The button carries the day with it - logging Saturday's
+     coffee onto Monday would quietly break the streak it just drew, which is
+     worse than having no button. Today already has its own button up in the
+     pace strip, so this never doubles it. */
+  const isToday = dd===todayStr();
+  const logHTML = isToday ? '' :
+    `<button class="btn ghost cal-log sm" data-callog="${dd}">＋ Log to ${escapeHtml(label)}</button>`;
   el.innerHTML=`<div class="cal-day">
     <h3>${label}</h3>
     <div class="cd-save ${saved>=0?'good':'bad'}">${saved>=0?money(saved)+' saved':money(-saved)+' over'}</div>
     <div class="sub" style="font-size:12px">${money(spent)} spent of ${money(allowance)} allowance</div>
     ${rows}
+    ${logHTML}
     ${action}
   </div>`;
+  el.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>openQuickLogFor(b.dataset.callog));
   const bank=el.querySelector('[data-calsweep]'); if(bank) bank.onclick=()=>calSweepDay(bank.dataset.calsweep, +bank.dataset.calamt);
   const undo=el.querySelector('[data-calunsweep]'); if(undo) undo.onclick=()=>calUnsweepDay(undo.dataset.calunsweep);
   const mkg=el.querySelector('[data-calgoal]');
@@ -3253,7 +3283,13 @@ function renderRewardCalendar(){
   const box=document.getElementById('rewardCalBox'); if(!box) return;
   if(!state.spendingMode){ box.innerHTML=''; return; }
   const M=state.activeMonth, lim=state.spendLimit||0;
-  if(lim<=0){ box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p></div>`; return; }
+  if(lim<=0){
+    /* No limit means no calendar, which used to mean no way to log from here
+       either - the emptiest version of the screen was also the most useless. */
+    box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit in Settings and this turns into a daily allowance - beat it each day to build a reward streak.</p><button class="btn primary cal-log" data-callog="today">Log an expense</button></div>`;
+    box.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>openQuickLogFor());
+    return;
+  }
   const [y,mo]=M.split('-').map(Number);
   const dim=new Date(y,mo,0).getDate(), allowance=lim/dim, firstWd=new Date(y,mo-1,1).getDay();
   const tm=thisMonth(), isCur=(M===tm), isFuture=(M>tm), todayDay=isCur?new Date().getDate():(isFuture?0:dim);
@@ -3288,11 +3324,17 @@ function renderRewardCalendar(){
   const wkPct=wkAllow>0?Math.min(100,Math.round(wkSpent/wkAllow*100)):0;
   const swept=calMonthSwept(M), aheadNet=ahead-swept;   // what's still unbanked - the honest headline
   const overSwept=swept - Math.max(0,calRealSurplus(M,allowance));
+  /* "$0 spent" has two meanings and the pace strip cannot tell them apart: you
+     spent nothing, or you have not typed it in yet. The calendar is the screen a
+     spend-mode user actually lives on - the streak and the stars are the whole
+     draw - and it had no way to add anything. The one action this mode exists
+     for now sits on it, rather than in a panel you scrolled past. */
   const weekHTML = wkDays>0 ? `<div class="cal-week">
       <div class="sp-k">This week's pace</div>
       <div class="wk-row"><span>${money(wkSpent)} spent</span><span style="color:${wkOver?'var(--bad)':'var(--good)'}">${wkOver?money(-wkDiff)+' over pace':money(wkDiff)+' ahead'}</span></div>
       <div class="wk-bar ${wkOver?'over':''}"><span style="width:${wkPct}%"></span></div>
-      <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays===1?'':'s'} so far this week.</div>
+      <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays===1?'':'s'} so far this week.${(isCur&&wkSpent===0)?' Nothing logged yet - a zero only counts if it is true.':''}</div>
+      ${isCur?`<button class="btn primary cal-log" data-callog="today">Log an expense</button>`:''}
     </div>` : '';
   const org=state.trackStart||'';
   let orgNote='';
@@ -3316,6 +3358,10 @@ function renderRewardCalendar(){
   renderCalDay(M, allowance);
   const grid=box.querySelector('.cal-grid');
   if(grid) grid.addEventListener('click',e=>{ const c=e.target.closest('.cal-cell[data-day]'); if(!c) return; calSelDay=+c.dataset.day; renderRewardCalendar(); });
+  box.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>{
+    const d=b.dataset.callog;
+    openQuickLogFor(d==='today'?null:d);   // no date = today, and today is what the panel already defaults to
+  });
 }
 function applySpending(){
   const on=!!state.spendingMode;
@@ -5314,7 +5360,7 @@ function renderQuickLog(){
     <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
     <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn primary" id="qlSave">Log them all →</button></div>
   </div>`;
-  document.getElementById('qlDate').value=todayStr();
+  document.getElementById('qlDate').value=qlDatePrefill||todayStr(); qlDatePrefill=null;   // consumed once - the next open is today again unless told otherwise
   // --- photo capture + on-device read ---
   // camera and gallery need separate inputs - see renderBudgetPhoto for why
   const snap=document.getElementById('qlSnap'), pick=document.getElementById('qlPick'), cam=document.getElementById('qlCam'),
@@ -8048,7 +8094,7 @@ function intentItems(){
   const spend=!!state.spendingMode, stage=(typeof activeStage==='function')?activeStage():1;
   const list=[
     {ic:'', t:'Gut-check something before I buy it', s:'Price it in hours of your life first', hero:true, area:'impulse', go:()=>{ const sh=document.getElementById('intentSheet'); if(sh) sh.classList.remove('on'); setFabOpen(false); openModal(true); }},   // synchronous swap: the sheet's history entry becomes the modal's - no async back() to race
-    {ic:'', t:'Log what I spent', s:'One line each - or snap your notepad', go:()=>{ quickLogOpen=true; closeOverlayThenTab('tx'); setTimeout(()=>{ if(!document.querySelector('#quickLog .ql-row')) renderQuickLog(); const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus(); },160); }},   // never wipe rows (or a photo) already in progress
+    {ic:'', t:'Log what I spent', s:'One line each - or snap your notepad', go:()=>openQuickLogFor(null,true)},   // never wipe rows (or a photo) already in progress
     {ic:'', t:'Log money coming in', s:'Paycheck, side gig, anything that landed', go:()=>{ closeOverlayThenTab('tx'); setTimeout(()=>{ const tt=document.querySelector('#typeToggle button[data-t="income"]'); if(tt) tt.click(); const el=document.getElementById('txAmt'); if(el){ el.scrollIntoView({behavior:'auto',block:'center'}); el.focus(); } },160); }},
     {ic:'', t:'Give my dollars a job', s:'Assign this month down to zero', hide:spend, go:()=>{ closeOverlayThenTab('budget'); }},
     {ic:'', t:"See where my money's actually going", s:'Your patterns, not your guesses', go:()=>{ closeOverlayThenTab(spend?'home':'learn'); }},

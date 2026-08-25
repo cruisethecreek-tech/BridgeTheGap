@@ -1683,6 +1683,67 @@ check('Home and Settings run the same arithmetic, to the cent',
       tr.viaSettings===tr.wage, `${tr.viaSettings} vs ${tr.wage}`);
 check('...and waving it off sticks', tr.skipped===true && tr.afterSkip.trim()==='');
 
+/* ---- 34. the screen a spend-mode user lives on could not log ----
+   Sent from a real phone with the pace card circled: "right from this screen
+   there should be a button to track an expense." There was not. Spend mode has
+   exactly one job - log what you spent - and the button for it sat at the top of
+   a long scroll, in a panel above the reward calendar. The calendar is the part
+   people actually come back for (the streak, the stars, the green days), it
+   fills the screen, and it had no way to add anything at all. Worse, "$0 spent"
+   has two meanings on that card - you spent nothing, or you have not typed it in
+   yet - and there was nothing on screen to resolve it. ---- */
+const callog = await p.evaluate(async () => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.spendingMode=true; state.spendLimit=1500;
+  state.hourlyWage=22; state.trueRateSkipped=true;
+  state.activeMonth=thisMonth(); state.trackStart=thisMonth()+'-01';
+  save(); applySpending(); renderHome();
+  const cal=()=>document.getElementById('rewardCalBox');
+  const btns=()=>[...cal().querySelectorAll('[data-callog]')].map(b=>({d:b.dataset.callog,t:b.textContent.trim()}));
+  const onCal=btns();
+  const zeroNote=/only counts if it is true/.test(cal().innerText);
+  /* a day that is not today has to carry its own date, or logging Saturday's
+     coffee onto Monday quietly breaks the streak the calendar just drew */
+  const cells=[...cal().querySelectorAll('.cal-cell[data-day]')];
+  cells[0].click(); await new Promise(r=>setTimeout(r,60));
+  const past=btns();
+  const wantDate=thisMonth()+'-'+String(cells[0].dataset.day).padStart(2,'0');
+  /* today already has its button in the pace strip - the day card must not add a second */
+  const cells2=[...cal().querySelectorAll('.cal-cell[data-day]')];
+  cells2[cells2.length-1].click(); await new Promise(r=>setTimeout(r,60));
+  const todaySel=btns();
+  /* and the back-date button has to actually land on that day */
+  const cells3=[...cal().querySelectorAll('.cal-cell[data-day]')];
+  cells3[0].click(); await new Promise(r=>setTimeout(r,60));
+  document.querySelector('#calDay [data-callog]').click();
+  await new Promise(r=>setTimeout(r,260));
+  const landed={tab:(document.querySelector('.view.on')||{}).id, date:(document.getElementById('qlDate')||{}).value};
+  /* the emptiest version of the screen - no limit, so no calendar - was also
+     the one with no way out of being empty */
+  quickLogOpen=false; renderQuickLog();
+  state.spendLimit=0; save(); renderRewardCalendar();
+  const noLimit=btns().length;
+  /* a month that is not the current one must not offer to log "today" into it */
+  state.spendLimit=1500; state.activeMonth=shiftMonth(thisMonth(),-1); save(); renderRewardCalendar();
+  const pastMonth=btns().filter(b=>b.d==='today').length;
+  return {onCal, zeroNote, past, wantDate, todaySel, landed, noLimit, pastMonth};
+});
+check('the reward calendar carries the one action the mode is for',
+      callog.onCal.length===1 && callog.onCal[0].d==='today' && /Log an expense/.test(callog.onCal[0].t),
+      callog.onCal.map(b=>b.t).join(' | '));
+check('...and an unlogged zero says so rather than reading as a clean week', callog.zeroNote===true);
+check('tapping an earlier day offers to log to THAT day',
+      callog.past.length===2 && callog.past[1].d===callog.wantDate,
+      callog.past.map(b=>b.t).join(' | '));
+check('...and the button that opens carries the date with it',
+      callog.landed.tab==='view-tx' && callog.landed.date===callog.wantDate,
+      `${callog.landed.tab} @ ${callog.landed.date}`);
+check('today never gets two buttons for the same thing',
+      callog.todaySel.length===1, callog.todaySel.map(b=>b.t).join(' | '));
+check('no limit set is still a screen you can log from', callog.noLimit===1, String(callog.noLimit));
+check('a month that is not this one never offers to log "today" into it',
+      callog.pastMonth===0, String(callog.pastMonth));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
