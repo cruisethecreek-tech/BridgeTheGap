@@ -3109,6 +3109,104 @@ check('a cheap liability offers the door to the tool that prices it',
 check('...and a 26% store card is not called a lever',
       levDoor.notOfferedOnExpensive===true);
 
+/* ---- 51. charts you can interrogate ----
+   "These graphs mean actually nothing unless you're able to click on them." Every
+   time-series drew a shape and stopped - no axis, no values, no way to ask a peak
+   what it was made of. The properties below are what makes a chart an account of
+   your money rather than a picture of it: every point is reachable by thumb AND by
+   keyboard, the readout changes when the selection does, and it says what the
+   point is MADE of rather than repeating its number. */
+const CHARTS=[
+  {id:'monthChart', open:"activateTab('reflect'); rfTab='inout'; renderReflectTab();", read:'#monthRead .cread'},
+  {id:'trendChart', open:"activateTab('reflect'); rfTab='worth'; renderReflectTab();", read:'#trendChart .cread'},
+  {id:'trendBody',  open:"activateTab('reflect'); rfTab='trends'; renderReflectTab();", read:'#trendBody .cread'},
+  {id:'debtChart',  open:"activateTab('debt'); renderDebt();", read:'#debtResults .cread'}
+];
+await seed({...FULL, activeMonth:'2026-08',
+  transactions:[
+    {id:'x1',type:'income',amount:3200,date:'2026-06-01',source:'Paycheck'},
+    {id:'x2',type:'expense',amount:1200,catId:'roof',date:'2026-06-05'},
+    {id:'x3',type:'income',amount:12400,date:'2026-07-01',source:'Paycheck',note:'Intake'},
+    {id:'x4',type:'expense',amount:300,catId:'fun',date:'2026-07-09'},
+    {id:'x5',type:'income',amount:3200,date:'2026-08-01',source:'Paycheck'},
+    {id:'x6',type:'expense',amount:940,catId:'roof',date:'2026-08-03'},
+    /* two categories inside the active month, because the breakdown donut
+       defaults to a one-month window and one slice is not a donut. */
+    {id:'x7',type:'expense',amount:220,catId:'fun',date:'2026-08-11'}],
+  debts:[{id:'d1',name:'Card',balance:2400,apr:23.9,minPayment:75}], debtBudget:400,
+  snapshots:[{month:'2026-06',bank:3000,netWorth:3000,saved:0},
+             {month:'2026-07',bank:5200,netWorth:5200,saved:100},
+             {month:'2026-08',bank:4800,netWorth:4800,saved:250}]});
+await p.reload(); await p.waitForTimeout(400);
+for(const C of CHARTS){
+  const r=await p.evaluate(({id,open,read})=>{
+    eval(open);
+    const readOf=()=>{ const e=document.querySelector(read); return e?e.innerText.replace(/\s+/g,' ').trim():null; };
+    const hits=document.querySelectorAll(`[data-cfor="${id}"][data-cidx]`).length;
+    const first=readOf();
+    if(hits<2) return {hits, first, moved:false, keys:false, focusKept:false};
+    document.querySelector(`[data-cfor="${id}"][data-cidx="0"]`).dispatchEvent(new MouseEvent('click',{bubbles:true}));
+    const atZero=readOf();
+    const host=document.querySelector(`[data-chartkeys="${id}"]`);
+    let keys=false, focusKept=false;
+    if(host){
+      host.focus();
+      host.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+      const afterKey=readOf();
+      keys = afterKey!==atZero;
+      focusKept = !!document.querySelector(`[data-chartkeys="${id}"]`);
+    }
+    return {hits, first, atZero, moved:atZero!==first, keys, focusKept, hasHost:!!host};
+  }, C);
+  check(`${C.id}: every point is a thumb-sized target, not a 3px dot`, r.hits>=2, `${r.hits} bands`);
+  check(`${C.id}: it says something before you touch it`, !!r.first && r.first.length>20, (r.first||'').slice(0,60));
+  check(`${C.id}: tapping a different point changes what it says`, r.moved===true, `${(r.first||'').slice(0,30)} -> ${(r.atZero||'').slice(0,30)}`);
+  check(`${C.id}: the arrow keys walk it, and focus survives the redraw`,
+        r.hasHost===true && r.keys===true && r.focusKept===true, JSON.stringify({hasHost:r.hasHost,keys:r.keys,focusKept:r.focusKept}));
+}
+/* The readout has to earn its place: a month label and a dollar figure is what
+   the title tooltip already was. Each one names what the number is made of. */
+const reads = await p.evaluate(() => {
+  const out={};
+  activateTab('reflect'); rfTab='inout'; renderReflectTab();
+  const tap=(id,i)=>document.querySelector(`[data-cfor="${id}"][data-cidx="${i}"]`).dispatchEvent(new MouseEvent('click',{bubbles:true}));
+  tap('monthChart',4); out.jul=document.querySelector('#monthRead .cread').innerText;
+  tap('monthChart',1); out.empty=document.querySelector('#monthRead .cread').innerText;
+  rfTab='worth'; renderReflectTab(); out.ledger=document.querySelector('#trendChart .cread').innerText;
+  rfTab='trends'; renderReflectTab();
+  trendPick='spent'; renderTrendSeries();
+  tap('trendBody',0); out.trendGap=document.querySelector('#trendBody .cread').innerText;
+  return out;
+});
+check('the in-vs-out readout breaks the month into its parts',
+      /in\b/.test(reads.jul) && /out\b/.test(reads.jul) && /biggest/i.test(reads.jul) && /entr/i.test(reads.jul),
+      reads.jul.replace(/\s+/g,' ').slice(0,90));
+/* The reason this feature exists at all: a July bar four times everyone else's,
+   made almost entirely of a row the setup chat wrote. The chart could not say so
+   and the readout must. */
+check('...and names income the setup chat wrote rather than letting it pass as yours',
+      /setup chat/i.test(reads.jul), reads.jul.replace(/\s+/g,' ').slice(-120));
+check('a month with nothing logged is called unlogged, never zero',
+      /nothing logged/i.test(reads.empty) && !/\$0\b/.test(reads.empty), reads.empty.replace(/\s+/g,' ').slice(0,90));
+check('...and so is a gap in a ledger trend line',
+      /nothing logged/i.test(reads.trendGap), reads.trendGap.replace(/\s+/g,' ').slice(0,90));
+check('the running-total readout says what it is not, as well as what it is',
+      /not your bank balance/i.test(reads.ledger) && /not net worth/i.test(reads.ledger),
+      reads.ledger.replace(/\s+/g,' ').slice(-90));
+/* The donut was the last mute picture: its legend was clickable and it was not. */
+const donut = await p.evaluate(() => {
+  activateTab('reflect'); rfTab='breakdown'; renderReflectTab();
+  const arcs=[...document.querySelectorAll('#bdBox .bd-arc')];
+  if(arcs.length<2) return {arcs:arcs.length};
+  const leaf=arcs.find(a=>!/▸/.test(a.parentNode.parentNode.innerText)) || arcs[arcs.length-1];
+  leaf.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+  const sel=document.querySelectorAll('#bdBox .bd-row.sel').length;
+  document.querySelectorAll('#bdBox .bd-arc')[[...document.querySelectorAll('#bdBox .bd-arc')].indexOf(leaf)>=0?0:0];
+  return {arcs:arcs.length, sel};
+});
+check('the donut slices respond to a tap, like the legend beside them always did',
+      donut.arcs>=2 && donut.sel===1, JSON.stringify(donut));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
