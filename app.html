@@ -572,6 +572,20 @@
   .panel.spending .sp-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .panel.spending .sp-spent{font-weight:900;font-size:30px;letter-spacing:-.5px}
   .panel.spending .sp-k{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px}
+  .sp-recent .am.put{color:rgb(var(--good-rgb))}
+  .sp-recent .ce-put{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgb(var(--good-rgb));margin-left:5px}
+  .cal-entries .ce-put{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+    color:rgb(var(--good-rgb));margin-left:5px}
+  .cal-entries .am.put{color:rgb(var(--good-rgb))}
+  .cd-put,.wk-put{margin-top:8px;padding:8px 11px;border-radius:10px;
+    border:1px solid rgba(var(--good-rgb),.35);background:rgba(var(--good-rgb),.09);
+    font-size:13.5px;line-height:1.5}
+  .panel.spending .sp-spent.good{color:rgb(var(--good-rgb))}
+  .panel.spending .sp-kept{margin-top:12px;padding:11px 13px;border-radius:12px;
+    border:1px solid rgba(var(--good-rgb),.35);background:rgba(var(--good-rgb),.09);
+    font-size:14.5px;line-height:1.5;font-weight:700}
+  .panel.spending .sp-kept.quiet{border-color:var(--line);background:transparent;
+    color:var(--muted);font-weight:600;font-size:13.5px}
   .panel.spending .sp-income{margin-top:12px;font-size:14.5px;font-weight:600;color:var(--muted);line-height:1.5}
   .panel.spending .sp-income b{color:var(--text)}
   .sp-limit{margin-top:14px}
@@ -3094,6 +3108,17 @@ function openQuickLogFor(date, fromOverlay){
     const f=document.querySelector('#quickLog .ql-what'); if(f) f.focus();
   }, fromOverlay?160:60);
 }
+/* The line that makes the number mean something. Deliberately not a
+   congratulation with no arithmetic behind it - it states the ratio, and where
+   there is a rate it states the hours, which is the app's own currency. */
+function putAwayLine(put,spent,H){
+  const total=put+spent;
+  const share=total>0?Math.round(put/total*100):0;
+  const hrs=H>0?` That is ${fmtHours(put/H)} of your life you bought back.`:'';
+  if(spent<=0) return `${usd(put)} put away and nothing logged as spent yet.${hrs}`;
+  if(share>=50) return `Of the ${usd(total)} you moved this month, ${share}% of it stayed yours.${hrs}`;
+  return `${usd(put)} put away against ${usd(spent)} spent - ${share}% of what moved this month, kept.${hrs}`;
+}
 function renderSpending(){
   renderRewardCalendar();
   const box=document.getElementById('spendingBox'); if(!box) return;
@@ -3101,7 +3126,9 @@ function renderSpending(){
   const M=state.activeMonth;
   const spent=txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const lim=state.spendLimit||0, H=effectiveHourly(), income=monthIncome(M);
-  const recent=state.transactions.filter(t=>t.type==='expense').slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,5);
+  /* This listed expenses only, so the headline could say "$145 put away" and the
+     list underneath it would show nothing but coffee. */
+  const recent=state.transactions.filter(t=>t.type==='expense'||t.type==='invest').slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,5);
   let incHTML='';
   if(income>0){
     const pct=Math.round(spent/income*100), left=Math.max(0,income-spent);
@@ -3116,7 +3143,11 @@ function renderSpending(){
     </div>`;
   }
   const recentHTML = recent.length
-    ? `<div class="sp-recent">${recent.map(t=>`<div class="r"><span class="nm">${escapeHtml(t.note||catName(t.catId)||'Purchase')}</span><span class="am">-${money(t.amount)}<span class="dt">${(t.date||'').slice(5)}</span></span></div>`).join('')}</div>`
+    ? `<div class="sp-recent">${recent.map(t=>{
+        const inv=t.type==='invest';
+        const nm=inv?escapeHtml(t.source||'Put away'):escapeHtml(t.note||catName(t.catId)||'Purchase');
+        return `<div class="r"><span class="nm">${nm}${inv?' <span class="ce-put">put away</span>':''}</span><span class="am${inv?' put':''}">${inv?'\u2192':'-'}${money(t.amount)}<span class="dt">${(t.date||'').slice(5)}</span></span></div>`;
+      }).join('')}</div>`
     : `<div class="sub" style="margin-top:14px">Nothing logged yet. Run a gut-check before your next buy.</div>`;
   // The 30-day money map: track for real, then the truth is staring at you.
   // Day math counts CALENDAR days from local date strings (DST-proof, no ms drift).
@@ -3149,11 +3180,21 @@ function renderSpending(){
     <p class="sub" style="margin:4px 0 10px">Tracking shows you the truth. Sometimes seeing it is enough to change it. Sometimes you want every dollar earmarked with a job. Your call - switch anytime, nothing's lost.</p>
     <button class="btn ghost" id="toBudget">Give every dollar a job → full budgeting</button>
   </div>` : '';
+  /* One number, and it was the accusing one. Someone who moved $145 into savings
+     had a great month and this screen had nothing to say about it - the whole
+     surface read as a tally of damage. Money you kept on purpose is the point of
+     the app, so it stands next to the money that left, at the same size. */
+  const putAway=(typeof monthInvested==='function')?monthInvested(M):0;
+  const everPut=(typeof investedAllTime==='function')?investedAllTime():0;
   box.innerHTML=`<div class="panel spending">
     <div class="sp-top">
       <div><div class="sp-k">Spent this month</div><div class="sp-spent">${actMoney(spent)}</div></div>
+      ${putAway>0?`<div><div class="sp-k">Put away</div><div class="sp-spent good">${actMoney(putAway)}</div></div>`:''}
       ${H>0?`<div style="text-align:right"><div class="sp-k">That's</div><div style="font-weight:800">${fmtHours(spent/H)} of life</div></div>`:''}
     </div>
+    ${putAway>0
+      ? `<div class="sp-kept">${escapeHtml(putAwayLine(putAway,spent,H))}</div>`
+      : (everPut>0||spent>0 ? `<div class="sp-kept quiet">Money you put away goes in the same log - pick <b>“Put away”</b> at the bottom of the category list. It is not spending, and this screen will stop treating it as if it were.</div>` : '')}
     ${incHTML}
     ${limHTML}
     ${tcHTML}
@@ -3187,14 +3228,18 @@ function renderCalDay(M, allowance){
   const [y,mo]=M.split('-').map(Number), d=calSelDay;
   const entries=dayEntries(M,d);
   const spent=entries.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const dayPut=entries.filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0);
   const saved=allowance-spent;
   const label=new Date(y,mo-1,d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   let rows;
   if(entries.length){
     rows=`<div class="cal-entries">${entries.slice().sort((a,b)=>a.type<b.type?1:-1).map(t=>{
-      const inc=t.type==='income';
-      const nm=inc?escapeHtml(t.source||t.note||'Income'):escapeHtml(t.note||catName(t.catId)||'Purchase');
-      return `<div class="ce"><span class="nm">${nm}</span><span class="am ${inc?'in':''}">${inc?'+':'-'}${money(t.amount)}</span></div>`;
+      const inc=t.type==='income', inv=t.type==='invest';
+      /* An investment is not a purchase and must never be drawn as one - it is
+         the same money, still yours, moved somewhere better. */
+      const nm=(inc||inv)?escapeHtml(t.source||t.note||(inv?'Put away':'Income')):escapeHtml(t.note||catName(t.catId)||'Purchase');
+      const sign=inc?'+':inv?'\u2192':'-';
+      return `<div class="ce"><span class="nm">${nm}${inv?' <span class="ce-put">put away</span>':''}</span><span class="am ${inc?'in':''}${inv?' put':''}">${sign}${money(t.amount)}</span></div>`;
     }).join('')}</div>`;
   } else {
     rows=`<div class="sub" style="margin-top:8px">Nothing logged this day - a clean ${money(allowance)} saved.</div>`;
@@ -3258,10 +3303,18 @@ function renderCalDay(M, allowance){
   const isToday = dd===todayStr();
   const logHTML = isToday ? '' :
     `<button class="btn ghost cal-log sm" data-callog="${dd}">＋ Log to ${escapeHtml(label)}</button>`;
+  /* "Saved" here has always meant "did not spend", which is a real thing but a
+     passive one. Money actually MOVED somewhere is the active version, and it
+     was invisible - the card would show a day someone funded their Roth as an
+     ordinary quiet day. */
+  const putLine = dayPut>0
+    ? `<div class="cd-put">\u2192 <b>${money(dayPut)}</b> put away this day.${effectiveHourly()>0?` ${fmtHours(dayPut/effectiveHourly())} of your life, kept rather than spent.`:''}</div>`
+    : '';
   el.innerHTML=`<div class="cal-day">
     <h3>${label}</h3>
     <div class="cd-save ${saved>=0?'good':'bad'}">${saved>=0?money(saved)+' saved':money(-saved)+' over'}</div>
     <div class="sub" style="font-size:12px">${money(spent)} spent of ${money(allowance)} allowance</div>
+    ${putLine}
     ${rows}
     ${logHTML}
     ${action}
@@ -3378,6 +3431,12 @@ function renderRewardCalendar(){
   // weekly pacing: the calendar week (Sun..today) that contains today, within this month - scored days only
   const dow=new Date(y,mo-1,todayDay).getDay(), wkStart=Math.max(1,todayDay-dow);
   let wkSpent=0, wkDays=0; for(let d=wkStart; d<=todayDay; d++){ if(calIsPre(dayStr(d), spentByDay[d])) continue; wkSpent+=(spentByDay[d]||0); wkDays++; }
+  /* The pace strip counted only what left. A week where someone moved money into
+     savings read exactly like a week where they did nothing at all. */
+  const wkPut=txnsInMonth(M).filter(t=>t.type==='invest').reduce((s,t)=>{
+    const dd=+((t.date||'').slice(8,10));
+    return (dd>=wkStart && dd<=todayDay) ? s+t.amount : s;
+  },0);
   const wkAllow=allowance*wkDays, wkDiff=wkAllow-wkSpent, wkOver=wkSpent>wkAllow;
   const wkPct=wkAllow>0?Math.min(100,Math.round(wkSpent/wkAllow*100)):0;
   const swept=calMonthSwept(M), aheadNet=ahead-swept;   // what's still unbanked - the honest headline
@@ -3391,7 +3450,8 @@ function renderRewardCalendar(){
       <div class="sp-k">This week's pace</div>
       <div class="wk-row"><span>${money(wkSpent)} spent</span><span style="color:${wkOver?'var(--bad)':'var(--good)'}">${wkOver?money(-wkDiff)+' over pace':money(wkDiff)+' ahead'}</span></div>
       <div class="wk-bar ${wkOver?'over':''}"><span style="width:${wkPct}%"></span></div>
-      <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays===1?'':'s'} so far this week.${(isCur&&wkSpent===0)?' Nothing logged yet - a zero only counts if it is true.':''}</div>
+      <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays===1?'':'s'} so far this week.${(isCur&&wkSpent===0&&wkPut===0)?' Nothing logged yet - a zero only counts if it is true.':''}</div>
+      ${wkPut>0?`<div class="wk-put">\u2192 <b>${money(wkPut)}</b> put away this week. Not spending is good; moving it somewhere is better.</div>`:''}
       ${isCur?`<button class="btn primary cal-log" data-callog="today">Log an expense</button>`:''}
     </div>` : '';
   const org=state.trackStart||'';
@@ -5291,7 +5351,17 @@ function qlCatOptions(){
      used to land on whichever one was first - "Rent / mortgage" for most people
      - and every unreviewed line claimed to be rent. */
   const cats=state.categories.length?`<option value="">Which category?</option>`+categoryOptions():`<option value="">Uncategorized</option>`;
-  return cats+`<option value="__new">＋ New category…</option>`;
+  /* Every line in here was hard-coded type:'expense', and the only list on offer
+     was places money GOES. So a person who moved $145 into savings had nowhere
+     to put it - the app would either refuse the entry or record their best month
+     as a purchase. The invest and income types have existed end to end for a
+     while; the fast way in just never learned about them, which left the whole
+     screen reading as an accusation. Two entries at the bottom of the same
+     dropdown, so nothing new has to fit on a phone row. */
+  return cats
+    +`<option value="__new">＋ New category…</option>`
+    +`<option value="__invest">→ Put away (savings or investing)</option>`
+    +`<option value="__income">← Money that came in</option>`;
 }
 /* ---- guessing the category from what you typed -------------------------------
    Every row's dropdown defaulted to whatever category happened to be first, so
@@ -5332,9 +5402,21 @@ const HABIT_WORDS=[
   {w:['daycare','childcare','babysitter','diapers'],                         c:['child','kids','daycare']}
 ];
 function qlWords(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(w=>w.length>2); }
+/* Words that mean the money did not leave. Checked FIRST, because every one of
+   these would otherwise score against a spending category and quietly file a
+   Roth contribution as shopping - the one misfiling that turns a good month into
+   an accusation. */
+const PUT_AWAY_WORDS=['savings','saving','saved','save','invest','invested','investing','investment',
+  'roth','ira','401k','403b','tsp','hsa','brokerage','index fund','etf','vanguard','fidelity','schwab',
+  'emergency fund','rainy day','sinking fund','nest egg','stash','put away','set aside','transfer to savings',
+  'stocks','bonds','crypto','retirement','pension','529'];
+function looksPutAway(q){
+  return PUT_AWAY_WORDS.some(w=> w.includes(' ') ? q.includes(w) : new RegExp('\\b'+w+'\\b').test(q));
+}
 function suggestCatFor(text){
   const q=String(text||'').trim().toLowerCase();
   if(q.length<3) return '';
+  if(looksPutAway(q)) return '__invest';
   const words=qlWords(q); if(!words.length) return '';
   const live=new Map(state.categories.map(c=>[c.id,c]));
   const score={};
@@ -5375,7 +5457,7 @@ function suggestCatFor(text){
   return top>=4 ? best : '';
 }
 function qlRow(){ return `<div class="ql-row">
-    <input class="ql-what" type="text" placeholder="What was it? (e.g. Coffee, Amazon)">
+    <input class="ql-what" type="text" placeholder="What was it? (e.g. Coffee, Roth IRA)">
     <span class="ql-dol">$<input class="ql-amt" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></span>
     <select class="ql-cat">${qlCatOptions()}</select>
     <input class="ql-new hide" type="text" placeholder="Name it">
@@ -5418,7 +5500,7 @@ function renderQuickLog(){
   qlGen++;   // invalidate any OCR pass still running against the previous panel
   if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPhotoFile=null; return; }
   box.innerHTML=`<div class="ql-panel">
-    <div class="ql-head"><span>One line per purchase, then log them all. The little stuff is where it hides.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
+    <div class="ql-head"><span>One line each, then log them all. The little stuff is where it hides - and money you <b>put away</b> goes in here too, at the bottom of the category list.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
     <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Snap my notepad</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
@@ -5494,12 +5576,23 @@ function renderQuickLog(){
   box.querySelectorAll('.ql-row').forEach(wireRow);
   document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
   document.getElementById('qlSave').onclick=()=>{
-    const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0;
+    const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0, put=0, came=0;
     box.querySelectorAll('.ql-row').forEach(el=>{
       const what=(el.querySelector('.ql-what').value||'').trim();
       const amt=parseFloat(el.querySelector('.ql-amt').value);
       if(!(amt>0)){ if(what){ namedNoAmt++; el.querySelector('.ql-amt').style.borderColor='var(--bad)'; } return; }
       const catSel=el.querySelector('.ql-cat'); let catId=catSel.value||null;   // '' = Uncategorized, on purpose
+      /* Money that did NOT leave. Same row, same two fields, different verb. */
+      if(catId==='__invest'){
+        const dest=what||'Savings';
+        state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note:'',ikind:'holds'});
+        investAssetAdd(amt);          // it is still yours, so net worth has to know
+        added++; put+=amt; el.remove(); return;
+      }
+      if(catId==='__income'){
+        state.transactions.push({id:uid(),type:'income',amount:amt,source:what||'Income',date,note:''});
+        added++; came+=amt; el.remove(); return;
+      }
       if(catId==='__new'){ const nm=(el.querySelector('.ql-new').value||'').trim()||what||'Spending'; catId=findOrCreateCat(nm).id; }
       if(!catId) uncat++;   // honest: a row nothing could be guessed for lands as Uncategorized, and says so
       state.transactions.push({id:uid(),type:'expense',amount:amt,catId,date,note:what}); added++;
@@ -5510,8 +5603,17 @@ function renderQuickLog(){
     save(); renderTxForm(); renderTx(); renderBudget(); renderHome();
     if(namedNoAmt){ if(typeof toast==='function') toast('Logged '+added+' - fix the highlighted line'+(namedNoAmt>1?'s':'')+' and log again.'); }
     else { quickLogOpen=false; renderQuickLog();
-      if(typeof toast==='function') toast('Logged '+added+' purchase'+(added>1?'s':'')
-        +(uncat?' - '+uncat+' with no category yet. Search "Uncategorized" in the log below to find them.':'.')); }
+      /* "Logged 3 purchases" for a batch that was mostly savings is the same
+         fault one layer up - the confirmation has to name what actually
+         happened, and lead with the part worth being pleased about. */
+      const bits=[];
+      if(put>0) bits.push(money(put)+' put away');
+      if(came>0) bits.push(money(came)+' in');
+      if(typeof toast==='function') toast(
+        bits.length
+          ? bits.join(', ')+' - '+added+' line'+(added>1?'s':'')+' logged.'
+          : 'Logged '+added+' purchase'+(added>1?'s':'')
+            +(uncat?' - '+uncat+' with no category yet. Search "Uncategorized" in the log below to find them.':'.')); }
   };
 }
 /* Every posted recurring entry was noted "Recurring" - so four bills in a row
