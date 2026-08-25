@@ -110,7 +110,13 @@ for (const [tab, debtBudget] of PASSES) {
       const aside=(el.innerText||'').trim();
       let box=el.parentElement, block='';
       for(let hops=0; box && hops<4; hops++, box=box.parentElement){
-        const t=(box.innerText||'').trim();
+        /* A .unit-work line IS the same amount in two units, on purpose - it is
+           the field saying "you typed 40 a week, here is the month I will use".
+           That is the fix, not the fault, so it never counts as the headline a
+           life caption is wrongly converting. */
+        let t=(box.innerText||'').trim();
+        box.querySelectorAll('.unit-work').forEach(u=>{ const ut=(u.innerText||'').trim(); if(ut) t=t.replace(ut,''); });
+        t=t.trim();
         const rest=t.replace(aside,'').trim();
         if(/\$\s?\d/.test(rest) || /\b\d[\d,.]*\s*(min|hrs?|hours?|days?|mo)\b/i.test(rest)){ block=t; break; }
       }

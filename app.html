@@ -1021,6 +1021,22 @@
      thing this mode is for, and the panel it sits in is a wall of days. */
   /* Every breadcrumb in the app. Deliberately quiet - it is an offer at the end
      of a sentence, not a call to action competing with the panel it sits in. */
+  /* A field that owns its own unit: the label row carries the "?" and the period
+     picker, the input sits under it, and the conversion prints beneath. */
+  .ufld{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:700}
+  .ufld .fl-k{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+  .ufld .fl-in{display:inline-flex;align-items:center;gap:5px;color:var(--text);font-weight:800;font-size:15px}
+  .ufld .fl-in input{font-size:15px}
+  .why-q{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;
+    margin-left:6px;padding:0;border-radius:50%;border:1px solid var(--line);background:transparent;
+    color:var(--muted);font:inherit;font-size:12px;font-weight:900;line-height:1;cursor:pointer;vertical-align:middle}
+  .why-q:hover,.why-q.on{border-color:var(--accent);color:var(--accent);background:rgba(var(--accent-rgb),.10)}
+  .why-note{margin:8px 0 4px;padding:11px 13px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(var(--accent-rgb),.06);font-size:13.5px;line-height:1.55;max-width:520px}
+  .why-note .wn-t{font-weight:900;margin-bottom:5px;font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+  .unit-sel{margin-left:6px;padding:6px 8px;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--text);font:inherit;font-size:13px;font-weight:700;max-width:150px}
+  .unit-work{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
   .nw-plan{margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--line);
     background:rgba(var(--accent-rgb),.07);font-size:14px;line-height:1.5}
   .trail-btn{display:inline-block;margin-top:8px;padding:7px 12px;border-radius:999px;
@@ -1752,7 +1768,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
-          <label class="fld income-only-rec hide" id="recHoursWrap">Hours/mo it takes<input type="number" id="recHours" min="0" step="0.5" placeholder="opt." style="width:90px"></label>
+          <div class="ufld income-only-rec hide" id="recHoursWrap"><span class="fl-k">Hours it takes<span id="recHoursUnit"></span></span>
+            <span class="fl-in"><input type="number" id="recHours" min="0" step="0.5" inputmode="decimal" placeholder="opt." style="width:90px"></span>
+            <div class="unit-work" id="recHoursW"></div></div>
           <label class="fld invest-only-rec hide" id="recInvKindWrap">Kind<select id="recInvKind"><option value="holds">Holds its value</option><option value="self">Into me (health, skills)</option></select></label>
           <label class="fld">Repeats
             <select id="recFreq"><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="semimonthly">Twice a month</option><option value="monthly" selected>Monthly</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select>
@@ -1951,7 +1969,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Your way out</h2>
         <p class="sub">Put in what you can throw at debt each month and this shows the payoff date, the interest it costs you, and which order to kill them in. Nothing here changes your budget; it is a projection you can argue with.</p>
         <div class="row">
-          <label class="fld">Total you can pay toward debt each month $<input type="number" id="debtBudget" min="0" step="10" placeholder="e.g. 900" style="width:150px"></label>
+          <div class="ufld"><span class="fl-k">Total you can pay toward debt<span id="debtBudgetUnit"></span></span>
+            <span class="fl-in">$<input type="number" id="debtBudget" min="0" step="10" inputmode="decimal" placeholder="e.g. 900" style="width:130px"></span>
+            <div class="unit-work" id="debtBudgetW"></div></div>
         </div>
         <!-- The one thing people get wrong here: they type the EXTRA they can find,
              not the total. That makes the payoff date wildly pessimistic and the
@@ -2201,21 +2221,16 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld">Take-home pay per hour
             <input type="number" id="wage" min="0" step="0.5" placeholder="e.g. 22" style="width:150px">
           </label>
-          <label class="fld">Hours you actually work / week
-            <input type="number" id="hpw" min="1" max="120" step="any" placeholder="40" style="width:120px">
-          </label>
+          <div class="ufld"><span class="fl-k">Hours you actually work<span id="hpwUnit"></span></span>
+            <span class="fl-in"><input type="number" id="hpw" min="0" step="any" inputmode="decimal" placeholder="40" style="width:110px"></span>
+            <div class="unit-work" id="hpwW"></div></div>
           <div id="wageNote" class="sub" style="margin:0;align-self:flex-end;max-width:340px"></div>
         </div>
         <details class="truerate" id="trueRate">
           <summary>Calculate your True Net Hourly Wage</summary>
           <div class="tr-body">
             <p class="sub" style="margin:6px 0 12px">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs - the commute, the gas, the work lunches - spread over the time the job actually eats.</p>
-            <div class="row">
-              <label class="fld">Take-home / month<input type="number" id="trTakeHome" min="0" step="50" placeholder="e.g. 3200" style="width:130px"></label>
-              <label class="fld">Commute + prep (hrs/week)<input type="number" id="trCommute" min="0" step="0.5" placeholder="e.g. 7" style="width:120px"></label>
-              <label class="fld">Work overhead / month $<input type="number" id="trOverhead" min="0" step="10" placeholder="gas, lunches, outfits" style="width:150px"></label>
-              <button class="btn primary" id="trCompute" style="align-self:flex-end">Set my true rate</button>
-            </div>
+            <div class="row" id="trFields"></div>
             <div class="tr-result" id="trResult" style="display:none"></div>
           </div>
         </details>
@@ -2237,7 +2252,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <label class="hh-toggle"><input type="checkbox" id="spendOn"> Focus on just my spending</label>
         <div id="spendFields" style="display:none">
           <div class="row" style="margin-top:14px">
-            <label class="fld">Monthly spending limit (optional) $<input type="number" id="spendLimit" min="0" step="10" placeholder="e.g. 300" style="width:150px"></label>
+            <div class="ufld"><span class="fl-k">Spending limit (optional)<span id="spendLimitUnit"></span></span>
+              <span class="fl-in">$<input type="number" id="spendLimit" min="0" step="10" inputmode="decimal" placeholder="e.g. 300" style="width:130px"></span>
+              <div class="unit-work" id="spendLimitW"></div></div>
           </div>
           <p class="sub" style="margin-top:10px">Set a personal "fun money" number and the home screen shows a progress bar - how much you've spent and what's left. Leave it blank for pure tracking, no limit.</p>
         </div>
@@ -2712,7 +2729,7 @@ function defaultState(){
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[], seenGuide:{}, guidesOff:false,
            onboarded:false, intake:{}, register:'middle', vault:[],
-           freedomMode:false, trueRate:{}, trueRateSkipped:false, network:[], enough:0, skills:[],
+           freedomMode:false, trueRate:{}, trueRateSkipped:false, units:{}, network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
@@ -3377,7 +3394,9 @@ function applySpending(){
   const home=document.getElementById('view-home'); if(home) home.classList.toggle('spending-mode',on);
   const sf=document.getElementById('spendFields'); if(sf) sf.style.display=on?'':'none';
   const cb=document.getElementById('spendOn'); if(cb) cb.checked=on;
-  const li=document.getElementById('spendLimit'); if(li&&document.activeElement!==li) li.value=state.spendLimit||'';
+  wireUnitField({id:'spendLimit', dflt:'month', kinds:['day','week','biweek','month'], why:'spendLimit',
+    get:()=>state.spendLimit||0,
+    set:v=>{ state.spendLimit=Math.round(v*100)/100; save(); renderSpending(); }});
   renderSpending();
 }
 
@@ -3491,7 +3510,9 @@ function renderDebt(){
   box.querySelectorAll('button[data-deldebt]').forEach(b=>b.addEventListener('click',()=>{ state.debts=state.debts.filter(x=>x.id!==b.dataset.deldebt); save(); renderDebt(); }));
   const sn=document.getElementById('debtStratNote'); if(sn) sn.textContent=DEBT_STRAT_NOTE[state.debtStrategy||'avalanche']||'';
   document.querySelectorAll('#debtStrategy button').forEach(b=>b.classList.toggle('on',b.dataset.s===(state.debtStrategy||'avalanche')));
-  const bi=document.getElementById('debtBudget'); if(bi&&document.activeElement!==bi) bi.value=state.debtBudget||'';
+  wireUnitField({id:'debtBudget', dflt:'month', kinds:['week','biweek','month'], why:'debtBudget',
+    get:()=>state.debtBudget||0,
+    set:v=>{ state.debtBudget=Math.round(v*100)/100; save(); renderDebtResults(); }});
   renderDebtResults();
 }
 function renderDebtResults(){
@@ -6287,8 +6308,6 @@ async function refreshSyncState(){
     if(sp.checked) ensureTrackStart();   // the calendar originates the day tracking begins
     save(); applySpending(); renderBudget(); renderTx(); renderHome();
   });
-  const sl=document.getElementById('spendLimit');
-  if(sl) sl.addEventListener('input',()=>{ state.spendLimit=parseFloat(sl.value)||0; save(); renderSpending(); });
 })();
 
 /* ---------- Debt Payoff Planner controls ---------- */
@@ -6312,8 +6331,6 @@ async function refreshSyncState(){
     if(!n) alert('No new liabilities to import (they may already be here, or you have none with a balance).');
     else alert('Imported '+n+' debt'+(n>1?'s':'')+'. Add each one’s rate and minimum payment for an accurate plan.');
   });
-  const bud=document.getElementById('debtBudget');
-  if(bud) bud.addEventListener('input',()=>{ state.debtBudget=parseFloat(bud.value)||0; save(); renderDebtResults(); });
   const strat=document.getElementById('debtStrategy');
   if(strat) strat.addEventListener('click',e=>{ const b=e.target.closest('button[data-s]'); if(!b) return; state.debtStrategy=b.dataset.s; save(); renderDebt(); });
   const ir=document.getElementById('investReturn');
@@ -7038,7 +7055,7 @@ function renderNetWorth(){
     const k=a.kind||'real', yr=(a.cost||0)*12;
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
       <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'Works':'Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
-      <div class="li-cost">Drains $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.cost||0}" data-cost="${a.id}">/mo <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
+      <div class="li-cost">Drains $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.cost?Math.round((a.cost/periodMeta(a.costUnit||'month').per)*100)/100:0}" data-cost="${a.id}"><select class="unit-sel" data-costunit="${a.id}" aria-label="Per what?">${['month','year','week'].map(periodMeta).map(pp=>`<option value="${pp.k}"${(a.costUnit||'month')===pp.k?' selected':''}>${pp.label}</option>`).join('')}</select>${whyBtn('assetDrain')} <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet. An asset is anything that puts money in your pocket - savings, investments, a rental. Add one above.</div>';
   /* You type in a $12,000 car loan and the app - which owns a payoff planner
@@ -7055,11 +7072,26 @@ function renderNetWorth(){
     + (offerPlan?`<div class="nw-plan">That is <b>${money(liabTotal)}</b> owed. The payoff planner turns it into a date - which one to kill first, what the interest is costing you, and how much sooner an extra $50 gets you out.${trailBtn('debt','Plan the way out','solid')}</div>`:'');
   renderDrain();
   if(typeof applyStage==='function') applyStage();
+  /* a.cost is always MONTHLY. What is on screen is that figure divided into
+     whatever period the row is set to - registration and insurance are yearly
+     things, and making someone divide by twelve before they can answer is the
+     same fault as making them multiply a weekly paycheck by 4.33. */
+  const drainSync=a=>{
+    const yl=document.querySelector(`#assetList [data-costyr="${a.id}"]`);
+    if(yl) yl.textContent=a.cost?'= '+money(a.cost*12)+'/yr to keep':'';
+    renderDrain();
+  };
   document.querySelectorAll('#assetList input[data-cost]').forEach(inp=>inp.addEventListener('input',()=>{
     const a=state.assets.find(x=>x.id===inp.dataset.cost); if(!a) return;
-    a.cost=parseFloat(inp.value)||0; save();
-    const yl=document.querySelector(`#assetList [data-costyr="${a.id}"]`); if(yl) yl.textContent=a.cost?'= '+money(a.cost*12)+'/yr to keep':'';
-    renderDrain();
+    a.cost=Math.round(toMonthly(parseFloat(inp.value)||0, a.costUnit||'month')*100)/100; save();
+    drainSync(a);
+  }));
+  document.querySelectorAll('#assetList select[data-costunit]').forEach(sel=>sel.addEventListener('change',()=>{
+    const a=state.assets.find(x=>x.id===sel.dataset.costunit); if(!a) return;
+    a.costUnit=sel.value;                                   // the number stays; what it means changes
+    const inp=document.querySelector(`#assetList input[data-cost="${a.id}"]`);
+    a.cost=Math.round(toMonthly(parseFloat(inp?inp.value:0)||0, a.costUnit)*100)/100; save();
+    drainSync(a);
   }));
   document.querySelectorAll('#assetList button[data-togglekind]').forEach(b=>b.addEventListener('click',()=>{
     const a=state.assets.find(x=>x.id===b.dataset.togglekind); if(!a) return;
@@ -7318,15 +7350,22 @@ wageEl.addEventListener('input',()=>{
   state.hourlyWage=v; state.wageAuto=false; save();   // manual override stops auto-reblending
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
 });
-/* hours/week is an input, never an assumption - editable here, not just at intake */
-(function(){
-  const el=document.getElementById('hpw'); if(!el) return;
-  el.addEventListener('input',()=>{
-    const v=parseFloat(el.value);
-    state.hoursPerWeek=(v>0&&v<=120)?v:0; save();
-    updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
-  });
-})();
+/* hours/week is an input, never an assumption - editable here, not just at
+   intake, and in whatever period they count in. Plenty of people know "eight and
+   a half a day" and not the weekly total, and the commute field directly below
+   already takes work days - two fields about the same job disagreeing on units
+   is exactly the confusion this pass exists to remove.
+   state.hoursPerWeek stays hours a WEEK, because everything downstream reads it
+   that way; only what is on screen changes. */
+function wireHpw(){
+  return wireUnitField({id:'hpw', dflt:'week', kinds:['workday','week','month'], why:'hpw', unitWord:'hrs',
+    get:()=>state.hoursPerWeek>0 ? state.hoursPerWeek*WEEKS_PER_YEAR/12 : 0,   // as hours a MONTH, which is the common currency
+    set:mo=>{
+      const wk=mo*12/WEEKS_PER_YEAR;
+      state.hoursPerWeek=(wk>0&&wk<=120)?Math.round(wk*100)/100:0; save();
+      updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
+    }});
+}
 function updateWageNote(){
   const note=document.getElementById('wageNote'); const h=effectiveHourly();
   if(state.hourlyWage>0) note.textContent='Locked in. Every '+usd(state.hourlyWage)+' you spend = 1 hour of your life at work.';
@@ -7805,6 +7844,156 @@ document.getElementById('freedomToggle').addEventListener('click',e=>{
   state.freedomMode=want; save(); renderAll();
 });
 
+/* ============================================================
+   PERIODS - let people enter a number in the unit they think in.
+
+   The true-rate card asked for take-home "/ month", then commute "hrs/week",
+   then overhead "/ month" - three fields, two different periods, in one card.
+   Someone who gets $60 of gas a week has to do the conversion in their head
+   before they can answer, and someone who reads the card top to bottom carries
+   "month" into the middle field and answers it wrong without ever noticing.
+
+   Neither is the user's fault. The app already knows how to convert; it was just
+   choosing the unit and making the human meet it there. So the unit becomes a
+   dropdown, the number they typed stays exactly as typed, and the monthly
+   equivalent is shown underneath in the same breath - so there is never a moment
+   where the field means something other than what it looks like.
+
+   The multipliers are the same ones REC_FREQS, PAY_FREQS and leakFreqMult run
+   on, so a bill, a paycheck, a leak and an overhead of the same cadence can
+   never disagree about what a month is.
+   ============================================================ */
+const PERIODS=[
+  {k:'day',     label:'a day',          short:'/day',     per:365/12},
+  /* "Per day" for a commute is a trap: nobody drives to work on a Sunday, and
+     multiplying by 30.4 calendar days overstates it by about 40%. A separate
+     kind, named so the person can see which one they picked. Five work days a
+     week is an assumption and it is stated on screen, which is the only honest
+     way to hold one. */
+  {k:'workday', label:'a day you work',  short:'/workday', per:5*52/12},
+  {k:'week',   label:'a week',        short:'/wk',  per:52/12},
+  {k:'biweek', label:'every 2 weeks', short:'/2wk', per:26/12},
+  {k:'month',  label:'a month',       short:'/mo',  per:1},
+  {k:'year',   label:'a year',        short:'/yr',  per:1/12}
+];
+function periodMeta(k){ return PERIODS.find(x=>x.k===k)||PERIODS[3]; }
+function toMonthly(v,k){ return (+v||0)*periodMeta(k).per; }
+function unitOf(field,dflt){ const u=(state.units||{})[field]; return PERIODS.some(p=>p.k===u)?u:(dflt||'month'); }
+function setUnit(field,k){ state.units=state.units||{}; state.units[field]=k; save(); }
+/* The picker. `kinds` narrows the list where an option would be nonsense - a
+   commute measured per year tells nobody anything. */
+function periodSel(field,dflt,kinds){
+  const cur=unitOf(field,dflt);
+  const list=(kinds||['week','biweek','month','year']).map(periodMeta);
+  return `<select class="unit-sel" data-unit="${field}" aria-label="Per what?">${list.map(p=>`<option value="${p.k}"${p.k===cur?' selected':''}>${escapeHtml(p.label)}</option>`).join('')}</select>`;
+}
+/* The line under the field. It is the answer to "what did you do with my
+   number", printed before anyone has to ask. */
+function periodWork(v,k,unitWord){
+  const n=+v||0; if(!(n>0)) return '';
+  const m=periodMeta(k), mo=toMonthly(n,k);
+  const val=x=>unitWord==='hrs' ? (Math.round(x*10)/10)+' hrs' : usd(x);
+  if(k==='month') return `${val(n)} a month.`;
+  const mult=Math.round(m.per*100)/100;
+  return `${val(n)} ${m.label} &times; ${mult} = <b>${val(mo)}</b> a month.`;
+}
+
+/* ============================================================
+   "?" - show the working.
+
+   A field that arrives PRE-FILLED, or whose answer feeds a calculation the user
+   cannot see, has to be able to say where the number came from. Otherwise the
+   app is asking someone to trust a figure it will not explain, which is the
+   exact behaviour it accuses everything else of. Every entry here quotes the
+   user's own live numbers rather than a worked example.
+   ============================================================ */
+const FIELD_WHY={
+  trTake:{ t:'Where this number came from', b:()=>{
+      const pm=personalMonthlyIncome(), stated=+((state.intake||{}).income)||0;
+      const src = pm>0 ? `It is pre-filled with <b>${money(pm)}</b> - the income you have logged for a month, your own paycheck only. A partner's pay is left out on purpose, because it is not your hours.`
+        : stated>0 ? `It is pre-filled with <b>${money(stated)}</b>, the take-home you gave during setup.`
+        : `Nothing to pre-fill it with yet, so it is blank - put in roughly what lands in a normal month.`;
+      return `${src} Change it freely; typing here does not change anything you logged.`; } },
+  hpw:{ t:'Why it asks, instead of assuming 40', b:()=>{
+      const wk=state.hoursPerWeek>0?state.hoursPerWeek:0;
+      return `The real ones - the early start, the late night, the weekend that wasn't. This is the denominator under every hours-of-life figure in the app, so a guess here quietly mis-prices everything.<br><br>${wk>0?`At <b>${wk} a week</b> your working month is <b>${Math.round(monthHours(wk))} hours</b> (${wk} &times; 52 &divide; 12).`:`Left blank, the app falls back to a standard full-time year - 2,080 hours, ${Math.round(WORKMONTH_HRS)} a month - and says so wherever it matters.`}<br><br>Someone on a 55-hour week who lets the app assume 40 is told their hour is worth far more than it is, and every purchase looks cheaper than it really was.`; } },
+  trCommute:{ t:'What counts as commute + prep', b:()=>{
+      const hpw=state.hoursPerWeek>0?state.hoursPerWeek:40;
+      return `Time the job costs you that nobody pays you for: the drive or the train both ways, getting into uniform, the shop-talk call on a Sunday. Not the hours on your timesheet - those are already counted, at ${hpw} a week.<br><br>It is added to your working month, so the same pay is divided across more of your life. That is the whole point: <b>an hour you spend on the job is an hour you spent on the job</b>, paid or not.<br><br>Answering per <b>day you work</b> assumes a five-day week (${Math.round(5*WEEKS_PER_YEAR/12*10)/10} of them a month) - nobody commutes on a Sunday, so counting calendar days would overstate it by about 40%. Pick "a week" instead if your week is not five days.`; } },
+  trOver:{ t:'What counts as work overhead', b:()=>`Money you would not spend if you did not have this job: fuel or fares, the lunches you buy because you are out, parking, tools, the clothes you only wear to work, childcare that exists so you can be there.<br><br>It is subtracted from your take-home before the division, because it never really landed in your pocket - it went straight back out to make the job possible.` },
+  trResult:{ t:'The arithmetic, in full', b:()=>{
+      const hpw=state.hoursPerWeek>0?state.hoursPerWeek:40;
+      const work=state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS;
+      return `<b>(take-home &minus; overhead) &divide; (your work month + your commute hours)</b><br><br>Your work month is <b>${Math.round(work)} hours</b> (${state.hoursPerWeek>0?`${hpw} hours a week &times; 52 &divide; 12`:'a standard full-time 2,080-hour year &divide; 12 - set your real hours in Settings and this uses them'}). Commute hours a week are converted the same way, &times; 52 &divide; 12.<br><br>Nothing is rounded until the last step, and the result is what every hours-of-life figure in the app is priced against.`; } },
+  debtBudget:{ t:'What this number does', b:()=>{
+      const mins=(state.debts||[]).filter(d=>+d.balance>0).reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0);
+      return `Everything you can put toward debt in a month, <b>including the minimums</b> - not extra on top of them. ${mins>0?`Your minimums come to <b>${money(mins)}</b>, so anything above that is what actually shortens the payoff.`:''}<br><br>The planner pays every minimum first, then throws the whole remainder at one debt at a time in the order you picked. It changes nothing in your budget - it is a projection you can argue with.`; } },
+  spendLimit:{ t:'How the daily allowance is worked out', b:()=>{
+      const lim=state.spendLimit||0, dim=daysInMonth(state.activeMonth);
+      return lim>0
+        ? `<b>${money(lim)} &divide; ${dim} days = ${money(lim/dim)} a day.</b> Every day you come in under that goes green; a day with nothing logged earns a star. It is split evenly rather than by weekday, because a rule you can predict is a rule you can beat.`
+        : `Whatever you set is divided by the days in the month to make a daily allowance. Beat it and the day goes green.`; } },
+  enough:{ t:'What "Enough" is for', b:()=>`The monthly spend where more money stops buying you a better life. It is not a budget and nothing enforces it - it is the line that tells you when a raise should turn into freedom instead of quietly turning into a bigger normal.<br><br>The app compares it against what you actually spend and says so when the two drift apart.` },
+  assetDrain:{ t:'Why a thing you own has a cost', b:()=>`What this costs you every month just to keep: insurance, storage, fees, servicing, registration. An asset that drains more than it returns is a liability wearing an asset's name, and this is the field that tells you which one you have.<br><br>Shown &times; 12 beside it, because the yearly number is the one that changes minds.` },
+  recHours:{ t:'Why it asks for hours', b:()=>`Only income you sell hours for counts toward your true hourly rate. Money that costs you no time - benefits, rent from a property, a partner's pay - is still counted in your budget total, it just does not drag your rate around.<br><br>Give hours here and this source joins the blend: total worked income &divide; total worked hours.` }
+};
+function whyBtn(k){ return FIELD_WHY[k] ? `<button type="button" class="why-q" data-why="${k}" aria-label="Where does this number come from?" title="Show me the working">?</button>` : ''; }
+/* Inline, under the field, rather than a modal - on a phone an overlay hides the
+   very thing you were asking about. */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-why]'); if(!b) return;
+  const k=b.dataset.why, w=FIELD_WHY[k]; if(!w) return;
+  const host=b.closest('label,.fld,.ec-row,.li-cost,.row')||b.parentNode;
+  const open=host.parentNode.querySelector(`.why-note[data-forwhy="${k}"]`);
+  if(open){ open.remove(); b.classList.remove('on'); return; }
+  const d=document.createElement('div');
+  d.className='why-note'; d.dataset.forwhy=k;
+  d.innerHTML=`<div class="wn-t">${escapeHtml(w.t)}</div><div class="wn-b">${typeof w.b==='function'?w.b():w.b}</div>`;
+  host.parentNode.insertBefore(d, host.nextSibling);
+  b.classList.add('on');
+});
+/* One listener for every period picker in the app. The number stays exactly as
+   typed and only its MEANING changes - the same convention the leak finder has
+   always used - and the working line under it redraws immediately, so the field
+   never means something other than what it looks like. */
+document.addEventListener('change',e=>{
+  const sel=e.target.closest('select[data-unit]'); if(!sel) return;
+  setUnit(sel.dataset.unit, sel.value);
+  const fn=UNIT_REDRAW[sel.dataset.unit]; if(typeof fn==='function') fn();
+});
+const UNIT_REDRAW={};
+/* One field that owns its unit. `get` and `set` speak MONTHLY and only monthly -
+   the engines never learn that periods exist, so nothing downstream can drift
+   out of step with a dropdown. The typed number never changes when the unit
+   does; only its meaning does, which is the convention the leak finder set. */
+/* The recurring-income hours box is a FORM field, not a setting - there is
+   nothing to write to until Add is pressed - so it gets the picker and the
+   working line without a setter. */
+function drawRecHours(){ wireUnitField({id:'recHours', dflt:'month', kinds:['week','biweek','month'], why:'recHours', unitWord:'hrs'}); }
+function wireUnitField(o){
+  const inp=document.getElementById(o.id); if(!inp) return null;
+  const slot=document.getElementById(o.id+'Unit');
+  if(slot && !slot.firstChild) slot.innerHTML=(o.why?whyBtn(o.why):'')+periodSel(o.id,o.dflt,o.kinds);
+  const cur=()=>unitOf(o.id,o.dflt);
+  const draw=()=>{ const w=document.getElementById(o.id+'W');
+    if(w) w.innerHTML=periodWork(parseFloat(inp.value)||0, cur(), o.unitWord); };
+  const commit=()=>{ if(o.set) o.set(toMonthly(parseFloat(inp.value)||0, cur())); draw(); };
+  if(!inp.dataset.unitWired){
+    inp.dataset.unitWired='1';
+    inp.addEventListener('input',commit);
+  }
+  UNIT_REDRAW[o.id]=commit;                       // the picker moved: the same number now means something else
+  const fill=()=>{
+    if(o.get && document.activeElement!==inp){
+      const m=o.get();
+      inp.value = m>0 ? Math.round(m/periodMeta(cur()).per*100)/100 : '';
+    }
+    draw();
+  };
+  fill();
+  return {fill, draw, commit};
+}
+
 /* --- True Net Hourly Wage engine ---
    One computation, two doors: the Settings panel and the card that meets people
    the moment setup ends. Two copies of this arithmetic would drift, and a rate
@@ -7819,17 +8008,69 @@ function applyTrueRate(take,commute,overhead){
   save();
   const w=document.getElementById('wage'); if(w) w.value=state.hourlyWage;
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
+  /* Two doors, one truth: setting the rate from the Home card has to leave the
+     Settings panel showing the same three numbers, in whatever units that panel
+     is set to. fillTrueRate only writes values, so it cannot double-bind the
+     button the way a full re-render would. */
+  fillTrueRate(); trDrawWork('tr');
   return {rate:state.hourlyWage, before, denom, workHrs, naive:take/WORKMONTH_HRS};
 }
-document.getElementById('trCompute').addEventListener('click',()=>{
-  const take=parseFloat(document.getElementById('trTakeHome').value)||0;
-  const commute=parseFloat(document.getElementById('trCommute').value)||0;
-  const overhead=parseFloat(document.getElementById('trOverhead').value)||0;
-  if(take<=0){ alert('Enter your take-home pay per month.'); return; }
-  const r=applyTrueRate(take,commute,overhead);
-  document.getElementById('trResult').style.display='';
-  document.getElementById('trResult').innerHTML=`Your true net rate: <b>${usd(r.rate)}/hr</b><br><span style="color:var(--muted)">The naive paycheck-per-hour rate was ${usd(r.naive)}/hr (a full-time month is about ${Math.round(WORKMONTH_HRS)} hrs). The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
-});
+/* The three fields, built rather than hardcoded, because each one now owns a
+   unit the user picks and a working line that has to redraw when they pick it.
+   Prefix `tr` in Settings, `trc` on the Home card - same fields, same units,
+   same arithmetic, two doors. */
+function trFieldsHTML(pre){
+  const u=k=>unitOf(pre+k);
+  return `
+    <div class="ufld"><span class="fl-k">Take-home${whyBtn('trTake')}${periodSel(pre+'Take','month',['week','biweek','month','year'])}</span>
+      <span class="fl-in">$<input type="number" id="${pre}Take" min="0" step="10" inputmode="decimal" placeholder="e.g. 3200" style="width:120px"></span>
+      <div class="unit-work" id="${pre}TakeW"></div></div>
+    <div class="ufld"><span class="fl-k">Commute + prep, in hours${whyBtn('trCommute')}${periodSel(pre+'Commute','week',['workday','week','month'])}</span>
+      <span class="fl-in"><input type="number" id="${pre}Commute" min="0" step="0.5" inputmode="decimal" placeholder="e.g. 7" style="width:100px"></span>
+      <div class="unit-work" id="${pre}CommuteW"></div></div>
+    <div class="ufld"><span class="fl-k">Work overhead${whyBtn('trOver')}${periodSel(pre+'Over','month',['day','week','biweek','month','year'])}</span>
+      <span class="fl-in">$<input type="number" id="${pre}Over" min="0" step="5" inputmode="decimal" placeholder="gas, lunches" style="width:130px"></span>
+      <div class="unit-work" id="${pre}OverW"></div></div>`;
+}
+/* Read the three, converted to the month the arithmetic runs in. */
+function trRead(pre){
+  const g=id=>parseFloat((document.getElementById(pre+id)||{}).value)||0;
+  return { take:toMonthly(g('Take'), unitOf(pre+'Take','month')),
+           commuteWk:toMonthly(g('Commute'), unitOf(pre+'Commute','week'))*12/WEEKS_PER_YEAR,   // back to hours a WEEK, which is what the engine wants
+           over:toMonthly(g('Over'), unitOf(pre+'Over','month')),
+           rawTake:g('Take') };
+}
+function trDrawWork(pre){
+  const g=id=>parseFloat((document.getElementById(pre+id)||{}).value)||0;
+  const put=(id,html)=>{ const el=document.getElementById(pre+id+'W'); if(el) el.innerHTML=html; };
+  put('Take', periodWork(g('Take'), unitOf(pre+'Take','month')));
+  put('Commute', periodWork(g('Commute'), unitOf(pre+'Commute','week'), 'hrs'));
+  put('Over', periodWork(g('Over'), unitOf(pre+'Over','month')));
+}
+function wireTrFields(pre, onEnter){
+  ['Take','Commute','Over'].forEach(k=>{
+    const el=document.getElementById(pre+k); if(!el) return;
+    el.addEventListener('input',()=>trDrawWork(pre));
+    if(onEnter) el.addEventListener('keydown',e=>{ if(e.key==='Enter') onEnter(); });
+    UNIT_REDRAW[pre+k]=()=>trDrawWork(pre);      // the picker changed: redraw the conversion at once
+  });
+  trDrawWork(pre);
+}
+function renderTrSettings(){
+  const box=document.getElementById('trFields'); if(!box) return;
+  const run=()=>document.getElementById('trCompute').click();
+  box.innerHTML=trFieldsHTML('tr')+`<button class="btn primary" id="trCompute" style="align-self:flex-end">Set my true rate</button>`;
+  fillTrueRate();
+  wireTrFields('tr', run);
+  document.getElementById('trCompute').addEventListener('click',()=>{
+    const v=trRead('tr');
+    if(!(v.take>0)){ const t=document.getElementById('trTake'); if(t) t.focus(); if(typeof toast==='function') toast('Put in your take-home first - the rate divides it.'); return; }
+    const r=applyTrueRate(v.take, v.commuteWk, v.over);
+    const res=document.getElementById('trResult');
+    res.style.display='';
+    res.innerHTML=`Your true net rate: <b>${usd(r.rate)}/hr</b> ${whyBtn('trResult')}<br><span style="color:var(--muted)">The naive paycheck-per-hour rate was ${usd(r.naive)}/hr (a full-time month is about ${Math.round(WORKMONTH_HRS)} hrs). The job's real cost is bigger than it looks - and now every purchase is priced against the truth.</span>`;
+  });
+}
 /* The true rate used to live in a collapsed <details> inside Settings, which is
    the same as not existing: the one number the entire app prices against sat
    two taps and a scroll behind a summary nobody opens. It now meets people the
@@ -7846,28 +8087,26 @@ function renderTrueRateCard(){
   if(!trueRateDue()){ box.innerHTML=''; return; }
   const H=effectiveHourly();
   const take=Math.round(personalMonthlyIncome()>0 ? personalMonthlyIncome() : (+((state.intake||{}).income)||0));
-  const hrs=state.hoursPerWeek>0?state.hoursPerWeek:40;
   box.innerHTML=`<div class="panel trc">
     <div class="ph-eye">One number, before you go further</div>
     <h2>The job pays ${usd(H)} an hour. Your hour costs more than that.</h2>
-    <p class="sub">Every purchase in this app is priced in hours of your life, and that pricing is only as honest as this rate. Right now it is your pay divided by the hours on your timesheet - which ignores the commute you don't get paid for, the prep, and the money the job itself costs you in gas, lunches and clothes. Two questions and it's the real number.</p>
-    <div class="row" style="margin-top:12px">
-      <label class="fld">Take-home / month<input type="number" id="trcTake" min="0" step="50" value="${take>0?take:''}" placeholder="e.g. 3200" style="width:130px"></label>
-      <label class="fld">Commute + prep (hrs/week)<input type="number" id="trcCommute" min="0" max="80" step="0.5" placeholder="e.g. 7" style="width:150px"></label>
-      <label class="fld">Work overhead / month $<input type="number" id="trcOver" min="0" step="10" placeholder="gas, lunches, outfits" style="width:170px"></label>
-    </div>
-    <div class="row" style="margin-top:12px">
+    <p class="sub">Every purchase in this app is priced in hours of your life, and that pricing is only as honest as this rate. Right now it is your pay divided by the hours on your timesheet - which ignores the commute you don't get paid for, the prep, and the money the job itself costs you in gas, lunches and clothes. Two questions and it's the real number. Every field takes whatever period you think in, and the <b>?</b> next to each shows its working.</p>
+    <div class="row" style="margin-top:12px">${trFieldsHTML('trc')}</div>
+    <div class="row" style="margin-top:14px">
       <button class="btn primary" id="trcGo">Show me my real rate</button>
       <button class="btn ghost" id="trcSkip">My rate's already right</button>
     </div>
-    <p class="sub" style="margin-top:10px">Working: (take-home − overhead) ÷ (${Math.round(monthHours(hrs))} work hours a month + your commute hours). Nothing here leaves the device, same as everything else.</p>
+    <p class="sub" style="margin-top:10px">Nothing here leaves the device, same as everything else. ${whyBtn('trResult')} shows the full arithmetic.</p>
   </div>`;
+  /* Pre-filled from their own logged income - and the "?" beside it says exactly
+     that, because a number that appears in a field with no explanation is a
+     number people either trust blindly or delete. */
+  if(take>0){ const t=document.getElementById('trcTake'); if(t) t.value=Math.round(take/periodMeta(unitOf('trcTake','month')).per*100)/100; }
+  wireTrFields('trc', ()=>document.getElementById('trcGo').click());
   document.getElementById('trcGo').onclick=()=>{
-    const take=parseFloat(document.getElementById('trcTake').value)||0;
-    const commute=parseFloat(document.getElementById('trcCommute').value)||0;
-    const over=parseFloat(document.getElementById('trcOver').value)||0;
-    if(take<=0){ document.getElementById('trcTake').focus(); return; }
-    const r=applyTrueRate(take,commute,over);       // this repaints Home, which empties this box
+    const v=trRead('trc');
+    if(!(v.take>0)){ const t=document.getElementById('trcTake'); if(t) t.focus(); return; }
+    const r=applyTrueRate(v.take, v.commuteWk, v.over);       // this repaints Home, which empties this box
     const drop=r.before>0 ? r.before-r.rate : 0;
     box.innerHTML=`<div class="panel trc done">
       <div class="ph-eye">Set</div>
@@ -7877,7 +8116,7 @@ function renderTrueRateCard(){
         : drop<-0.005
         ? `That is higher than the ${usd(r.before)} the app was using, so purchases will price out in fewer hours from here. Either way it is now your number rather than an estimate.`
         : `Same as the estimate the app was already using - which means the estimate was right. Now it is confirmed rather than assumed.`}</p>
-      <p class="sub">Change it any time in Settings under Your True Hourly Wage.</p>
+      <p class="sub">${whyBtn('trResult')} the full arithmetic. Change it any time in Settings under Your True Hourly Wage.</p>
     </div>`;
   };
   document.getElementById('trcSkip').onclick=()=>{
@@ -7886,12 +8125,15 @@ function renderTrueRateCard(){
     toast('Kept your rate. The calculator lives in Settings if you change your mind.');
   };
 }
+/* What is stored is always monthly (and commute always hours a week), because
+   that is what the engine runs on. Put it back on screen in whatever unit the
+   person chose, so the field reads in their language and not the engine's. */
 function fillTrueRate(){
-  if(!state.trueRate) return;
-  const t=state.trueRate;
-  if(t.take) document.getElementById('trTakeHome').value=t.take;
-  if(t.commute!=null) document.getElementById('trCommute').value=t.commute;
-  if(t.overhead!=null) document.getElementById('trOverhead').value=t.overhead;
+  const t=state.trueRate||{};
+  const put=(id,val)=>{ const el=document.getElementById(id); if(el&&val!=null) el.value=Math.round(val*100)/100; };
+  if(t.take) put('trTake', t.take/periodMeta(unitOf('trTake','month')).per);
+  if(t.commute) put('trCommute', t.commute*WEEKS_PER_YEAR/12/periodMeta(unitOf('trCommute','week')).per);
+  if(t.overhead) put('trOver', t.overhead/periodMeta(unitOf('trOver','month')).per);
 }
 
 /* --- impulse check --- */
@@ -8188,6 +8430,7 @@ function recSyncTypeFields(){
   const rs=document.getElementById('recSrc'); if(rs) rs.placeholder=inv?'Roth IRA, index fund…':'Paycheck…';
   document.getElementById('recOwnerWrap').classList.toggle('hide',!inc);
   const rhw=document.getElementById('recHoursWrap'); if(rhw) rhw.classList.toggle('hide',!inc);
+  if(inc) drawRecHours();
   const rik=document.getElementById('recInvKindWrap'); if(rik) rik.classList.toggle('hide',!inv);
 }
 document.getElementById('recType').addEventListener('change',recSyncTypeFields);
@@ -8220,7 +8463,9 @@ function recEditLoad(id){
   set('recDate', r.anchor || (r.day ? state.activeMonth+'-'+String(Math.min(28,Math.max(1,+r.day||1))).padStart(2,'0') : todayStr()));
   if(r.type==='expense') set('recCat', r.catId||'');
   else { set('recSrc', r.source||''); if(r.type==='invest') set('recInvKind', r.ikind||'holds');
-         else { if(state.householdOn) set('recOwner', r.owner||'a'); set('recHours', r.hours||''); } }
+         else { if(state.householdOn) set('recOwner', r.owner||'a');
+                set('recHours', r.hours>0 ? Math.round(r.hours/periodMeta(unitOf('recHours','month')).per*100)/100 : '');
+                if(typeof drawRecHours==='function') drawRecHours(); } }
   const add=document.getElementById('addRec'); if(add) add.textContent='Save';
   const c=document.getElementById('recCancel'); if(c) c.classList.remove('hide');
   renderRecurring();
@@ -8241,7 +8486,11 @@ document.getElementById('addRec').addEventListener('click',()=>{
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
     if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; }
-    const h=parseFloat((document.getElementById('recHours')||{}).value); if(h>0) item.hours=Math.min(h,400);   // hours of YOUR life this income costs each month
+    /* Stored as hours a MONTH, whatever unit they typed it in - the blended-rate
+       engine only ever divides by a month. */
+    const hRaw=parseFloat((document.getElementById('recHours')||{}).value);
+    const h=hRaw>0?toMonthly(hRaw, unitOf('recHours','month')):0;
+    if(h>0) item.hours=Math.min(h,400);
   }
   if(recEditId){
     const i=state.recurring.findIndex(x=>x.id===recEditId);
@@ -10600,7 +10849,7 @@ function commitIntake(){
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
-  { const h=document.getElementById('hpw'); if(h) h.value=state.hoursPerWeek||''; }
+  wireHpw();
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderRecurring(); renderCharts();
   applyHousehold(); applySpending();
   closeOverlayThenTab('home');
@@ -10620,8 +10869,8 @@ function boot(){
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
   renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderLessons(); renderRecurring(); renderCharts(); renderReflectTab(); renderDebt(); renderComfortMenu();
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
-  { const h=document.getElementById('hpw'); if(h) h.value = state.hoursPerWeek || ''; }
-  renderFreedomToggle(); fillTrueRate(); fillTrapPickers();
+  wireHpw();
+  renderFreedomToggle(); renderTrSettings(); wireHpw(); fillTrapPickers();
   renderBackupNote(); renderAutoBackup();
   renderAreaToggles(); applyAreaVisibility();   // the areas this person chose to keep
   // Progressive interface: never strip a tool an existing user already engaged with.
@@ -10958,11 +11207,14 @@ function renderEnough(income){
   else msg=`You're within your Enough line (${money(enough)}/mo). Solid. Every dollar you lift income above this is pure freedom fuel.`;
   box.innerHTML=`<div class="enoughcard ${creep?'creep':''}">
     <div class="ec-k">The "Enough" anchor</div>
-    <div class="ec-row"><span class="sub" style="margin:0">Enough is $</span><input type="number" min="0" step="50" value="${enough||''}" id="enoughInput" placeholder="e.g. 3500"><span class="sub" style="margin:0">/month</span>${creep?`<button class="btn sm primary" data-goto="goals">Route surplus to a goal →</button>`:''}</div>
+    <div class="ec-row"><span class="sub" style="margin:0">Enough is $</span><input type="number" min="0" step="50" inputmode="decimal" id="enoughInput" placeholder="e.g. 3500"><span id="enoughInputUnit"></span>${creep?`<button class="btn sm primary" data-goto="goals">Route surplus to a goal →</button>`:''}</div>
+    <div class="unit-work" id="enoughInputW"></div>
     <div class="ec-msg">${msg}</div>
   </div>`;
+  wireUnitField({id:'enoughInput', dflt:'month', kinds:['week','month','year'], why:'enough',
+    get:()=>state.enough||0,
+    set:v=>{ state.enough=Math.round(v*100)/100; save(); }});
   const inp=document.getElementById('enoughInput');
-  if(inp) inp.addEventListener('input',()=>{ state.enough=parseFloat(inp.value)||0; save(); });
   if(inp) inp.addEventListener('change',()=>renderEnough(income));
 }
 

@@ -238,6 +238,18 @@ It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.
 
+It holds **the period pickers** - the rule that a field asking for a *rate* must
+let the person choose the period. Every multiplier has to agree with the rest of
+the app (a bill, a paycheck, a leak and an overhead of the same cadence cannot
+disagree about what a month is), a commute has to count **work days and not
+calendar days** (21.67 a month, not 30.42 - the bug that fell out of building
+this), the typed number must never move when the unit does, what gets stored must
+always be monthly, the two true-rate doors must end up showing the same three
+numbers, and the chosen unit has to survive a repaint. Then the audit rule
+itself: no `<label class="fld">` may hard-code a period into its text, with the
+things that are not rates listed as deliberate exclusions rather than left
+ambiguous - an APR and an expected market return are annual by definition.
+
 It holds **the trail** - the rule that a panel must never name a destination it
 cannot take you to. Every entry in `TRAIL` has to resolve to a field that exists
 in the dom (a breadcrumb that navigates and then does nothing is worse than no

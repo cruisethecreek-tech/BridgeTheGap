@@ -1659,9 +1659,9 @@ const tr = await p.evaluate(async () => {
      that differs by where you typed it is worse than no rate */
   state.trueRate={}; state.hourlyWage=19.5; save();
   const viaSettings=(()=>{
-    document.getElementById('trTakeHome').value='3211';
+    document.getElementById('trTake').value='3211';
     document.getElementById('trCommute').value='7';
-    document.getElementById('trOverhead').value='260';
+    document.getElementById('trOver').value='260';
     document.getElementById('trCompute').click();
     return state.hourlyWage;
   })();
@@ -1851,6 +1851,119 @@ const phrasing = await p.evaluate(() => {
   return banned.filter(re=>re.test(src)).map(String);
 });
 check('no panel points at a tab it cannot take you to', phrasing.length===0, phrasing.join(' | '));
+
+/* ---- 36. every rate-shaped field takes the period you think in ----
+   Sent from a phone with three labels circled: the true-rate card asked for
+   take-home "/ month", then commute "hrs/week", then overhead "/ month" - three
+   fields, two periods, one card. Someone who buys $60 of gas a week has to do
+   the conversion before they can answer, and someone reading top to bottom
+   carries "month" into the middle field and answers it wrong without noticing.
+   Neither is the user's fault: the app already knows how to convert, it was just
+   picking the unit and making the human meet it there. Same note asked for a "?"
+   on anything pre-filled or derived, which is fair - a number that appears in a
+   field with no explanation is one people either trust blindly or delete. ---- */
+const units = await p.evaluate(async () => {
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3;
+  state.hourlyWage=22; state.hoursPerWeek=38; state.intake={name:'Pat',income:7700};
+  save(); renderAll(); applySpending();
+  const r={};
+  /* every multiplier in the app must agree about what a month is - a bill, a
+     paycheck, a leak and an overhead of the same cadence cannot disagree */
+  r.weekAgrees = periodMeta('week').per===recFreqMeta({freq:'weekly'}).per
+              && periodMeta('week').per===leakFreqMult('week')
+              && periodMeta('biweek').per===recFreqMeta({freq:'biweekly'}).per
+              && periodMeta('month').per===1 && periodMeta('year').per===1/12;
+  /* a commute is not a calendar-day thing: five work days, not thirty */
+  r.workday=Math.round(periodMeta('workday').per*100)/100;
+  r.calDay=Math.round(periodMeta('day').per*100)/100;
+
+  renderHome();
+  const card=document.getElementById('trueRateCard');
+  r.cardPickers=[...card.querySelectorAll('select[data-unit]')].map(x=>x.dataset.unit).sort();
+  r.cardWhy=[...card.querySelectorAll('[data-why]')].map(x=>x.dataset.why).sort();
+  r.prefill=document.getElementById('trcTake').value;
+  /* the number typed must never move when the unit does - only its meaning */
+  const setSel=(u,v)=>{ const el=card.querySelector(`select[data-unit="${u}"]`); el.value=v; el.dispatchEvent(new Event('change',{bubbles:true})); };
+  const type=(id,v)=>{ const el=document.getElementById(id); el.value=v; el.dispatchEvent(new Event('input',{bubbles:true})); };
+  setSel('trcOver','week'); type('trcOver','60');
+  r.overWork=document.getElementById('trcOverW').textContent;
+  setSel('trcCommute','workday'); type('trcCommute','1.5');
+  r.commWork=document.getElementById('trcCommuteW').textContent;
+  r.stillTyped=document.getElementById('trcOver').value;
+  document.getElementById('trcGo').click();
+  await new Promise(x=>setTimeout(x,150));
+  r.stored=JSON.parse(JSON.stringify(state.trueRate));
+  r.rate=state.hourlyWage;
+  /* the two doors must end up showing the same three numbers */
+  r.settings={take:document.getElementById('trTake').value, over:document.getElementById('trOver').value};
+
+  /* the other rate-shaped fields the audit turned up */
+  state.spendingMode=true; save(); applySpending();
+  const su=document.querySelector('select[data-unit="spendLimit"]'); su.value='week'; su.dispatchEvent(new Event('change',{bubbles:true}));
+  type('spendLimit','120');
+  r.limit=Math.round(state.spendLimit*100)/100;
+  state.debts.push({id:'d1',name:'Visa',balance:3000,apr:22,minPayment:60}); save(); renderDebt();
+  const du=document.querySelector('select[data-unit="debtBudget"]'); du.value='week'; du.dispatchEvent(new Event('change',{bubbles:true}));
+  type('debtBudget','200');
+  r.debt=Math.round(state.debtBudget*100)/100;
+  state.assets.push({id:'a1',name:'Car',value:9000,kind:'stuff',cost:0}); save(); renderNetWorth();
+  const cu=document.querySelector('select[data-costunit="a1"]'); cu.value='year'; cu.dispatchEvent(new Event('change',{bubbles:true}));
+  const ci=document.querySelector('input[data-cost="a1"]'); ci.value='1800'; ci.dispatchEvent(new Event('input',{bubbles:true}));
+  r.asset=Math.round(state.assets[0].cost*100)/100;
+  /* and the choice has to survive a repaint, or it is a setting that forgets */
+  renderDebt(); renderNetWorth();
+  r.persist={debt:document.querySelector('select[data-unit="debtBudget"]').value+':'+document.getElementById('debtBudget').value,
+             asset:document.querySelector('select[data-costunit="a1"]').value+':'+document.querySelector('input[data-cost="a1"]').value};
+  return r;
+});
+check('every period multiplier agrees with the rest of the app', units.weekAgrees===true);
+check('a commute counts work days, not calendar days',
+      units.workday===21.67 && units.calDay===30.42, `${units.workday} vs ${units.calDay}`);
+check('all three true-rate fields take a period', units.cardPickers.length===3, units.cardPickers.join(','));
+check('...and all three can show their working', units.cardWhy.length>=3, units.cardWhy.join(','));
+check('...the pre-filled figure is pre-filled from their own income', units.prefill==='7700', units.prefill);
+check('$60 a week converts on 52 weeks, out loud',
+      /\$60 a week × 4.33 = \$260 a month/.test(units.overWork), units.overWork);
+check('1.5 hours a work day is 21.67 of them, not 30',
+      /1\.5 hrs a day you work × 21\.67 = 32\.5 hrs a month/.test(units.commWork), units.commWork);
+check('changing the unit never moves the number you typed', units.stillTyped==='60', units.stillTyped);
+check('what gets stored is always monthly, whatever they typed',
+      units.stored.take===7700 && units.stored.overhead===260 && units.stored.commute===7.5,
+      JSON.stringify(units.stored));
+check('...and the rate is right to the cent', units.rate===37.73, String(units.rate));
+check('setting it on Home leaves Settings showing the same numbers',
+      units.settings.take==='7700' && units.settings.over==='260', JSON.stringify(units.settings));
+check('a weekly spending limit stores as a month', units.limit===520, String(units.limit));
+check('a weekly debt payment stores as a month', units.debt===866.67, String(units.debt));
+check('a yearly running cost stores as a month', units.asset===150, String(units.asset));
+check('the unit survives a repaint',
+      units.persist.debt==='week:200' && units.persist.asset==='year:1800', JSON.stringify(units.persist));
+
+/* The audit rule itself: a field that asks for a RATE - money or hours per some
+   period - must let the person pick the period. Fields that are not rates are
+   listed as deliberate exclusions rather than left ambiguous: a transaction is a
+   dated event, a goal target is a total, an APR is annual by definition, and the
+   zero-based plan is monthly by design. */
+const bakedIn = await p.evaluate(() => {
+  const src=document.documentElement.outerHTML
+    .replace(/<!--[\s\S]*?-->/g,' ')
+    .replace(/\/\*[\s\S]*?\*\//g,' ');
+  /* a label that hard-codes a period next to an input is the fault returning */
+  const bad=[];
+  /* Deliberate exclusions, because these are not rates and a picker would be
+     wrong rather than kind: an APR and an expected market return are annual by
+     definition, a transaction is a dated event, a goal target is a total, and
+     the zero-based plan is monthly by design - that IS the model. */
+  const NOT_A_RATE=/%\s*\/\s*yr|APR/i;
+  src.replace(/<label[^>]*class="fld"[^>]*>([\s\S]{0,120}?)<input/g,(m,txt)=>{
+    if(NOT_A_RATE.test(txt)) return m;
+    if(/\/\s*(month|mo|week|wk|yr|year)\b|per (month|week|year)|monthly|weekly|hrs\/|hours\/mo/i.test(txt)) bad.push(txt.replace(/\s+/g,' ').trim().slice(0,60));
+    return m;
+  });
+  return bad;
+});
+check('no field hard-codes a period into its label any more', bakedIn.length===0, bakedIn.join(' | '));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
