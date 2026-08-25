@@ -5722,14 +5722,23 @@ function renderTx(){
   const exp=txAllMonths?state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0):monthExpense(M);
   const inv=txAllMonths?investedAllTime():monthInvested(M);
   const showInv=investedAllTime()>0;   // the growth lane's tile appears once they've ever invested
+  /* "Net" and "Balance (all time)" are the SAME arithmetic - income minus
+     spending minus investing - differing only by the window. On the all-months
+     view they are identical by construction, and for anyone with a single month
+     of history they are identical on the month view too. So the strip was
+     printing one number twice under two labels that both say "net", which is
+     exactly the kind of thing that makes a person distrust a figure they cannot
+     trace. It appears only when it actually says something different. */
+  const bal=allTimeBalance();
+  const dupBalance = Math.abs(bal-(inc-exp-inv))<0.005;
   const sumEl=document.getElementById('txSummary');
   sumEl.classList.toggle('five',showInv);
   sumEl.innerHTML=`
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('income','Income')}</div><div class="v good">${money(inc)}</div></div>
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('spent','Spent')}</div><div class="v">${money(exp)}</div></div>
     ${showInv?`<div class="stat"><div class="k">Invested ${txAllMonths?'(all time)':'(month)'}</div><div class="v pos">${money(inv)}</div></div>`:''}
-    <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
-    <div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${allTimeBalance()<0?'bad':'pos'}">${money(allTimeBalance())}</div></div>`;
+    <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}${whyBtn('txNet')}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
+    ${dupBalance?'':`<div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${bal<0?'bad':'pos'}">${money(bal)}</div></div>`}`;
   const bn=document.getElementById('bankNote');
   if(bn) bn.innerHTML=(state.accounts||[]).length
     ? `<div class="ltb-note">This is what you've <b>logged</b>, not your bank balance. Your real total is <b>${usd(bankTotal())}</b> across ${(state.accounts||[]).length} account${(state.accounts||[]).length>1?'s':''} - edit those on <b>Build</b>.</div>`
@@ -8111,6 +8120,32 @@ function periodWork(v,k,unitWord){
    user's own live numbers rather than a worked example.
    ============================================================ */
 const FIELD_WHY={
+  txNet:{ t:'Where this number comes from', b:()=>{
+      const M=state.activeMonth;
+      const all=!!(typeof txAllMonths!=='undefined' && txAllMonths);
+      const list=all?state.transactions.slice():txnsInMonth(M);
+      const sum=(f)=>list.filter(f).reduce((s,t)=>s+t.amount,0);
+      const inc=sum(t=>t.type==='income'), exp=sum(t=>t.type==='expense'), inv=sum(t=>t.type==='invest');
+      const window = all ? 'everything you have ever logged' : `everything logged in ${fmtMonth(M)}`;
+      let out=`<b>Income &minus; spending &minus; anything you put away</b>, across ${window}.<br><br>`
+        + `${money(inc)} in &minus; ${money(exp)} out${inv>0?` &minus; ${money(inv)} put away`:''} = <b>${money(inc-exp-inv)}</b>.<br><br>`;
+      /* The question that prompted this: "I've only been doing this for 3 days."
+         Almost all of it is usually the paycheck the SETUP CHAT wrote, dated the
+         1st, because they told it their monthly take-home. That is a reasonable
+         thing for it to have done and a terrible thing to leave unexplained. */
+      const seeded=list.filter(t=>t.type==='income'&&t.note==='Intake');
+      const seedTotal=seeded.reduce((s,t)=>s+t.amount,0);
+      if(seedTotal>0){
+        const share=inc>0?Math.round(seedTotal/inc*100):0;
+        out += `<b>${money(seedTotal)}</b> of the income side (${share}%) was written by the <b>setup chat</b>, not by you - dated the 1st, because you told it what lands in a normal month. `
+          + `If that money has not actually arrived yet, this reads high. `
+          + `Find it in the log below (${seeded.map(t=>escapeHtml(t.source||'Paycheck')).join(', ')}), and delete or correct it - the app will not argue.<br><br>`;
+      }
+      const bank=(state.accounts||[]).length?bankTotal():null;
+      out += bank!=null
+        ? `This is what you have <b>logged</b>, not what is in the bank. Your accounts say <b>${money(bank)}</b>.`
+        : `This is what you have <b>logged</b>. It does not know your real bank balance - add your accounts on Build and the net worth and runway figures start telling the truth.`;
+      return out; } },
   trTake:{ t:'Where this number came from', b:()=>{
       const pm=personalMonthlyIncome(), stated=+((state.intake||{}).income)||0;
       const src = pm>0 ? `It is pre-filled with <b>${money(pm)}</b> - the income you have logged for a month, your own paycheck only. A partner's pay is left out on purpose, because it is not your hours.`
