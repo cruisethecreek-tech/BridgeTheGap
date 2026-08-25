@@ -1211,6 +1211,36 @@
   .intake-top .x{margin-left:auto;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
   .intake-prog{height:3px;background:var(--line)}
   .intake-prog>span{display:block;height:100%;background:var(--accent);width:0;transition:width .35s ease}
+  /* The welcome gate. It replaces the log rather than floating over it, so there
+     is one thing on screen and one button to press; the overflow lives on the
+     scroller and not on the card, or the CTA drops off the bottom of a short
+     phone with no way to reach it. */
+  .ia-welcome{display:none;flex:1;overflow-y:auto;padding:22px 16px calc(26px + env(safe-area-inset-bottom))}
+  .ia-welcome.on{display:block}
+  .iaw-card{max-width:560px;margin:0 auto;text-align:center}
+  .iaw-eye{display:inline-block;font-size:11.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+  .iaw-t{font-size:30px;line-height:1.15;letter-spacing:-.7px;margin:14px 0 0;font-weight:900}
+  /* Focused on open so a screen reader lands on the heading rather than on the
+     close button. It is not an interactive control, so it must not look like one. */
+  .iaw-t:focus{outline:none}
+  .iaw-lead{font-size:15px;line-height:1.6;color:var(--muted);margin:13px 0 0;text-align:left}
+  .iaw-lead b{color:var(--text)}
+  .iaw-three{margin-top:18px;display:flex;flex-direction:column;gap:9px;text-align:left}
+  .iaw-row{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
+  .iaw-k{display:block;font-weight:900;font-size:15px}
+  .iaw-d{display:block;font-size:13.5px;line-height:1.5;color:var(--muted);margin-top:3px}
+  /* Deliberately not styled like the three cards above it. That block is what
+     the app promises to do; this one is the boundary, and a boundary that looks
+     like every other paragraph gets read like every other paragraph. */
+  .iaw-real{margin-top:18px;text-align:left;background:rgba(var(--accent-rgb),.06);
+    border:1px solid rgba(var(--accent-rgb),.35);border-left-width:4px;border-radius:14px;padding:14px 15px}
+  .iaw-real>b{display:block;font-size:14.5px;margin-bottom:7px}
+  .iaw-real p{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 9px}
+  .iaw-real p:last-child{margin-bottom:0}
+  .iaw-go{width:100%;margin-top:20px;font-size:16px;padding:15px}
+  .iaw-fine{font-size:12px;color:var(--muted);line-height:1.5;margin:11px 0 0}
+  @media(max-width:360px){ .iaw-t{font-size:26px} }
   .intake-log{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:11px;max-width:640px;margin:0 auto;width:100%}
   .bub{max-width:84%;padding:13px 15px;border-radius:16px;font-size:15px;line-height:1.5;animation:fade .25s ease}
   .bub.bot{background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:5px;align-self:flex-start}
@@ -2666,6 +2696,33 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <button class="x" id="intakeX" title="Close">✕</button>
     </div>
     <div class="intake-prog"><span id="intakeBar"></span></div>
+    <!-- The door, before the questions. Asked for directly: something that has to
+         be read and accepted before the setup chat starts. It exists to set the
+         terms rather than to sell anything, and the whole card turns on one
+         sentence most software will not say - this thing is not real, it cannot
+         want the outcome for you, and the work is entirely yours. An app that
+         opens by promising to change your life has already told its first lie. -->
+    <div class="ia-welcome" id="iaWelcome" role="dialog" aria-labelledby="iaWelTitle" aria-modal="true">
+      <div class="iaw-card">
+        <span class="iaw-eye">Ground zero</span>
+        <h1 class="iaw-t" id="iaWelTitle">Everybody starts at zero.</h1>
+        <p class="iaw-lead">Zero is not a verdict and it is not your balance. It is just where you are standing today, and everyone is standing on it - the person with nothing in the account and the person with plenty. Today is the only day either of them actually has.</p>
+        <p class="iaw-lead">What matters is the <b>distance</b>. Between here and next month. Between here and five years, ten, twenty. That gap is the only thing this app is interested in, and it closes exactly one way: what comes in against what goes out, decided by you, over and over.</p>
+        <p class="iaw-lead">You can use it to budget. That is not really what it is. It is an <b>accountability</b> app, and this is the part it does:</p>
+        <div class="iaw-three">
+          <div class="iaw-row"><span class="iaw-k">I am listening.</span><span class="iaw-d">Tell me what lands and what leaves. I keep all of it, and I do not get tired of the boring entries.</span></div>
+          <div class="iaw-row"><span class="iaw-k">I am watching.</span><span class="iaw-d">I will show you the pattern you would rather not look at, in your own numbers, without softening it.</span></div>
+          <div class="iaw-row"><span class="iaw-k">You can do better.</span><span class="iaw-d">Not as an insult. As the only reason worth opening this.</span></div>
+        </div>
+        <div class="iaw-real">
+          <b>Now the part you should hear before you start.</b>
+          <p>I am not real. I am a tool - some arithmetic, some questions you would avoid, and a memory better than yours. I cannot want this for you. I cannot spend the money or refuse to. I cannot even waste your time, because I have none to waste; every minute this costs is one you decided to spend.</p>
+          <p>So the effort is yours. All of it. If you genuinely want the thing you say you want, nobody in here is going to do it for you, and nothing in here will pretend otherwise. What I will do is keep an honest record and refuse to flatter it.</p>
+        </div>
+        <button class="btn primary iaw-go" id="iaWelGo">I'm ready to work &rarr;</button>
+        <p class="iaw-fine">Everything you enter stays in this browser. Nothing is uploaded, nothing is sold, and there is no account to make.</p>
+      </div>
+    </div>
     <div class="intake-log" id="intakeLog"></div>
     <div class="intake-dock" id="intakeDock"></div>
   </div>
@@ -2951,7 +3008,7 @@ function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[], seenGuide:{}, guidesOff:false,
-           onboarded:false, intake:{}, register:'middle', vault:[],
+           onboarded:false, welcomed:false, intake:{}, register:'middle', vault:[],
            freedomMode:false, trueRate:{}, trueRateSkipped:false, units:{}, tripwires:[], network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
            uiMode:'auto', stageReached:1, day1:null,
@@ -11630,8 +11687,35 @@ function iaResumeOffer(){
   return true;
 }
 function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay();
+  /* The gate goes up once, for someone who has never agreed to the terms. A
+     re-run of setup by somebody who already read it would be the app clearing
+     its throat at a person mid-sentence. */
+  /* Reset the surface before deciding what goes on it. Closing the gate with
+     Back leaves the log and dock hidden, and without this a later re-run would
+     open on an empty screen with no way forward. */
+  iaHideWelcome();
+  if(!state.welcomed){ iaShowWelcome(); return; }
   if(!iaResumeOffer()) runIntakeStep();
 }   // a re-run starts from the hours already on record, so the pill shows the live value
+function iaShowWelcome(){
+  const w=document.getElementById('iaWelcome'); if(!w){ if(!iaResumeOffer()) runIntakeStep(); return; }
+  w.classList.add('on');
+  document.getElementById('intakeLog').style.display='none';
+  document.getElementById('intakeDock').style.display='none';
+  /* A progress bar above a page with no questions on it is a bar measuring
+     nothing. */
+  const pr=document.querySelector('.intake-prog'); if(pr) pr.style.visibility='hidden';
+  w.scrollTop=0;
+  const go=document.getElementById('iaWelGo');
+  if(go) go.onclick=()=>{ state.welcomed=true; save(); iaHideWelcome(); if(!iaResumeOffer()) runIntakeStep(); };
+  setTimeout(()=>{ const t=document.getElementById('iaWelTitle'); if(t){ t.setAttribute('tabindex','-1'); t.focus({preventScroll:true}); } },60);
+}
+function iaHideWelcome(){
+  const w=document.getElementById('iaWelcome'); if(w) w.classList.remove('on');
+  const lg=document.getElementById('intakeLog'); if(lg) lg.style.display='';
+  const dk=document.getElementById('intakeDock'); if(dk) dk.style.display='';
+  const pr=document.querySelector('.intake-prog'); if(pr) pr.style.visibility='';
+}
 /* Answers whose gate no longer passes are lies waiting to be committed - e.g.
    full-path walls after switching to spend mode, or "dreaming of owning" after
    the roof amount was zeroed. Sweep them whenever the flow moves. */
@@ -12597,7 +12681,7 @@ function commitIntake(){
 // "Setup chat" left the global footer for Settings > Setup & data ("Re-run setup
 // chat"), so this listener has nothing to bind to; intakeBtn2 carries it now.
 (function(){ const b=document.getElementById('intakeBtn'); if(b) b.addEventListener('click',openIntake); })();
-document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); dismissOverlay(); });
+document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); iaHideWelcome(); dismissOverlay(); });
 
 /* ---------- boot ---------- */
 function boot(){

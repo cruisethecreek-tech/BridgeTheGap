@@ -1203,6 +1203,11 @@ check('...and it actually renders on Reflect', /week went into you/.test(tw.onSc
 await p.evaluate(()=>localStorage.clear());
 await p.reload(); await p.waitForTimeout(1400);
 const gate = await p.evaluate(async () => {
+  /* The welcome gate now stands in front of the first question. Accept it the
+     way a person would, then carry on - this section is about what the chat asks
+     FIRST, and "first" now means first after the door. */
+  const w=document.getElementById('iaWelGo');
+  if(w){ w.click(); await new Promise(r=>setTimeout(r,600)); }
   await new Promise(r=>setTimeout(r,1400));
   const dock=document.querySelector('.gatepick');
   const bub=[...document.querySelectorAll('.bub')].map(x=>x.textContent).pop()||'';
@@ -3206,6 +3211,120 @@ const donut = await p.evaluate(() => {
 });
 check('the donut slices respond to a tap, like the legend beside them always did',
       donut.arcs>=2 && donut.sel===1, JSON.stringify(donut));
+
+/* ---- 52. the welcome gate ----
+   A card that has to be read and accepted before the setup chat starts. Two
+   things make it worth testing rather than just writing: it is the only screen
+   in the app that BLOCKS, so a CTA that cannot be reached on a short phone is a
+   dead end with no way past it; and its whole reason for existing is one
+   sentence - the app is not real, it cannot want this for you, the work is
+   yours - which is exactly the sentence a future copy edit would soften first. */
+await p.evaluate(()=>localStorage.clear());
+await p.reload(); await p.waitForTimeout(900);
+const wel = await p.evaluate(() => ({
+  shown:document.getElementById('iaWelcome').classList.contains('on'),
+  overlay:document.getElementById('intake').classList.contains('on'),
+  logHidden:document.getElementById('intakeLog').style.display==='none',
+  bubbles:document.querySelectorAll('#intakeLog .bub').length,
+  barHidden:document.querySelector('.intake-prog').style.visibility==='hidden',
+  text:document.getElementById('iaWelcome').innerText,
+  cta:(document.getElementById('iaWelGo')||{}).innerText||''
+}));
+check('a first run meets the gate before it meets a single question',
+      wel.shown===true && wel.overlay===true && wel.bubbles===0, JSON.stringify({shown:wel.shown,bubbles:wel.bubbles}));
+check('...with nothing behind it competing for the screen',
+      wel.logHidden===true && wel.barHidden===true);
+/* The four things the card has to say. Asserted as ideas, not sentences - the
+   wording will change and none of these may quietly leave with it. */
+const GATE=[
+  ['everybody starts at zero', /start(s|ing)? at zero|everybody starts/i],
+  ['zero is today, not a verdict', /not a verdict|where you are standing/i],
+  ['the distance is the point', /distance/i],
+  ['in against out', /comes in against what goes out/i],
+  ['accountability, not budgeting', /accountability\b/i],
+  ['I am listening', /listening/i],
+  ['I am watching', /watching/i],
+  ['you can do better', /do better/i],
+  ['it is not real', /\bnot real\b/i],
+  ['it cannot want it for you', /cannot want this for you/i],
+  ['it cannot waste your time', /waste your time/i],
+  ['the effort is entirely yours', /effort is yours|all of it/i]
+];
+const missing=GATE.filter(([,rx])=>!rx.test(wel.text)).map(([n])=>n);
+check('the gate still says all twelve things it was built to say',
+      missing.length===0, missing.join(', '));
+check('...and the button asks for work rather than promising a result',
+      /\bwork\b/i.test(wel.cta), wel.cta);
+/* The blocking screen must be passable on the shortest phone the app supports.
+   The overflow lives on the scroller, so the CTA is reachable at any height -
+   this proves it rather than trusting it. */
+/* Really resized, really scrolled, really clicked. Two earlier drafts of this
+   were worthless: the first read the same layout four times and called it four
+   phones, and the second set scrollTop by hand - which works even on a container
+   that has been made unscrollable, so it passed with the button welded off the
+   bottom of the screen. The only honest version of "can a person reach it" is to
+   scroll the way a thumb does and then press the thing. */
+const welReach=[];
+for(const h of [568,640,700,844]){
+  await p.setViewportSize({width:360,height:h});
+  await p.evaluate(()=>localStorage.clear());
+  await p.reload(); await p.waitForTimeout(900);
+  await p.mouse.move(180, Math.round(h/2));
+  for(let i=0;i<6;i++){ await p.mouse.wheel(0,900); await p.waitForTimeout(60); }
+  await p.waitForTimeout(150);
+  const box=await p.evaluate(hh => {
+    const r=document.getElementById('iaWelGo').getBoundingClientRect();
+    return {h:hh, top:Math.round(r.top), bottom:Math.round(r.bottom), height:Math.round(r.height), width:Math.round(r.width)};
+  }, h);
+  const onScreen = box.top>=0 && box.bottom<=h+1;
+  let pressed=false;
+  if(onScreen){
+    try{ await p.click('#iaWelGo',{timeout:2000}); await p.waitForTimeout(600);
+         pressed=await p.evaluate(()=>document.querySelectorAll('#intakeLog .bub').length>0); }
+    catch(e){ pressed=false; }
+  }
+  welReach.push({...box, onScreen, pressed});
+}
+await p.setViewportSize({width:390,height:1000});
+check('a thumb can scroll to the CTA and press it on every phone height',
+      welReach.every(r=>r.onScreen && r.pressed && r.height>=44 && r.width>200), JSON.stringify(welReach));
+/* Accepting starts the chat. Declining with the X must not leave the surface in
+   a state a later re-run cannot recover from - the failure that made iaHideWelcome
+   necessary in the first place. */
+const flow = await p.evaluate(async () => {
+  document.getElementById('iaWelGo').click();
+  await new Promise(r=>setTimeout(r,600));
+  const after={ gone:!document.getElementById('iaWelcome').classList.contains('on'),
+                asked:document.querySelectorAll('#intakeLog .bub').length>0,
+                stored:JSON.parse(localStorage.getItem('unfiltered_budget_v2')).welcomed,
+                logBack:document.getElementById('intakeLog').style.display!=='none',
+                barBack:document.querySelector('.intake-prog').style.visibility!=='hidden' };
+  // a re-run by somebody who already accepted goes straight to the questions
+  document.getElementById('intake').classList.remove('on');
+  openIntake();
+  await new Promise(r=>setTimeout(r,600));
+  after.rerunSkips=!document.getElementById('iaWelcome').classList.contains('on');
+  after.rerunAsks=document.querySelectorAll('#intakeLog .bub').length>0;
+  // and somebody who backed out of the gate still gets a usable screen next time
+  state.welcomed=false; save();
+  document.getElementById('intake').classList.remove('on');
+  openIntake();
+  await new Promise(r=>setTimeout(r,300));
+  after.gateAgain=document.getElementById('iaWelcome').classList.contains('on');
+  document.getElementById('iaWelGo').click();
+  await new Promise(r=>setTimeout(r,600));
+  after.recovers=document.getElementById('intakeLog').style.display!=='none'
+              && document.querySelectorAll('#intakeLog .bub').length>0;
+  return after;
+});
+check('accepting it starts the chat and records the acceptance',
+      flow.gone===true && flow.asked===true && flow.stored===true, JSON.stringify(flow));
+check('...and hands the log and the progress bar back',
+      flow.logBack===true && flow.barBack===true);
+check('a re-run by someone who already accepted is not made to read it again',
+      flow.rerunSkips===true && flow.rerunAsks===true);
+check('the gate leaves the setup screen usable, however it was left',
+      flow.gateAgain===true && flow.recovers===true, JSON.stringify({gateAgain:flow.gateAgain,recovers:flow.recovers}));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

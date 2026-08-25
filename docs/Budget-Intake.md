@@ -9,6 +9,24 @@ interrogate.** The difference is that here the *engine-critical* answers write
 straight into the app - income, essentials, dream, tone - so the moment the chat
 ends, the Home screen is already alive.
 
+## The welcome gate - the door in front of the questions
+
+Before the first question, a full-screen card the user has to read and accept. It exists to set the terms rather than to sell anything, and everything on it is there because an unstated expectation is the thing people quit over.
+
+The copy, in order:
+
+1. **Ground zero.** "Everybody starts at zero." Zero is not a verdict and not their balance - it is where they are standing today, and everyone stands on it, the person with nothing and the person with plenty. Today is the only day either of them has.
+2. **The distance is the point.** Between here and next month, here and five, ten, twenty years. That gap is the only thing the app is interested in, and it closes exactly one way: what comes in against what goes out, decided by them, over and over.
+3. **It is an accountability app.** You can use it to budget. That is not really what it is.
+4. **The three promises**, as their own cards: *I am listening* (tell me what lands and what leaves; I keep all of it and do not tire of the boring entries), *I am watching* (I will show you the pattern you would rather not look at, in your own numbers, without softening it), *You can do better* (not as an insult, as the only reason worth opening this).
+5. **The boundary**, styled apart from everything above it because a boundary that looks like a paragraph gets read like one: *I am not real. I am a tool - some arithmetic, some questions you would avoid, and a memory better than yours. I cannot want this for you. I cannot spend the money or refuse to. I cannot even waste your time, because I have none to waste; every minute this costs is one you decided to spend. So the effort is yours. All of it.*
+6. **The CTA**: "I'm ready to work". It asks for work rather than promising a result, which is the same rule the rest of the app follows.
+7. **The fine print**: everything stays in the browser, nothing uploaded, no account to make.
+
+Mechanically: it lives inside the setup overlay rather than in a second one, so there is one door and one close button. It replaces the log rather than floating over it, the progress bar is hidden while it is up (a bar above a screen with no questions measures nothing), and the overflow lives on the scroller so the CTA is reachable on a 568px phone. Accepting sets `state.welcomed` and starts the chat. A re-run of setup by somebody who already accepted goes straight to the questions - clearing your throat at a person mid-sentence is not a welcome. A reset wipes `welcomed` with everything else, which is correct: that is a fresh start.
+
+`iaShowWelcome`, `iaHideWelcome`, `#iaWelcome`. Key: `welcomed`.
+
 ## Review before anything is written
 The last step is **not** a blind "Set me up". It shows every answer the user gave -
 name, setup type, income, hourly rate, the walls, other bills, dream, limit, why -
