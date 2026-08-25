@@ -1037,6 +1037,32 @@
   .unit-sel{margin-left:6px;padding:6px 8px;border-radius:9px;border:1px solid var(--line);
     background:var(--panel-2);color:var(--text);font:inherit;font-size:13px;font-weight:700;max-width:150px}
   .unit-work{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  /* Tripwires. The truth box leads, deliberately: someone reading "get a warning
+     when you open Amazon" needs to know within one sentence that the app is not
+     watching them. */
+  .tw-truth{margin:4px 0 14px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(var(--accent-rgb),.06);font-size:13.5px;line-height:1.55}
+  .tw-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .tw-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;
+    border:1px solid var(--line);border-radius:12px;background:var(--panel-2)}
+  .tw-main{display:flex;align-items:baseline;gap:8px;flex:1 1 auto;min-width:0}
+  .tw-nm{font-weight:900;font-size:15px;color:var(--text)}
+  .tw-trap{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+  .tw-acts{display:flex;align-items:center;gap:6px;flex:none}
+  .tw-url{flex:1 1 100%;font-size:11px;color:var(--muted);word-break:break-all;line-height:1.4}
+  .tw-seeds{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .tw-chip{padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;
+    color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+  .tw-chip:hover{border-color:var(--accent);color:var(--accent)}
+  .tw-how{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .tw-how summary{cursor:pointer;font-weight:800;font-size:14px}
+  .tw-howbody{padding-top:8px}
+  .tw-plat{display:flex;gap:6px;margin-bottom:10px}
+  .tw-plat button{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;
+    color:var(--muted);font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+  .tw-plat button.on{border-color:var(--accent);color:var(--accent);background:rgba(var(--accent-rgb),.10)}
+  .tw-steps{margin:0 0 8px;padding-left:20px;font-size:13.5px;line-height:1.65}
+  .tw-steps li{margin-bottom:5px}
   .nw-plan{margin-top:12px;padding:12px;border-radius:12px;border:1px solid var(--line);
     background:rgba(var(--accent-rgb),.07);font-size:14px;line-height:1.5}
   .trail-btn{display:inline-block;margin-top:8px;padding:7px 12px;border-radius:999px;
@@ -1914,6 +1940,12 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
 
+      <div class="panel" id="tripwirePanel">
+        <h2>Tripwires</h2>
+        <p class="sub">A nudge at the door of the shop. Pick the apps that usually get you, and your phone's own automation opens this gut-check the moment you open one - with the shop already named. Never a block. You still decide; you just decide on purpose.</p>
+        <div id="tripwireBody"></div>
+      </div>
+
       <div class="panel" id="vaultPanel">
         <h2>24-Hour Cooling Vault</h2>
         <p class="sub">Not sure? Lock the target in for 24 hours. The urge fades, the trap dies, and the ransom option only unlocks once the timer runs out. Most traps don't survive the wait.</p>
@@ -2729,7 +2761,7 @@ function defaultState(){
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[], seenGuide:{}, guidesOff:false,
            onboarded:false, intake:{}, register:'middle', vault:[],
-           freedomMode:false, trueRate:{}, trueRateSkipped:false, units:{}, network:[], enough:0, skills:[],
+           freedomMode:false, trueRate:{}, trueRateSkipped:false, units:{}, tripwires:[], network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
@@ -7383,7 +7415,7 @@ function renderAll(){
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
-  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons(); renderReflectTab();
+  renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons(); renderReflectTab(); renderTripwires();
   renderAreaToggles(); applyAreaVisibility();   // a sync pull can change which areas this person wants
   applyPanelGates();   // panels with nothing to show fold away, and say what brings them back
   ensureDay1();   // renderHome already ends with applyStage - no second pass
@@ -8335,7 +8367,89 @@ const BADGES=[
 const modal=document.getElementById('modal');
 /* reuseEntry: opened FROM the intent sheet - the sheet's history entry transfers to
    the modal instead of pushing a second one, so one Back closes it cleanly */
-function openModal(reuseEntry){ document.getElementById('mName').value=''; document.getElementById('mAmt').value=''; document.getElementById('mTrap').value='scroll'; modal.classList.add('on'); if(reuseEntry!==true) pushOverlay(); setTimeout(()=>document.getElementById('mName').focus(),60); }
+function openModal(reuseEntry, pre){
+  pre=pre||{};
+  document.getElementById('mName').value=pre.name||'';
+  document.getElementById('mAmt').value=pre.amt>0?pre.amt:'';
+  document.getElementById('mTrap').value=pre.trap||'scroll';
+  modal.classList.add('on');
+  if(reuseEntry!==true) pushOverlay();
+  /* Arriving from a tripwire, the name is already filled - so put the cursor
+     where the answer is missing instead of at the top of a form they did not
+     start. */
+  const focusId = pre.name ? 'mAmt' : 'mName';
+  setTimeout(()=>{ const el=document.getElementById(focusId); if(el){ el.focus(); try{el.select();}catch(_){} } },60);
+}
+/* ============================================================
+   TRIPWIRES - the nudge at the door of the shop.
+
+   The idea, from a user: opt in to a warning when you open the app that usually
+   gets you. Amazon, Etsy, the food app at 11pm.
+
+   What is honest about how this works, and it is said on the panel too: THIS APP
+   CANNOT SEE WHICH APPS YOU OPEN. No web app can - there is no such API, and
+   building one would mean an accessibility service or a Screen Time entitlement
+   and a native app, which is the opposite of a page that promises nothing leaves
+   your device. What both phones already ship is an automation engine that CAN
+   watch for an app opening, and what this app can do is hand it a link that
+   lands you on the gut-check with the shop already named. The watching happens
+   in the OS, on the device, and Accountability never learns it happened.
+
+   Deliberately a nudge and not a block: the whole thesis is that you decide.
+   ============================================================ */
+const TRIPWIRE_SEEDS=[
+  {n:'Amazon',      t:'scroll'},
+  {n:'Etsy',        t:'scroll'},
+  {n:'Temu',        t:'scroll'},
+  {n:'SHEIN',       t:'scroll'},
+  {n:'TikTok Shop', t:'scroll'},
+  {n:'Instagram',   t:'scroll'},
+  {n:'DoorDash',    t:'friction'},
+  {n:'Uber Eats',   t:'friction'},
+  {n:'Instacart',   t:'friction'},
+  {n:'StockX',      t:'status'},
+  {n:'eBay',        t:'scroll'},
+  {n:'Steam',       t:'scroll'}
+];
+/* A guess, only ever a starting point - the trap picker is right there and a
+   wrong guess costs one tap to fix. */
+function trapForName(name){
+  const n=String(name||'').toLowerCase();
+  if(/doordash|uber ?eats|grubhub|instacart|deliveroo|just ?eat|postmates|seamless/.test(n)) return 'friction';
+  if(/stockx|goat|farfetch|ssense|nike|sneaker|rolex|gucci/.test(n)) return 'status';
+  if(/subscri|renew|trial|\+$|prime|premium|patreon|onlyfans/.test(n)) return 'leak';
+  return 'scroll';
+}
+function tripwireURL(name){
+  return location.origin+location.pathname+'#check='+encodeURIComponent(name||'');
+}
+/* Parse whatever brought us here. Two doors: a tripwire link the user's own
+   automation opened, and Android's share sheet (see share_target in the
+   manifest) for the times they are already looking at the thing. */
+function bootEntryTarget(){
+  const out={};
+  const h=String(location.hash||'');
+  const m=h.match(/^#check=(.*)$/);
+  if(m){ try{ out.name=decodeURIComponent(m[1].replace(/\+/g,' ')); }catch(_){ out.name=m[1]; } }
+  else if(h==='#gutcheck'||h==='#check') out.name='';
+  else {
+    const q=new URLSearchParams(location.search||'');
+    const shared=[q.get('share_title'),q.get('share_text'),q.get('share_url')].filter(Boolean);
+    if(!shared.length) return null;
+    /* A shared product is usually "Thing - Shop" or a bare URL. Take the most
+       human part and let them correct it; guessing harder would just be
+       confidently wrong more often. */
+    let nm=q.get('share_title')||q.get('share_text')||'';
+    if(!nm && q.get('share_url')){ try{ nm=new URL(q.get('share_url')).hostname.replace(/^www\./,''); }catch(_){ nm=q.get('share_url'); } }
+    out.name=String(nm).slice(0,80).trim();
+    const t=String(q.get('share_text')||'').replace(/,/g,'');
+    const price=t.match(/[$£€]\s?(\d+(?:\.\d{1,2})?)/);
+    if(price) out.amt=parseFloat(price[1]);
+    out.shared=true;
+  }
+  if(out.name) out.trap=trapForName(out.name);
+  return out;
+}
 /* small toast layer - the quick log and friends promise feedback; give them one */
 function toast(msg){
   let t=document.getElementById('toastEl');
@@ -8420,6 +8534,127 @@ document.getElementById('copyLink').addEventListener('click',()=>{
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done,()=>{msg.textContent=url;});
   else msg.textContent=url;
 });
+
+/* ---------- Tripwires: pick the shops, build the automation ---------- */
+let twPlatform=null;
+function twGuessPlatform(){
+  if(twPlatform) return twPlatform;
+  const ua=navigator.userAgent||'';
+  twPlatform = /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Android/i.test(ua) ? 'android' : 'other';
+  return twPlatform;
+}
+/* A tripwire fires more than once, and the second time the app is usually still
+   open in the background - so the OS hands it the link without reloading the
+   page, boot() never runs again, and the nudge silently does nothing. That is
+   the common case, not the edge case: you open Amazon, get sent here, go back,
+   and open Amazon again. */
+window.addEventListener('hashchange',()=>{
+  if(!/^#(check|gutcheck)/.test(String(location.hash||''))) return;
+  if(!state.onboarded) return;
+  const m=document.getElementById('modal');
+  if(m && m.classList.contains('on')) return;          // already scanning something - do not stomp on it
+  const e=bootEntryTarget(); if(!e) return;
+  openModal(false,e);
+  if(e.name && typeof toast==='function') toast(`${e.name} - price it before you open the app.`);
+});
+function tripwires(){ return (state.tripwires||[]); }
+function twHas(n){ return tripwires().some(t=>t.name.toLowerCase()===String(n).toLowerCase()); }
+function twAdd(name,trap){
+  name=String(name||'').trim().slice(0,40); if(!name || twHas(name)) return;
+  state.tripwires=tripwires().concat([{id:uid(), name, trap:trap||trapForName(name)}]);
+  save(); renderTripwires();
+}
+function twRemove(id){ state.tripwires=tripwires().filter(t=>t.id!==id); save(); renderTripwires(); }
+/* The recipes. Menu wording drifts between OS versions, so these describe the
+   SHAPE of the automation - trigger, condition, action - rather than pretending
+   to be a screenshot of one particular release. Both platforms ship this; none
+   of it needs an app store, a login, or a penny. */
+const TW_RECIPES={
+  ios:{ app:'Shortcuts', where:'Automation tab',
+    steps:[
+      'Open <b>Shortcuts</b> and go to the <b>Automation</b> tab.',
+      'New automation &rarr; <b>App</b> &rarr; choose the app (say Amazon) &rarr; tick <b>Is Opened</b>.',
+      'Choose <b>Run Immediately</b>, and turn <b>Notify When Run</b> off if you would rather it stay quiet.',
+      'For the action, pick one: <b>Show Notification</b> with your own words for the gentlest version, or <b>Open URLs</b> with the link below to land straight on the gut-check.',
+      'Repeat per app. One automation each.'
+    ],
+    note:'iOS only lets an automation watch an <b>app</b>, not a website, so for a shop you use in Safari set the tripwire on Safari itself or use the share sheet instead.' },
+  android:{ app:'Modes and Routines (Samsung), or MacroDroid / Tasker', where:'routines',
+    steps:[
+      'Open your routines app - on Samsung that is <b>Modes and Routines</b>; otherwise <b>MacroDroid</b> or <b>Tasker</b> do the same job.',
+      'New routine &rarr; the <b>If</b> condition is <b>an app is opened</b> &rarr; pick the app.',
+      'For the <b>Then</b> action pick one: show a notification with your own words, or open the link below so the gut-check is already waiting.',
+      'Repeat per app.'
+    ],
+    note:'Android can also do this the other way round: once Accountability is installed to your home screen, it appears in the <b>share sheet</b>, so from inside Amazon you can share the product straight into a gut-check with the price already read off it.' },
+  other:{ app:'your phone', where:'automations',
+    steps:[
+      'This is set up on the phone, not here. On <b>iPhone</b> it is the Shortcuts app, Automation tab, "App is opened".',
+      'On <b>Android</b> it is Modes and Routines (Samsung), MacroDroid, or Tasker, with an "app opened" trigger.',
+      'The action is either a notification in your own words, or opening the link below.'
+    ],
+    note:'Open this page on your phone and the steps will match what you are holding.' }
+};
+function renderTripwires(){
+  const box=document.getElementById('tripwireBody'); if(!box) return;
+  const list=tripwires(), plat=twGuessPlatform(), r=TW_RECIPES[plat];
+  const mine=list.map(t=>{
+    const tr=TRAPS.find(x=>x.v===t.trap)||TRAPS[0];
+    return `<div class="tw-row">
+      <div class="tw-main"><span class="tw-nm">${escapeHtml(t.name)}</span><span class="tw-trap">${escapeHtml(tr.label)}</span></div>
+      <div class="tw-acts">
+        <button class="btn sm ghost" data-twcopy="${t.id}">Copy link</button>
+        <button class="btn sm ghost" data-twtest="${t.id}">Test</button>
+        <button class="del" data-twdel="${t.id}" title="Remove">&#10005;</button>
+      </div>
+      <code class="tw-url">${escapeHtml(tripwireURL(t.name))}</code>
+    </div>`;
+  }).join('');
+  const seeds=TRIPWIRE_SEEDS.filter(x=>!twHas(x.n));
+  box.innerHTML=`
+    <div class="tw-truth">
+      <b>What this is, exactly.</b> Accountability <b>cannot see which apps you open</b> - no web page can, and building something that could would mean the kind of always-watching permission this app exists to argue against. Your phone already has an automation engine that can. You point it at the shops you choose, and it opens this gut-check with the shop named. The watching happens on your phone, in your own settings, and nothing about it ever reaches this app or anyone else.
+    </div>
+    ${list.length?`<div class="tw-list">${mine}</div>`:`<div class="empty" style="margin-top:10px">No tripwires yet. Pick the ones that actually get you - be honest, it is a private list on your own phone.</div>`}
+    ${seeds.length?`<div class="tw-seeds">${seeds.map(x=>`<button class="tw-chip" data-twseed="${escapeHtml(x.n)}" data-twtrap="${x.t}">+ ${escapeHtml(x.n)}</button>`).join('')}</div>`:''}
+    <div class="row" style="margin-top:12px">
+      <label class="fld" style="flex:1;min-width:180px">Something else that gets you
+        <input type="text" id="twNew" maxlength="40" placeholder="e.g. the coffee app, a game store"></label>
+      <button class="btn primary" id="twAdd" style="align-self:flex-end">Add</button>
+    </div>
+    ${list.length?`
+    <details class="tw-how" open>
+      <summary>How to arm these on ${plat==='ios'?'iPhone':plat==='android'?'Android':'your phone'}</summary>
+      <div class="tw-howbody">
+        <div class="tw-plat">
+          <button class="${plat==='ios'?'on':''}" data-twplat="ios">iPhone</button>
+          <button class="${plat==='android'?'on':''}" data-twplat="android">Android</button>
+        </div>
+        <ol class="tw-steps">${r.steps.map(x=>`<li>${x}</li>`).join('')}</ol>
+        <p class="sub">${r.note}</p>
+        <p class="sub">Takes about a minute per app, once. Nothing here needs an account, a store, or a payment.</p>
+      </div>
+    </details>`:''}
+    <p class="sub" style="margin-top:12px">A tripwire is a nudge, never a lock. You can walk straight past it - the point is that you walked past it <b>on purpose</b>, which is a different thing from not noticing.</p>`;
+  box.querySelectorAll('[data-twseed]').forEach(b=>b.onclick=()=>twAdd(b.dataset.twseed,b.dataset.twtrap));
+  box.querySelectorAll('[data-twdel]').forEach(b=>b.onclick=()=>twRemove(b.dataset.twdel));
+  box.querySelectorAll('[data-twplat]').forEach(b=>b.onclick=()=>{ twPlatform=b.dataset.twplat; renderTripwires(); });
+  box.querySelectorAll('[data-twcopy]').forEach(b=>b.onclick=()=>{
+    const t=tripwires().find(x=>x.id===b.dataset.twcopy); if(!t) return;
+    const url=tripwireURL(t.name);
+    const ok=()=>toast('Link copied. Paste it into the automation’s "open URL" step.');
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok,()=>toast(url));
+    else toast(url);
+  });
+  box.querySelectorAll('[data-twtest]').forEach(b=>b.onclick=()=>{
+    const t=tripwires().find(x=>x.id===b.dataset.twtest); if(!t) return;
+    openModal(false,{name:t.name, trap:t.trap});          // exactly what the automation will do
+  });
+  const add=document.getElementById('twAdd'), inp=document.getElementById('twNew');
+  const go=()=>{ const v=(inp.value||'').trim(); if(!v){ inp.focus(); return; } twAdd(v); };
+  if(add) add.onclick=go;
+  if(inp) inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+}
 
 /* --- recurring transactions --- */
 function recSyncTypeFields(){
@@ -10884,7 +11119,17 @@ function boot(){
   activateTab('home',true);
   // the home-screen shortcut only skips straight to the scan for a user who is
   // already set up - a first run still gets the intake, shortcut or not
-  if((location.hash==='#gutcheck'||location.hash==='#check') && state.onboarded) setTimeout(openModal,250);
+  const entry = state.onboarded ? bootEntryTarget() : null;
+  if(entry){
+    setTimeout(()=>{
+      openModal(false, entry);
+      if(entry.name && typeof toast==='function')
+        toast(entry.shared ? 'Shared to Accountability. Put a price on it and scan.' : `${entry.name} - price it before you open the app.`);
+    },250);
+    /* Drop the query so a refresh does not re-open the same scan, and so the
+       shared title never sits in the address bar afterwards. */
+    if(entry.shared && history.replaceState) history.replaceState({t:'tab',name:'home'},'',location.pathname);
+  }
   // A first visit opens the setup chat; a RESET does not. Someone who just wiped
   // their data is deciding what to do next, and dropping them straight back into
   // the same questionnaire they just walked away from reads as the app refusing
