@@ -607,6 +607,10 @@
     background:transparent;color:var(--muted);font-size:13.5px;line-height:1.55}
   .sp-recent .am.put{color:rgb(var(--good-rgb))}
   .sp-recent .ce-put{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgb(var(--good-rgb));margin-left:5px}
+  .li-apr{display:inline-flex;align-items:center;gap:2px;color:var(--muted);font-size:12px;font-weight:700;flex:none}
+  .li-apr .apredit{width:52px;background:transparent;border:1px solid var(--line);border-radius:7px;
+    color:var(--text);font:inherit;font-size:12px;font-weight:700;padding:3px 5px;text-align:right}
+  .li-yield{margin-top:4px;font-size:12px;color:rgb(var(--good-rgb));font-weight:700}
   .cal-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .cal-head h2{margin:0}
   .cal-mo{display:flex;align-items:center;gap:4px}
@@ -2160,7 +2164,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             </div>
             <div>
               <label class="fld" style="width:100%">Add liability
-                <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" inputmode="decimal" min="0" step="0.01" style="width:84px"><button class="btn sm primary" id="addLiab">＋</button></div>
+                <div class="row" style="gap:8px"><input type="text" id="liabName" placeholder="Credit card, loan…" style="flex:1;min-width:80px"><input type="number" id="liabVal" placeholder="$" inputmode="decimal" min="0" step="0.01" style="width:84px"><input type="number" id="liabApr" placeholder="APR%" inputmode="decimal" min="0" max="100" step="0.1" style="width:74px" title="Interest rate, if you know it"><button class="btn sm primary" id="addLiab">＋</button></div>
               </label>
               <div id="liabList"></div>
             </div>
@@ -2757,14 +2761,32 @@ const ENERGY=[
 ];
 function energyOf(k){ return ENERGY.find(e=>e.k===k)||null; }
 /* Offense / Income-creation engine */
+/* The app teaches "own things that pay you" as the top rung of the Growth
+   Ladder, and defines an asset as the thing that "feeds you while you sleep" -
+   and then offered five income types, every one of which is a form of LABOUR.
+   There was no way to record a dividend, a bond coupon, a savings-account
+   interest payment or a month's rent. The independent-income ladder that
+   celebrates escaping wage work could only be fed by more work.
+
+   These are marked `yield`: money that arrived because capital did the working.
+   They count as independent income (the purest kind), and they carry no hours,
+   so they never touch the true hourly rate - which is the correct treatment
+   already applied to any income with no hours against it. */
 const INCOME_SOURCES=[
   {k:'primary', label:'Primary Job'},
   {k:'side', label:'Side Hustle'},
   {k:'freelance', label:'Freelance / Service'},
   {k:'sale', label:'Asset / Item Sale'},
-  {k:'skillmon', label:'Skill Monetization'}
+  {k:'skillmon', label:'Skill Monetization'},
+  {k:'yield', label:'Dividends / interest', yield:true},
+  {k:'rent', label:'Rent / royalties', yield:true}
 ];
 function isIndependent(srcType){ return !!srcType && srcType!=='primary'; }
+function isYieldSrc(k){ return !!(INCOME_SOURCES.find(x=>x.k===k)||{}).yield; }
+function yieldTotal(month){
+  const list=month?txnsInMonth(month):state.transactions;
+  return list.filter(t=>t.type==='income'&&isYieldSrc(t.srcType)).reduce((s,t)=>s+t.amount,0);
+}
 function indieTotal(){ return state.transactions.filter(t=>t.type==='income'&&isIndependent(t.srcType)).reduce((s,t)=>s+t.amount,0); }
 const INDIE_MILES=[50,500,1000,5000];
 function offenseDefense(M){
@@ -6640,7 +6662,7 @@ async function refreshSyncState(){
   if(imp) imp.addEventListener('click',()=>{
     const existing=new Set(state.debts.map(d=>d.name.toLowerCase()));
     let n=0;
-    (state.liabilities||[]).forEach(l=>{ if((+l.value||0)>0 && !existing.has((l.name||'').toLowerCase())){ state.debts.push({id:uid(),name:l.name||'Debt',balance:+l.value||0,apr:0,minPayment:0}); n++; } });
+    (state.liabilities||[]).forEach(l=>{ if((+l.value||0)>0 && !existing.has((l.name||'').toLowerCase())){ state.debts.push({id:uid(),name:l.name||'Debt',balance:+l.value||0,apr:+l.apr||0,minPayment:0}); n++; } });   // the rate travels with it now
     save(); renderDebt();
     if(!n) alert('No new liabilities to import (they may already be here, or you have none with a balance).');
     else alert('Imported '+n+' debt'+(n>1?'s':'')+'. Add each one’s rate and minimum payment for an accurate plan.');
@@ -7388,7 +7410,18 @@ function ensureImpulseCategory(){
 }
 
 /* --- net worth panel --- */
-function lineItem(o,cls){ return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span><span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`; }
+/* A 3% mortgage and a 29% card were the same thing here: a name and a number.
+   The rate is the entire difference between borrowing that is working for you
+   and borrowing that is eating you, and the app already knew the concept - the
+   payoff planner has had an APR field all along. It just never travelled, so
+   "import from my liabilities" pushed every one of them across at apr:0 and the
+   planner then warned that its own numbers were understated. */
+function lineItem(o,cls){
+  const rate = cls==='liab'
+    ? `<span class="li-apr" title="Interest rate - the difference between debt that works for you and debt that eats you"><input class="apredit" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="${o.apr!=null?o.apr:''}" data-editapr="${o.id}" placeholder="APR">%</span>`
+    : '';
+  return `<div class="lineitem ${cls}"><span class="nm">${escapeHtml(o.name)}</span>${rate}<span class="vl">${cls==='liab'?'−':''}$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${o.value||0}" data-editval="${cls}:${o.id}" title="Edit value"></span><button class="del" data-delitem="${cls}:${o.id}" title="Delete">✕</button></div>`;
+}
 function renderNetWorth(){
   const realA=sumAssetsKind('real'), stuffA=sumAssetsKind('stuff'), A=realA+stuffA, L=sumLiab(), NW=A-L, working=realA-L, total=A+L;
   const nn=document.getElementById('nwNum'); nn.textContent=money(NW); nn.className='nw '+(NW<0?'neg':'pos');
@@ -7417,6 +7450,8 @@ function renderNetWorth(){
     return `<div class="lineitem ${k==='stuff'?'stuff':'asset'}">
       <div class="li-top"><button class="kindtag" data-togglekind="${a.id}" title="Tap to flip">${k==='real'?'Works':'Loses value'}</button><span class="nm">${escapeHtml(a.name)}</span><span class="vl">$<input class="vledit" type="number" inputmode="decimal" min="0" step="0.01" value="${a.value||0}" data-editval="asset:${a.id}" title="Edit value"></span><button class="del" data-delitem="asset:${a.id}" title="Delete">✕</button></div>
       <div class="li-cost">Drains $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.cost?Math.round((a.cost/periodMeta(a.costUnit||'month').per)*100)/100:0}" data-cost="${a.id}"><select class="unit-sel" data-costunit="${a.id}" aria-label="Per what?">${['month','year','week'].map(periodMeta).map(pp=>`<option value="${pp.k}"${(a.costUnit||'month')===pp.k?' selected':''}>${pp.label}</option>`).join('')}</select>${whyBtn('assetDrain')} <span class="li-yr" data-costyr="${a.id}">${a.cost?'= '+money(yr)+'/yr to keep':''}</span></div>
+      ${k==='real'?`<div class="li-cost">Pays $<input type="number" inputmode="decimal" min="0" step="0.01" value="${a.pays?Math.round((a.pays/periodMeta(a.paysUnit||'month').per)*100)/100:0}" data-pays="${a.id}"><select class="unit-sel" data-paysunit="${a.id}" aria-label="Per what?">${['month','year','week'].map(periodMeta).map(pp=>`<option value="${pp.k}"${(a.paysUnit||'month')===pp.k?' selected':''}>${pp.label}</option>`).join('')}</select>${whyBtn('assetPays')} <span class="li-yr" data-paysyr="${a.id}">${a.pays?'= '+money((a.pays||0)*12)+'/yr back':''}</span></div>
+      ${(a.pays||a.cost)?`<div class="li-yield">${(a.pays||0)>(a.cost||0)?`Net <b>+${money(((a.pays||0)-(a.cost||0))*12)}</b> a year - this one genuinely pays you.`:((a.cost||0)>(a.pays||0)?`Net <b>&minus;${money(((a.cost||0)-(a.pays||0))*12)}</b> a year. It costs more to hold than it returns.`:'Pays exactly what it costs to hold.')}</div>`:''}`:''}
     </div>`;
   }).join(''):'<div class="empty" style="margin-top:8px">No assets yet. An asset is anything that puts money in your pocket - savings, investments, a rental. Add one above.</div>';
   /* You type in a $12,000 car loan and the app - which owns a payoff planner
@@ -7447,6 +7482,19 @@ function renderNetWorth(){
     a.cost=Math.round(toMonthly(parseFloat(inp.value)||0, a.costUnit||'month')*100)/100; save();
     drainSync(a);
   }));
+  document.querySelectorAll('#assetList input[data-pays]').forEach(inp=>inp.addEventListener('input',()=>{
+    const a=state.assets.find(x=>x.id===inp.dataset.pays); if(!a) return;
+    a.pays=Math.round(toMonthly(parseFloat(inp.value)||0, a.paysUnit||'month')*100)/100; save();
+    const yl=document.querySelector(`#assetList [data-paysyr="${a.id}"]`);
+    if(yl) yl.textContent=a.pays?'= '+money(a.pays*12)+'/yr back':'';
+    renderDrain();
+  }));
+  document.querySelectorAll('#assetList select[data-paysunit]').forEach(sel=>sel.addEventListener('change',()=>{
+    const a=state.assets.find(x=>x.id===sel.dataset.paysunit); if(!a) return;
+    a.paysUnit=sel.value;
+    const inp=document.querySelector(`#assetList input[data-pays="${a.id}"]`);
+    a.pays=Math.round(toMonthly(parseFloat(inp?inp.value:0)||0, a.paysUnit)*100)/100; save(); renderNetWorth();
+  }));
   document.querySelectorAll('#assetList select[data-costunit]').forEach(sel=>sel.addEventListener('change',()=>{
     const a=state.assets.find(x=>x.id===sel.dataset.costunit); if(!a) return;
     a.costUnit=sel.value;                                   // the number stays; what it means changes
@@ -7463,6 +7511,11 @@ function renderNetWorth(){
     const [cls,id]=b.dataset.delitem.split(':');
     if(cls==='asset') state.assets=state.assets.filter(x=>x.id!==id); else state.liabilities=state.liabilities.filter(x=>x.id!==id);
     save(); renderNetWorth();
+  }));
+  document.querySelectorAll('#liabList input[data-editapr]').forEach(inp=>inp.addEventListener('input',()=>{
+    const l=state.liabilities.find(x=>x.id===inp.dataset.editapr); if(!l) return;
+    const v=parseFloat(inp.value);
+    l.apr=(v>=0&&v<=100)?v:null; save(); renderNetWorth(); renderSovereignty&&renderSovereignty();
   }));
   document.querySelectorAll('#assetList input[data-editval], #liabList input[data-editval]').forEach(inp=>{
     inp.addEventListener('input',()=>{ const [cls,id]=inp.dataset.editval.split(':'); const arr=cls==='asset'?state.assets:state.liabilities; const o=arr.find(x=>x.id===id); if(!o) return; o.value=parseFloat(inp.value)||0; save(); });
@@ -7684,10 +7737,21 @@ function showAssetChallenge(id,word){
 function renderDrain(){
   const box=document.getElementById('nwDrain'); if(!box) return;
   const drain=state.assets.reduce((s,a)=>s+(a.cost||0),0);
-  if(drain<=0){ box.innerHTML=''; return; }
+  const paysAll=state.assets.reduce((s,a)=>s+(+a.pays||0),0);
+  /* Bailing on drain alone hid the whole panel for the person whose assets pay
+     and cost nothing - which is the best case, and the one the app most wants to
+     be able to show them. */
+  if(drain<=0 && paysAll<=0){ box.innerHTML=''; return; }
   const H=effectiveHourly();
   const hrs=H>0?' · '+fmtHours(drain/H)+' of work/mo':'';
-  box.innerHTML=`<div class="drainbox"><div class="db-k">The cost of keeping it all</div><div class="db-v">${actMoney(drain)}/mo <span class="db-sub">· ${actMoney(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month - before you buy a single new thing. That's the part nobody calls an "asset."</div></div>`;
+  /* The lesson says the test is whether a thing puts money IN your pocket, and
+     the panel could only ever measure it taking money out. Both sides now. */
+  const pays=(state.assets||[]).reduce((s,a)=>s+(+a.pays||0),0);
+  const net=pays-drain;
+  box.innerHTML=`<div class="drainbox">`
+    +(drain>0?`<div class="db-k">The cost of keeping it all</div><div class="db-v">${actMoney(drain)}/mo <span class="db-sub">· ${actMoney(drain*12)}/yr${hrs}</span></div><div class="db-note">This is what your stuff quietly takes every month - before you buy a single new thing. That's the part nobody calls an "asset."</div>`:'')
+    +(pays>0?`<div class="db-k" style="margin-top:12px">And what it pays back</div><div class="db-v" style="color:rgb(var(--good-rgb))">${actMoney(pays)}/mo <span class="db-sub">· ${actMoney(pays*12)}/yr</span></div><div class="db-note">${net>=0?`Net <b>+${money(net*12)}</b> a year. What you own is carrying itself and then some - that is the whole definition, and most people never get a number for it.`:`Net <b>&minus;${money(-net*12)}</b> a year. It pays, but not enough to cover what it costs to hold.`}</div>`:'')
+    +`</div>`;
 }
 document.getElementById('addAsset').addEventListener('click',()=>{
   const n=document.getElementById('assetName').value.trim(), v=parseFloat(document.getElementById('assetVal').value);
@@ -7699,8 +7763,12 @@ document.getElementById('addAsset').addEventListener('click',()=>{
 });
 document.getElementById('addLiab').addEventListener('click',()=>{
   const n=document.getElementById('liabName').value.trim(), v=parseFloat(document.getElementById('liabVal').value);
-  if(!n||!v||v<0) return; state.liabilities.push({id:uid(),name:n,value:v});
-  document.getElementById('liabName').value=''; document.getElementById('liabVal').value=''; save(); renderNetWorth();
+  if(!n||!v||v<0) return;
+  const ap=parseFloat((document.getElementById('liabApr')||{}).value);
+  state.liabilities.push({id:uid(),name:n,value:v,apr:(ap>=0&&ap<=100)?ap:null});
+  document.getElementById('liabName').value=''; document.getElementById('liabVal').value='';
+  { const el=document.getElementById('liabApr'); if(el) el.value=''; }
+  save(); renderNetWorth();
 });
 
 /* --- hourly wage --- */
@@ -8348,6 +8416,14 @@ const FIELD_WHY={
         ? `<b>${money(lim)} &divide; ${dim} days = ${money(lim/dim)} a day.</b> Every day you come in under that goes green; a day with nothing logged earns a star. It is split evenly rather than by weekday, because a rule you can predict is a rule you can beat.`
         : `Whatever you set is divided by the days in the month to make a daily allowance. Beat it and the day goes green.`; } },
   enough:{ t:'What "Enough" is for', b:()=>`The monthly spend where more money stops buying you a better life. It is not a budget and nothing enforces it - it is the line that tells you when a raise should turn into freedom instead of quietly turning into a bigger normal.<br><br>The app compares it against what you actually spend and says so when the two drift apart.` },
+  assetPays:{ t:'The other half of the test', b:()=>{
+      const pays=(state.assets||[]).reduce((s,a)=>s+(+a.pays||0),0);
+      const cost=(state.assets||[]).reduce((s,a)=>s+(+a.cost||0),0);
+      return `What this thing hands you every month, without you selling an hour for it: rent, a dividend, interest, a royalty.<br><br>The app's own definition of an asset is that it <b>puts money in your pocket</b> - and until this field existed it could only ever record things taking money out, which made every single thing you own look like a drain. `
+        + (pays>0
+            ? `Across everything you own: <b>${money(pays)}</b> a month in, <b>${money(cost)}</b> a month out.`
+            : `Nothing you have listed pays you yet. That is not a failing - it is the number the top rung of the Growth Ladder exists to move.`)
+        + `<br><br>Only real assets get this field. A depreciating thing that somehow pays you is a real asset wearing the wrong label - flip it with the tag on the left.`; } },
   assetDrain:{ t:'Why a thing you own has a cost', b:()=>`What this costs you every month just to keep: insurance, storage, fees, servicing, registration. An asset that drains more than it returns is a liability wearing an asset's name, and this is the field that tells you which one you have.<br><br>Shown &times; 12 beside it, because the yearly number is the one that changes minds.` },
   recHours:{ t:'Why it asks for hours', b:()=>`Only income you sell hours for counts toward your true hourly rate. Money that costs you no time - benefits, rent from a property, a partner's pay - is still counted in your budget total, it just does not drag your rate around.<br><br>Give hours here and this source joins the blend: total worked income &divide; total worked hours.` }
 };

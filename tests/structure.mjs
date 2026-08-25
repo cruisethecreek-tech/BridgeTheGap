@@ -2691,6 +2691,73 @@ check('the link that was the only way in promises only what it can deliver',
       reach.linkSpend==='Edit my accounts →' && reach.linkFull==='Edit what you own and owe →',
       `${reach.linkSpend} | ${reach.linkFull}`);
 
+/* ---- 46. the app could not record being paid ----
+   Asked directly: how are HELOCs and cards viewed in Build, why is there no area
+   for dividends or interest, and is the philosophy to forbid leverage?
+
+   Three answers, all checkable, all gaps rather than positions. The app teaches
+   that an asset is the thing that "puts money IN your pocket" and that the top
+   rung of the Growth Ladder is "own things that pay you" - and then offered five
+   income types, every one of them a form of LABOUR, and an asset model whose
+   only recurring field was what the thing DRAINS. A liability was a name and a
+   number, so a 3% mortgage and a 29% card were the same object, and "import from
+   my liabilities" pushed every one into the payoff planner at apr:0 - after
+   which the planner warned that its own figures were understated. ---- */
+const cap = await p.evaluate(() => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22; state.trueRateSkipped=true;
+  save(); activateTab('goals'); renderAll();
+  o.yieldKinds=INCOME_SOURCES.filter(x=>x.yield).map(x=>x.k).sort();
+  /* money capital earned is the purest independent income there is */
+  o.indie={y:isIndependent('yield'), r:isIndependent('rent'), p:isIndependent('primary')};
+  const M=state.activeMonth;
+  state.transactions.push({id:'y1',type:'income',amount:180,source:'VTI dividend',srcType:'yield',date:M+'-05'});
+  state.transactions.push({id:'y2',type:'income',amount:1400,source:'Rental',srcType:'rent',date:M+'-01'});
+  state.transactions.push({id:'w1',type:'income',amount:3200,source:'Pay',srcType:'primary',date:M+'-02'});
+  save();
+  o.yieldMonth=yieldTotal(M);
+  o.offense=offenseDefense(M).offense;
+  /* it must not touch the hourly rate - no hours were sold for it */
+  recomputeBlendedWage();
+  o.wageUntouched=state.hourlyWage;
+  /* an asset that pays, and one that cannot */
+  state.assets.push({id:'a1',name:'Rental duplex',value:240000,kind:'real',cost:900,pays:1400});
+  state.assets.push({id:'a2',name:'Truck',value:22000,kind:'stuff',cost:400});
+  save(); renderNetWorth();
+  o.paysOnReal=!!document.querySelector('input[data-pays="a1"]');
+  o.noPaysOnStuff=!document.querySelector('input[data-pays="a2"]');
+  o.net=(document.getElementById('assetList').innerText.match(/Net \+[^\n-]*/)||[''])[0].trim();
+  o.bothSides=/And what it pays back/.test((document.getElementById('nwDrain')||{}).innerText||'');
+  /* a rate on a liability, and it has to travel */
+  state.liabilities.push({id:'l1',name:'HELOC',value:40000,apr:6.5});
+  state.liabilities.push({id:'l2',name:'Visa',value:3000,apr:26.9});
+  save(); renderNetWorth();
+  o.aprField=!!document.querySelector('input[data-editapr="l1"]');
+  document.getElementById('importLiab').click();
+  o.imported=state.debts.map(d=>d.name+'@'+d.apr).sort().join(',');
+  /* and the planner orders them by what they actually cost */
+  state.debtStrategy='avalanche'; state.debtBudget=1200; save();
+  const sim=simulateDebts(state.debts.map(d=>({name:d.name,balance:d.balance,apr:d.apr,minPayment:100})),1200,'avalanche');
+  o.killsDearestFirst=sim.order?sim.order[0]:(sim.error||'');
+  return o;
+});
+check('the app can record money that capital earned', cap.yieldKinds.join(',')==='rent,yield', cap.yieldKinds.join(','));
+check('...and counts it as independent income, which is what it is',
+      cap.indie.y===true && cap.indie.r===true && cap.indie.p===false);
+check('...it reaches the Offense meter', cap.yieldMonth===1580 && cap.offense===1580,
+      `${cap.yieldMonth} / ${cap.offense}`);
+check('...without touching the hourly rate, because no hours were sold for it',
+      cap.wageUntouched===22, String(cap.wageUntouched));
+check('an asset can finally say what it pays, not only what it drains',
+      cap.paysOnReal===true && /Net \+\$6,000 a year/.test(cap.net), cap.net);
+check('...only for things that could actually pay you', cap.noPaysOnStuff===true);
+check('...and the panel shows both sides', cap.bothSides===true);
+check('a liability carries its rate, so 3% and 29% stop being the same object',
+      cap.aprField===true);
+check('...and the rate travels into the payoff planner instead of arriving as 0%',
+      cap.imported==='HELOC@6.5,Visa@26.9', cap.imported);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
