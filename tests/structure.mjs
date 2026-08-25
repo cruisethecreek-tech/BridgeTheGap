@@ -2823,6 +2823,69 @@ check('the monthly snapshot carries what the trends read',
 check('changing a balance reaches the trend the same day',
       trends.snapped===4321, String(trends.snapped));
 
+/* ---- 48. the only scoreboard the app cannot flatter itself with ----
+   The framing, in the user's words: this is not really a budgeting app, it is an
+   accountability app - and since it never pulls bank data, whatever is actually
+   in their accounts is the reflection of how well it works. Them freely updating
+   that balance is the measurement.
+
+   That is structurally true and worth the app saying out loud. Every other
+   figure in here is built from what somebody chose to type: log less and the app
+   looks calmer, log nothing and it has nothing bad to say. The account balance
+   is the exception precisely BECAUSE the app cannot reach it - typed in freely,
+   from outside, against no incentive.
+
+   Which is exactly why it has to be reported carefully. A rising balance is not
+   proof the app worked; a raise, a refund and an unpaid bill look identical from
+   here. It says what moved, says what it cannot know, and stops. ---- */
+const score = await p.evaluate(() => {
+  const o={};
+  const seed=(banks,intensity)=>{
+    state=JSON.parse(JSON.stringify(defaultState()));
+    state.onboarded=true; state.uiMode='all'; state.stageReached=3; state.hourlyWage=22; state.trueRateSkipped=true;
+    state.intensity=intensity||'blunt';
+    state.intake={name:'Pat',income:3200,reflections:{situation:'ok'}};
+    const M=thisMonth(); state.activeMonth=M;
+    state.snapshots=banks.map((v,i)=>({month:shiftMonth(M,-(banks.length-1-i)),date:'x',bank:v}));
+    state.accounts=[{id:'a',name:'Checking',kind:'checking',balance:banks[banks.length-1],updated:todayStr()}];
+    save();
+  };
+  const sig=()=>{ const r=buildReport(); const g=r.signals.find(x=>x.k==='bankTrend');
+    return g ? {t:g.t, work:g.work, nudge:String(g.nudge).replace(/<[^>]*>/g,''), bad:!!g.bad}
+             : {locked:(r.locked.find(l=>/cannot make up/.test(l.t))||{}).t, do:(r.locked.find(l=>/cannot make up/.test(l.t))||{}).do}; };
+  seed([2000,2600,3400],'savage'); o.up=sig();
+  seed([5000,4200,3100]);          o.down=sig();
+  seed([3000,3010,2995]);          o.flat=sig();
+  seed([3000]);                    o.one=sig();
+  /* staleness is a fact, not a nag - shown late, gone the moment it is current */
+  seed([2000,2600,3400]);
+  state.accounts[0].updated=shiftDays(todayStr(),-23); save();
+  activateTab('goals'); renderAccounts();
+  o.stale=(document.querySelector('.ac-stale')||{}).innerText||'';
+  state.accounts[0].updated=shiftDays(todayStr(),-3); save(); renderAccounts();
+  o.recent=!document.querySelector('.ac-stale');
+  /* and the panel itself has to say why this number is different */
+  o.thesis=/it is the scoreboard/i.test(document.getElementById('view-goals').innerText);
+  return o;
+});
+check('two readings of the real balance become a verdict',
+      /up \$1,400/.test(score.up.t) && /\$3,400 − \$2,000 = \+\$1,400/.test(score.up.work),
+      `${score.up.t} | ${score.up.work}`);
+check('...one reading is not a trend, and it says what would make it one',
+      /needs two readings/.test(score.one.locked||'') && score.one.do==='account', score.one.locked);
+check('...a fall is not called a failure', /not automatically failure/.test(score.down.nudge) && score.down.bad===true,
+      score.down.nudge.slice(-80));
+check('...and level is called level', /held level/.test(score.flat.t) && /Not falling is worth something/.test(score.flat.nudge));
+check('it says what it cannot know, every time',
+      ['up','down','flat'].every(k=>/cannot tell you WHY it moved/.test(score[k].nudge)));
+check('...and why this one number is different from all the others',
+      /did not come from your own typing/.test(score.up.nudge)
+        && /only honest scoreboard/.test(score.up.nudge), score.up.nudge.slice(-60));
+check('a stale balance is named, with the reason it matters', /Last checked 23 days ago/.test(score.stale)
+        && /honest measure of whether any of this is working/.test(score.stale), score.stale.slice(0,50));
+check('...and it is a fact, not a nag - gone once it is current', score.recent===true);
+check('the panel where the number lives says why it is the scoreboard', score.thesis===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

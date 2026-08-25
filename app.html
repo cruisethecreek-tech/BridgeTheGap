@@ -607,6 +607,8 @@
     background:transparent;color:var(--muted);font-size:13.5px;line-height:1.55}
   .sp-recent .am.put{color:rgb(var(--good-rgb))}
   .sp-recent .ce-put{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgb(var(--good-rgb));margin-left:5px}
+  .ac-stale{margin-top:10px;padding:10px 12px;border-radius:11px;border:1px solid var(--line);
+    background:rgba(var(--accent-rgb),.07);font-size:13px;line-height:1.55}
   .trend-seg{flex-wrap:wrap;margin-bottom:10px}
   .trend-wrap{margin-top:4px}
   .li-apr{display:inline-flex;align-items:center;gap:2px;color:var(--muted);font-size:12px;font-weight:700;flex:none}
@@ -2132,6 +2134,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <summary><span class="acc-hd">Accounts<span class="acc-sub">What's actually in the bank, in your words</span></span></summary>
         <div class="acc-body">
           <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what's really sitting in each account today. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
+          <p class="sub"><b>And it is the scoreboard.</b> This app never connects to your bank, which means every other figure in it is built from what you chose to type - log less and it looks calmer. This number is the exception, because it comes from outside and you have nothing to gain by inflating it. What it does over months is the honest answer to whether any of this is working. Keep it current and the app can tell you the truth; let it go stale and it can only tell you about your typing.</p>
           <div class="row" style="gap:8px;margin-top:12px">
             <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
             <select id="acctKind" style="min-width:120px"></select>
@@ -7316,6 +7319,12 @@ function loggedSince(dateStr){
   return state.transactions.filter(t=>t.date>dateStr).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
 }
 function oldestAcctUpdate(){ const d=(state.accounts||[]).map(a=>a.updated).filter(Boolean).sort(); return d[0]||''; }
+/* The whole scoreboard depends on this being retyped from time to time, so how
+   long it has been is a fact worth showing. Nagging would be the wrong move -
+   this app does not nag - but silence lets a balance quietly become fiction. */
+function newestAcctUpdate(){ const d=(state.accounts||[]).map(a=>a.updated).filter(Boolean).sort(); return d[d.length-1]||''; }
+function daysSinceBalance(){ const d=newestAcctUpdate(); if(!d) return null;
+  return Math.max(0, Math.round((Date.parse(todayStr()+'T00:00:00')-Date.parse(d+'T00:00:00'))/86400000)); }
 function netWorth(){ return sumAssets()+bankTotal()-sumLiab(); }
 function avgMonthlyIncome(){
   const byM={}; state.transactions.filter(t=>t.type==='income').forEach(t=>{const m=monthOf(t.date);byM[m]=(byM[m]||0)+t.amount;});
@@ -7718,6 +7727,9 @@ function renderAccounts(){
   if(em>0) bits.push(`<div class="ac-line">Emergency fund: <b>${usd(em)}</b>${ess>0?` - that's <b>${(Math.round(em/ess*10)/10)} month${(Math.round(em/ess*10)/10)===1?'':'s'}</b> of your essentials`:''}.</div>`);
   if(col>0) bits.push(`<div class="ac-line">College / kids: <b>${usd(col)}</b>.</div>`);
   if(Math.abs(drift)>0.005) bits.push(`<div class="ac-line sub">Since you last updated a balance you've logged <b>${usd(drift)}</b> of movement. If reality has drifted, retype the real number - the app will never quietly change it for you.</div>`);
+  /* Not a nag - a fact, and the reason it matters, stated once. */
+  const age=daysSinceBalance();
+  if(age!=null && age>=10) bits.push(`<div class="ac-stale">Last checked <b>${age} days ago</b>. This is the one number in the whole app that does not come from your own typing - you read it off your bank, with nothing to gain by being generous, which is exactly why it is the honest measure of whether any of this is working. Two minutes to retype it is the whole cost.</div>`);
   sum.innerHTML=bits.join('');
 }
 (function(){
@@ -9874,6 +9886,18 @@ const RP_TONE={
     middle:{clean:'From what you told setup, not from what has landed yet.',
             blunt:'That is your own figure times twelve, not a measurement. Two full months and it becomes real.',
             savage:'That is your number times twelve - a claim, not a measurement. Log two months and it stops being a claim.'}},
+  bankUp:{
+    middle:{clean:'The app cannot take credit for that, and neither can it be blamed if it turns. It is just the number.',
+            blunt:'That is the only scoreboard here the app cannot flatter itself with - it comes from your bank, not from your typing.',
+            savage:'Every other number here is built from what you chose to type. That one is not. It is the only honest scoreboard in the building.'}},
+  bankDown:{
+    middle:{clean:'Down is information, not a verdict. Plenty of good reasons a balance falls.',
+            blunt:'Down is not automatically failure - a planned purchase looks identical to a bad month from here. Only you know which it was.',
+            savage:'Down. A planned move and a bad month look exactly the same from here, and the app is not going to guess which one you had.'}},
+  bankFlat:{
+    middle:{clean:'Level across the whole stretch.',
+            blunt:'Level. Not falling is worth something; it is not the same as building.',
+            savage:'Flat. Holding the line beats sliding, and it is still not the same as getting anywhere.'}},
   timeWeek:{
     middle:{clean:'Hours are the other budget.', blunt:'Hours are the other budget, and it does not roll over.',
             savage:'Hours are the one budget with no overdraft. Spent is spent.'}}
@@ -10138,6 +10162,42 @@ function outsideFresh(){ return daysSince(OUTSIDE.built) <= 240; }
 /* the outside signals ride the same rails as the personal ones: silent below
    their data, working shown, never first (context waits behind the person's own
    month). They are declared after the personal signals for exactly that reason. */
+/* ============================================================
+   THE ONLY SCOREBOARD THE APP CANNOT FLATTER ITSELF WITH
+
+   Every other figure in here is built from what somebody chose to type. Log
+   less and the app looks calmer; log nothing and it has nothing bad to say.
+   That is the structural weakness of a tool with no bank connection.
+
+   The account balance is the exception, and it is the exception precisely
+   BECAUSE the app cannot reach it. It is typed in freely, from outside, against
+   no incentive - so its movement over time is the one honest answer to "is any
+   of this working". That is the whole thesis of an accountability app rather
+   than a budgeting one: the budget is the process, the balance is the outcome.
+
+   Which is exactly why it has to be reported carefully. A rising balance is not
+   proof the app worked - a raise, a refund or an unpaid bill look identical from
+   here. A falling one is not proof of failure. It says what moved, it says what
+   it cannot know, and it stops there.
+   ============================================================ */
+REPORT_SIGNALS.push(
+  { k:'bankTrend', run(){
+      const snaps=(state.snapshots||[]).filter(s=>s.bank!=null).slice().sort((a,b)=>a.month<b.month?-1:1);
+      if(snaps.length<2) return {locked:'A second month of balances - the one number the app cannot make up needs two readings before it is a trend.', do:'account'};
+      const first=snaps[0], last=snaps[snaps.length-1];
+      const move=last.bank-first.bank, months=snaps.length;
+      const flat=Math.abs(move) < Math.max(25, Math.abs(first.bank)*0.01);
+      const H=effectiveHourly();
+      const per=move/Math.max(1,months-1);
+      return { t: flat ? 'What you actually hold has held level'
+                 : move>0 ? `What you actually hold is up ${money(move)}`
+                          : `What you actually hold is down ${money(-move)}`,
+        body:`Across ${months} month${months>1?'s':''} of readings, the money in your accounts went from <b>${money(first.bank)}</b> in ${fmtMonth(first.month)} to <b>${money(last.bank)}</b> in ${fmtMonth(last.month)}.${flat?'':` That is about <b>${money(Math.abs(per))}</b> a month${move>0?' gained':' gone'}.`}`,
+        work:`${money(last.bank)} − ${money(first.bank)} = ${move>=0?'+':'−'}${money(Math.abs(move))} over ${months-1} month${months-1===1?'':'s'}`,
+        nudge:`This is the only figure here that did not come from your own typing - you read it off your bank and put it in, with nothing to gain by being generous. It also cannot tell you WHY it moved: a raise, a refund, a bill you have not paid yet and a month of genuine discipline all look the same from this height.${(move>0&&H>0)?` For scale, ${money(move)} is ${fmtHours(move/H)} of your life you did not have to sell again.`:''} ${rpSay(move>0?RP_TONE.bankUp:(flat?RP_TONE.bankFlat:RP_TONE.bankDown),null)}`,
+        bad: move<0 && !flat };
+    }}
+);
 REPORT_SIGNALS.push(
   { k:'oCpi', run(){
       if(!outsideFresh()) return null;
@@ -12238,6 +12298,7 @@ const TRAIL={
   give:     {tab:'goals',    focus:'giveName',     label:'Give something'},
   asset:    {tab:'goals',    focus:'assetName',    label:'Add an asset'},
   liab:     {tab:'goals',    focus:'liabName',     label:'Add what you owe'},
+  account:  {tab:'goals',    focus:'acctName',     label:'Update my balances'},
   skill:    {tab:'goals',    focus:'skillName',    label:'Invest in a skill'},
   debt:     {tab:'debt',     focus:'debtName',     label:'Open the payoff planner'},
   hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},
