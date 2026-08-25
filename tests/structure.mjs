@@ -2447,6 +2447,64 @@ check('...one side at a time, so it cannot outgrow the phone',
       glance.onlyOne===1 && glance.incomeRow==='Paycheck', String(glance.onlyOne));
 check('...and it closes again', glance.closesAgain===0, String(glance.closesAgain));
 
+/* ---- 42. the date belongs beside the switch that raised the question ----
+   From a phone: "give the option to quickly change the calendar date when the
+   recurring button is pressed, instead of scrolling all the way down." The
+   inline repeat control offered a frequency and nothing else - and "monthly"
+   with no date is the app picking one, which it did: the 1st, hard-coded. The
+   only place to correct it was the Recurring panel at the bottom of the tab,
+   past every category. ---- */
+const repDate = await p.evaluate(async () => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3; save();
+  const M=state.activeMonth, c=findOrCreateCat('Roof');
+  budgetFor(M)[c.id]=848.38; save(); activateTab('budget'); renderBudget();
+  o.beforeTick=document.querySelectorAll('[data-repdate]').length;
+  const cb=document.querySelector('[data-repeat="'+c.id+'"]');
+  cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(x=>setTimeout(x,80));
+  const rec=()=>state.recurring.find(r=>r.catId===c.id);
+  o.anchored={anchor:rec().anchor, today:todayStr()};
+  /* anchoring to a date that has already gone back-posts a bill - and if they
+     logged that rent by hand, it lands twice */
+  o.noBackPost={posted:postRecurring(M), spent:monthExpense(M)};
+  const di=()=>document.querySelector('[data-repdate="'+c.id+'"]');
+  o.shown={exists:!!di(), value:di()&&di().value};
+  di().value=M+'-01'; di().dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(x=>setTimeout(x,80));
+  o.moved={anchor:rec().anchor, day:rec().day};
+  di().value=''; di().dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(x=>setTimeout(x,60));
+  o.blankIgnored=rec().anchor;
+  const sel=document.querySelector('[data-repfreq="'+c.id+'"]');
+  sel.value='biweekly'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(x=>setTimeout(x,60));
+  o.freqKeepsDate={freq:rec().freq, anchor:rec().anchor};
+  /* untick and the date goes with it - a date for a bill that does not repeat
+     is a control with nothing behind it */
+  const cb2=document.querySelector('[data-repeat="'+c.id+'"]');
+  cb2.checked=false; cb2.dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(x=>setTimeout(x,80));
+  o.goneWithIt=document.querySelectorAll('[data-repdate]').length;
+  return o;
+});
+check('no date control until the thing actually repeats',
+      repDate.beforeTick===0 && repDate.goneWithIt===0,
+      `${repDate.beforeTick}/${repDate.goneWithIt}`);
+check('ticking repeat puts the date right there', repDate.shown.exists===true, String(repDate.shown.value));
+check('...anchored to a 1st that has not happened yet, so nothing back-posts',
+      repDate.anchored.anchor>repDate.anchored.today && /-01$/.test(repDate.anchored.anchor),
+      repDate.anchored.anchor);
+check('...and nothing is posted for a date already gone',
+      repDate.noBackPost.posted===0 && repDate.noBackPost.spent===0, JSON.stringify(repDate.noBackPost));
+check('changing it there moves the rule, day and all',
+      repDate.moved.anchor.endsWith('-01') && repDate.moved.day===1, JSON.stringify(repDate.moved));
+check('...a blank date is not an instruction', repDate.blankIgnored.endsWith('-01'), repDate.blankIgnored);
+check('...and the frequency beside it keeps the date',
+      repDate.freqKeepsDate.freq==='biweekly' && repDate.freqKeepsDate.anchor.endsWith('-01'),
+      JSON.stringify(repDate.freqKeepsDate));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

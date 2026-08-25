@@ -227,7 +227,15 @@
   .panel-waiting{opacity:.72}
   .panel-waiting>*:not(h2):not(.sub):not(.pw-note){display:none!important}
   .panel-waiting .pw-note{display:block;margin-top:10px;font-size:12.5px;color:var(--accent);background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.28);border-radius:10px;padding:9px 12px}
-  .rep{display:inline-flex;align-items:center;gap:5px;flex-shrink:0}
+  .rep{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;flex-wrap:wrap}
+  .rep-d{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;
+    padding:5px 7px;font:inherit;font-size:12px;font-weight:700;max-width:140px;min-width:0}
+  /* A native date field has a floor width - "mm/dd/yyyy" - so on a phone the
+     repeat controls take their own line rather than shoving the row off the
+     glass. Caught by the layout suite the moment the date input landed. */
+  @media(max-width:560px){
+    .rep{flex:1 1 100%;justify-content:flex-start;flex-shrink:1}
+  }
   .rep-t{display:inline-flex;align-items:center;cursor:pointer;position:relative}
   .rep-t input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
   .rep-t span{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:14px;line-height:1}
@@ -4421,6 +4429,7 @@ let collapsedCats=new Set();
    "the rent repeats every month".
    ============================================================ */
 const ROW_FREQS=['weekly','biweekly','monthly','quarterly'];   // the four people actually use; the full six stay in the Recurring panel
+function fmtDayShort(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}); }catch(_){ return d; } }
 function recForCat(catId){ return (state.recurring||[]).find(r=>r.type==='expense' && r.catId===catId) || null; }
 function repeatCtrlHTML(catId, assigned){
   if(catReorder) return '';
@@ -4430,10 +4439,19 @@ function repeatCtrlHTML(catId, assigned){
     return `<option value="${k}"${k===freq?' selected':''}>${escapeHtml(m.label)}</option>`; }).join('');
   const extra = on && !ROW_FREQS.includes(freq)
     ? `<option value="${freq}" selected>${escapeHtml(recFreqMeta(r).label)}</option>` : '';
+  /* The frequency alone was half an answer. "Monthly" without a date is the app
+     picking one, and the only place to correct it was the Recurring panel at the
+     very bottom of the tab - past every category, which nobody scrolls to just
+     to move a bill from the 26th to the 1st. The date belongs where the decision
+     is being made, next to the switch that raised the question. */
+  const anchor=on?recAnchor(r):'';
+  const next=on?recNextDue(r):null;
   return `<span class="rep ${on?'on':''}">
     <label class="rep-t" title="${on?'This repeats - untick to stop':'Tick if this bill repeats'}">
       <input type="checkbox" data-repeat="${catId}"${on?' checked':''}><span>↻</span></label>
     ${on?`<select class="rep-f" data-repfreq="${catId}" title="How often">${extra}${opts}</select>`:''}
+    ${on?`<input class="rep-d" type="date" data-repdate="${catId}" value="${escapeHtml(anchor)}"
+        title="${next?'Next one: '+next:'The date it lands'}" aria-label="Date it lands">`:''}
   </span>`;
 }
 function wireRepeat(box){
@@ -4455,9 +4473,25 @@ function wireRepeat(box){
       return;
     }
     state.recurring=state.recurring||[];
-    state.recurring.push({id:uid(), type:'expense', amount:amt, catId:id, freq:'monthly', anchor:M+'-01', src:'row'});
+    /* Anchoring to the 1st of THIS month back-posts a bill whose date has
+       already gone - and if they logged that rent by hand, it lands twice. The
+       1st that has not happened yet is the same day of the month and cannot
+       duplicate anything, and the date control beside it moves it in one tap. */
+    const first=M+'-01';
+    const anchor = todayStr()>first ? shiftMonth(M,1)+'-01' : first;
+    const rec={id:uid(), type:'expense', amount:amt, catId:id, freq:'monthly', anchor, day:1, src:'row'};
+    state.recurring.push(rec);
     save(); renderBudget(); renderRecurring(); renderTx();
-    if(typeof toast==='function') toast(`${catName(id)} repeats monthly at ${money(amt)}. Change the frequency beside it.`);
+    if(typeof toast==='function') toast(`${catName(id)} repeats monthly at ${money(amt)}. First one lands ${fmtDayShort(anchor)} - change the date beside it if that is wrong.`);
+  }));
+  box.querySelectorAll('[data-repdate]').forEach(inp=>inp.addEventListener('change',()=>{
+    const r=recForCat(inp.dataset.repdate); if(!r) return;
+    const v=inp.value;
+    if(!v){ inp.value=recAnchor(r); return; }        // a blank date is not an instruction
+    r.anchor=v; r.day=Math.min(28,Math.max(1,+v.slice(8,10)||1));
+    save(); renderBudget(); renderRecurring(); renderTx();
+    const nx=recNextDue(r);
+    if(typeof toast==='function') toast(nx?`Next one: ${fmtDayShort(nx)}.`:'Date set.');
   }));
   box.querySelectorAll('[data-repfreq]').forEach(sel=>sel.addEventListener('change',()=>{
     const r=recForCat(sel.dataset.repfreq); if(!r) return;
