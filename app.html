@@ -3999,6 +3999,14 @@ function activateTab(name,fromHistory){
   /* Nothing should be able to land on an area the user switched off - not a
      shortcut, not the map, not a stale history entry from before they hid it. */
   if(areaOff(name)) name='home';
+  /* And nothing should land on a tab the ladder has hidden. That is how Accounts
+     became findable only through one link on another tab: you could get in and
+     then had no door to come back through, because the button was not in the
+     bar. Reachability is now checked at the moment of navigating, not assumed. */
+  if(name!=='home'){
+    const btn=document.querySelector('#tabs .tab[data-view="'+name+'"]');
+    if(btn && btn.classList.contains('stage-locked')) name='home';
+  }
   currentTab=name;
   if(!fromHistory && typeof history!=='undefined' && history.pushState){ history.pushState({t:'tab',name},''); }
   document.body.classList.toggle('on-home', name==='home');
@@ -4097,6 +4105,28 @@ function evidenceStage(){ let s=1;
   if((state.assets&&state.assets.length)||(state.liabilities&&state.liabilities.length)||(state.network&&state.network.length)) s=3;
   return s;
 }
+/* A tab button carries its own data-stage, so the ladder could hide the DOOR to
+   a room that still had something in it. That is what happened to Accounts: it
+   landed on Build later than the rest of the tab, it is deliberately ungated -
+   "what's in the bank" is a fact, not a wealth-stage tool, and Home already
+   shows spend-mode users their bank total - but the Build BUTTON is stage 2, so
+   in spending mode the tab vanished and took Accounts with it. The only way in
+   left was a link from Reflect's net-worth view, which deep-linked into a tab
+   with no door: you could get there once and never find it again.
+
+   So the rule is now about the room, not the label on it. A tab is hidden only
+   when everything inside it is hidden. */
+function unlockReachableTabs(){
+  document.querySelectorAll('#tabs .tab[data-stage][data-view]').forEach(btn=>{
+    const view=document.getElementById('view-'+btn.dataset.view); if(!view) return;
+    const panels=[...view.querySelectorAll('.panel')];
+    if(!panels.length) return;                       // a view built of something other than panels keeps its own rule
+    /* Symmetric on purpose. An earlier version only ever REMOVED the lock, so a
+       tab whose contents all closed later kept its button - a door to an empty
+       room, which is the same fault in the other direction. */
+    btn.classList.toggle('stage-locked', !panels.some(p=>!p.classList.contains('stage-locked')));
+  });
+}
 function applyStage(opts){
   opts=opts||{};
   // Spending mode is a spender's world - the wealth-stage ladder (net worth,
@@ -4104,6 +4134,7 @@ function applyStage(opts){
   // level up or celebrate it here.
   if(state.spendingMode){
     document.querySelectorAll('[data-stage]').forEach(el=>el.classList.add('stage-locked'));
+    unlockReachableTabs();
     renderStageBar(); renderRetro();
     if(typeof positionFab==='function') positionFab();   // hiding Build reshapes the bar - re-seat the FAB in the notch
     return;
@@ -4113,6 +4144,7 @@ function applyStage(opts){
   if(state.uiMode!=='all' && rs>(state.stageReached||1)){ state.stageReached=rs; save(); leveledUp=rs; }
   const stage=activeStage();
   document.querySelectorAll('[data-stage]').forEach(el=>{ el.classList.toggle('stage-locked',(+el.dataset.stage)>stage); });
+  unlockReachableTabs();
   renderStageBar(); renderRetro();
   if(typeof positionFab==='function') positionFab();     // showing/hiding Build reshapes the bar - re-seat the FAB
   if(leveledUp && !opts.silent) celebrateStage(leveledUp);
@@ -10128,7 +10160,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
     bar.innerHTML=`<p class="sub rf-lead">What you own minus what you owe, and the running balance of everything you have tracked.</p>`;
     body.innerHTML=`<div class="rf-nw"><div class="rf-nwv ${nw<0?'bad':'good'}">${money(nw)}</div><div class="rf-nwk">Net worth today</div>
         <div class="rf-nwsplit"><span>Assets <b>${money(a)}</b></span><span>Owed <b>${money(l)}</b></span></div>
-        <button class="btn sm ghost" id="rfEditNW">Edit what you own and owe →</button></div>
+        <button class="btn sm ghost" id="rfEditNW">${(typeof state!=='undefined'&&state.spendingMode)?'Edit my accounts':'Edit what you own and owe'} →</button></div>
       <div id="trendChart"></div>`;
     renderCharts();
     const e=document.getElementById('rfEditNW');
