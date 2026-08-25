@@ -2162,6 +2162,96 @@ const oneKind = await p.evaluate(() => {
 check('all three kinds of entry survive in the fast log', oneKind.inv===true && oneKind.inc===true,
       JSON.stringify(oneKind));
 
+/* ---- 39. not everything is a trap ----
+   Sent from a phone, with a screenshot: someone scanned a $100 leaf mulcher.
+   Every autumn they had fought the leaves with a rake that could not do it, the
+   alternative was paying somebody, and the tool solved it. The app called it a
+   Scroll Trap and told them Meta had bet they would cave. That is not a
+   gut-check, it is an accusation - and an app that calls every purchase a trap
+   is worth exactly as much as one that calls none of them a trap, because
+   neither is telling you anything.
+
+   The fifth answer is not a permission slip. It asks what the thing replaces and
+   does the arithmetic, and it is perfectly willing to conclude "nothing". ---- */
+const tool = await p.evaluate(async () => {
+  const o={};
+  state=JSON.parse(JSON.stringify(defaultState()));
+  state.onboarded=true; state.uiMode='all'; state.stageReached=3;
+  state.hourlyWage=22; state.hoursPerWeek=40; state.trueRateSkipped=true;
+  save(); renderAll(); activateTab('impulse'); fillTrapPickers();
+  o.options=[...document.getElementById('impTrap').options].map(x=>x.value);
+  /* the extra questions cost the other four lanes nothing */
+  o.hiddenFirst=document.getElementById('impTool').classList.contains('hide');
+  const pick=v=>{ const s=document.getElementById('impTrap'); s.value=v; s.dispatchEvent(new Event('change',{bubbles:true})); };
+  pick('tool');
+  o.shown=!document.getElementById('impTool').classList.contains('hide');
+  o.units=[...document.querySelectorAll('#impTool select[data-unit]')].map(x=>x.dataset.unit).sort();
+  const scan=(nm,amt,rep,hrs)=>{
+    document.getElementById('impName').value=nm;
+    document.getElementById('impAmt').value=String(amt);
+    document.getElementById('impRepAmt').value=rep==null?'':String(rep);
+    document.getElementById('impRepHrs').value=hrs==null?'':String(hrs);
+    document.getElementById('impRun').click();
+    const c=document.getElementById('impResult');
+    return { cls:c.querySelector('.checkcard').className, head:c.querySelector('.verdict').textContent,
+             tag:c.querySelector('.trap-tag').textContent, body:c.querySelector('.qline').textContent,
+             needle:parseFloat(c.querySelector('.needle').style.left),
+             honest:(c.querySelector('.tool-honest')||{}).textContent||'',
+             btns:[...c.querySelectorAll('.check-actions button')].map(x=>x.textContent.trim()),
+             text:c.innerText };
+  };
+  /* the actual purchase from the screenshot */
+  o.mulcher=scan('Leaf mulcher',100,240,12);
+  /* the arithmetic, by hand: $240/yr hired vs 12 hrs x $22 = $264/yr of hours.
+     They would have done ONE of them, so the bigger one counts and the other is
+     named as set aside. $100 / $264 = 0.379 yr = 5 months. */
+  o.math=(()=>{ const pb=toolPayback(100,240,'year',12,'year',22);
+    return {total:pb.totalYear, both:pb.both, usedHours:pb.usedHours,
+            years:Math.round(pb.years*1000)/1000, five:pb.fiveYear}; })();
+  /* replaces nothing: the lane must refuse to bless it */
+  o.want=scan('Fancy rake',100,null,null);
+  /* a slow payback is called slow, not celebrated */
+  o.slow=scan('Ride-on mower',4000,300,null);
+  /* the other lanes are untouched */
+  pick('scroll');
+  o.scroll=scan('Sneakers',100,null,null);
+  o.hiddenAgain=document.getElementById('impTool').classList.contains('hide');
+  return o;
+});
+check('there is a fifth answer, and it is not a trap',
+      tool.options.length===5 && tool.options[4]==='tool', tool.options.join(','));
+check('...its questions cost the other four lanes nothing',
+      tool.hiddenFirst===true && tool.shown===true && tool.hiddenAgain===true);
+check('...and each one takes the period you think in',
+      tool.units.join(',')==='impRepAmt,impRepHrs', tool.units.join(','));
+check('the leaf mulcher gets a payback, not an accusation',
+      /pays for itself in 5 months/.test(tool.mulcher.head) && /Replaces a real cost/.test(tool.mulcher.tag),
+      tool.mulcher.head);
+check('...and the needle points at Freedom, not at Trap',
+      tool.mulcher.needle<25, String(tool.mulcher.needle));
+check('...with none of the shame the trap lanes carry',
+      !/Meta ran the numbers|prove them wrong|cave/i.test(tool.mulcher.text));
+check('the hours and the hired help are never added together',
+      tool.math.total===264 && tool.math.both===true && tool.math.usedHours===true,
+      JSON.stringify(tool.math));
+check('...and it says out loud which one it set aside',
+      /would have done <?b?>?one<\/?b?>? of them|one of them, not both/.test(tool.mulcher.body)
+        && /leaves \$240 a year of hired help out/.test(tool.mulcher.body),
+      tool.mulcher.body.slice(-160));
+check('...the payback is right to the month', tool.math.years===0.379, String(tool.math.years));
+check('replacing nothing is called a want, not an investment',
+      /No cost replaced/.test(tool.want.tag) && /this is a want/.test(tool.want.body)
+        && !/pays/.test(tool.want.cls), tool.want.tag);
+check('...and the needle swings back toward Trap', tool.want.needle>50, String(tool.want.needle));
+check('a slow payback is called slow', /slow payback/.test(tool.slow.body), tool.slow.body.slice(-90));
+check('the caveats are not optional',
+      /if you actually use it/.test(tool.mulcher.honest) && /would genuinely have paid|really going to/.test(tool.mulcher.honest));
+check('the buy button stops calling it a ransom',
+      tool.mulcher.btns[0]==='Buy it - it pays back' && tool.mulcher.btns.includes('Skip it'),
+      tool.mulcher.btns.join(' | '));
+check('the four trap lanes are untouched',
+      /Scroll Trap detected/.test(tool.scroll.text) && !/tool/.test(tool.scroll.cls), tool.scroll.tag);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

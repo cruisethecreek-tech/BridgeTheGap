@@ -238,6 +238,16 @@ It also checks **id uniqueness in the live dom**, which building this earned: a
 panel ended up carrying two `id` attributes, the browser kept the first, and the
 code that had been hiding it silently stopped finding it.
 
+It holds **not everything is a trap** - the fifth gut-check lane, where the
+properties guard against it becoming a rationalisation button. The payback has to
+be right to the month, the needle has to point at Freedom when the arithmetic
+does and swing back toward Trap when it does not, replacing nothing has to be
+called a **want** rather than an investment, a slow payback has to be called
+slow, the caveats have to be present, and the hired cost and the saved hours must
+**never be added together** - you would have done one of them, not both, so the
+larger counts and the other is named out loud as set aside. The four trap lanes
+have to be untouched, and their extra questions must cost those lanes nothing.
+
 It holds **money that did not leave** - the rule that the fast way to log must
 never be able to write only one kind of entry again. A Roth contribution is never
 guessed as shopping, a put-away line writes an investment rather than an expense,
