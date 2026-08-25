@@ -192,12 +192,31 @@ wrote a paycheck dated `${M}-01` whether or not the person had been paid, so
 somebody setting up on the 26th who gets paid on the 29th was shown a month's
 income they did not have - and left-to-budget, the net tile and the glance panel
 all inherited it. That was the app breaking its own rule: `postRecurring` caps
-the current month at today precisely so that "spent has to be a fact, not a
-forecast". The `paidYet` step asks the one thing only they can answer. **Landed**
-logs it as of *today*, a date the app actually knows. **Not yet** and **some of
-it** log nothing - the recurring rule is still written, because it is a statement
-about what repeats rather than a claim that it happened, and the reply admits the
-1st was a guess and says where the real payday goes.
+the current month at today precisely so that *"spent has to be a fact, not a
+forecast"*; the intake simply went round it.
+
+The `payDay` step asks for one date - **when did you last actually get paid?** -
+and it settles both things the app was inventing. It is asked as the *last*
+payday rather than the next, because that is a fact people know precisely, and
+everything else follows from it: the recurring rule is anchored there at the
+cadence the income step already captured (weekly and biweekly carrying the
+per-payday amount), and `commitIntake` now writes **no transaction at all**. It
+calls `postRecurring(M)` instead, which posts exactly what has come due by today
+and nothing that has not. So a monthly paycheck due on the 29th posts nothing on
+the 25th, one that landed on the 9th posts *on the 9th* rather than today or the
+1st, and a biweekly anchor four weeks back correctly lands two paydays.
+
+It is **optional**, because someone starting a new job genuinely has no answer
+and a made-up date is worse than none; skipping anchors the rule to the 1st of
+next month so nothing is claimed in the meantime. It also carries a `why`, which
+exposed a second bug: `why` had only ever been wired into the chip renderers, so
+`haveNow` declared one and rendered no button at all - and the suite that checked
+it only ever asserted the field existed on the step object.
+
+One more thing that had to move with it: re-running setup dropped the intake's
+recurring **rules** and kept the transactions those rules had posted, so the next
+run created fresh rules, posted again, and the month quietly doubled its income.
+Entries now leave with their rule.
 
 **Nobody gets paid "in a normal month".** The intake had one income question and
 it wanted a monthly take-home. Anyone paid weekly, every two weeks, or by the

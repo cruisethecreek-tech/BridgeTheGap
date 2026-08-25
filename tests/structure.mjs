@@ -2322,50 +2322,97 @@ check('...while still separating logged money from bank money',
    26th. But commitIntake wrote a paycheck dated the 1st whether or not the
    person had been paid, and every figure built on it inherited that. ---- */
 const paid = await p.evaluate(() => {
-  const o={};
+  const M=thisMonth(), today=todayStr(), d=new Date().getDate(), dim=daysInMonth(M);
   const run=(ans)=>{
     state=JSON.parse(JSON.stringify(defaultState()));
     state.onboarded=true; state.uiMode='all'; state.stageReached=3; save();
-    iaAns={name:'Pat',acct:'full',income:3200,hoursPerWeek:40,wage:20,paidYet:ans,
-           roof:1200,situation:'ok',register:'middle',tone:'blunt'};
+    iaAns=Object.assign({name:'Pat',acct:'full',income:3200,hoursPerWeek:40,wage:20,
+      roof:1200,situation:'ok',register:'middle',tone:'blunt'},ans);
     iaCommitted=false; commitIntake();
-    const M=state.activeMonth;
-    return { inc:monthIncome(M),
+    return { inc:Math.round(monthIncome(state.activeMonth)*100)/100,
              dates:state.transactions.filter(t=>t.type==='income').map(t=>t.date),
-             repeats:state.recurring.filter(r=>r.type==='income').length };
+             rec:state.recurring.filter(r=>r.type==='income')
+                  .map(r=>`${r.amount}|${r.freq||'monthly'}|${r.anchor||'-'}`) };
   };
-  o.landed=run('yes'); o.notYet=run('no'); o.part=run('part');
-  o.today=todayStr();
-  /* the rule the app already had, restated so it cannot be lost */
+  const o={today};
+  /* the case from the phone: paid on the 29th, setting up before it */
+  const future=Math.min(dim, d+4);
+  o.notYet=run({payDay:shiftMonth(M,-1)+'-'+String(future).padStart(2,'0'), payFreq:'monthly'});
+  /* paid earlier this month: it posts, on the day it actually landed */
+  const past=String(Math.max(1,Math.min(9,d-3))).padStart(2,'0');
+  o.paid=run({payDay:M+'-'+past, payFreq:'monthly'});
+  /* biweekly walks forward from the anchor at the right cadence, per-payday amount */
+  o.biweekly=run({payDay:shiftDays(today,-28), payFreq:'biweekly', payAmt:1476.92});
+  /* skipped, because a new job genuinely has no answer - invent nothing */
+  o.skipped=run({payDay:''});
+  /* re-running setup must not post the same month's pay twice */
   state=JSON.parse(JSON.stringify(defaultState()));
   state.onboarded=true; save();
-  const M=state.activeMonth, dim=daysInMonth(M);
-  const future=Math.min(dim, new Date().getDate()+3);
-  state.recurring.push({id:'r1',type:'income',amount:3200,day:future,
-    anchor:M+'-'+String(future).padStart(2,'0'),source:'Paycheck',src:'intake'});
-  save();
-  o.future={posted:postRecurring(M), income:monthIncome(M)};
-  const st=INTAKE.find(x=>x.id==='paidYet');
-  o.step={ exists:!!st, opts:st?st.options.map(x=>x.value).join(','):'',
-           withIncome:st?st.showIf({income:3200}):null, without:st?st.showIf({income:0}):null,
-           noReply:st?st.options.find(x=>x.value==='no').reply:'' };
+  iaAns={name:'Pat',acct:'full',income:3200,hoursPerWeek:40,wage:20,roof:1200,
+    payDay:M+'-'+past, payFreq:'monthly', situation:'ok',register:'middle',tone:'blunt'};
+  iaCommitted=false; commitIntake(); const once=monthIncome(state.activeMonth);
+  iaCommitted=false; commitIntake();
+  o.rerun={once, twice:monthIncome(state.activeMonth)};
+  const st=INTAKE.find(x=>x.id==='payDay');
+  o.step={ exists:!!st, input:st&&st.input, optional:!!(st&&st.optional), why:!!(st&&st.why),
+           withIncome:st?st.showIf({income:3200}):null, without:st?st.showIf({income:0}):null };
+  /* and the "why" has to actually render, not just exist on the object - it was
+     only ever wired into the chip renderers, so a money step that declared one
+     showed no button at all */
   return o;
 });
-check('the intake asks whether the money has actually landed',
-      paid.step.exists===true && paid.step.opts==='yes,no,part', paid.step.opts);
-check('...and only when there is income to ask about',
+check('the intake asks when the money actually landed',
+      paid.step.exists===true && paid.step.input==='date', String(paid.step.input));
+check('...only when there is income to ask about',
       paid.step.withIncome===true && paid.step.without===false);
-check('"it landed" logs it as of today, not the 1st of the month',
-      paid.landed.inc===3200 && paid.landed.dates[0]===paid.today, paid.landed.dates.join(','));
-check('"not yet" logs no income at all', paid.notYet.inc===0 && paid.notYet.dates.length===0,
-      String(paid.notYet.inc));
-check('...and "some of it" refuses to guess the split too', paid.part.inc===0, String(paid.part.inc));
-check('...but the repeat is still recorded, because it does repeat',
-      paid.notYet.repeats===1 && paid.part.repeats===1, `${paid.notYet.repeats}/${paid.part.repeats}`);
-check('...and it says the payday was a guess, and where to correct it',
-      /guess the 1st as your payday/.test(paid.step.noReply) && /Recurring/.test(paid.step.noReply));
-check('a paycheck due later this month does not post today',
-      paid.future.posted===0 && paid.future.income===0, JSON.stringify(paid.future));
+check('...and it can be skipped, because a new job has no answer yet',
+      paid.step.optional===true && paid.step.why===true);
+check('a paycheck due later this month posts nothing today',
+      paid.notYet.inc===0 && paid.notYet.dates.length===0, String(paid.notYet.inc));
+check('...but the rule is anchored to the real payday, not the 1st',
+      /^3200\|monthly\|/.test(paid.notYet.rec[0]) && !/\-01$/.test(paid.notYet.rec[0]), paid.notYet.rec[0]);
+check('pay that already landed posts on the day it landed',
+      paid.paid.inc===3200 && paid.paid.dates[0].slice(0,7)===paid.today.slice(0,7)
+        && paid.paid.dates[0]<=paid.today, paid.paid.dates.join(','));
+check('biweekly walks forward at the right cadence, per payday',
+      paid.biweekly.inc===2953.84 && paid.biweekly.dates.length===2, JSON.stringify(paid.biweekly.dates));
+check('...carrying the per-payday amount, not the monthly one',
+      /^1476\.92\|biweekly\|/.test(paid.biweekly.rec[0]), paid.biweekly.rec[0]);
+check('skipping invents nothing and starts next month',
+      paid.skipped.inc===0 && /\-01$/.test(paid.skipped.rec[0]), paid.skipped.rec[0]);
+check('re-running setup does not post the same month twice',
+      paid.rerun.once===paid.rerun.twice && paid.rerun.once===3200, JSON.stringify(paid.rerun));
+
+/* A reason nobody can reach is the same as no reason. `why` was only ever wired
+   into the chip renderers, so haveNow and payDay both declared one and rendered
+   no button at all - and the suite that checked haveNow only ever asserted the
+   FIELD existed on the step object. */
+const whyRenders = await p.evaluate(async () => {
+  state=JSON.parse(JSON.stringify(defaultState())); save();
+  const out={};
+  for(const id of ['payDay','haveNow']){
+    openIntake();
+    iaAns={name:'Pat',acct:'full',income:3200,hasDebt:'yes',debtAmt:5000,payFreq:'monthly',
+           situation:'ok',register:'middle',tone:'blunt'};
+    iaStep=INTAKE.findIndex(s=>s.id===id); runIntakeStep();
+    await new Promise(r=>setTimeout(r,2600));
+    const btn=document.getElementById('iaWhy');
+    out[id]={shown:!!btn};
+    if(btn){ btn.click(); await new Promise(r=>setTimeout(r,60));
+      const bubs=[...document.querySelectorAll('#intakeLog .bub.bot')];
+      out[id].answered=bubs.length? bubs[bubs.length-1].textContent.slice(0,40) : '';
+      out[id].gone=!document.getElementById('iaWhy'); }
+    document.getElementById('intake').classList.remove('on');
+    document.getElementById('intakeLog').innerHTML='';
+  }
+  return out;
+});
+check('a step that declares a reason actually shows the button',
+      whyRenders.payDay.shown===true && whyRenders.haveNow.shown===true,
+      JSON.stringify({pay:whyRenders.payDay.shown, have:whyRenders.haveNow.shown}));
+check('...it answers when tapped, and does not ask to be asked twice',
+      !!whyRenders.payDay.answered && whyRenders.payDay.gone===true,
+      whyRenders.payDay.answered||'(no answer)');
 
 /* ---- and the totals open, because a total with nothing behind it is faith ---- */
 const glance = await p.evaluate(() => {

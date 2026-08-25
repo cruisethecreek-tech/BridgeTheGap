@@ -1422,11 +1422,26 @@
   .rec .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;flex-shrink:0}
   .rec.income .tag{background:rgba(var(--good-rgb),.12);color:var(--good);border:1px solid rgba(var(--good-rgb),.34)}
   .rec.expense .tag{background:var(--ink);color:var(--muted);border:1px solid var(--line)}
-  .rec .nm{flex:1;font-weight:700;font-size:14px;min-width:0;overflow-wrap:anywhere}
+  /* `overflow-wrap:anywhere` lets a name break mid-word, which ALSO drops its
+     min-content width to a single character - so flex handed the amount its full
+     width (an amount with cents has no break opportunity and cannot shrink) and
+     crushed "Partner" into a one-letter column. Same fault as the transaction
+     rows, mirrored: size the box that cannot shrink, and give the phone a second
+     line rather than pretending four things fit on one. */
+  .rec .nm{flex:1;font-weight:700;font-size:14px;min-width:0;overflow-wrap:break-word}
+  .rec .am{flex:none;white-space:nowrap}
+  @media (max-width:560px){
+    .rec{flex-wrap:wrap;gap:6px 10px}
+    .rec .tag{order:1}
+    .rec .am{order:2;margin-left:auto}
+    .rec .edit{order:3}
+    .rec .del{order:4}
+    .rec .nm{order:5;flex:1 1 100%}
+  }
   .rec .rec-when{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--muted);line-height:1.4;margin-top:2px}
   .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
   .rec.invest .am{color:var(--accent)}
-  .rec .am{font-weight:900}.rec.income .am{color:var(--good)}
+  .rec .am{font-weight:900;font-variant-numeric:tabular-nums}.rec.income .am{color:var(--good)}
   .glance{position:fixed;left:0;top:38%;z-index:120;display:flex;flex-direction:row-reverse;align-items:flex-start}
 .gl-tab{background:var(--panel);border:1px solid var(--line);border-left:none;color:var(--accent);border-radius:0 12px 12px 0;width:34px;height:46px;font-size:17px;line-height:1;cursor:pointer;box-shadow:3px 0 14px rgba(0,0,0,.28);flex:none;padding:0}
 .gl-tab:hover{border-color:var(--accent)}
@@ -10236,16 +10251,23 @@ const INTAKE=[
      gets paid on the 29th was shown a month's income they do not have, and
      every figure built on it - left to budget, net, the glance panel - inherited
      the lie. It is the only question that can settle it, so it gets asked. */
-  {id:'paidYet', input:'reflect', key:'paidYet', showIf:a=>intakeIncomeTotal(a)>0,
-    bot:a=>`One thing I won't guess at${a.name?', '+a.name:''}: has that money actually landed this month, or is it still coming? I'd rather show you nothing than show you money you haven't been paid.`,
-    options:[
-      {label:'Yes, it has landed', value:'yes',
-       reply:"Good - I'll log it as of today so the month starts from something real."},
-      {label:"Not yet this month", value:'no',
-       reply:"Then it isn't income yet, and I won't count it. Your budget will read as unfunded until it lands - that's not a fault, it's the truth showing. I've set it to repeat, but I've had to guess the 1st as your payday. Set the real day on Plan under Recurring and it will post itself, on time, every month."},
-      {label:'Some of it has', value:'part',
-       reply:"I'll leave it out rather than guess at the split - log what actually landed on Track and the numbers will be yours instead of mine. I've set the pay to repeat on the 1st as a placeholder; the real day goes on Plan under Recurring."}
-    ]},
+  /* One date settles two things the app was otherwise inventing: whether this
+     month's pay has landed, and when the next one will. Ask for the LAST payday
+     rather than the next - it is a fact people know precisely, and everything
+     else follows from it. The recurring engine already walks forward from an
+     anchor at the right cadence, and postRecurring already refuses to post
+     anything not yet due, so once the anchor is real the app stops guessing
+     entirely. Optional, because someone starting a new job genuinely has no
+     answer, and a made-up date is worse than none. */
+  {id:'payDay', input:'date', key:'payDay', optional:true, showIf:a=>+a.income>0,
+    sum:'Last payday',
+    bot:a=>{
+      const f=payFreqMeta(a.payFreq);
+      const cadence = f && f.k!=='hourly' && f.k!=='yearly' ? ` You said you're paid ${f.label.toLowerCase()}, so I can work out every payday from this one.` : '';
+      return `Last thing on money coming in${a.name?', '+a.name:''}: **when did you last actually get paid?**${cadence} I ask because I refuse to invent it - if I guessed, I'd show you money you haven't been handed yet, and then every number after it would be wrong.`;
+    },
+    why:"Because the alternative is making it up. Without this, setup logs a paycheck dated the 1st whether or not it arrived - so someone who gets paid on the 29th and sets up on the 26th is shown a month's income they do not have, and the budget, the net figure and the glance panel all inherit it. With a real date the app posts each paycheck the day it actually lands, and not a day sooner. Skip it and I will simply post nothing until next month.",
+    hint:'The date the money actually hit your account.'},
   {id:'householdOffer', input:'reflect', key:'wantHousehold', optional:true,
     showIf:a=>a.acct!=='spend' && (a.extraIncome||[]).some(x=>/partner/i.test(x.name)),
     bot:"You've got a partner bringing money in too. Want the full couples view? It tags who earns what, prices purchases in your partner's life-hours as well, and splits the essentials income-fairly (not just 50/50).",
@@ -10818,16 +10840,36 @@ function renderIntakeDock(s){
   const pre=(typeof s.prefill==='function')?(s.prefill(iaAns)||''):'';
   // a bare "e.g. 3200" tells nobody what unit or period is wanted - show the $ and say it
   const hint=s.hint?`<div class="ia-hint">${escapeHtml(s.hint)}</div>`:'';
+  const isDate=s.input==='date';
   const field=isMoney
     ? `<span class="ia-money"><span class="ia-cur">$</span><input id="iaInput" type="number" inputmode="decimal" min="0" step="any" value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'0')}"></span>`
+    : isDate
+    /* A native date field, because a payday is a date people know exactly and a
+       phone gives them a one-tap picker for it. Capped at today: this asks when
+       you WERE paid, and a future answer would be the same fabrication the
+       question exists to remove. */
+    ? `<input id="iaInput" type="date" max="${todayStr()}" value="${escapeHtml(pre)}">`
     : `<input id="iaInput" type="text" value="${escapeHtml(pre)}" placeholder="${escapeHtml(s.placeholder||'')}">`;
+  /* `why` was only ever wired into the chip renderers, so a money step that
+     declared one - haveNow did, and the structure suite only checked that the
+     FIELD existed - rendered no button at all. A reason nobody can reach is the
+     same as no reason. */
+  const whyB = s.why ? '<button class="intake-skip" id="iaWhy">Why are you asking?</button>' : '';
   dock.innerHTML=`<div class="inrow">${field}<button class="intake-send" id="iaSend">Send</button></div>${hint}`
-    +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}${backBtn}</div>`;
+    +`<div class="intake-underrow">${s.help?`<button class="intake-help" id="iaHelp">${escapeHtml(s.help.cta)}</button>`:''}${whyB}${optNow?'<button class="intake-skip" id="iaSkip2">Skip this</button>':''}${backBtn}</div>`;
+  { const wb=document.getElementById('iaWhy'); if(wb) wb.onclick=()=>{ iaBub(s.why,'bot'); wb.remove(); }; }
   const inp=document.getElementById('iaInput'); setTimeout(()=>{ inp.focus(); if(pre) try{inp.select();}catch(_){} },60);
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
   const hb=document.getElementById('iaHelp'); if(hb) hb.onclick=()=>runIntakeHelper(s);
   const submit=()=>{
     const raw=inp.value.trim();
+    if(isDate){
+      if(!raw){ if(optNow){ iaStore(s.key,''); iaBub('Skip','me'); iaAdvance(); } else inp.focus(); return; }
+      if(raw>todayStr()){ inp.focus(); return; }
+      iaStore(s.key,raw);
+      iaBub(new Date(raw+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}),'me');
+      iaAdvance(); return;
+    }
     if(isMoney){
       if(!raw){ if(optNow){ iaStore(s.key,0); iaBub('Skip','me'); iaAdvance(); } else inp.focus(); return; }
       const n=parseFloat(raw); if(isNaN(n)||n<0){ inp.focus(); return; }
@@ -11371,26 +11413,45 @@ function commitIntake(){
   // Re-running the setup chat REPLACES the previous intake's artifacts instead of stacking
   // a second paycheck / goal / liability on top of the first. (src:'intake' tags them;
   // intake transactions are purged for the active month only, so history stays history.)
+  /* Re-running setup used to drop the intake's recurring RULES and keep the
+     transactions those rules had posted - so the next run created fresh rules,
+     posted again, and the month quietly doubled its income. Take the entries
+     with their rule. (The old note==='Intake' rows are still purged, so a save
+     made before this change cleans itself up on the next run.) */
+  const oldIntakeRecIds=new Set(state.recurring.filter(r=>r.src==='intake').map(r=>r.id));
   state.recurring=state.recurring.filter(r=>r.src!=='intake');
-  state.transactions=state.transactions.filter(t=>!(t.note==='Intake' && monthOf(t.date)===M));
+  state.transactions=state.transactions.filter(t=>
+    !(t.note==='Intake' && monthOf(t.date)===M) && !(t.recId && oldIntakeRecIds.has(t.recId)));
   state.goals=state.goals.filter(g=>!(g.src==='intake' && !(g.saved>0)));   // keep any intake goal with real progress
   state.liabilities=state.liabilities.filter(l=>l.src!=='intake');
-  const addIncome=(amount,source,owner,hours)=>{
-    const rec={id:uid(),type:'income',amount,day:1,source,src:'intake'};
+  /* No transaction is written here any more. The rule is written with a REAL
+     anchor and cadence, and postRecurring posts it - which already refuses to
+     post anything not yet due this month. So the paycheck appears the day it
+     actually lands, and never before, without this function needing an opinion. */
+  const addIncome=(amount,source,owner,hours,freq,anchor)=>{
+    const rec={id:uid(),type:'income',amount,day:anchor?Math.min(28,+anchor.slice(8,10)||1):1,source,src:'intake'};
+    if(freq&&freq!=='monthly') rec.freq=freq;
+    if(anchor) rec.anchor=anchor;
     if(owner) rec.owner=owner; if(hours>0) rec.hours=hours;
     state.recurring.push(rec);
-    if(!landed) return;                      // it repeats, but it has not happened - see paidYet
-    const tx={id:uid(),type:'income',amount,source,owner:owner||'a',date:todayStr(),note:'Intake',recId:rec.id};
-    if(hours>0) tx.hours=hours;
-    state.transactions.push(tx);
   };
+  /* The cadence they gave the income question, mapped onto the recurring engine.
+     Weekly and biweekly carry the PER-PAYDAY amount; everything else is the
+     monthly figure, because that is what was captured. */
+  const payMap={weekly:'weekly', biweekly:'biweekly', semimonthly:'semimonthly'};
+  const payFreq=payMap[a.payFreq]||'monthly';
+  const payAmount=(payMap[a.payFreq] && +a.payAmt>0) ? +a.payAmt : +a.income;
+  /* No payday given (skipped, or a new job with none yet): start next month
+     rather than invent one, and say so on the recap. */
+  const payAnchor = a.payDay ? a.payDay : shiftMonth(M,1)+'-01';
   /* "Landed" decides whether a TRANSACTION is written at all. The recurring rule
      is written either way - it is a statement about what repeats, not a claim
      that it has happened - so the money posts by itself the day it is due.
      Dated today rather than the 1st, because today is a date we actually know. */
-  const landed = a.paidYet==='yes';
   // main-job hours: the hours they TOLD us beat any figure derived from a rounded rate
-  if(a.income>0) addIncome(a.income,'Paycheck','a', a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0));   // spend path too - otherwise any recurring edit later zeroes an auto wage
+  if(a.income>0) addIncome(payAmount,'Paycheck','a',
+    a.hoursPerWeek>0 ? monthHours(a.hoursPerWeek) : (a.wage>0 ? Math.min(a.income/a.wage,400) : 0),
+    payFreq, payAnchor);   // spend path too - otherwise any recurring edit later zeroes an auto wage
   // A partner's hours are kept, not dropped: recomputeBlendedWage only ever reads
   // owner 'a', so storing them cannot skew YOUR rate - and they are the only
   // honest source for theirs.
@@ -11450,6 +11511,11 @@ function commitIntake(){
     income:+a.income||0,
     pay:{ freq:a.payFreq||(+a.income>0?'monthly':''), amt:+a.payAmt||0, hoursPerWeek:+a.hoursPerWeek||0 },
     reflections:{ situation:a.situation||'', moneyStory:a.moneyStory||'', moneyStoryNote:a.moneyStoryNote||'', incomeAvoid:a.incomeAvoid||'', budgetPast:a.budgetPast||'', budgetPastNote:a.budgetPastNote||'', roof:a.roofFeel||'', roofIdeal:a.roofFeelNote||'', food:a.foodStyle||'', commute:a.commuteFeel||'', debt:a.debtFeel||'' }};
+  /* The one place income becomes real: whatever has actually come due by today.
+     A paycheck dated the 29th does not post on the 26th, because postRecurring
+     has always capped the current month at today - the intake just used to go
+     round it. */
+  postRecurring(M);
   state.onboarded=true; save();
   renderIntensity(); renderRegister(); newQuote();
   document.getElementById('wage').value=state.hourlyWage||''; updateWageNote();
