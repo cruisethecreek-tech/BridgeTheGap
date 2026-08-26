@@ -440,6 +440,26 @@ the keystroke without a re-render, because redrawing the sheet mid-number takes
 the keyboard down with it. Neither is visible in a screenshot and both were
 wrong in the first draft.
 
+It holds **two numbers that look like they disagree**. The trend chart's running
+total and the all-time figure in its own legend sit inches apart and differ until
+you tap the last point. The properties check the reconciliation in *both*
+directions - a middle point names what has been logged since and lands on the
+figure below, and the last point says it IS that figure - because the second half
+is what teaches the relationship, and a check that only tested the mismatch case
+would let it rot.
+
+And **whose money it is**. The answer to "my spouse earned this" existed as an
+owner field the arithmetic already respected, gated behind a Settings checkbox:
+a fact about the money hidden behind a preference about the interface, so the
+honest answer was unreachable from the screen asking the question. The properties
+pin reachability first (the field is on the form with household mode still off),
+then the split the whole thing exists for - a partner's paycheque counts in the
+month total and stays out of the personal income that powers your true hourly
+rate - and finally that independence follows whose it is, not just what kind it
+is. The fixture logs it through the form the way a person would, because a
+property proved by writing straight to state would have passed while the picker
+was still hidden.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
