@@ -3812,6 +3812,154 @@ check('...and it lands somewhere defensible rather than nowhere',
 check('...without losing the name of the income itself, which is a separate field',
       other.kept.name==="Pat's paycheck" && other.kept.label==='Snow plowing');
 
+/* ---- 58. the ledger and the bank, introduced ----
+   Asked directly: "how do I change my bank balance to reflect the income I
+   received?" You could not. The two halves of the app were separate universes -
+   the ledger knew what had been logged, the accounts knew what you last told
+   them the bank said, and no transaction had ever carried an account. Logging
+   $715.97 of income left checking sitting at exactly what it was.
+
+   What it must NOT do is post straight to the balance. That would make the
+   balance only as accurate as the typing, and the entire value of this number is
+   that it comes from outside. So the ledger produces an expectation, the bank
+   stays the scorecard, and the difference between them at reconcile time is
+   money that moved without being logged. Those three properties are the feature;
+   everything else is presentation. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-20'},
+            {id:'sav',name:'Savings',kind:'savings',balance:9000,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'}]});
+await p.reload(); await p.waitForTimeout(700);
+const ledgerBank = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderTx(); await wait(250);
+  const out={};
+  out.pickerShown=!document.getElementById('fldAcct').classList.contains('hide');
+  document.querySelector('#typeToggle button[data-t="income"]').click(); await wait(120);
+  document.getElementById('txAcct').value='chk';
+  document.getElementById('txAmt').value='715.97';
+  document.getElementById('txSrc').value='Paycheck';
+  document.getElementById('txDate').value='2026-08-26';
+  document.getElementById('addTx').click(); await wait(300);
+  const t=state.transactions[0];
+  out.carriesAccount=t.acctId==='chk';
+  /* the load-bearing pair: the bank did not move, the expectation did */
+  out.bankHeld=bankTotal()===11000;
+  out.expected=bankExpected();
+  out.perAccount={chk:acctExpected(state.accounts[0]), sav:acctExpected(state.accounts[1])};
+  /* reconcile against a bank that says something else */
+  activateTab('goals'); renderAccounts(); await wait(200);
+  const inp=document.querySelector('[data-acctbal="chk"]');
+  inp.value='2700'; inp.dispatchEvent(new Event('change',{bubbles:true})); await wait(300);
+  out.afterRecon={balance:state.accounts[0].balance, gap:state.accounts[0].lastGap};
+  out.saysSo=document.getElementById('acctList').innerText;
+  /* accepting the app's own figure is NOT a reconcile - nothing came from
+     outside, so recording a gap would be inventing evidence */
+  const inp2=document.querySelector('[data-acctbal="sav"]');
+  inp2.value='8000'; inp2.dispatchEvent(new Event('change',{bubbles:true})); await wait(250);
+  out.noHistoryNoGap=state.accounts[1].lastGap===undefined;
+  return out;
+});
+check('an account picker appears when there is more than one account',
+      ledgerBank.pickerShown===true);
+check('a logged entry now names the account it moved money in or out of',
+      ledgerBank.carriesAccount===true);
+check('...the bank total does not move, because nothing came from the bank',
+      ledgerBank.bankHeld===true);
+check('...but the expected balance does, on the right account only',
+      ledgerBank.expected===11715.97 && ledgerBank.perAccount.chk===2715.97 && ledgerBank.perAccount.sav===9000,
+      JSON.stringify(ledgerBank.perAccount));
+/* The whole point of the feature. */
+check('reconciling against the real bank figure finds the money that never got logged',
+      ledgerBank.afterRecon.balance===2700 && ledgerBank.afterRecon.gap===-15.97,
+      JSON.stringify(ledgerBank.afterRecon));
+check('...and says so in words rather than leaving it as a number to spot',
+      /without being logged/i.test(ledgerBank.saysSo), ledgerBank.saysSo.replace(/\n/g,' ').slice(0,110));
+check('...while an account with nothing logged against it records no gap to explain',
+      ledgerBank.noHistoryNoGap===true);
+/* Two ways this could go silently wrong. */
+const bankEdges = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const out={};
+  /* 1. Same-day double count. A balance typed today already includes today's
+        activity, so only entries dated strictly after it may be added. */
+  state.accounts=[{id:'a1',name:'One',kind:'checking',balance:500,updated:'2026-08-26'}];
+  state.transactions=[{id:'s',type:'income',amount:100,date:'2026-08-26',acctId:'a1'},
+                      {id:'l',type:'income',amount:40,date:'2026-08-27',acctId:'a1'}];
+  save();
+  out.sameDayIgnored=acctExpected(state.accounts[0])===540;
+  /* 2. A posted bill moves real money and must name an account, or the
+        expectation quietly ignores exactly the entries the app wrote itself. */
+  state.transactions=[]; state.recurring=[{id:'r',type:'expense',amount:1200,catId:'f',
+    freq:'monthly',anchor:'2026-08-01',day:1}];
+  save(); postRecurring('2026-08');
+  const posted=state.transactions.filter(t=>t.recId==='r');
+  out.postedCarryAccount=posted.length>0 && posted.every(t=>t.acctId==='a1');
+  return out;
+});
+check('a balance set today is not double-counted by what was logged today',
+      bankEdges.sameDayIgnored===true);
+check('bills the app posts itself name an account too, or the expectation ignores them',
+      bankEdges.postedCarryAccount===true);
+
+/* ---- 59. the one-time catch-up ----
+   Everything logged before transactions carried an account has none, so it
+   counts toward nothing - and telling somebody to re-enter a year of history is
+   not an answer. One move files it all. The property that matters is not that it
+   works but that it TELLS THE TRUTH FIRST: the preview names exactly how far the
+   expected balance will move, and the move has to match. A bulk action that
+   surprises you with the size of its own effect is worse than no bulk action. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-20'},
+            {id:'sav',name:'Savings',kind:'savings',balance:9000,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'}],
+  transactions:[
+    {id:'old1',type:'income',amount:3200,date:'2026-07-01',source:'Paycheck'},
+    {id:'old2',type:'expense',amount:900,catId:'f',date:'2026-07-05'},
+    {id:'new1',type:'expense',amount:120,catId:'f',date:'2026-08-24'},
+    {id:'has',type:'expense',amount:10,catId:'f',date:'2026-08-25',acctId:'chk'}]});
+await p.reload(); await p.waitForTimeout(700);
+const bf = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); renderAccounts(); await wait(250);
+  const box=document.getElementById('acctBackfill');
+  const out={ offered:!!document.getElementById('backfillGo'),
+              counts:/3 entries/.test(box.innerText),
+              /* the promise, read off the screen before anything happens */
+              promised:(box.innerText.match(/by\s*[-−+]?\$[\d,.]+/)||[''])[0],
+              expectedBefore:acctExpected(state.accounts[0]),
+              bankBefore:bankTotal() };
+  document.getElementById('backfillGo').click(); await wait(300);
+  out.after={ orphans:state.transactions.filter(t=>!t.acctId).length,
+              expected:acctExpected(state.accounts[0]),
+              bank:bankTotal() };
+  out.moved=Math.round((out.after.expected-out.expectedBefore)*100)/100;
+  renderAccounts(); await wait(150);
+  out.offerGone=document.getElementById('acctBackfill').innerText.trim()==='';
+  return out;
+});
+check('history with no account on it is offered a home, counted honestly',
+      bf.offered===true && bf.counts===true, bf.promised);
+check('...the preview names how far the expected balance will move',
+      /120/.test(bf.promised), bf.promised);
+check('...and the move is exactly what was promised, not a surprise',
+      bf.moved===-120, `promised ${bf.promised}, moved ${bf.moved}`);
+check('...only entries after the balance date can move it - the rest is just history',
+      bf.after.expected===1870 && bf.expectedBefore===1990,
+      `${bf.expectedBefore} -> ${bf.after.expected}`);
+check('...the bank total is untouched, because nothing came from the bank',
+      bf.after.bank===bf.bankBefore && bf.after.bank===11000);
+check('...nothing is left homeless, and the offer stops being made',
+      bf.after.orphans===0 && bf.offerGone===true);
+/* It must not appear with nowhere to file to. */
+const bfNone = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  state.accounts=[]; state.transactions=[{id:'z',type:'expense',amount:5,catId:'f',date:'2026-08-24'}];
+  save(); renderAccounts(); await wait(200);
+  return document.getElementById('acctBackfill').innerText.trim();
+});
+check('...and is never offered when there is no account to file to', bfNone==='', bfNone.slice(0,50));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

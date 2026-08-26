@@ -1128,6 +1128,24 @@
   .cal-billnote b{color:var(--text)}
   .sp-bills{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--muted)}
   .sp-bills b{color:var(--text)}
+  /* The two numbers on an account row, kept visibly apart: what the bank said,
+     and what the ledger expects. */
+  .ac-exp{margin-top:5px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .ac-exp b{color:var(--text);font-weight:800}
+  .ac-mv{font-size:11.5px}
+  .ac-use{background:rgba(var(--good-rgb),.14);border:1px solid rgba(var(--good-rgb),.4);color:var(--good);
+    border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .ac-use:hover{background:rgba(var(--good-rgb),.24)}
+  .ac-gap{margin-top:6px;font-size:12px;line-height:1.5;padding:7px 10px;border-radius:9px;
+    border:1px solid rgba(230,178,77,.4);background:rgba(230,178,77,.08);color:var(--muted)}
+  .ac-gap b{color:var(--text)}
+  .ac-gap.short{border-color:rgba(var(--accent-2-rgb),.4);background:rgba(var(--accent-2-rgb),.08)}
+  .ac-backfill{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:13px 15px}
+  .bf-h{font-size:15px;font-weight:800}
+  .bf-p{font-size:13px;line-height:1.55;color:var(--muted);margin:7px 0 0}
+  .bf-p b{color:var(--text)}
+  .ac-backfill select{margin:0 2px}
+  .ac-backfill .btn{margin-top:11px}
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
 
   /* ---------- Transactions ---------- */
@@ -2225,6 +2243,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld">Amount
             <input type="number" id="txAmt" placeholder="0.00" min="0" step="0.01" style="width:130px">
           </label>
+          <label class="fld hide" id="fldAcct">Which account
+            <select id="txAcct"></select>
+          </label>
           <label class="fld expense-only" id="fldCat">Category
             <select id="txCat"></select>
             <input class="cat-new hide" id="txCatNew" type="text" placeholder="Name the new one">
@@ -2496,6 +2517,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <button class="btn sm primary" id="addAcct">＋ Add</button>
           </div>
           <div id="acctList"></div>
+          <div id="acctBackfill"></div>
           <div id="acctSummary"></div>
         </div>
       </details>
@@ -6237,11 +6259,15 @@ document.getElementById('addTx').addEventListener('click',()=>{
        this one is the worst version of this fault: the person has already typed
        the amount. Take them to it. */
     if(!catId){ if(typeof toast==='function') toast('Needs a category first - taking you to Plan. Add one and come straight back.'); goTrail('category'); return; }
-    const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy; state.transactions.push(tx);
+    const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy;
+    const aid=txAcctChoice(); if(aid) tx.acctId=aid;
+    state.transactions.push(tx);
   } else if(txType==='invest'){
     const dest=document.getElementById('txInv').value.trim()||'Investment';
     const ikind=(document.getElementById('txInvKind')||{}).value||'holds';
-    state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note,ikind});
+    const ivTx={id:uid(),type:'invest',amount:amt,source:dest,date,note,ikind};
+    const ivAid=txAcctChoice(); if(ivAid) ivTx.acctId=ivAid;   // the cash still left an account
+    state.transactions.push(ivTx);
     // supplements, a course, a tool: real growth, but the money is CONSUMED. Only
     // money that keeps its value becomes an asset, or net worth quietly lies.
     if(ikind!=='self') investAssetAdd(amt);
@@ -6254,6 +6280,7 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const prevIndie=indieTotal();
     const tx={id:uid(),type:'income',amount:amt,source,date,note,srcType}; if(hours>0) tx.hours=hours;
     if(srcType==='other'&&srcLabel) tx.srcLabel=srcLabel;
+    const aid=txAcctChoice(); if(aid) tx.acctId=aid;
     if(state.householdOn){ const o=document.getElementById('txOwner'); if(o) tx.owner=o.value; }
     state.transactions.push(tx);
     if(isIndependent(srcType)){ const nowIndie=prevIndie+amt; indieCrossed=INDIE_MILES.find(m=>prevIndie<m&&nowIndie>=m)||null; }
@@ -6263,6 +6290,8 @@ document.getElementById('addTx').addEventListener('click',()=>{
   // jump active month to the transaction's month so the user sees it land
   state.activeMonth=monthOf(date);
   save(); renderBudget(); renderTx(); renderHome();
+  /* The expected balance just moved, so the panel that shows it has to. */
+  if(typeof renderAccounts==='function') renderAccounts();
   if(txType==='invest') renderNetWorth();
   const lw=document.getElementById('logWin');
   if(lw){
@@ -6847,9 +6876,16 @@ function renderTx(){
     <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}${whyBtn('txNet')}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
     ${dupBalance?'':`<div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${bal<0?'bad':'pos'}">${money(bal)}</div></div>`}`;
   const bn=document.getElementById('bankNote');
-  if(bn) bn.innerHTML=(state.accounts||[]).length
-    ? `<div class="ltb-note">This is what you've <b>logged</b>, not your bank balance. Your real total is <b>${usd(bankTotal())}</b> across ${(state.accounts||[]).length} account${(state.accounts||[]).length>1?'s':''} - edit those on <b>Build</b>.</div>`
-    : `<div class="ltb-note">Heads up: this is only what you've <b>logged here</b> - it doesn't know your real bank balance. Add your accounts on <b>Build</b> and your net worth and runway start telling the truth.</div>`;
+  if(bn){
+    const n=(state.accounts||[]).length, exp=bankExpected(), said=bankTotal(), drift=Math.round((exp-said)*100)/100;
+    /* The answer to "how do I change my bank balance to reflect the income I
+       received": you do not have to any more - the app carries the expectation
+       forward and asks you to check it. Both numbers, and the distance between
+       them, rather than one number pretending to be both. */
+    bn.innerHTML = n
+      ? `<div class="ltb-note">This is what you've <b>logged</b>, not your bank balance. The bank last said <b>${usd(said)}</b> across ${n} account${n>1?'s':''}${Math.abs(drift)>0.005?`, and with everything logged since it should now be <b>${usd(exp)}</b>`:''}. ${trailBtn('account',Math.abs(drift)>0.005?'Check it against the bank':'Update my balances','ghost')}</div>`
+      : `<div class="ltb-note">Heads up: this is only what you've <b>logged here</b> - it doesn't know your real bank balance. Add your accounts on <b>Build</b> and your net worth and runway start telling the truth.</div>`;
+  }
   renderTxList();
   renderRecurring();
   renderCharts();
@@ -6913,6 +6949,7 @@ function deleteTx(id){
   state.giving=(state.giving||[]).filter(g=>g.txId!==id);
   state.impulse=(state.impulse||[]).filter(i=>!(i.type==='buy'&&i.txId===id));
   save(); renderBudget(); renderTx(); if(typeof renderGiving==='function') renderGiving(); if(typeof renderImpulse==='function') renderImpulse(); renderHome();
+  if(typeof renderAccounts==='function') renderAccounts();
   if(gone&&gone.type==='invest') renderNetWorth();
 }
 
@@ -6933,12 +6970,13 @@ function closeTxSheet(){ txSheetId=null; const el=document.getElementById('txShe
 function editTx(id, patch){
   const t=state.transactions.find(x=>x.id===id); if(!t) return;
   if('amount' in patch) t.amount=Math.max(0,+patch.amount||0);
-  ['date','note','source','catId','srcType','srcLabel','energy','ikind'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
+  ['date','note','source','catId','srcType','srcLabel','energy','ikind','acctId'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
   /* Covers the amount AND the kind: flipping "still yours" to "into you" takes
      the money out of the holding, and flipping it back puts it in. */
   if(t.type==='invest') syncInvestAsset();
   save();
   renderBudget(); renderTx(); renderHome();
+  if(typeof renderAccounts==='function') renderAccounts();
   if(typeof renderNetWorth==='function') renderNetWorth();
   if(typeof renderGiving==='function') renderGiving();
   if(txSheetId) renderTxSheet();
@@ -6970,6 +7008,7 @@ function renderTxSheet(){
     ${t.type==='invest'?`<div class="txs-f"><span class="txs-k">Into what</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Index fund" data-txedit="source"></span></div>
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="ikind"><option value="holds"${(t.ikind||'holds')==='holds'?' selected':''}>Still yours - it holds value</option><option value="self"${t.ikind==='self'?' selected':''}>Into you - spent on purpose</option></select></span></div>`:''}
     <div class="txs-f"><span class="txs-k">Note</span><span class="txs-v"><input type="text" value="${escapeHtml(t.note||'')}" placeholder="What was it?" data-txedit="note"></span></div>
+    ${(state.accounts||[]).length?`<div class="txs-f"><span class="txs-k">Account</span><span class="txs-v"><select data-txedit="acctId"><option value="">Not said</option>${acctOptions(t.acctId)}</select></span></div>`:''}
   </div>`;
 
   /* The energy tag drives the Circulation chart and it was write-once, set in
@@ -8379,7 +8418,57 @@ const ACCT_PURPOSES=[
   {k:'retire', label:'Retirement'}
 ];
 function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
+let backfillAcct=null;
 function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
+/* ---------- the ledger and the bank, finally introduced ----------
+   Asked directly: "how do I change my bank balance to reflect the income I
+   received?" You could not. The two halves of this app were separate universes -
+   the ledger knew what you logged, the accounts knew what you last told them the
+   bank said, and no transaction had ever carried an account. Logging $715.97 of
+   income left checking sitting at exactly what it was.
+
+   What it does NOT do is post straight to the balance, and that is deliberate -
+   it would make the balance only as accurate as the typing, and the whole reason
+   this number is worth anything is that it comes from outside. So the ledger
+   produces an EXPECTATION and the bank stays the scorecard:
+
+     expected = what the bank said, when you said it, plus everything logged
+                against that account since
+
+   Reconciling is the moment the app earns its keep. Type what the bank actually
+   says and the difference between that and the expectation is money that moved
+   and never got logged - which is the one thing an app built on self-reporting
+   can otherwise never see.
+
+   Date granularity, said out loud rather than hidden: transactions carry a date
+   and not a time, so anything dated ON the day you set the balance is assumed to
+   have been in the figure you copied. Strictly after, or it double-counts. */
+function acctLoggedSince(a){
+  if(!a||!a.updated) return 0;
+  return state.transactions.filter(t=>t.acctId===a.id && (t.date||'')>a.updated)
+    .reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+}
+function acctExpected(a){ return Math.round(((+a.balance||0)+acctLoggedSince(a))*100)/100; }
+function bankExpected(){ return (state.accounts||[]).reduce((s,a)=>s+acctExpected(a),0); }
+/* The account a new entry belongs to when nobody was asked: the only one, or the
+   first liquid one. With no accounts at all it stays null and nothing changes. */
+/* What the form is set to, or the sensible default when it was never shown. */
+function txAcctChoice(){
+  const sel=document.getElementById('txAcct');
+  if(sel && !document.getElementById('fldAcct').classList.contains('hide')) return sel.value||null;
+  return defaultAcctId();
+}
+function defaultAcctId(){
+  const list=(state.accounts||[]);
+  if(!list.length) return null;
+  if(list.length===1) return list[0].id;
+  const liq=list.filter(a=>acctKind(a.kind).liquid);
+  return (liq[0]||list[0]).id;
+}
+function acctName(id){ const a=(state.accounts||[]).find(x=>x.id===id); return a?a.name:''; }
+function acctOptions(sel){
+  return (state.accounts||[]).map(a=>`<option value="${a.id}"${a.id===sel?' selected':''}>${escapeHtml(a.name)}</option>`).join('');
+}
 function liquidTotal(){ return (state.accounts||[]).filter(a=>acctKind(a.kind).liquid).reduce((s,a)=>s+(+a.balance||0),0); }
 function earmarked(purpose){ return (state.accounts||[]).filter(a=>a.purpose===purpose).reduce((s,a)=>s+(+a.balance||0),0); }
 /* net logged movement since the user last told us a balance - the honest drift */
@@ -8779,11 +8868,35 @@ function renderAccounts(){
   box.innerHTML = accts.length ? accts.map(a=>{
     const k=acctKind(a.kind), pur=ACCT_PURPOSES.find(p=>p.k===a.purpose);
     const tag=(a.purpose&&pur)?`<span class="ac-tag">${escapeHtml(pur.label)}</span>`:'';
-    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${escapeHtml(k.label)}${a.updated?' · as of '+a.updated:''}</div></div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove">✕</button></div>`;
+    const moved=acctLoggedSince(a), exp=acctExpected(a);
+    /* Two numbers, never merged: what the bank said, and what the app expects
+       given what has been logged since. The gap between them is the point. */
+    const expLine = moved!==0
+      ? `<div class="ac-exp">Expected now <b>${usd(exp)}</b> <span class="ac-mv">${moved>=0?'+':'&minus;'}${usd(Math.abs(moved))} logged since</span>
+           <button class="ac-use" data-acctuse="${a.id}">Set it to this</button></div>`
+      : '';
+    const gapLine = (a.lastGap!==undefined && Math.abs(+a.lastGap)>0.005)
+      ? `<div class="ac-gap ${+a.lastGap<0?'short':'over'}"><b>${usd(Math.abs(+a.lastGap))}</b> ${+a.lastGap<0?'left without being logged':'arrived without being logged'} last time you checked${a.lastRecon?' ('+a.lastRecon+')':''}. That is the number this app exists to find.</div>`
+      : '';
+    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">Bank said this${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove">✕</button></div>`;
   }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
-    a.balance=parseFloat(i.value)||0; a.updated=todayStr(); save();
+    /* The moment the app earns its keep. Whatever the bank actually says is
+       compared against what the ledger expected, and the difference is money
+       that moved without being logged - the one thing self-reporting cannot
+       otherwise see. Captured before the balance moves, or there is nothing
+       left to compare against. */
+    const expected=acctExpected(a), typed=parseFloat(i.value)||0;
+    const hadHistory=!!a.updated && acctLoggedSince(a)!==0;
+    a.balance=typed; a.updated=todayStr();
+    if(hadHistory){
+      a.lastGap=Math.round((typed-expected)*100)/100;
+      a.lastRecon=todayStr();
+      if(Math.abs(a.lastGap)>0.005 && typeof toast==='function')
+        toast(`${usd(Math.abs(a.lastGap))} ${a.lastGap<0?'left':'arrived'} without being logged. Worth finding out what.`);
+    }
+    save();
     /* "As those bank balances change it should be logged to form a trend." The
        snapshot is the only place a balance can leave a trace - editing this box
        overwrites the number and the old one is gone - and it was only taken at
@@ -8792,11 +8905,59 @@ function renderAccounts(){
     if(typeof captureSnapshot==='function') captureSnapshot();
     renderAccounts(); renderNetWorth(); renderHome();
   }));
+  box.querySelectorAll('button[data-acctuse]').forEach(b=>b.addEventListener('click',()=>{
+    const a=(state.accounts||[]).find(x=>x.id===b.dataset.acctuse); if(!a) return;
+    /* Accepting the expectation is not a reconcile - nothing came from outside,
+       so there is no gap to record and claiming one would be inventing evidence. */
+    a.balance=acctExpected(a); a.updated=todayStr(); delete a.lastGap; delete a.lastRecon;
+    save();
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    renderAccounts(); renderNetWorth(); renderHome();
+    if(typeof toast==='function') toast(`${escapeHtml(a.name)} set to ${usd(a.balance)} from what you logged. Check it against the bank when you can - that is the half this cannot do.`);
+  }));
   box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{
     state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdel); save();
     if(typeof captureSnapshot==='function') captureSnapshot();
     renderAccounts(); renderNetWorth(); renderHome();
   }));
+  /* ---- the one-time catch-up ----
+     Everything logged before accounts carried one has no account on it, so it
+     counts toward nothing. Rather than leaving that history stranded, offer to
+     file it in one move - and say, before it happens, exactly what it will do to
+     the expected balance, which is usually far less than people fear: only
+     entries dated AFTER an account's balance date can move it at all, so filing
+     a year of old history typically moves the number by nothing. */
+  const back=document.getElementById('acctBackfill');
+  if(back){
+    const orphans=state.transactions.filter(t=>!t.acctId);
+    if(!accts.length || !orphans.length){ back.innerHTML=''; }
+    else {
+      const target=(state.accounts||[]).find(a=>a.id===(backfillAcct||defaultAcctId()))||accts[0];
+      const willMove=orphans.filter(t=>(t.date||'')>(target.updated||''))
+        .reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+      const picker = accts.length>1
+        ? `<select id="backfillPick">${acctOptions(target.id)}</select>` : `<b>${escapeHtml(target.name)}</b>`;
+      back.innerHTML=`<div class="ac-backfill">
+        <div class="bf-h"><b>${orphans.length}</b> entr${orphans.length===1?'y has':'ies have'} no account on ${orphans.length===1?'it':'them'}</div>
+        <p class="bf-p">Anything logged before accounts existed counts toward nothing. File ${orphans.length===1?'it':'them all'} to ${picker} in one move.</p>
+        <p class="bf-p">${Math.abs(willMove)>0.005
+          ? `This will move ${escapeHtml(target.name)}'s expected balance by <b>${willMove>=0?'+':'&minus;'}${usd(Math.abs(willMove))}</b> - only the ${orphans.filter(t=>(t.date||'')>(target.updated||'')).length} dated after ${target.updated||'its balance date'} can affect it. The rest is history, and history does not move a balance you have already checked.`
+          : `Every one of them is dated on or before ${target.updated||'its balance date'}, so the expected balance will not move at all. They just stop being homeless.`}</p>
+        <button class="btn sm primary" id="backfillGo">File ${orphans.length===1?'it':'them'} to ${escapeHtml(target.name)}</button>
+      </div>`;
+      const pick=document.getElementById('backfillPick');
+      if(pick) pick.addEventListener('change',()=>{ backfillAcct=pick.value; renderAccounts(); });
+      const go=document.getElementById('backfillGo');
+      if(go) go.addEventListener('click',()=>{
+        const n=orphans.length;
+        orphans.forEach(t=>{ t.acctId=target.id; });
+        backfillAcct=null; save();
+        if(typeof captureSnapshot==='function') captureSnapshot();
+        renderAccounts(); renderNetWorth(); renderTx(); renderHome();
+        if(typeof toast==='function') toast(`${n} entr${n===1?'y':'ies'} filed to ${target.name}. Every one of them can be moved individually on Track if any belongs somewhere else.`);
+      });
+    }
+  }
   const sum=document.getElementById('acctSummary'); if(!sum) return;
   if(!accts.length){ sum.innerHTML=''; return; }
   const em=earmarked('emergency'), col=earmarked('college'), ess=essentialMonthly();
@@ -10492,6 +10653,14 @@ function refreshCatSelects(){
   const st=document.getElementById('txSrcType');
   if(st){ const keep=st.value; st.innerHTML=incomeSourceOptions();
     if(keep && [...st.options].some(o=>o.value===keep)) st.value=keep; }
+  /* Asked for only when there is a decision to make. One account is not a
+     choice, it is an answer, so the field stays out of the way and the entry is
+     filed against it anyway. */
+  const ac=document.getElementById('txAcct'), acw=document.getElementById('fldAcct');
+  if(ac){ const keep=ac.value; ac.innerHTML=acctOptions();
+    if(keep && [...ac.options].some(o=>o.value===keep)) ac.value=keep;
+    else ac.value=defaultAcctId()||'';
+    if(acw) acw.classList.toggle('hide', (state.accounts||[]).length<2); }
   syncCatNew(); syncSrcOther();
 }
 function syncSrcOther(){
@@ -10644,9 +10813,15 @@ function postRecurring(month){
       if(cap && date>cap) return;
       // dedupe per OCCURRENCE, not per month - a weekly bill lands four times
       if(state.transactions.some(t=>t.recId===r.id&&t.date===date)) return;
-      if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id}; if(r.owner) tx.owner=r.owner; state.transactions.push(tx); }
-      else if(r.type==='invest'){ const ik=r.ikind||'holds'; state.transactions.push({id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik}); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
-      else state.transactions.push({id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:recTxNote(r),recId:r.id});
+      /* A posted bill moves real money, so it has to name the account it moved
+         it from - otherwise the expected balance quietly ignores exactly the
+         entries the app wrote on your behalf. Falls back to the default rather
+         than nothing, because a rule set up before accounts existed still lands
+         somewhere real. */
+      const raid=r.acctId||defaultAcctId();
+      if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id}; if(r.owner) tx.owner=r.owner; if(raid) tx.acctId=raid; state.transactions.push(tx); }
+      else if(r.type==='invest'){ const ik=r.ikind||'holds'; const tx={id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik}; if(raid) tx.acctId=raid; state.transactions.push(tx); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
+      else { const tx={id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:recTxNote(r),recId:r.id}; if(raid) tx.acctId=raid; state.transactions.push(tx); }
       added++;
     });
   });
