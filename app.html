@@ -1140,6 +1140,14 @@
     border:1px solid rgba(230,178,77,.4);background:rgba(230,178,77,.08);color:var(--muted)}
   .ac-gap b{color:var(--text)}
   .ac-gap.short{border-color:rgba(var(--accent-2-rgb),.4);background:rgba(var(--accent-2-rgb),.08)}
+  /* Asked in place, on the row itself. A dialog over the top would hide the
+     very thing being asked about. */
+  .rec.confirming,.acct-row.confirming{border-color:rgba(var(--accent-2-rgb),.5);background:rgba(var(--accent-2-rgb),.07);display:block}
+  .rec-conf{padding:2px 0}
+  .rc-q{font-weight:800;font-size:15px}
+  .rc-w{font-size:13px;line-height:1.55;color:var(--muted);margin-top:5px}
+  .rc-w b{color:var(--text)}
+  .rc-a{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
   .ac-backfill{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:13px 15px}
   .bf-h{font-size:15px;font-weight:800}
   .bf-p{font-size:13px;line-height:1.55;color:var(--muted);margin:7px 0 0}
@@ -8471,7 +8479,7 @@ const ACCT_PURPOSES=[
   {k:'retire', label:'Retirement'}
 ];
 function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
-let backfillAcct=null;
+let backfillAcct=null, recDelId=null, acctDelId=null;
 function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
 /* ---------- the ledger and the bank, finally introduced ----------
    Asked directly: "how do I change my bank balance to reflect the income I
@@ -8931,7 +8939,19 @@ function renderAccounts(){
     const gapLine = (a.lastGap!==undefined && Math.abs(+a.lastGap)>0.005)
       ? `<div class="ac-gap ${+a.lastGap<0?'short':'over'}"><b>${usd(Math.abs(+a.lastGap))}</b> ${+a.lastGap<0?'left without being logged':'arrived without being logged'} last time you checked${a.lastRecon?' ('+a.lastRecon+')':''}. That is the number this app exists to find.</div>`
       : '';
-    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">Bank said this${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove">✕</button></div>`;
+    /* Same reasoning as the recurring rules, with one more consequence now that
+       entries name an account: removing it leaves whatever pointed at it with
+       nowhere to be, so the count is stated before rather than discovered
+       after. */
+    if(acctDelId===a.id){
+      const pointing=state.transactions.filter(t=>t.acctId===a.id).length;
+      return `<div class="acct-row confirming"><div class="rec-conf">
+        <div class="rc-q">Remove <b>${escapeHtml(a.name)}</b>?</div>
+        <div class="rc-w">Its <b>${usd(+a.balance||0)}</b> leaves your net worth and your runway. ${pointing?`The <b>${pointing}</b> entr${pointing===1?'y':'ies'} logged against it stay on Track, but stop counting toward any balance until you give ${pointing===1?'it':'them'} a new home.`:'Nothing is logged against it.'}</div>
+        <div class="rc-a"><button class="btn sm danger" data-acctdelyes="${a.id}">Remove it</button><button class="btn sm ghost" data-acctdelno="1">Keep it</button></div>
+      </div></div>`;
+    }
+    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">Bank said this${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
   }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
@@ -8968,10 +8988,13 @@ function renderAccounts(){
     renderAccounts(); renderNetWorth(); renderHome();
     if(typeof toast==='function') toast(`${escapeHtml(a.name)} set to ${usd(a.balance)} from what you logged. Check it against the bank when you can - that is the half this cannot do.`);
   }));
-  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{
-    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdel); save();
+  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=b.dataset.acctdel; renderAccounts(); }));
+  box.querySelectorAll('button[data-acctdelno]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=null; renderAccounts(); }));
+  box.querySelectorAll('button[data-acctdelyes]').forEach(b=>b.addEventListener('click',()=>{
+    acctDelId=null;
+    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdelyes); save();
     if(typeof captureSnapshot==='function') captureSnapshot();
-    renderAccounts(); renderNetWorth(); renderHome();
+    renderAccounts(); renderNetWorth(); renderTx(); renderHome();
   }));
   /* ---- the one-time catch-up ----
      Everything logged before accounts carried one has no account on it, so it
@@ -10782,10 +10805,36 @@ function renderRecurring(){
     // "+1 mo" and the dollar figure you typed was nowhere on screen.
     const alt = state.freedomMode ? usd(r.amount) : (effectiveHourly()>0 ? fmtLife(r.amount) : '');
     const sign = r.type==='income'?'+':r.type==='invest'?'→':'−';
-    return `<div class="rec ${r.type}${recEditId===r.id?' editing':''}"><span class="tag">${tag}</span><span class="nm">${label}<i class="rec-when">${meta.short} · next ${nextTxt}${equiv}${alt?' · '+alt:''}</i></span><span class="am">${sign}${money(r.amount)}</span><button class="edit" data-editrec="${r.id}" title="Edit">✎</button><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
+    /* One tap used to end a schedule with nothing in between. A rule is not a
+       row of data - it is the thing standing between somebody and forgetting
+       their rent, and rebuilding it means remembering an amount, a cadence and
+       an anchor date they set weeks ago. So the ✕ asks, in place, and the answer
+       carries the fact people actually want: the money already posted is real
+       and is not going anywhere. Inline rather than a browser confirm, for the
+       same reason everything else here is - a dialog hides the row you are
+       being asked about. */
+    if(recDelId===r.id){
+      const posted=state.transactions.filter(t=>t.recId===r.id).length;
+      return `<div class="rec ${r.type} confirming"><div class="rec-conf">
+        <div class="rc-q">Stop <b>${label}</b> repeating?</div>
+        <div class="rc-w">No more will post. ${posted?`The <b>${posted}</b> already logged stay on Track - this only removes the schedule, never the money that already moved.`:'Nothing has posted from it yet, so nothing is lost.'}</div>
+        <div class="rc-a"><button class="btn sm danger" data-delrecyes="${r.id}">Stop it</button><button class="btn sm ghost" data-delrecno="1">Keep it</button></div>
+      </div></div>`;
+    }
+    return `<div class="rec ${r.type}${recEditId===r.id?' editing':''}"><span class="tag">${tag}</span><span class="nm">${label}<i class="rec-when">${meta.short} · next ${nextTxt}${equiv}${alt?' · '+alt:''}</i></span><span class="am">${sign}${money(r.amount)}</span><button class="edit" data-editrec="${r.id}" title="Edit">✎</button><button class="del" data-delrec="${r.id}" title="Stop this repeating">✕</button></div>`;
   }).join('');
   box.querySelectorAll('button[data-editrec]').forEach(b=>b.addEventListener('click',()=>recEditLoad(b.dataset.editrec)));
-  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ if(recEditId===b.dataset.delrec) recEditId=null; state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
+  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ recDelId=b.dataset.delrec; renderRecurring(); }));
+  box.querySelectorAll('button[data-delrecno]').forEach(b=>b.addEventListener('click',()=>{ recDelId=null; renderRecurring(); }));
+  box.querySelectorAll('button[data-delrecyes]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.delrecyes;
+    if(recEditId===id) recEditId=null;
+    recDelId=null;
+    state.recurring=state.recurring.filter(x=>x.id!==id);
+    recomputeBlendedWage(); save(); renderRecurring();
+    if(typeof updateWageNote==='function') updateWageNote(); renderHome();
+    if(typeof toast==='function') toast('Schedule stopped. Everything it already posted is still on Track.');
+  }));
 }
 /* ============================================================
    RECURRING SCHEDULES

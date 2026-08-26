@@ -4056,6 +4056,68 @@ check('...and the line is still filed against it',
 check('with no accounts at all it says nothing and still logs',
       qlOne.silentWithNone===true && qlOne.noneLogsFine===true);
 
+/* ---- 61. nothing that took work to build dies on one tap ----
+   From a phone, on the recurring list: "the delete button is too destructive."
+   It was - one tap ended a schedule with nothing in between. A rule is not a row
+   of data; it is the thing standing between somebody and forgetting their rent,
+   and rebuilding it means recalling an amount, a cadence and an anchor date they
+   set weeks ago.
+
+   The confirm has a job beyond slowing the hand down: it answers the question
+   the hand hesitated over. Stopping a schedule does not touch the money it
+   already posted, and saying so is the difference between a pause and a fear of
+   losing history. Accounts get the same treatment, and one consequence more -
+   now that entries name an account, removing one leaves whatever pointed at it
+   with nowhere to be, so the count is stated before rather than discovered
+   after. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'}],
+  recurring:[{id:'r1',type:'income',amount:2435.22,source:'Kristi',freq:'biweekly',anchor:'2026-08-14'}],
+  transactions:[{id:'p1',type:'income',amount:2435.22,source:'Kristi',date:'2026-08-14',recId:'r1',acctId:'chk'},
+                {id:'p2',type:'income',amount:2435.22,source:'Kristi',date:'2026-08-28',recId:'r1',acctId:'chk'}]});
+await p.reload(); await p.waitForTimeout(700);
+const destr = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderRecurring(); await wait(250);
+  const out={};
+  document.querySelector('[data-delrec="r1"]').click(); await wait(200);
+  out.asked=document.getElementById('recList').innerText;
+  out.survivedTheTap=state.recurring.length===1;
+  /* backing out has to actually back out */
+  document.querySelector('[data-delrecno]').click(); await wait(200);
+  out.keptOnNo=state.recurring.length===1 && !document.querySelector('[data-delrecyes]');
+  document.querySelector('[data-delrec="r1"]').click(); await wait(150);
+  document.querySelector('[data-delrecyes="r1"]').click(); await wait(300);
+  out.after={rules:state.recurring.length, postedKept:state.transactions.length};
+  /* accounts, same pattern, plus the entries that point at it */
+  activateTab('goals'); renderAccounts(); await wait(250);
+  document.querySelector('[data-acctdel="chk"]').click(); await wait(200);
+  out.acctAsked=document.getElementById('acctList').innerText;
+  out.acctSurvived=state.accounts.length===1;
+  document.querySelector('[data-acctdelno]').click(); await wait(200);
+  out.acctKeptOnNo=state.accounts.length===1;
+  return out;
+});
+check('the recurring cross asks before it ends a schedule',
+      destr.survivedTheTap===true && /Stop Kristi repeating/i.test(destr.asked),
+      destr.asked.replace(/\s+/g,' ').slice(0,70));
+/* The reassurance is the point, not decoration: people hesitate because they
+   think deleting the rule deletes the paychecks. */
+check('...and says the money already posted is not going anywhere',
+      /2/.test(destr.asked) && /stay on Track/i.test(destr.asked),
+      destr.asked.replace(/\s+/g,' ').slice(0,150));
+check('...backing out leaves it exactly where it was', destr.keptOnNo===true);
+check('...and going through stops the schedule without touching what it posted',
+      destr.after.rules===0 && destr.after.postedKept===2, JSON.stringify(destr.after));
+check('removing an account asks too, and names what it costs',
+      destr.acctSurvived===true && /Remove Checking/i.test(destr.acctAsked)
+      && /\$2,000/.test(destr.acctAsked), destr.acctAsked.replace(/\s+/g,' ').slice(0,80));
+check('...including the entries that would be left with nowhere to be',
+      /2 entries/i.test(destr.acctAsked) && /new home/i.test(destr.acctAsked),
+      destr.acctAsked.replace(/\s+/g,' ').slice(0,160));
+check('...and it too can be backed out of', destr.acctKeptOnNo===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
