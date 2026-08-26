@@ -2215,6 +2215,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
           <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select>
             <input class="cat-new hide" id="recCatNew" type="text" placeholder="Name the new one"></label>
+          <label class="fld hide" id="recAcctWrap">Which account<select id="recAcct"></select></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
           <div class="ufld income-only-rec hide" id="recHoursWrap"><span class="fl-k">Hours it takes<span id="recHoursUnit"></span></span>
@@ -2267,6 +2268,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <input class="cat-new hide" id="txCatNew" type="text" placeholder="Name the new one">
           </label>
           <label class="fld income-only hide" id="fldSrc">Source
+            <select id="txSrcPick" class="hide"></select>
             <input type="text" id="txSrc" placeholder="Paycheck, Side gig…">
           </label>
           <label class="fld income-only hide" id="fldSrcType">Type
@@ -3240,6 +3242,42 @@ function incomeKindLabel(t){
   if(!t||!t.srcType) return '';
   if(t.srcType==='other') return (t.srcLabel||'').trim()||'Something else';
   return (INCOME_SOURCES.find(x=>x.k===t.srcType)||{}).label||'';
+}
+/* ---------- the income streams you already named ----------
+   Asked from a phone: "wasn't typing in the source directly contradicting the
+   recurring funds? Why would it be typable if I can just choose from an account
+   I have set up for recurring?" Right. The recurring rules on Plan ARE a list of
+   named income streams - Hollywood, Cruise The Creek, Kristi, Bonus paycheck -
+   deliberately set up, with a cadence and an amount behind each. Then the log
+   form asked you to type the name again from memory, and a typo made a second
+   stream that matched nothing.
+
+   The rules come first because they were set up on purpose; past entries follow,
+   because a source used once is still a source. Each carries what was last true
+   of it, so choosing "Kristi" fills the kind and the account too - the rest of
+   the form stops being a quiz about your own history. */
+function knownSources(){
+  const out=[], seen=new Set();
+  const add=(name,srcType,acctId,fromRule)=>{
+    const n=(name||'').trim(); if(!n) return;
+    const key=n.toLowerCase();
+    if(seen.has(key)){ /* a rule outranks a past entry for the same name */
+      if(fromRule){ const e=out.find(x=>x.name.toLowerCase()===key); if(e){ e.fromRule=true; if(srcType) e.srcType=srcType; if(acctId) e.acctId=acctId; } }
+      return; }
+    seen.add(key); out.push({name:n, srcType:srcType||'', acctId:acctId||'', fromRule:!!fromRule});
+  };
+  (state.recurring||[]).filter(r=>r.type==='income').forEach(r=>add(r.source,r.srcType,r.acctId,true));
+  state.transactions.filter(t=>t.type==='income')
+    .slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))
+    .forEach(t=>add(t.source,t.srcType,t.acctId,false));
+  return out;
+}
+/* Whichever control is actually on screen. The picker wins when it is showing a
+   real choice; the free text is the answer when it is not. */
+function txSourceChoice(){
+  const sp=document.getElementById('txSrcPick'), si=document.getElementById('txSrc');
+  if(sp && !sp.classList.contains('hide') && sp.value && sp.value!=='__new') return sp.value;
+  return ((si&&si.value)||'').trim()||'Income';
 }
 function incomeSourceOptions(sel){
   return INCOME_SOURCES.map(x=>`<option value="${x.k}"${x.k===sel?' selected':''}>${escapeHtml(x.label)}</option>`).join('');
@@ -6289,7 +6327,7 @@ document.getElementById('addTx').addEventListener('click',()=>{
     if(ikind!=='self') investAssetAdd(amt);
     document.getElementById('txInv').value='';
   } else {
-    const source=document.getElementById('txSrc').value.trim()||'Income';
+    const source=txSourceChoice();
     const srcType=document.getElementById('txSrcType').value;
     const srcLabel=((document.getElementById('txSrcOther')||{}).value||'').trim();
     const hours=parseFloat(document.getElementById('txHours').value)||0;
@@ -6303,6 +6341,9 @@ document.getElementById('addTx').addEventListener('click',()=>{
   }
   txEnergy=''; document.querySelectorAll('#energySel button').forEach(x=>x.classList.remove('on'));
   document.getElementById('txAmt').value=''; document.getElementById('txNote').value=''; document.getElementById('txSrc').value=''; document.getElementById('txHours').value='';
+  /* Rebuild the source list: the entry just logged may have named a stream that
+     was not on it a second ago. */
+  if(typeof refreshCatSelects==='function') refreshCatSelects();
   // jump active month to the transaction's month so the user sees it land
   state.activeMonth=monthOf(date);
   save(); renderBudget(); renderTx(); renderHome();
@@ -7078,6 +7119,28 @@ function renderTxSheet(){
     <div class="txs-en">${ENERGY.map(e=>`<button class="txs-enb${t.energy===e.k?' on':''}" data-txenergy="${e.k}"><b>${escapeHtml(e.label)}</b><i>${escapeHtml(e.sub)}</i></button>`).join('')}
       <button class="txs-enb${!t.energy?' on':''}" data-txenergy=""><b>Not tagged</b><i>Leave it out of the Circulation read</i></button></div></div>` : '';
 
+  /* "I'm still missing the link between the way Track and Plan are affiliated."
+     The link was always there in the data - an expense carries a category, and
+     that category has a number on Plan - but nothing on this side of the app
+     ever showed it. So opening any expense now shows where it landed in the
+     plan: what was assigned, what is used, what is left, and this entry's share
+     of it. That is the whole relationship, stated on the thing that caused it. */
+  let planLine='';
+  if(t.type==='expense' && t.catId){
+    const M2=monthOf(t.date)||state.activeMonth;
+    const a=catAssigned(t.catId,M2), used=catUsed(t.catId,M2), left=a-used;
+    const share=used>0?Math.round(t.amount/used*100):0;
+    planLine=`<div class="cs-sec"><div class="cs-h">Where this sits in the plan</div>
+      <div class="cs-card">
+        <div class="cs-row"><span>${escapeHtml(catName(t.catId))} &middot; assigned for ${monShort(M2)}</span><b>${money(a)}</b></div>
+        <div class="cs-row"><span>Used, this entry included</span><b>${money(used)}</b></div>
+        <div class="cs-row big"><span>${left<0?'Over by':'Still there'}</span><b class="avail ${left<0?'over':(a>0?(left>0?'good':'spent'):'none')}">${money(Math.abs(left))}</b></div>
+      </div>
+      <p class="cs-note">${a>0
+        ? `This one is <b>${share}%</b> of what has left ${escapeHtml(catName(t.catId))} this month. Change its category above and both plans move - the one it leaves and the one it joins.`
+        : `Nothing is assigned to ${escapeHtml(catName(t.catId))} this month, so it has nothing to be measured against. ${trailBtn('plan','Give it a number','ghost')}`}</p>
+    </div>`;
+  }
   const facts=[];
   if(H>0 && t.type!=='invest') facts.push([t.type==='income'?'What it bought you':'What it cost you', state.freedomMode?usd(t.amount):fmtLife(t.amount,H)]);
   if(t.type==='income' && t.hours>0) facts.push(['Rate for it', usd(t.amount/t.hours)+'/hr']);
@@ -7096,7 +7159,7 @@ function renderTxSheet(){
     <p class="cs-note">This deletes the entry itself${gift?', its record in Giving':''}${link?', and the gut-check it came from':''}${t.type==='invest'&&(t.ikind||'holds')!=='self'?', and takes the money back out of Invested capital':''}. Nothing else moves.</p>
     <button class="btn sm danger ghost" data-txdel="${t.id}">Delete this entry</button></div>`;
 
-  body.innerHTML=fields+energy+context+danger;
+  body.innerHTML=fields+planLine+energy+context+danger;
 
   const csel=document.getElementById('txsCat');
   if(csel) csel.value = [...csel.options].some(o=>o.value===t.catId) ? t.catId : '';
@@ -10622,6 +10685,10 @@ function recEditLoad(id){
          else { if(state.householdOn) set('recOwner', r.owner||'a');
                 set('recHours', r.hours>0 ? Math.round(r.hours/periodMeta(unitOf('recHours','month')).per*100)/100 : '');
                 if(typeof drawRecHours==='function') drawRecHours(); } }
+  /* Which account this rule moves money through, for every type - a paycheck
+     lands somewhere and a bill leaves from somewhere. */
+  const ra=document.getElementById('recAcct');
+  if(ra && r.acctId && [...ra.options].some(o=>o.value===r.acctId)) ra.value=r.acctId;
   const add=document.getElementById('addRec'); if(add) add.textContent='Save';
   const c=document.getElementById('recCancel'); if(c) c.classList.remove('hide');
   renderRecurring();
@@ -10637,6 +10704,8 @@ document.getElementById('addRec').addEventListener('click',()=>{
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
   // day is kept in sync for anything still reading the old field
   const item={id:uid(),type,amount:amt,freq,anchor,day:Math.min(28,Math.max(1,+anchor.slice(8,10)||1))};
+  const racct=(document.getElementById('recAcct')||{}).value||defaultAcctId();
+  if(racct) item.acctId=racct;
   if(type==='expense'){
     const catId=resolveCatChoice('recCat','recCatNew');
     if(!catId && (document.getElementById('recCat')||{}).value==='__new'){
@@ -10729,14 +10798,34 @@ function refreshCatSelects(){
   const st=document.getElementById('txSrcType');
   if(st){ const keep=st.value; st.innerHTML=incomeSourceOptions();
     if(keep && [...st.options].some(o=>o.value===keep)) st.value=keep; }
-  /* Asked for only when there is a decision to make. One account is not a
-     choice, it is an answer, so the field stays out of the way and the entry is
-     filed against it anyway. */
-  const ac=document.getElementById('txAcct'), acw=document.getElementById('fldAcct');
-  if(ac){ const keep=ac.value; ac.innerHTML=acctOptions();
+  /* The streams already named on Plan, offered rather than remembered. Free text
+     stays reachable behind "Something else" - the first paycheck anyone logs has
+     no history to pick from, and a list you cannot escape is worse than one you
+     never had. */
+  const sp=document.getElementById('txSrcPick'), si=document.getElementById('txSrc');
+  if(sp&&si){
+    const known=knownSources();
+    if(!known.length){ sp.classList.add('hide'); si.classList.remove('hide'); }
+    else {
+      const keep=sp.value;
+      sp.innerHTML=known.map(k=>`<option value="${escapeHtml(k.name)}">${escapeHtml(k.name)}${k.fromRule?' · repeats':''}</option>`).join('')
+        +'<option value="__new">＋ Something else…</option>';
+      if(keep && [...sp.options].some(o=>o.value===keep)) sp.value=keep;
+      sp.classList.remove('hide');
+      si.classList.toggle('hide', sp.value!=='__new');
+    }
+  }
+  [['txAcct','fldAcct'],['recAcct','recAcctWrap']].forEach(([sid,wid])=>{
+    const ac=document.getElementById(sid), acw=document.getElementById(wid);
+    if(!ac) return;
+    const keep=ac.value; ac.innerHTML=acctOptions();
     if(keep && [...ac.options].some(o=>o.value===keep)) ac.value=keep;
     else ac.value=defaultAcctId()||'';
-    if(acw) acw.classList.toggle('hide', (state.accounts||[]).length<2); }
+    /* A rule that does not know where its money lands posts entries that count
+       toward no balance - which is the same hole the log form had, one step
+       further upstream where it repeats every month. */
+    if(acw) acw.classList.toggle('hide', (state.accounts||[]).length<2);
+  });
   syncCatNew(); syncSrcOther();
 }
 function syncSrcOther(){
@@ -10745,6 +10834,21 @@ function syncSrcOther(){
 }
 (function(){
   document.addEventListener('change',e=>{
+    if(e.target && e.target.id==='txSrcPick'){
+      const sp=e.target, si=document.getElementById('txSrc');
+      if(sp.value==='__new'){ if(si){ si.classList.remove('hide'); si.value=''; si.focus(); } return; }
+      if(si) si.classList.add('hide');
+      /* Fill what this stream was last known to be. Visible fields, so nothing
+         is being decided behind anyone's back - they can see it move and change
+         it if this one is different. */
+      const k=knownSources().find(x=>x.name===sp.value);
+      if(k){
+        const ty=document.getElementById('txSrcType');
+        if(ty && k.srcType && [...ty.options].some(o=>o.value===k.srcType)){ ty.value=k.srcType; syncSrcOther(); }
+        const ac2=document.getElementById('txAcct');
+        if(ac2 && k.acctId && [...ac2.options].some(o=>o.value===k.acctId)) ac2.value=k.acctId;
+      }
+    }
     if(e.target && e.target.id==='txSrcType'){
       syncSrcOther();
       if(e.target.value==='other'){ const n=document.getElementById('txSrcOther'); if(n) n.focus(); }

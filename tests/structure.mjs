@@ -4118,6 +4118,99 @@ check('...including the entries that would be left with nowhere to be',
       destr.acctAsked.replace(/\s+/g,' ').slice(0,160));
 check('...and it too can be backed out of', destr.acctKeptOnNo===true);
 
+/* ---- 62. the streams you already named, and the link to the plan ----
+   Two halves of one observation from a phone. "Wasn't typing in the source
+   directly contradicting the recurring funds? Why would it be typable if I can
+   just choose from an account I have set up for recurring?" - and then "I'm
+   still missing the link between the way Track and Plan are affiliated."
+
+   The first is a straight contradiction: the recurring rules on Plan ARE a list
+   of named income streams, set up on purpose with a cadence and an amount, and
+   the log form then asked for the name to be typed again from memory, where a
+   typo made a second stream matching nothing.
+
+   The second was true and invisible rather than absent. An expense has always
+   carried a category and that category has always had a number on Plan - but
+   nothing on the Track side ever showed it, so the relationship existed only in
+   the data. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'joint',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-20'},
+            {id:'sav',name:'Savings',kind:'savings',balance:500,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'},{id:'g',name:'Gas'}],
+  budgets:{'2026-08':{f:600,g:200}},
+  recurring:[{id:'r1',type:'income',amount:2435.22,source:'Kristi',freq:'biweekly',anchor:'2026-08-14',acctId:'joint'},
+             {id:'r2',type:'income',amount:1600,source:'Hollywood',freq:'biweekly',anchor:'2026-08-21',acctId:'sav'}],
+  transactions:[{id:'x',type:'expense',amount:145,catId:'f',date:'2026-08-24',note:'Groceries',acctId:'joint'},
+                {id:'y',type:'expense',amount:300,catId:'f',date:'2026-08-12',acctId:'joint'},
+                {id:'t1',type:'income',amount:400,source:'Yard sale',date:'2026-08-10',srcType:'sale',acctId:'joint'}]});
+await p.reload(); await p.waitForTimeout(700);
+const streams = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderTx(); await wait(300);
+  document.querySelector('#typeToggle button[data-t="income"]').click(); await wait(200);
+  const sp=document.getElementById('txSrcPick');
+  const out={ offered:[...sp.options].map(o=>o.value),
+              rulesFirst:[...sp.options].slice(0,2).map(o=>o.textContent),
+              typingHidden:document.getElementById('txSrc').classList.contains('hide') };
+  /* choosing one carries what that stream was last known to be */
+  sp.value='Hollywood'; sp.dispatchEvent(new Event('change',{bubbles:true})); await wait(200);
+  out.filledAccount=document.getElementById('txAcct').value;
+  document.getElementById('txAmt').value='1600';
+  document.getElementById('txDate').value='2026-08-26';
+  document.getElementById('addTx').click(); await wait(350);
+  const t=state.transactions.find(x=>x.amount===1600);
+  out.logged={source:t.source, acctId:t.acctId};
+  /* and the escape hatch survives, or a first paycheck could never be logged */
+  document.querySelector('#typeToggle button[data-t="income"]').click(); await wait(150);
+  const sp2=document.getElementById('txSrcPick');
+  sp2.value='__new'; sp2.dispatchEvent(new Event('change',{bubbles:true})); await wait(150);
+  out.canStillType=!document.getElementById('txSrc').classList.contains('hide');
+  document.getElementById('txSrc').value='Snow plowing';
+  document.getElementById('txAmt').value='90';
+  document.getElementById('addTx').click(); await wait(350);
+  out.typedLogged=(state.transactions.find(x=>x.amount===90)||{}).source;
+  out.joinsTheList=[...document.getElementById('txSrcPick').options].map(o=>o.value).includes('Snow plowing');
+  return out;
+});
+check('the streams named on Plan are offered instead of typed from memory',
+      streams.offered.includes('Kristi') && streams.offered.includes('Hollywood'),
+      streams.offered.join(','));
+check('...with the deliberate ones first and marked as repeating',
+      streams.rulesFirst.every(x=>/repeats/.test(x)), streams.rulesFirst.join(' / '));
+check('...and picking one carries the account that stream lands in',
+      streams.filledAccount==='sav' && streams.logged.acctId==='sav' && streams.logged.source==='Hollywood',
+      JSON.stringify(streams.logged));
+check('...while a stream with no history can still simply be typed',
+      streams.canStillType===true && streams.typedLogged==='Snow plowing' && streams.joinsTheList===true);
+/* A rule that does not know where its money lands posts entries counting toward
+   no balance - the same hole as the log form, one step upstream where it
+   repeats every month. */
+const recAcct = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  renderRecurring(); await wait(200);
+  const out={ asks:!document.getElementById('recAcctWrap').classList.contains('hide') };
+  recEditLoad('r2'); await wait(200);
+  out.loadsExisting=document.getElementById('recAcct').value==='sav';
+  return out;
+});
+check('a recurring rule is asked which account it moves money through',
+      recAcct.asks===true);
+check('...and editing one shows the account it already had', recAcct.loadsExisting===true);
+/* The link, finally on screen. */
+const planLink = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderTx(); await wait(250);
+  document.querySelector('[data-txsheet="x"]').click(); await wait(300);
+  const txt=document.getElementById('txSheetBody').innerText;
+  closeTxSheet();
+  return txt;
+});
+check('opening an expense shows where it sits in the plan',
+      /where this sits in the plan/i.test(planLink) && /\$600/.test(planLink) && /\$445/.test(planLink),
+      planLink.replace(/\s+/g,' ').match(/WHERE THIS SITS[^A-Z]*/i)?.[0]?.slice(0,90)||'');
+check('...including this entry\'s share of what has left that category',
+      /33%/.test(planLink), (planLink.match(/This one is [^.]*/)||[''])[0]);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
