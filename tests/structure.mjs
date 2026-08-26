@@ -304,12 +304,15 @@ await p.waitForTimeout(250);
 const inMode = await p.evaluate(()=>({
   grips:document.querySelectorAll('#cats .cat-grip').length,
   rows:document.querySelectorAll('#cats [data-row][data-lvl]').length,
-  assignFrozen:(()=>{ const e=document.querySelector('.cat.reordering .cat-assign');
+  /* The Plan list is a line per category now, so the control that has to step
+     aside is the leaf row's assign field rather than the old card's. */
+  assignFrozen:(()=>{ const e=document.querySelector('.subrow.reordering .sub-assign');
     return e ? getComputedStyle(e).display==='none' : false; })(),
   /* the browser must not claim the gesture as a page scroll, or a drag on a
      phone just scrolls the list and nothing ever moves */
   touchAction:getComputedStyle(document.querySelector('#cats .cat-grip')).touchAction,
   labelled:[...document.querySelectorAll('#cats .cat-grip')].every(g=>/arrow keys/i.test(g.getAttribute('aria-label')||'')),
+  realNames:state.categories.map(c=>c.name),
   subNames:[...document.querySelectorAll('.subrow.reordering .sub-name')]
     .map(e=>({full:e.textContent.trim(), w:e.getBoundingClientRect().width,
               clipped:e.scrollWidth>e.clientWidth+1}))
@@ -318,12 +321,16 @@ check('turning it on puts a grip on every row', inMode.grips>0 && inMode.grips==
       `${inMode.grips} grips / ${inMode.rows} rows`);
 check('...the grip owns the gesture rather than the page scroller', inMode.touchAction==='none', inMode.touchAction);
 check('...and the editing controls step aside while you move things', inMode.assignFrozen===true);
+/* "Fun" and "Roof" are three and four letters and always were. The old floor of
+   four characters worked only because this list showed subcategories alone; now
+   that every leaf is a row, a real name would fail it. Clipping is the fault -
+   measure that. */
 check('...leaving the names readable, not truncated to one letter',
-      inMode.subNames.length>0 && inMode.subNames.every(n=>!n.clipped && n.full.length>3),
+      inMode.subNames.length>0 && inMode.subNames.every(n=>!n.clipped && inMode.realNames.includes(n.full.replace(/[\u21bb\s]+$/,''))),
       inMode.subNames.map(n=>`"${n.full}" ${Math.round(n.w)}px${n.clipped?' CLIPPED':''}`).join(' | '));
 
 /* Roof is third. Drag it above the first card. */
-const firstCard = await centre('#cats .cat:first-child');
+const firstCard = await centre('#cats [data-row]');
 const mid = await dragTo('[data-grip="roof"]', firstCard.top+4);
 const afterDrag = await p.evaluate(()=>topCats().map(c=>c.name));
 check('a ghost and a drop line show what is about to happen',
@@ -347,16 +354,16 @@ check('...and cannot be dragged out into the top level',
 
 /* picking a row up and putting it back must not renumber anything */
 const settled = await p.evaluate(()=>topCats().map(c=>c.name));
-const backGrip = await centre('#cats .cat:nth-child(2) .cat-grip');
-await dragTo('#cats .cat:nth-child(2) .cat-grip', backGrip.y+3);
+const backGrip = await centre('#cats [data-row]:nth-of-type(2) .cat-grip');
+await dragTo('#cats [data-row]:nth-of-type(2) .cat-grip', backGrip.y+3);
 const unchanged = await p.evaluate(()=>topCats().map(c=>c.name));
 check('a drag that goes nowhere changes nothing', unchanged.join(',')===settled.join(','),
       `${settled.join(',')} -> ${unchanged.join(',')}`);
 
 /* a drag you cannot abandon is a drag you hesitate to start */
 const beforeEsc = await p.evaluate(()=>topCats().map(c=>c.name));
-const lastCard = await centre('#cats .cat:last-child');
-await dragTo('#cats .cat:last-child .cat-grip', lastCard.top-400, {cancel:true});
+const lastCard = await centre('#cats [data-row]:last-child');
+await dragTo('#cats [data-row]:last-child .cat-grip', lastCard.top-400, {cancel:true});
 const afterEsc = await p.evaluate(()=>({tops:topCats().map(c=>c.name),
   strays:document.querySelectorAll('.drag-ghost,.drag-line,.drag-src').length}));
 check('Escape abandons a drag and puts the row back',
@@ -367,7 +374,7 @@ check('...and clears the ghost with it', afterEsc.strays===0, String(afterEsc.st
 const kb = await p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   const before=topCats().map(c=>c.name);
-  const g=document.querySelector('#cats .cat:first-child .cat-grip'); g.focus();
+  const g=document.querySelector('#cats [data-row] .cat-grip'); g.focus();
   g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
   await wait(200);
   return { before, after:topCats().map(c=>c.name),
@@ -429,13 +436,21 @@ await seed(REPEAT); await p.reload(); await p.waitForTimeout(900);
 const rep = await p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('budget'); await wait(250);
-  const boxes=document.querySelectorAll('#cats [data-repeat]').length;
-  const onGroup=!!document.querySelector('#cats [data-repeat="pow"]');
-  const click=id=>{ const c=document.querySelector('[data-repeat="'+id+'"]'); c.checked=!c.checked; c.dispatchEvent(new Event('change',{bubbles:true})); };
+  /* The repeat switch moved off the row and into the category's own sheet when
+     the Plan list was cut back to a line each. Eleven toggles on one screen, none
+     of them explained, was the thing that made the scroll unreadable. The rule it
+     obeys has not changed - every leaf has one, no group does - so the test opens
+     each category instead of scanning the list. */
+  const open=id=>{ openCatSheet(id); };
+  const has=id=>{ open(id); return !!document.querySelector('#catSheetBody [data-repeat="'+id+'"]'); };
+  const boxes=['roof','elec','net','fun'].filter(has).length;
+  const onGroup=has('pow');
+  const click=id=>{ open(id); const c=document.querySelector('#catSheetBody [data-repeat="'+id+'"]'); c.checked=!c.checked; c.dispatchEvent(new Event('change',{bubbles:true})); };
   click('roof'); await wait(200);
   const afterTick=(state.recurring||[]).map(r=>({cat:r.catId, amt:r.amount, freq:r.freq}));
-  const freqOpts=[...document.querySelectorAll('[data-repfreq="roof"] option')].map(o=>o.value);
-  const sel=document.querySelector('[data-repfreq="roof"]'); sel.value='quarterly';
+  open('roof');
+  const freqOpts=[...document.querySelectorAll('#catSheetBody [data-repfreq="roof"] option')].map(o=>o.value);
+  const sel=document.querySelector('#catSheetBody [data-repfreq="roof"]'); sel.value='quarterly';
   sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(200);
   const afterFreq=(state.recurring||[]).map(r=>r.freq);
   click('elec'); await wait(200);
@@ -443,11 +458,12 @@ const rep = await p.evaluate(async () => {
   // a zero-amount category cannot repeat nothing
   click('fun'); await wait(250);
   const zeroRefused=(state.recurring||[]).every(r=>r.catId!=='fun');
-  const zeroUnticked=!document.querySelector('[data-repeat="fun"]').checked;
+  const zeroUnticked=!document.querySelector('#catSheetBody [data-repeat="fun"]').checked;
   click('elec'); await wait(200);
   const afterUntick=(state.recurring||[]).length;
-  // names stay readable with the control on the row
-  const names=[...document.querySelectorAll('.subrow .sub-name')].map(e=>({n:e.textContent.trim(), clipped:e.scrollWidth>e.clientWidth+1}));
+  // names stay readable on the list itself, with the sheet out of the way
+  closeCatSheet(); renderBudget(); await wait(150);
+  const names=[...document.querySelectorAll('#cats .sub-name')].map(e=>({n:e.textContent.trim(), clipped:e.scrollWidth>e.clientWidth+1}));
   return { boxes, onGroup, afterTick, freqOpts, afterFreq, withSub, zeroRefused, zeroUnticked, afterUntick, names };
 });
 check('every leaf category carries a repeat toggle', rep.boxes===4, String(rep.boxes));
@@ -463,7 +479,7 @@ check('a category with no amount cannot repeat nothing', rep.zeroRefused && rep.
       `refused ${rep.zeroRefused}, unticked ${rep.zeroUnticked}`);
 check('unticking removes it', rep.afterUntick===1, String(rep.afterUntick));
 check('...and the name is still readable beside the control',
-      rep.names.length>0 && rep.names.every(n=>!n.clipped && n.n.length>3),
+      rep.names.length>0 && rep.names.every(n=>!n.clipped && n.n.replace(/[\u21bb\s]+$/,'').length>=3),
       rep.names.map(n=>`"${n.n}"${n.clipped?' CLIPPED':''}`).join(' | '));
 
 /* it has to survive a reload and agree with the Recurring panel */
@@ -471,9 +487,13 @@ await p.reload(); await p.waitForTimeout(900);
 const persistRep = await p.evaluate(async () => {
   await new Promise(r=>setTimeout(r,150)); activateTab('budget');
   await new Promise(r=>setTimeout(r,250));
-  return { n:(state.recurring||[]).length, freq:(state.recurring[0]||{}).freq,
-           ticked:document.querySelector('[data-repeat="roof"]').checked,
-           panel:(document.getElementById('recList')||{}).innerText||'' };
+  openCatSheet('roof');
+  const t=document.querySelector('#catSheetBody [data-repeat="roof"]');
+  const out={ n:(state.recurring||[]).length, freq:(state.recurring[0]||{}).freq,
+              ticked:!!(t&&t.checked),
+              panel:(document.getElementById('recList')||{}).innerText||'' };
+  closeCatSheet();
+  return out;
 });
 check('a row-set repeat survives a reload', persistRep.n===1 && persistRep.freq==='quarterly' && persistRep.ticked,
       JSON.stringify({n:persistRep.n, freq:persistRep.freq, ticked:persistRep.ticked}));
@@ -576,23 +596,31 @@ check('...and each one is told apart from the others', toggle.distinct===3,
 const rename = await p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('budget'); await wait(350);
-  const pencils=document.querySelectorAll('#cats .subrow .cat-edit').length;
-  document.querySelector('[data-editcat="groc"]').click(); await wait(220);
-  const field=!!document.querySelector('input[data-rename="groc"]');
-  const cleared=(()=>{ const e=document.querySelector('.subrow.editing .sub-assign');
-    return e ? getComputedStyle(e).display==='none' : false; })();
-  document.querySelector('input[data-rename="groc"]').value='Groceries';
-  document.querySelector('[data-renamesave="groc"]').click(); await wait(220);
+  /* The pencil moved into each category's sheet along with everything else that
+     is not a name, a number and what is left. What must not change is that it
+     exists at EVERY level - the original bug was that only top-level categories
+     had one, so fixing a typo in a subcategory meant deleting it and taking its
+     transactions' category with it. */
+  const pencilFor=id=>{ openCatSheet(id); return document.querySelectorAll('#catSheetTitle .cat-edit').length; };
+  const pencils=['groc','w'].filter(id=>pencilFor(id)===1).length;
+  openCatSheet('groc');
+  document.querySelector('#catSheetTitle [data-editcat="groc"]').click(); await wait(220);
+  const field=!!document.querySelector('#catSheetBody input[data-rename="groc"]');
+  const cleared=!!document.querySelector('#catSheetBody .cs-rename');
+  document.querySelector('#catSheetBody input[data-rename="groc"]').value='Groceries';
+  document.querySelector('#catSheetBody [data-renamesave="groc"]').click(); await wait(220);
   // a third-level sub renames too, and Enter commits it
-  document.querySelector('[data-editcat="w"]').click(); await wait(220);
-  const i3=document.querySelector('input[data-rename="w"]'); i3.value='Walmart Supercenter';
+  openCatSheet('w');
+  document.querySelector('#catSheetTitle [data-editcat="w"]').click(); await wait(220);
+  const i3=document.querySelector('#catSheetBody input[data-rename="w"]'); i3.value='Walmart Supercenter';
   i3.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); await wait(220);
+  closeCatSheet();
   return { pencils, field, cleared, names:state.categories.map(c=>c.name),
            txKept:state.transactions.filter(t=>t.catId==='groc').length,
            assignKept:(state.budgets['2026-08']||{}).groc };
 });
-check('a subcategory can be renamed, not only deleted', rename.pencils===2 && rename.field,
-      `${rename.pencils} pencils, field ${rename.field}`);
+check('a subcategory can be renamed, not only deleted', rename.pencils===2 && rename.field && rename.cleared,
+      `${rename.pencils} of 2 levels carry a pencil, field ${rename.field}`);
 check('...at the third level too, with Enter to commit',
       rename.names.includes('Groceries') && rename.names.includes('Walmart Supercenter'),
       rename.names.join(','));
@@ -605,18 +633,25 @@ check('...with the rest of the row stepping aside for the field', rename.cleared
 const growth = await p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('budget'); await wait(300);
+  /* The row carries the shortest true version of it and the sheet carries the
+     sentence. Both have to say it - a plan that shows a retirement contribution
+     as spending is the fault this tag exists to prevent. */
   const tags=[...document.querySelectorAll('#cats .growth-tag')].map(e=>e.textContent.trim());
+  openCatSheet('inv');
+  const sheetSays=(document.getElementById('catSheetBody')||{}).innerText||'';
+  closeCatSheet();
   activateTab('tx'); await wait(300);
   const sel=document.getElementById('txCat');
   document.querySelector('#typeToggle button[data-t="expense"]').click(); await wait(120);
   sel.value='food'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(160);
   const afterOrdinary=txType;
   sel.value='inv'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(220);
-  return { tags, afterOrdinary, afterGrowth:txType,
+  return { tags, sheetSays, afterOrdinary, afterGrowth:txType,
            kinds:['invest','save','debt'].map(k=>growthKindFor(k==='invest'?'Investing / retirement':k==='save'?'Savings':'Extra debt payments')) };
 });
-check('money that is invested is not shown as money spent', growth.tags.length===1 && /not spent/i.test(growth.tags[0]),
-      growth.tags.join(','));
+check('money that is invested is not shown as money spent',
+      growth.tags.length===1 && /not spent/i.test(growth.tags[0]) && /Invested, not spent/i.test(growth.sheetSays),
+      growth.tags.join(',')+' | sheet: '+/Invested, not spent/i.test(growth.sheetSays));
 check('...and logging against it defaults to Invest, not Expense',
       growth.afterOrdinary==='expense' && growth.afterGrowth==='invest',
       `${growth.afterOrdinary} -> ${growth.afterGrowth}`);
@@ -2469,8 +2504,13 @@ const repDate = await p.evaluate(async () => {
   state.onboarded=true; state.uiMode='all'; state.stageReached=3; save();
   const M=state.activeMonth, c=findOrCreateCat('Roof');
   budgetFor(M)[c.id]=848.38; save(); activateTab('budget'); renderBudget();
-  o.beforeTick=document.querySelectorAll('[data-repdate]').length;
-  const cb=document.querySelector('[data-repeat="'+c.id+'"]');
+  /* Same control, same rule, now inside the category's own sheet - which is
+     also where the complaint that produced this section pointed: the date has
+     to be beside the switch that raised the question, not at the bottom of the
+     tab past every category. */
+  openCatSheet(c.id);
+  o.beforeTick=document.querySelectorAll('#catSheet [data-repdate]').length;
+  const cb=document.querySelector('#catSheet [data-repeat="'+c.id+'"]');
   cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true}));
   await new Promise(x=>setTimeout(x,80));
   const rec=()=>state.recurring.find(r=>r.catId===c.id);
@@ -2478,7 +2518,7 @@ const repDate = await p.evaluate(async () => {
   /* anchoring to a date that has already gone back-posts a bill - and if they
      logged that rent by hand, it lands twice */
   o.noBackPost={posted:postRecurring(M), spent:monthExpense(M)};
-  const di=()=>document.querySelector('[data-repdate="'+c.id+'"]');
+  const di=()=>document.querySelector('#catSheet [data-repdate="'+c.id+'"]');
   o.shown={exists:!!di(), value:di()&&di().value};
   di().value=M+'-01'; di().dispatchEvent(new Event('change',{bubbles:true}));
   await new Promise(x=>setTimeout(x,80));
@@ -2486,16 +2526,17 @@ const repDate = await p.evaluate(async () => {
   di().value=''; di().dispatchEvent(new Event('change',{bubbles:true}));
   await new Promise(x=>setTimeout(x,60));
   o.blankIgnored=rec().anchor;
-  const sel=document.querySelector('[data-repfreq="'+c.id+'"]');
+  const sel=document.querySelector('#catSheet [data-repfreq="'+c.id+'"]');
   sel.value='biweekly'; sel.dispatchEvent(new Event('change',{bubbles:true}));
   await new Promise(x=>setTimeout(x,60));
   o.freqKeepsDate={freq:rec().freq, anchor:rec().anchor};
   /* untick and the date goes with it - a date for a bill that does not repeat
      is a control with nothing behind it */
-  const cb2=document.querySelector('[data-repeat="'+c.id+'"]');
+  const cb2=document.querySelector('#catSheet [data-repeat="'+c.id+'"]');
   cb2.checked=false; cb2.dispatchEvent(new Event('change',{bubbles:true}));
   await new Promise(x=>setTimeout(x,80));
-  o.goneWithIt=document.querySelectorAll('[data-repdate]').length;
+  o.goneWithIt=document.querySelectorAll('#catSheet [data-repdate]').length;
+  closeCatSheet();
   return o;
 });
 check('no date control until the thing actually repeats',
@@ -2544,6 +2585,18 @@ const preCal = await p.evaluate(async () => {
   o.streak=(()=>{ const st=[...document.querySelectorAll('#rewardCalBox .cal-stat')]
     .find(x=>/streak/i.test(x.textContent)); return st?st.querySelector('.v').textContent.trim():''; })();
   o.ahead=/Ahead this month/.test(txt());
+  /* Pinned to "3" once, which made it a calendar bomb: the streak counts up to
+     today, so the assertion broke by itself the next morning without a line of
+     code changing. The property is that the pre-start day is NOT SCORED, and the
+     way to test that is to take the day away and check the streak did not move. */
+  const readStreak=()=>{ const st=[...document.querySelectorAll('#rewardCalBox .cal-stat')]
+    .find(x=>/streak/i.test(x.textContent)); return st?st.querySelector('.v').textContent.trim():''; };
+  const keep=state.transactions.slice();
+  state.transactions=state.transactions.filter(t=>t.date!==M+'-01');
+  renderRewardCalendar();
+  o.streakWithoutPreDay=readStreak();
+  state.transactions=keep; renderRewardCalendar();
+  o.streakAgain=readStreak();
   /* the money is still real everywhere it was real before */
   o.stillCounted={month:Math.round(monthExpense(M)*100)/100};
   /* the sentence above the grid has to be true of what the grid does */
@@ -2566,7 +2619,9 @@ const preCal = await p.evaluate(async () => {
 check('a day before you started is greyed, whatever is on it',
       /\bpre\b/.test(preCal.cls) && !/\bover\b/.test(preCal.cls), preCal.cls);
 check('...and it is not scored, so the streak survives it',
-      preCal.streak==='3' && preCal.ahead===true, `streak "${preCal.streak}"`);
+      +preCal.streak>0 && preCal.ahead===true && preCal.streak===preCal.streakWithoutPreDay
+        && preCal.streak===preCal.streakAgain,
+      `streak "${preCal.streak}" with the day, "${preCal.streakWithoutPreDay}" without it`);
 check('...but the money still counts everywhere it counted before',
       preCal.stillCounted.month===1698.38, String(preCal.stillCounted.month));
 check('...it is still tappable, and marked, so nothing is hidden',
@@ -3325,6 +3380,110 @@ check('a re-run by someone who already accepted is not made to read it again',
       flow.rerunSkips===true && flow.rerunAsks===true);
 check('the gate leaves the setup screen usable, however it was left',
       flow.gateAgain===true && flow.recovers===true, JSON.stringify({gateAgain:flow.gateAgain,recovers:flow.recovers}));
+
+/* ---- 53. a line per category, and a door to the rest ----
+   From a phone: "this scroll is long on the plan tab, it should adopt this
+   layout, with a details tab holding the past history and recurring options and
+   targets." Correct. Every category carried a progress bar, a meta line, a
+   repeat control with its own date picker, a split button, a delete button, a
+   rename pencil and an add-subcategory row - eleven controls each, and the one
+   question a plan exists to answer, "what is left in this", was buried in the
+   middle of them.
+
+   The properties: the list holds one line per category, that line answers the
+   question, tapping it opens everything else, and nothing that used to be
+   reachable stopped being reachable. That last one is the whole risk of a move
+   like this, so it is checked control by control. */
+await seed({...FULL, activeMonth:'2026-08',
+  categories:[{id:'bills',name:'Bills'},{id:'elec',name:'Electric',parentId:'bills'},
+              {id:'att',name:'Phone',parentId:'bills'},{id:'food',name:'Food'},
+              {id:'ret',name:'Retirement',growth:'invest'}],
+  budgets:{'2026-08':{elec:180,att:95,food:600,ret:400},'2026-07':{elec:170,att:95,food:640}},
+  transactions:[{id:'i',type:'income',amount:4200,date:'2026-08-01'},
+                {id:'e1',type:'expense',amount:191,catId:'elec',date:'2026-08-04',note:'August bill'},
+                {id:'e2',type:'expense',amount:712,catId:'food',date:'2026-08-09'},
+                {id:'e3',type:'expense',amount:180,catId:'elec',date:'2026-07-04'},
+                {id:'v1',type:'invest',amount:400,catId:'ret',date:'2026-08-02'}]});
+await p.setViewportSize({width:390,height:1200});
+await p.reload(); await p.waitForTimeout(700);
+const plan = await p.evaluate(() => {
+  activateTab('budget'); renderBudget();
+  const box=document.getElementById('cats');
+  const rows=[...box.querySelectorAll('[data-row]')];
+  const heights=rows.map(r=>Math.round(r.getBoundingClientRect().height));
+  return {
+    rows:rows.length,
+    cols:!!box.querySelector('.plan-cols'),
+    pills:box.querySelectorAll('.avail').length,
+    tallest:Math.max(...heights),
+    /* the controls that used to live on every row */
+    barsInList:box.querySelectorAll('.bar').length,
+    repeatsInList:box.querySelectorAll('[data-repeat]').length,
+    deletesInList:box.querySelectorAll('[data-del]').length,
+    pencilsInList:box.querySelectorAll('.cat-edit').length,
+    addSubInList:box.querySelectorAll('[data-addsub-input]').length,
+    everyRowHasPill:rows.every(r=>!!r.querySelector('.avail')),
+    everyLeafTypeable:rows.filter(r=>r.classList.contains('subrow')).every(r=>!!r.querySelector('input[data-cat]'))
+  };
+});
+check('the plan is one line per category, with a column header over them',
+      plan.rows===5 && plan.cols===true && plan.everyRowHasPill===true, JSON.stringify(plan));
+check('...and no row is taller than a line',
+      plan.tallest<=64, `tallest row ${plan.tallest}px`);
+check('...the amount is still typed straight into the list, where it is typed ninety times a month',
+      plan.everyLeafTypeable===true);
+check('...and the eleven controls that used to ride along are gone from it',
+      plan.barsInList===0 && plan.repeatsInList===0 && plan.deletesInList===0
+      && plan.pencilsInList===0 && plan.addSubInList===0,
+      JSON.stringify({bars:plan.barsInList,repeats:plan.repeatsInList,dels:plan.deletesInList,pencils:plan.pencilsInList,addsub:plan.addSubInList}));
+/* Gone from the list is only acceptable if it is present in the sheet. */
+const sheet = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  document.querySelector('#cats [data-catsheet="elec"] .rw-nm').click(); await wait(200);
+  const on=document.getElementById('catSheet').classList.contains('on');
+  const b=document.getElementById('catSheetBody');
+  const has=sel=>!!b.querySelector(sel);
+  const out={ on, title:(document.getElementById('catSheetTitle')||{}).innerText||'',
+    assigned:has('input[data-cat="elec"]'), repeat:has('[data-repeat="elec"]'),
+    del:has('[data-del="elec"]'), pencil:!!document.querySelector('#catSheetTitle .cat-edit'),
+    split:has('[data-addsubfirst="elec"]'), bar:has('.bar'),
+    history:has('.cs-hist'), txs:has('.cs-tx'),
+    text:b.innerText };
+  /* a group opens too, and says what a group is */
+  document.getElementById('catSheetX').click(); await wait(150);
+  document.querySelector('#cats [data-catsheet="bills"] .rw-nm').click(); await wait(200);
+  out.groupText=document.getElementById('catSheetBody').innerText;
+  out.groupSubs=document.querySelectorAll('#catSheetBody .cs-sub').length;
+  out.groupHasAssign=!!document.querySelector('#catSheetBody input[data-cat="bills"]');
+  document.getElementById('catSheetX').click(); await wait(150);
+  return out;
+});
+check('tapping a category opens its own sheet', sheet.on===true && /Electric/.test(sheet.title), sheet.title);
+check('...carrying every control the row used to',
+      sheet.assigned && sheet.repeat && sheet.del && sheet.pencil && sheet.split && sheet.bar,
+      JSON.stringify({assign:sheet.assigned,repeat:sheet.repeat,del:sheet.del,pencil:sheet.pencil,split:sheet.split,bar:sheet.bar}));
+check('...plus the history the list never had room for',
+      sheet.history===true && sheet.txs===true && /Jul/.test(sheet.text) && /August bill/.test(sheet.text));
+check('...and it does not invent a carry-forward this app has never had',
+      !/from last month/i.test(sheet.text) && !/rolled over/i.test(sheet.text));
+check('a pool opens too, lists what is inside it, and does not offer its own amount',
+      sheet.groupSubs===2 && sheet.groupHasAssign===false && /pool/i.test(sheet.groupText),
+      JSON.stringify({subs:sheet.groupSubs, ownField:sheet.groupHasAssign}));
+/* The bug the compact row exposed: a growth pool could never be used up, so the
+   Plan claimed money was available that had already left. */
+const growthPool = await p.evaluate(() => {
+  const M=state.activeMonth;
+  const row=document.querySelector('#cats [data-catsheet="ret"] .avail');
+  return { pill:row?row.innerText:'', used:catUsed('ret',M), spent:catSpent('ret',M),
+           breakdown:(()=>{ rfTab='breakdown'; activateTab('reflect'); renderReflectTab();
+             return document.getElementById('bdBox').innerText; })() };
+});
+check('a category funded and then invested from reads as used up, not as money still there',
+      /\$0\b/.test(growthPool.pill) && growthPool.used===400, `pill "${growthPool.pill}", used ${growthPool.used}`);
+check('...while the spending breakdown still refuses to call an investment spending',
+      growthPool.spent===0 && !/Retirement/.test(growthPool.breakdown),
+      growthPool.breakdown.replace(/\n/g,' ').slice(0,80));
+await p.setViewportSize({width:390,height:1000});
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

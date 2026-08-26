@@ -284,6 +284,12 @@
   .subrow.reordering .sub-assign,.subrow.reordering .btn.danger,.subrow.reordering .sub-split-btn,
   .cat.reordering .rep,.subrow.reordering .rep{display:none!important}
   .subrow.reordering .sub-name,.cat.reordering .cat-name{flex:1;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
+  /* In reorder mode the Available pill goes too. Nothing on that row is being
+     read while a row is being moved, and every column the name does not have to
+     share with is a name that stays readable under a thumb. */
+  .subrow.reordering .avail,.cat.grp.reordering .avail,.cat.grp.reordering .cat-assign{display:none!important}
+  .subrow.reordering{grid-template-columns:auto minmax(0,1fr)}
+  .cat.grp.reordering .cat-top{grid-template-columns:auto auto minmax(0,1fr)}
   .areaguide{background:rgba(var(--accent-rgb),.09);border:1px solid rgba(var(--accent-rgb),.34);border-radius:16px;padding:16px 18px;margin-bottom:16px}
   .areaguide .ag-k{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent)}
   .areaguide .ag-t{font-weight:800;font-size:16px;margin:4px 0 6px;color:var(--text)}
@@ -954,6 +960,108 @@
   .cat-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--muted)}
   .cat-meta .rem.good{color:var(--good)}.cat-meta .rem.over{color:var(--accent)}
   .cat.overspent{border-color:#4a221e}.cat.overspent .bar>span{background:var(--accent-2)}
+
+
+  /* ---------- Plan: one line per category ----------
+     Three columns and nothing else. The name is a door into the category's own
+     sheet, the middle is the only field being typed into ninety times a month,
+     and the pill on the right is the answer to the only question the list is
+     for. Everything that used to sit on the row lives behind the door now. */
+  .plan-cols{display:grid;grid-template-columns:minmax(0,1fr) 88px 80px;gap:8px;align-items:end;
+    padding:0 10px 7px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .plan-cols span:not(:first-child){text-align:right}
+  .cat.grp{background:transparent;border:none;border-radius:0;padding:0;margin-top:10px}
+  .cat.grp .cat-top{display:grid;grid-template-columns:auto minmax(0,1fr) 88px 80px;gap:8px;align-items:center;
+    background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px;flex-wrap:nowrap}
+  .cat.grp .cat-name{font-size:15px;flex:none;min-width:0}
+  .cat.grp .cat-assign{display:block;text-align:right;font-weight:800;font-size:14px;color:var(--text)}
+  .cat.grp .cat-assign i{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--muted)}
+  .cat.grp.overspent .cat-top{border-color:rgba(var(--accent-2-rgb),.45)}
+  .subrow{display:grid;grid-template-columns:minmax(0,1fr) 88px 80px;gap:8px;align-items:center;
+    padding:9px 10px;margin-top:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+  .subrow.lvl1{margin-left:12px}
+  .subrow.lvl2{margin-left:24px}
+  .subrow.overspent{border-color:rgba(var(--accent-2-rgb),.45)}
+  /* break-word rather than anywhere. "anywhere" is allowed to split a word even
+     when wrapping to the next line would have fitted it whole, which is how
+     "Food" ended up broken across two lines in a column that had room for it. */
+  .rw-nm{background:none;border:none;padding:0;text-align:left;color:var(--text);font:inherit;font-weight:700;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-wrap:break-word;min-width:0;cursor:pointer;width:100%}
+  .rw-nm:hover{color:var(--accent)}
+  /* These two carry flex sizing from the old stacked layout, including a
+     min-width floor. Inside a grid track a min-width larger than the track does
+     not shrink it - it overflows into the next column, which is how a category
+     name ended up printed on top of the "$" beside it. */
+  .subrow .sub-name,.cat.grp .cat-name{min-width:0;flex:none;display:block;overflow:hidden}
+  .subrow .sub-assign{display:flex;align-items:center;gap:5px;min-width:0}
+  .growth-tag.mini{font-size:9.5px;padding:1px 5px;letter-spacing:.2px}
+  .rep-dot{font-size:12px;color:var(--muted);flex:none}
+  .subrow .sub-assign input{width:100%}
+  .avail{display:inline-block;width:100%;text-align:center;border:1px solid transparent;border-radius:999px;
+    padding:6px 8px;font-weight:800;font-size:13px;white-space:nowrap;font-family:inherit;overflow:hidden;text-overflow:ellipsis}
+  .subrow[data-catsheet],.cat.grp[data-catsheet] .cat-top,.cs-sub[data-catsheet]{cursor:pointer}
+  .avail.good{background:rgba(53,201,154,.16);color:var(--good);border-color:rgba(53,201,154,.35)}
+  .avail.over{background:rgba(var(--accent-2-rgb),.18);color:var(--accent-2);border-color:rgba(var(--accent-2-rgb),.45)}
+  .avail.spent{background:rgba(230,178,77,.16);color:var(--accent);border-color:rgba(230,178,77,.35)}
+  .avail.none{background:var(--ink);color:var(--muted);border-color:var(--line)}
+  @media(max-width:365px){
+    .plan-cols{grid-template-columns:minmax(0,1fr) 74px 68px;gap:6px;padding:0 8px 7px}
+    .cat.grp .cat-top{grid-template-columns:auto minmax(0,1fr) 74px 68px;gap:6px;padding:9px 8px}
+    .subrow{grid-template-columns:minmax(0,1fr) 74px 68px;gap:6px;padding:8px}
+    .avail{font-size:12px;padding:6px 3px}
+    .subrow .sub-assign input{padding:6px;font-size:13px}
+    .subrow.lvl1{margin-left:8px} .subrow.lvl2{margin-left:16px}
+  }
+
+  /* ---------- the category sheet ---------- */
+  #catSheetTitle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-right:34px}
+  .cs-sec{margin-top:16px}
+  .cs-sec:first-child{margin-top:4px}
+  .cs-h{font-size:11.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .cs-card{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
+  .cs-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;font-size:14px;color:var(--muted)}
+  .cs-row b{color:var(--text);font-weight:800;font-size:15px}
+  .cs-row.sub{font-size:12.5px;padding:0 0 6px}
+  .cs-row.sub b{font-size:13px;font-weight:700}
+  .cs-row.big{border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
+  .cs-row.big .avail{width:auto;padding:5px 12px;cursor:default}
+  .cs-card .bar{margin-top:10px}
+  .cs-assign{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;
+    background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+  .cs-k{font-weight:700;font-size:14px}
+  .cs-in{display:flex;align-items:center;gap:6px;color:var(--muted)}
+  .cs-in input{width:110px;padding:9px 10px;font-size:15px;font-weight:700}
+  .cs-note{font-size:13px;line-height:1.55;color:var(--muted);margin:9px 0 0}
+  .cs-rename{margin-bottom:12px;display:flex;gap:8px}
+  .cs-rep{display:flex;align-items:flex-start;gap:11px}
+  .cs-repk{font-size:13px;line-height:1.55;color:var(--muted)}
+  .cs-repk b{color:var(--text)}
+  .cs-sub{display:grid;grid-template-columns:1fr 78px 78px;gap:8px;align-items:center;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px}
+  .cs-subn{background:none;border:none;padding:0;text-align:left;color:var(--text);font:inherit;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .cs-subn:hover{color:var(--accent)}
+  .cs-suba{text-align:right;font-size:13px;color:var(--muted);font-weight:700}
+  .cs-hist{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:11px 13px}
+  .cs-hrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:9px;align-items:center;padding:5px 0;font-size:12.5px}
+  .cs-hm{color:var(--muted);font-weight:800}
+  .cs-hbars{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .cs-hbars i{display:block;height:5px;border-radius:3px;min-width:2px}
+  .hb-a{background:rgba(230,178,77,.55)}
+  .hb-s{background:var(--accent-2)}
+  .cs-hv{text-align:right;font-weight:700;white-space:nowrap}
+  .cs-hv em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--muted)}
+  .cs-hd{text-align:right;font-weight:700;color:var(--good);white-space:nowrap;font-size:12px}
+  .cs-hd.over{color:var(--accent-2)}
+  .cs-hkey{display:flex;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+  .cs-hkey span{display:flex;align-items:center;gap:5px}
+  .cs-hkey i{width:14px;height:5px;border-radius:3px}
+  .cs-txs{margin-top:9px}
+  .cs-tx{display:grid;grid-template-columns:52px 1fr auto;gap:9px;align-items:center;padding:8px 0;
+    border-bottom:1px solid var(--line);font-size:13.5px}
+  .cs-tx:last-of-type{border-bottom:none}
+  .cs-txd{color:var(--muted);font-size:12px;font-weight:700}
+  .cs-txn{overflow-wrap:anywhere}
+  .cs-txv{font-weight:800;white-space:nowrap}
 
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
 
@@ -2639,6 +2747,19 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <div class="gl-panel" id="glanceBody"></div>
   </div>
 
+  <!-- Everything a category is, in the one place there is room for it. Asked for
+       directly after a long scroll on the Plan tab: keep the list to a line per
+       category and put the history, the repeat and the target behind a detail
+       view. That is also the honest split - the list is for the one decision
+       being made ninety times a month, and this is for the questions you ask
+       about a category twice. -->
+  <div class="modal-overlay" id="catSheet">
+    <div class="modal">
+      <button class="x" id="catSheetX">&#10005;</button>
+      <h3 id="catSheetTitle">Category</h3>
+      <div id="catSheetBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="talkSheet">
     <div class="modal">
       <button class="x" id="talkX">✕</button>
@@ -4482,6 +4603,7 @@ function closeTopOverlay(){
   const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
+  const cs=document.getElementById('catSheet'); if(cs&&cs.classList.contains('on')){ cs.classList.remove('on'); if(typeof catSheetId!=='undefined') catSheetId=null; return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
   const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
   const ik=document.getElementById('intake'); if(ik&&ik.classList.contains('on')){ ik.classList.remove('on'); document.body.style.overflow=''; return true; }
@@ -4963,6 +5085,12 @@ let collapsedCats=new Set();
 const ROW_FREQS=['weekly','biweekly','monthly','quarterly'];   // the four people actually use; the full six stay in the Recurring panel
 function fmtDayShort(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}); }catch(_){ return d; } }
 function recForCat(catId){ return (state.recurring||[]).find(r=>r.type==='expense' && r.catId===catId) || null; }
+let catSheetId=null;
+/* Anything that changes a category has to land on both surfaces at once. The
+   list and the sheet show the same numbers, and a sheet still displaying last
+   second's figure while the list behind it has moved on is the kind of thing
+   people stop trusting an app over. */
+function planRefresh(){ renderBudget(); if(catSheetId) renderCatSheet(); }
 function repeatCtrlHTML(catId, assigned){
   if(catReorder) return '';
   const r=recForCat(catId), on=!!r;
@@ -4991,15 +5119,18 @@ function wireRepeat(box){
     const id=cb.dataset.repeat, M=state.activeMonth;
     if(!cb.checked){
       state.recurring=(state.recurring||[]).filter(r=>!(r.type==='expense'&&r.catId===id));
-      save(); renderBudget(); renderRecurring(); renderTx();
+      save(); planRefresh(); renderRecurring(); renderTx();
       if(typeof toast==='function') toast('Stopped repeating. Anything already posted stays.');
       return;
     }
     const amt=assignedFor(id,M);
     if(!(amt>0)){
-      cb.checked=false; renderBudget();
-      // a repeat with no amount posts nothing, so send them to the number first
-      setTimeout(()=>{ const inp=document.querySelector('#cats input[data-cat="'+id+'"]');
+      cb.checked=false; planRefresh();
+      /* Send them to the number first - and to the copy of it they are actually
+         looking at. The tick now lives in the category sheet, so pointing at the
+         list underneath would scroll a field they cannot see. */
+      setTimeout(()=>{ const inp=document.querySelector('#catSheet.on input[data-cat="'+id+'"]')
+                          || document.querySelector('#cats input[data-cat="'+id+'"]');
         if(inp){ inp.scrollIntoView({behavior:'smooth',block:'center'}); inp.focus(); inp.select&&inp.select(); } },80);
       if(typeof toast==='function') toast('Give it an amount first - then it can repeat that amount.');
       return;
@@ -5013,7 +5144,7 @@ function wireRepeat(box){
     const anchor = todayStr()>first ? shiftMonth(M,1)+'-01' : first;
     const rec={id:uid(), type:'expense', amount:amt, catId:id, freq:'monthly', anchor, day:1, src:'row'};
     state.recurring.push(rec);
-    save(); renderBudget(); renderRecurring(); renderTx();
+    save(); planRefresh(); renderRecurring(); renderTx();
     if(typeof toast==='function') toast(`${catName(id)} repeats monthly at ${money(amt)}. First one lands ${fmtDayShort(anchor)} - change the date beside it if that is wrong.`);
   }));
   box.querySelectorAll('[data-repdate]').forEach(inp=>inp.addEventListener('change',()=>{
@@ -5021,13 +5152,13 @@ function wireRepeat(box){
     const v=inp.value;
     if(!v){ inp.value=recAnchor(r); return; }        // a blank date is not an instruction
     r.anchor=v; r.day=Math.min(28,Math.max(1,+v.slice(8,10)||1));
-    save(); renderBudget(); renderRecurring(); renderTx();
+    save(); planRefresh(); renderRecurring(); renderTx();
     const nx=recNextDue(r);
     if(typeof toast==='function') toast(nx?`Next one: ${fmtDayShort(nx)}.`:'Date set.');
   }));
   box.querySelectorAll('[data-repfreq]').forEach(sel=>sel.addEventListener('change',()=>{
     const r=recForCat(sel.dataset.repfreq); if(!r) return;
-    r.freq=sel.value; save(); renderBudget(); renderRecurring();
+    r.freq=sel.value; save(); planRefresh(); renderRecurring();
     if(typeof toast==='function') toast(`Now ${recFreqMeta(r).short} - about ${money(recMonthly(r))} a month.`);
   }));
 }
@@ -5219,6 +5350,17 @@ function descendantsOf(id){
 }
 function catDepth(id){ let d=1,c=state.categories.find(x=>x.id===id),hops=0; while(c&&c.parentId&&hops++<6){ d++; c=state.categories.find(x=>x.id===c.parentId); } return d; }
 function catSpent(id,M){ return spentFor(id,M)+descendantsOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
+/* Money that left a category's assignment is not always SPENDING. A Retirement
+   category funded at $400 with $400 logged against it as an invest showed
+   "$400 available" every single month, because spentFor counts expenses only -
+   so the pool could never be used up and Left to spend was overstated by every
+   dollar anyone had ever invested. Spending analytics still want expenses alone
+   (an invest is not a leak and must never appear in the breakdown as one), so
+   the two questions get two functions instead of one that answers neither well.
+   This one is "what came out of this pool", and it is what the Plan runs on. */
+function investedFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='invest'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
+function catInvested(id,M){ return investedFor(id,M)+descendantsOf(id).reduce((s,k)=>s+investedFor(k.id,M),0); }
+function catUsed(id,M){ return catSpent(id,M)+catInvested(id,M); }
 /* Budgeting works in BOTH directions, because people know their numbers at
    different levels. Top-down: assign $300 to Power & Wi-Fi and split it into
    Electric/Water/Internet. Bottom-up: you know water is $70 and electric is $120
@@ -5527,74 +5669,89 @@ function renderBudget(){
     box.innerHTML=`<div class="empty">No categories yet. Add one above, or hit “Starter set” to skip the blank page.</div>`;
   } else {
     const tops=topCats();
-    box.innerHTML=tops.map((c,ti)=>{
-      const a=catAssigned(c.id,M), sp=catSpent(c.id,M), rem=a-sp;   // rolled up: subs you filled in count even if the parent is blank
-      const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
-      const over=sp>a&&sp>0;
-      const rc=rem<0?'over':(rem>0?'good':'');
+    /* The list used to be the whole app on one screen: every category carried a
+       progress bar, a meta line, a repeat control with its own date picker, a
+       split button, a delete button, a rename pencil, an add-subcategory row and
+       sometimes a wall guide. Eleven controls per category, times twenty
+       categories, is a scroll nobody finishes - and the one question a plan is
+       supposed to answer, "what is left in this", was buried in the middle of it.
+
+       So the list answers exactly that question and nothing else: name, what you
+       assigned, what is left. Everything else moved into the category's own
+       sheet, one tap away, where there is room to show it properly. */
+    const rowFor=(c,depth)=>{
+      const a=catAssigned(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
-      const rebalance = over ? `<div class="rebalance">
-          <div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
-          <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div>
-        </div>` : '';
-      const subsHTML = (isGroup && !collapsed) ? kids.map((k,ki)=>{
-        // a sub can be a group itself: Gas → Car 1 / Car 2, Groceries → Walmart / Meijer (three levels max)
-        const gkids=childrenOf(k.id), kGroup=gkids.length>0;
-        const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
-        const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
-        let h=`<div class="subrow${catReorder?' reordering':''}${k.id===catEditId?' editing':''}" data-row="${k.id}" data-lvl="${c.id}">${reorderCtrlHTML(k.id)}<span class="sub-name">${k.id===catEditId
-          ? `<input type="text" class="cat-rename" value="${escapeHtml(k.name)}" data-rename="${k.id}" placeholder="Subcategory name"><button class="btn sm primary" data-renamesave="${k.id}">Save</button>`
-          : `${escapeHtml(k.name)}<button class="mini-edit cat-edit" data-editcat="${k.id}" title="Rename ${escapeHtml(k.name)} (keeps your transactions)">✎</button>${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}`}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span>${kGroup?'':repeatCtrlHTML(k.id)}<span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
-        if(kGroup){
-          h+=gkids.map(g=>`<div class="subrow subsub${catReorder?' reordering':''}${g.id===catEditId?' editing':''}" data-row="${g.id}" data-lvl="${k.id}">${reorderCtrlHTML(g.id)}<span class="sub-name">${g.id===catEditId
-            ? `<input type="text" class="cat-rename" value="${escapeHtml(g.name)}" data-rename="${g.id}" placeholder="Subcategory name"><button class="btn sm primary" data-renamesave="${g.id}">Save</button>`
-            : `${escapeHtml(g.name)}<button class="mini-edit cat-edit" data-editcat="${g.id}" title="Rename ${escapeHtml(g.name)} (keeps your transactions)">✎</button>`}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span>${repeatCtrlHTML(g.id)}<span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
-          h+=splitNoteHTML(k.id,M,k.name);
-        }
-        if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
-        return h;
-      }).join('') : '';
-      const showAddRow = (isGroup || splitting.has(c.id)) && !collapsed;
-      const addSub = showAddRow
-        ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋ Add</button></div>`
-        : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
-      return `<div class="cat ${over?'overspent':''}${catReorder?' reordering':''}" data-row="${c.id}" data-lvl="">
-        <div class="cat-top">
-          ${reorderCtrlHTML(c.id)}
-          ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
-          ${c.id===catEditId
-            ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
-            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag" title="This money is not spending - logging against it defaults to Invest">${GROWTH_TAG[c.growth]||'Not spending'}</span>`:''}${isGroup&&a>assignedFor(c.id,M)?`<span class="roll-tag" title="Added up from your subs">= ${money(a)}</span>`:''}</span>`}
-          <span class="cat-assign">Assign $ <input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(c.id,M)||0}" data-cat="${c.id}" ${isGroup?`placeholder="or fill the subs"`:''}></span>
-          ${isGroup?'':repeatCtrlHTML(c.id)}
-          <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
-        </div>
-        <div class="bar"><span style="width:${pct}%"></span></div>
-        <div class="cat-meta"><span>Spent ${money(sp)} of ${money(a)}</span><span class="rem ${rc}">${rem<0?money(-rem)+' over':money(rem)+' left'}</span></div>
-        ${splitNoteHTML(c.id,M,'')}
-        ${rebalance}
-        ${subsHTML}
-        ${addSub}
-        ${wallGuideHTML(c,M)}
+      const own=assignedFor(c.id,M);
+      const pillCls = rem<0 ? 'over' : (a>0 ? (rem>0?'good':'spent') : 'none');
+      /* Renaming happens in the sheet, never here. Two live inputs carrying the
+         same data-rename would have the save button picking one of them at
+         random, and the row has no room for a text field anyway. */
+      const nameHTML = `<button class="rw-nm" data-catsheet="${c.id}" title="Open ${escapeHtml(c.name)}">${escapeHtml(c.name)}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag mini" title="${escapeHtml(GROWTH_TAG[c.growth]||'Not spending')}">${escapeHtml(GROWTH_TAG_SHORT[c.growth]||'not spent')}</span>`:''}${recForCat(c.id)?'<span class="rep-dot" title="This repeats">&#8635;</span>':''}</button>`;
+      if(isGroup){
+        return `<div class="cat grp${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
+          <div class="cat-top">
+            ${reorderCtrlHTML(c.id)}
+            <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
+            <span class="cat-name">${nameHTML}</span>
+            <span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}</span>
+            <span class="avail ${pillCls} gcol">${money(rem)}</span>
+          </div>
+        </div>`;
+      }
+      /* The pill is a SPAN, not a button, and the row carries the target instead.
+         In Life mode every figure in the app reads as hours, and a BUTTON whose
+         label is "-4.9 hrs" reads as somewhere you type hours - which you cannot.
+         The name beside it is a real button and is the accessible door; making
+         the whole row tappable just means a thumb does not have to find it. */
+      return `<div class="subrow lvl${depth}${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
+        ${reorderCtrlHTML(c.id)}
+        <span class="sub-name">${nameHTML}</span>
+        <span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <span class="avail ${pillCls}" title="What is left">${money(rem)}</span>
       </div>`;
-    }).join('');
+    };
+    const walk=(c,depth)=>{
+      let h=rowFor(c,depth);
+      if(childrenOf(c.id).length && !collapsedCats.has(c.id))
+        h+=childrenOf(c.id).map(k=>walk(k,depth+1)).join('');
+      return h;
+    };
+    box.innerHTML=`<div class="plan-cols"><span>Category</span><span>Assigned</span><span>Available</span></div>`
+      + tops.map(c=>walk(c,0)).join('');
   }
+  wirePlan(box, true);
+}
+/* One set of controls, two homes. The Plan list keeps the fast path - a name, a
+   number and what is left - and everything that used to hang off each row now
+   lives in that category's own sheet. Both surfaces render the same controls, so
+   they have to be wired by the same code or they drift: the tick that starts a
+   repeat, the rename, the split, the delete. A second copy of this block is how
+   a button quietly stops working on one screen and nobody notices for a month. */
+function wirePlan(box, isMain){
+  /* Read here rather than captured from the caller. When this block lived inside
+     renderBudget it closed over that render's M; extracted, it referenced a
+     variable that no longer existed, so every handler that wrote a budget threw
+     silently on click - the negative clamp among them. Reading the live active
+     month is also more correct: a handler bound before the month changed must
+     write to the month the user is looking at now. */
+  const M=state.activeMonth;
   wireDeepen(box);
   box.querySelectorAll('[data-assignnow]').forEach(b=>b.addEventListener('click',()=>{
     const id=b.dataset.assignnow, sum=kidsAssigned(id,M);
-    budgetFor(M)[id]=sum; save(); renderBudget(); renderHome();
+    budgetFor(M)[id]=sum; save(); planRefresh(); renderHome();
     const c=state.categories.find(x=>x.id===id);
     if(typeof toast==='function') toast((c?c.name:'That pool')+' set to '+money(sum)+' - the subs add up to it exactly.');
   }));
   box.querySelectorAll('[data-wallnext]').forEach(b=>b.addEventListener('click',()=>goToWall(b.dataset.wallnext)));
-  box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; renderBudget(); }));
+  box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; planRefresh(); }));
   let budgetAdvancing=false;
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
     /* Clamp at the point of entry: the field says min=0 but typing "-500" got
        past it, and a negative assignment SUBTRACTS from the assigned total -
        zero-based math you can print money against. (Independent audit, F1.) */
     inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=Math.max(0,parseFloat(inp.value)||0); save(); refreshBudgetSummary(); });
-    inp.addEventListener('change',()=>{ if(budgetAdvancing) return; renderBudget(); });
+    inp.addEventListener('change',()=>{ if(budgetAdvancing) return; planRefresh(); });
     inp.addEventListener('keydown',e=>{
       if(e.key!=='Enter') return;
       e.preventDefault();
@@ -5602,38 +5759,38 @@ function renderBudget(){
       budgetAdvancing=true;
       const ids=[...box.querySelectorAll('input[data-cat]')].map(x=>x.dataset.cat);
       const nextId=ids[ids.indexOf(inp.dataset.cat)+1];
-      renderBudget();
+      planRefresh();
       const next=nextId?box.querySelector('input[data-cat="'+nextId+'"]'):null;
       if(next){ next.focus(); if(next.select) next.select(); }
       else { const add=document.getElementById('catName'); if(add) add.focus(); }   // past the last: on to adding a category
       budgetAdvancing=false;
     });
   });
-  box.querySelectorAll('button[data-editcat]').forEach(btn=>btn.addEventListener('click',()=>{ catEditId=btn.dataset.editcat; renderBudget(); const inp=box.querySelector('input[data-rename]'); if(inp){ inp.focus(); inp.select&&inp.select(); } }));
-  const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); renderBudget(); renderTx(); };
+  box.querySelectorAll('button[data-editcat]').forEach(btn=>btn.addEventListener('click',()=>{ catEditId=btn.dataset.editcat; planRefresh(); const inp=box.querySelector('input[data-rename]'); if(inp){ inp.focus(); inp.select&&inp.select(); } }));
+  const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); planRefresh(); renderTx(); };
   box.querySelectorAll('button[data-renamesave]').forEach(btn=>btn.addEventListener('click',()=>saveRename(btn.dataset.renamesave)));
-  box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; renderBudget(); } }));
+  box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; planRefresh(); } }));
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
     const toRemove=new Set([id,...descendantsOf(id).map(k=>k.id)]);   // the whole subtree goes, all three levels
     state.categories=state.categories.filter(c=>!toRemove.has(c.id));
     Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
     // keep transactions for history; they become "Uncategorized"
-    save(); renderBudget(); renderTx();
+    save(); planRefresh(); renderTx();
   }));
   wireReorder(box); wireRepeat(box);
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
-  box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); renderBudget(); }));
+  box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); planRefresh(); }));
   // "Split into subcategories" reveals an inline input (no jarring browser prompt) and focuses it
   box.querySelectorAll('button[data-addsubfirst]').forEach(btn=>btn.addEventListener('click',()=>{
-    const id=btn.dataset.addsubfirst; splitting.add(id); renderBudget();
+    const id=btn.dataset.addsubfirst; splitting.add(id); planRefresh();
     const inp=box.querySelector('input[data-addsub-input="'+id+'"]'); if(inp) inp.focus();
   }));
   const addSubcat=(parentId,name)=>{
     name=(name||'').trim(); if(!name) return;
     if(catDepth(parentId)>=3){ if(typeof toast==='function') toast('Three levels is the limit - deeper than this stops being a plan and starts being filing.'); return; }
     const newId=uid();
-    state.categories.push({id:newId,name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
+    state.categories.push({id:newId,name,parentId}); splitting.add(parentId); save(); planRefresh(); renderTxForm();
     // Land on the NEW sub's amount, not the next name box. Naming a category and
     // then having to hunt for its $0 to fill in is the wrong order: you named it
     // because you know what it costs. Adding several at once is the rarer case,
@@ -5647,16 +5804,138 @@ function renderBudget(){
   }));
   box.querySelectorAll('input[data-addsub-input]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addSubcat(inp.dataset.addsubInput, inp.value); } }));
 }
+
+/* ---------- the category sheet ---------- */
+function openCatSheet(id){
+  if(!state.categories.some(c=>c.id===id)) return;
+  catSheetId=id; catEditId=null;
+  renderCatSheet();
+  document.getElementById('catSheet').classList.add('on');
+  pushOverlay();
+}
+function closeCatSheet(){ catSheetId=null; const el=document.getElementById('catSheet'); if(el) el.classList.remove('on'); }
+function catMonthHistory(id,n){
+  const out=[]; let m=state.activeMonth;
+  for(let i=0;i<n;i++){ out.unshift({m, a:catAssigned(id,m), s:catUsed(id,m)}); m=shiftMonth(m,-1); }
+  return out;
+}
+function renderCatSheet(){
+  const body=document.getElementById('catSheetBody'); if(!body) return;
+  const c=state.categories.find(x=>x.id===catSheetId);
+  if(!c){ closeCatSheet(); return; }
+  const M=state.activeMonth;
+  const kids=childrenOf(c.id), isGroup=kids.length>0;
+  const a=catAssigned(c.id,M), own=assignedFor(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
+  const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
+  const t=document.getElementById('catSheetTitle');
+  if(t) t.innerHTML=`${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename ${escapeHtml(c.name)} (keeps your transactions)">&#9998;</button>`;
+
+  const rename = c.id===catEditId
+    ? `<div class="cs-rename"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></div>` : '';
+
+  /* No carry-forward line here, on purpose. This app has never rolled a leftover
+     into next month, and a row labelled "from last month" would be inventing a
+     number the arithmetic behind it does not support. What the month held is
+     what the month held. */
+  const balance=`<div class="cs-sec"><div class="cs-h">Balance</div>
+    <div class="cs-card">
+      <div class="cs-row"><span>Assigned for ${monShort(M)}</span><b>${money(a)}</b></div>
+      ${isGroup&&a>own?`<div class="cs-row sub"><span>of which straight to ${escapeHtml(c.name)}</span><b>${money(own)}</b></div>`:''}
+      <div class="cs-row"><span>${c.growth?'Put away':'Spent'} in ${monShort(M)}</span><b>${money(sp)}</b></div>
+      ${c.growth?`<div class="cs-row sub"><span>${escapeHtml(GROWTH_TAG[c.growth])} - this money is still yours</span><b></b></div>`:''}
+      <div class="cs-row big"><span>Available</span><b class="avail ${rem<0?'over':(a>0?(rem>0?'good':'spent'):'none')}">${money(rem)}</b></div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+    </div>
+    ${!isGroup?`<div class="cs-assign"><span class="cs-k">Assign this month</span><span class="cs-in">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span></div>`
+      :`<p class="cs-note">This is a pool. Its number is whatever its subcategories add up to${own>0?`, plus the ${money(own)} you put straight against it`:''}. Assign inside the subs below.</p>`}
+    ${rem<0?`<div class="rebalance"><div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
+      <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div></div>`:''}
+    ${splitNoteHTML(c.id,M,isGroup?'':c.name)}
+  </div>`;
+
+  /* The repeat control was on every row, which is where it was least useful:
+     eleven of them on screen at once, none of them explained. One category, one
+     switch, with the sentence that says what ticking it actually does. */
+  const r=recForCat(c.id);
+  const target=`<div class="cs-sec"><div class="cs-h">Repeats</div>
+    <div class="cs-card">
+      ${isGroup?`<p class="cs-note" style="margin:0">A pool does not repeat - its subcategories do. Open one of them below to set it.</p>`
+        :`<div class="cs-rep">${repeatCtrlHTML(c.id)}<span class="cs-repk">${r?`Repeats ${escapeHtml(recFreqMeta(r).short||recFreqMeta(r).label)} at <b>${money(r.amount)}</b>${recNextDue(r)?` &middot; next on <b>${fmtDayShort(recNextDue(r))}</b>`:''}. It posts itself, so you do not have to remember it.`:`Tick this if the bill comes back every month. The app will post it on the day it lands, at the amount you assigned, and stop pretending you will remember.`}</span></div>`}
+    </div></div>`;
+
+  const subs = isGroup||splitting.has(c.id)
+    ? `<div class="cs-sec"><div class="cs-h">Inside it</div>
+        ${kids.map(k=>{
+          const ka=catAssigned(k.id,M), ks=catUsed(k.id,M), kr=ka-ks;
+          return `<div class="cs-sub" data-catsheet="${k.id}"><button class="cs-subn" data-catsheet="${k.id}">${escapeHtml(k.name)}${childrenOf(k.id).length?`<span class="cat-count">${childrenOf(k.id).length}</span>`:''}</button>
+            <span class="cs-suba">${money(ka)}</span><span class="avail ${kr<0?'over':(ka>0?(kr>0?'good':'spent'):'none')}">${money(kr)}</span></div>`;
+        }).join('')}
+        ${catDepth(c.id)<3?`<div class="addsub-row"><input type="text" placeholder="Add under ${escapeHtml(c.name)}" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">&#65291; Add</button></div>`
+          :`<p class="cs-note">Three levels is the limit. Deeper than this stops being a plan and starts being filing.</p>`}
+      </div>`
+    : `<div class="cs-sec"><div class="cs-h">Inside it</div>
+        <p class="cs-note">Nothing yet. Splitting is for when one number stops telling you enough - Power &amp; Wi-Fi into Electric, Gas, Water; Groceries into the two shops you actually use.</p>
+        <button class="btn sm" data-addsubfirst="${c.id}">Split into subcategories</button></div>`;
+
+  /* The reason a detail view is worth building at all. A category with a number
+     against it and no past is a guess; the same category with six months behind
+     it is evidence, and the app already had every figure needed to show it. */
+  const hist=catMonthHistory(c.id,6).filter(h=>h.a>0||h.s>0);
+  const txs=state.transactions
+    .filter(t=>t.catId===c.id || descendantsOf(c.id).some(d=>d.id===t.catId))
+    .sort((x,y)=>y.date.localeCompare(x.date)).slice(0,6);
+  const history=`<div class="cs-sec"><div class="cs-h">History</div>
+    ${hist.length?`<div class="cs-hist">${hist.map(h=>{
+        const d=h.a-h.s, w=Math.max(...hist.map(x=>Math.max(x.a,x.s)),1);
+        return `<div class="cs-hrow"><span class="cs-hm">${monShort(h.m)}</span>
+          <span class="cs-hbars"><i class="hb-a" style="width:${h.a/w*100}%"></i><i class="hb-s" style="width:${h.s/w*100}%"></i></span>
+          <span class="cs-hv">${money(h.s)}<em>of ${money(h.a)}</em></span>
+          <span class="cs-hd ${d<0?'over':''}">${d<0?money(-d)+' over':money(d)+' left'}</span></div>`;
+      }).join('')}<div class="cs-hkey"><span><i class="hb-a"></i>assigned</span><span><i class="hb-s"></i>${c.growth?'put away':'spent'}</span></div></div>`
+      :`<p class="cs-note">No months with anything in them yet. Assign something and log against it, and this fills itself in.</p>`}
+    ${txs.length?`<div class="cs-txs">${txs.map(t=>`<div class="cs-tx"><span class="cs-txd">${fmtDayShort(t.date)}</span><span class="cs-txn">${escapeHtml(t.note||catName(t.catId)||c.name)}</span><span class="cs-txv">${money(t.amount)}</span></div>`).join('')}
+        ${trailBtn('logspend','Log another','ghost')}</div>`
+      :`<div class="cs-txs"><p class="cs-note">Nothing logged against it.${trailBtn('logspend','Log one','ghost')}</p></div>`}
+  </div>`;
+
+  const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
+    <p class="cs-note">Deleting a category keeps every transaction you logged against it - they become Uncategorized, so no history is lost${isGroup?`. Its ${kids.length} subcategor${kids.length>1?'ies go':'y goes'} with it`:''}.</p>
+    <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button></div>`;
+
+  body.innerHTML=rename+balance+target+subs+history+wallGuideHTML(c,M)+danger;
+  /* The whole sheet, not just its body - the rename pencil lives in the title,
+     and wiring only the body left it as a button that did nothing. */
+  wirePlan(document.getElementById('catSheet'), false);
+}
+(function(){
+  const x=document.getElementById('catSheetX'); if(x) x.addEventListener('click',dismissOverlay);
+  const ov=document.getElementById('catSheet');
+  if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) dismissOverlay(); });
+  /* Delegated, because the rows that open this are re-rendered constantly and
+     the sheet itself contains more of them. */
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-catsheet]'); if(!b) return;
+    if(catReorder) return;                 // a drag handle is not a doorway
+    /* The row is the target, but it also HOLDS the assign field, the collapse
+       chevron and the delete button. Tapping any of those must do its own job -
+       a row that swallows its own controls is worse than one you cannot tap. */
+    if(e.target.closest('input,select,textarea,label')) return;
+    const btn=e.target.closest('button');
+    if(btn && !btn.hasAttribute('data-catsheet')) return;
+    openCatSheet(b.dataset.catsheet);
+  });
+})();
+
 /* essential = one of the Cover First walls */
 function isEssentialCat(name){ const n=(name||'').toLowerCase(); return (typeof WALLS!=='undefined'?WALLS:[]).some(w=>w.match.some(t=>n.includes(t))); }
 /* Pillar 4A: pull unused funds from flexible categories into the overspent one */
 function autoRebalance(catId){
   const M=state.activeMonth, target=state.categories.find(c=>c.id===catId); if(!target) return;
-  let need=catSpent(catId,M)-catAssigned(catId,M); if(need<=0){ renderBudget(); return; }
+  let need=catUsed(catId,M)-catAssigned(catId,M); if(need<=0){ renderBudget(); return; }
   // donors: top-level non-essential pools with surplus, "Fun Money" style first.
   // Only genuinely FREE money can move - a pool's dollars already committed to its
   // own subcategories aren't spare, so the movable amount is capped by both.
-  const freeOf=c=>Math.min(catAssigned(c.id,M)-catSpent(c.id,M), assignedFor(c.id,M)-kidsAssigned(c.id,M));
+  const freeOf=c=>Math.min(catAssigned(c.id,M)-catUsed(c.id,M), assignedFor(c.id,M)-kidsAssigned(c.id,M));
   const donors=topCats().filter(c=>c.id!==catId && !isEssentialCat(c.name) && freeOf(c)>0)
     .sort((x,y)=>{ const fx=/fun|misc|extra|blow|guilt|play/.test(x.name.toLowerCase())?0:1, fy=/fun|misc|extra|blow|guilt|play/.test(y.name.toLowerCase())?0:1; if(fx!==fy) return fx-fy; return freeOf(y)-freeOf(x); });
   let moved=0;
@@ -13097,6 +13376,12 @@ function growthKindFor(name){
   return '';
 }
 const GROWTH_TAG={invest:'Invested, not spent', save:'Saved, not spent', debt:'Debt paid down'};
+/* The Plan row has one line and no room for "Invested, not spent" beside a name,
+   an amount and a pill. A coloured dot would have fitted and said nothing - and
+   the whole reason this tag exists is that a retirement contribution was reading
+   as money spent, which a dot does not fix. So: the shortest true word, with the
+   full sentence one tap away in the category's sheet. */
+const GROWTH_TAG_SHORT={invest:'not spent', save:'not spent', debt:'paid down'};
 /* intake budget math: total money in, and total given a job so far */
 function intakeIncomeTotal(a){ return (+a.income||0) + ((a.extraIncome||[]).reduce((s,x)=>s+(+x.amount||0),0)); }
 function intakeAssignedTotal(a){ const walls=(+a.roof||0)+(+a.food||0)+(+a.util||0)+(+a.transport||0); const exp=(a.expenses||[]).reduce((s,x)=>s+(+x.amount||0),0); return walls+exp; }
