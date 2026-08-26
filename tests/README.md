@@ -414,6 +414,19 @@ back into it when the destination account is deleted so it never vanishes
 either, keeps the free-text lane for things the app does not track, and rides a
 recurring rule onto everything it posts.
 
+And **moving a category under another**: it has to arrive as the same category
+carrying its assignment, its history, its repeat rule and its watch-list place,
+the new parent has to roll it up, and the three moves that must never be offered
+have to be absent from the list rather than merely rejected - itself, its own
+descendants, and any home that would make a fourth level. Reversible to top level
+throughout.
+
+That section also caught an older assertion pinned to the exact words "Log an
+expense", which blocked correcting a button that was narrower than the panel it
+opens. It asserts the property now. Two of this session's failures were the same
+shape: a check that queries a surface the fixture never rendered passes on an
+empty string, so the new one asserts the label is non-empty before judging it.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
