@@ -2273,6 +2273,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div class="row">
           <label class="fld">Amount
             <input type="number" id="txAmt" placeholder="0.00" min="0" step="0.01" style="width:130px">
+            <div class="unit-work" id="txAmtNote"></div>
           </label>
           <label class="fld hide" id="fldAcct">Which account
             <select id="txAcct"></select>
@@ -3287,11 +3288,47 @@ function knownSources(){
       return; }
     seen.add(key); out.push({name:n, srcType:srcType||'', acctId:acctId||'', fromRule:!!fromRule});
   };
-  (state.recurring||[]).filter(r=>r.type==='income').forEach(r=>add(r.source,r.srcType,r.acctId,true));
+  (state.recurring||[]).filter(r=>r.type==='income').forEach(r=>{
+    add(r.source,r.srcType,r.acctId,true);
+    /* the budgeted figure: what this stream is SUPPOSED to pay per occurrence */
+    const e=out.find(x=>x.name.toLowerCase()===(r.source||'').trim().toLowerCase());
+    if(e && +r.amount>0) e.amount=+r.amount;
+  });
   state.transactions.filter(t=>t.type==='income')
     .slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))
     .forEach(t=>add(t.source,t.srcType,t.acctId,false));
   return out;
+}
+/* ---------- budgeted against actual, at the moment of logging ----------
+   Drawn on the screenshot in two inks: the amount a stream is SET UP to pay
+   (green - "budgeted = predetermined") and the amount that actually landed
+   (red - "actual"). The rule already holds the first number, the field holds
+   the second, and until now the form never put them next to each other - so a
+   short paycheck logged without comment and the shortfall surfaced weeks later
+   as an unexplained gap at reconcile time, if at all.
+
+   Picking a stream that repeats pre-fills its usual amount, because the usual
+   case should cost zero typing. Typing over it is the interesting case, and the
+   line under the field prices the difference while it is being typed - which is
+   the moment the person can still do something about it, like ask why the check
+   is short. */
+function txExpectedFor(name){
+  const k=knownSources().find(x=>x.name===name);
+  return (k && k.fromRule && k.amount>0) ? k.amount : 0;
+}
+function txAmtNoteHTML(){
+  const n=document.getElementById('txAmtNote'); if(!n) return;
+  const sp=document.getElementById('txSrcPick');
+  const isIncome=txType==='income';
+  const exp=(isIncome && sp && !sp.classList.contains('hide') && sp.value && sp.value!=='__new')
+    ? txExpectedFor(sp.value) : 0;
+  if(!exp){ n.innerHTML=''; return; }
+  const amt=parseFloat((document.getElementById('txAmt')||{}).value)||0;
+  const d=Math.round((amt-exp)*100)/100;
+  if(!(amt>0)) n.innerHTML=`Usually <b>${usd(exp)}</b> - filled in for you. Type over it if this one was different.`;
+  else if(Math.abs(d)<0.005) n.innerHTML=`Exactly what ${escapeHtml(sp.value)} usually pays.`;
+  else if(d<0) n.innerHTML=`<b>${usd(-d)}</b> less than the ${usd(exp)} this usually is. Worth knowing why before it becomes a pattern.`;
+  else n.innerHTML=`<b>${usd(d)}</b> more than the usual ${usd(exp)}. If that repeats, update the rule on Plan so the plan stops understating you.`;
 }
 /* Whichever control is actually on screen. The picker wins when it is showing a
    real choice; the free text is the answer when it is not. */
@@ -6450,12 +6487,21 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const tx={id:uid(),type:'income',amount:amt,source,date,note,srcType}; if(hours>0) tx.hours=hours;
     if(srcType==='other'&&srcLabel) tx.srcLabel=srcLabel;
     const aid=txAcctChoice(); if(aid) tx.acctId=aid;
+    /* say a shortfall out loud at the moment it is logged - reconcile time is
+       weeks away and the question "why was the check short" has a shelf life */
+    const expAmt=txExpectedFor(source);
+    if(expAmt>0 && Math.abs(amt-expAmt)>0.005 && typeof toast==='function')
+      toast(amt<expAmt
+        ? `Logged ${usd(amt)} - ${usd(expAmt-amt)} short of what ${source} usually pays. Worth finding out why.`
+        : `Logged ${usd(amt)} - ${usd(amt-expAmt)} more than usual. If that is the new normal, update the rule on Plan.`);
     if(state.householdOn){ const o=document.getElementById('txOwner'); if(o) tx.owner=o.value; }
     state.transactions.push(tx);
     if(isIndependent(srcType)){ const nowIndie=prevIndie+amt; indieCrossed=INDIE_MILES.find(m=>prevIndie<m&&nowIndie>=m)||null; }
   }
   txEnergy=''; document.querySelectorAll('#energySel button').forEach(x=>x.classList.remove('on'));
-  document.getElementById('txAmt').value=''; document.getElementById('txNote').value=''; document.getElementById('txSrc').value=''; document.getElementById('txHours').value='';
+  const clrAmt=document.getElementById('txAmt'); clrAmt.value=''; delete clrAmt.dataset.autofilled;
+  const clrNote=document.getElementById('txAmtNote'); if(clrNote) clrNote.innerHTML='';
+  document.getElementById('txNote').value=''; document.getElementById('txSrc').value=''; document.getElementById('txHours').value='';
   /* Rebuild the source list: the entry just logged may have named a stream that
      was not on it a second ago. */
   if(typeof refreshCatSelects==='function') refreshCatSelects();
@@ -7268,6 +7314,13 @@ function renderTxSheet(){
   if(t.type==='income' && t.hours>0) facts.push(['Rate for it', usd(t.amount/t.hours)+'/hr']);
   if(t.type==='income' && t.srcType) facts.push([isIndependent(t.srcType)?'Counts as':'Counts as',
     (incomeKindLabel(t)||'Income') + (isIndependent(t.srcType)?' - income you built':' - your primary job')]);
+  /* the toast at log time is gone in four seconds; the discrepancy is not */
+  if(t.type==='income'){
+    const expAmt=txExpectedFor(t.source);
+    if(expAmt>0 && Math.abs(t.amount-expAmt)>0.005)
+      facts.push([t.amount<expAmt?'Short of usual':'Above usual',
+        `${usd(Math.abs(t.amount-expAmt))} ${t.amount<expAmt?'under':'over'} the ${usd(expAmt)} this stream is set to pay`]);
+  }
   if(t.recId) facts.push(['Posted by','a repeat you set up']);
   const link=(state.impulse||[]).find(i=>i.txId===t.id);
   if(link) facts.push(['Came from','a gut-check you ran']);
@@ -10963,6 +11016,14 @@ function syncSrcOther(){
   if(sel&&nw) nw.classList.toggle('hide', sel.value!=='other');
 }
 (function(){
+  document.addEventListener('input',e=>{
+    if(e.target && e.target.id==='txAmt'){
+      /* a hand-typed figure is the ACTUAL and must never be replaced by a
+         stream switch; only untouched fills may be overwritten */
+      delete e.target.dataset.autofilled;
+      txAmtNoteHTML();
+    }
+  });
   document.addEventListener('change',e=>{
     if(e.target && e.target.id==='txSrcPick'){
       const sp=e.target, si=document.getElementById('txSrc');
@@ -10977,7 +11038,14 @@ function syncSrcOther(){
         if(ty && k.srcType && [...ty.options].some(o=>o.value===k.srcType)){ ty.value=k.srcType; syncSrcOther(); }
         const ac2=document.getElementById('txAcct');
         if(ac2 && k.acctId && [...ac2.options].some(o=>o.value===k.acctId)) ac2.value=k.acctId;
+        /* Pre-fill the budgeted amount - but never over something already typed,
+           and remember it was a fill so switching streams can replace it. */
+        const amtEl=document.getElementById('txAmt');
+        if(amtEl && k.fromRule && k.amount>0 && (!amtEl.value || amtEl.dataset.autofilled==='1')){
+          amtEl.value=k.amount; amtEl.dataset.autofilled='1';
+        }
       }
+      txAmtNoteHTML();
     }
     if(e.target && e.target.id==='txSrcType'){
       syncSrcOther();
