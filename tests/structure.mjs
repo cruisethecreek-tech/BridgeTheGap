@@ -4916,6 +4916,114 @@ check('...and stops asking for hours it would throw away', rec.hoursGone===true)
 check('...which come back the moment the rule is yours again', rec.hoursBack===true);
 check('...and the note does not strand itself on an expense rule', rec.noteNotStranded===true);
 
+/* ---- 71. the recurring list is read in the order you think in ----
+   "There should be a reorder tab to organize the reoccurring."
+
+   The categories got this months ago and the reasoning was already written down
+   next to catOrder: array order is creation order, and creation order is an
+   accident - the sequence you happened to remember your bills in, not the one
+   you think about them in. The recurring list, which is where the paycheck and
+   the rent live, never got it.
+
+   The interesting decision was not the feature, it was refusing to build it
+   twice. A second copy of a hundred and twenty lines of pointer handling is how
+   the two lists quietly stop behaving the same - one gets the escape-to-cancel,
+   the other does not; one auto-scrolls at the edge of the glass, the other
+   strands you. What actually differs between them is four things: where the rows
+   are, what a row is called, how an order is written, what to redraw. So that is
+   what DRAG_SCOPES holds, and the grip carries data-scope. These properties
+   exist to catch the drift if anyone ever un-shares it: the categories are
+   checked through the same engine right after the recurring list is.
+
+   The arrangements are here because dragging twelve rows on a phone is a chore.
+   They write real sort values rather than becoming a view mode, so what you see
+   is what is stored and the result is still yours to adjust by hand. "Biggest
+   first" prices the cadence, not the cheque - $1,600 every two weeks outranks
+   $1,850 a month, and the fixture that got this wrong the first time was mine. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'rent',name:'Rent'},{id:'phone',name:'Phone'},{id:'fun',name:'Fun'}],
+  budgets:{'2026-08':{rent:1850,phone:45,fun:200}},
+  recurring:[{id:'p1',type:'expense',amount:45,catId:'phone',freq:'monthly',anchor:'2026-08-20'},
+             {id:'p2',type:'income',amount:1600,source:'Hollywood',freq:'biweekly',anchor:'2026-08-14'},
+             {id:'p3',type:'expense',amount:1850,catId:'rent',freq:'monthly',anchor:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(450);
+const ord = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const rows=()=>[...document.querySelectorAll('#recList [data-row]')].map(e=>e.dataset.row);
+  const o={};
+  activateTab('budget'); await wait(250);
+  o.quietByDefault = document.querySelectorAll('#recList [data-grip]').length===0
+                  && document.getElementById('recArrange').classList.contains('hide');
+  document.getElementById('recReorderBtn').click(); await wait(250);
+  o.gripPerRow=document.querySelectorAll('#recList [data-grip]').length;
+  o.offersArrangements=!document.getElementById('recArrange').classList.contains('hide');
+  /* destructive buttons must not be live under a thumb that is trying to drag */
+  o.delInert=getComputedStyle(document.querySelector('#recList .rec .del')).pointerEvents==='none';
+  /* the keyboard path, which is the one no drag test covers */
+  document.querySelector('#recList [data-grip="p3"]').focus();
+  document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true}));
+  await wait(200);
+  o.afterArrowUp=rows();
+  o.writtenToState=state.recurring.find(r=>r.id==='p3').sort;
+  o.focusFollowed=document.activeElement&&document.activeElement.dataset.grip;
+  /* arrangements write an order, they are not a view */
+  document.querySelector('[data-arrange="size"]').click(); await wait(200);
+  o.bySize=rows();
+  o.sizes=rows().map(id=>Math.round(recMonthly(state.recurring.find(r=>r.id===id))));
+  document.querySelector('[data-arrange="due"]').click(); await wait(200);
+  o.byDue=rows().map(id=>recNextDue(state.recurring.find(r=>r.id===id)));
+  document.querySelector('[data-arrange="kind"]').click(); await wait(200);
+  o.byKind=rows().map(id=>state.recurring.find(r=>r.id===id).type);
+  /* the arrangement has to have WRITTEN the order: dense sort values, in the
+     sequence on screen. A view-mode implementation would render the same list
+     and leave the data untouched, and nothing else here would notice. */
+  o.storedSorts=rows().map(id=>state.recurring.find(r=>r.id===id).sort);
+  /* the same engine still drives the categories - the drift check */
+  setRecReorder(false); setReorder(true); await wait(250);
+  const c0=[...document.querySelectorAll('#cats [data-row]')].map(e=>e.dataset.row);
+  const g=document.querySelector('#cats [data-grip]');
+  o.catGripHasNoRecScope=!g.dataset.scope;
+  g.focus();
+  g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+  await wait(200);
+  const c1=[...document.querySelectorAll('#cats [data-row]')].map(e=>e.dataset.row);
+  o.catsStillMove = c0[0]===c1[1] && c0[1]===c1[0];
+  /* one floating Done, however many lists are open */
+  setRecReorder(true); await wait(200);
+  o.bothAtOnce = !!document.querySelector('#cats [data-grip]') && !!document.querySelector('#recList [data-grip]');
+  document.getElementById('reorderDone').click(); await wait(250);
+  o.doneEndsBoth = !document.querySelector('#cats [data-grip]') && !document.querySelector('#recList [data-grip]');
+  o.bodyClean = !document.body.classList.contains('reordering');
+  return o;
+});
+check('the recurring list says nothing about reordering until you ask',
+      ord.quietByDefault===true);
+check('...then every row gets a grip, and the arrangements appear with it',
+      ord.gripPerRow===3 && ord.offersArrangements===true, `grips=${ord.gripPerRow}`);
+check('...and the buttons that end a schedule go inert under a dragging thumb',
+      ord.delInert===true);
+check('a row moves by arrow key, not only by drag',
+      JSON.stringify(ord.afterArrowUp)==='["p1","p3","p2"]', JSON.stringify(ord.afterArrowUp));
+check('...writing an order into the data rather than shuffling the screen',
+      ord.writtenToState===1, String(ord.writtenToState));
+check('...with focus following the row that moved, so the next press repeats it',
+      ord.focusFollowed==='p3', String(ord.focusFollowed));
+check('"biggest first" prices the cadence, not the cheque',
+      JSON.stringify(ord.bySize)==='["p2","p3","p1"]'
+      && ord.sizes[0]>ord.sizes[1] && ord.sizes[1]>ord.sizes[2],
+      JSON.stringify(ord.bySize)+' '+JSON.stringify(ord.sizes));
+check('"by what is due next" is in date order',
+      ord.byDue.every((d,i)=>i===0||ord.byDue[i-1]<=d), JSON.stringify(ord.byDue));
+check('"money in, then out" leads with what arrives',
+      ord.byKind[0]==='income', JSON.stringify(ord.byKind));
+check('...and an arrangement WRITES that order, so it stays yours to adjust',
+      JSON.stringify(ord.storedSorts)==='[0,1,2]', JSON.stringify(ord.storedSorts));
+check('the categories still reorder through the very same engine',
+      ord.catsStillMove===true && ord.catGripHasNoRecScope===true);
+check('...both lists can be open at once, and one Done ends both',
+      ord.bothAtOnce===true && ord.doneEndsBoth===true && ord.bodyClean===true,
+      JSON.stringify({both:ord.bothAtOnce,done:ord.doneEndsBoth,body:ord.bodyClean}));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
