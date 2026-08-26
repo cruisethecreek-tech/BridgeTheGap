@@ -4211,6 +4211,79 @@ check('opening an expense shows where it sits in the plan',
 check('...including this entry\'s share of what has left that category',
       /33%/.test(planLink), (planLink.match(/This one is [^.]*/)||[''])[0]);
 
+/* ---- 63. two budgets, one dollar ----
+   From a phone, on a $225 grocery run the calendar called "$219.26 over" while
+   the Plan tab said Food still had $477.35 left: "it's part of my planned budget
+   monies that has been accounted for - is this a direct contradiction?" It was,
+   and it was measurable: two screens, the same $267.65, opposite verdicts, with
+   the calendar also disagreeing with its own month-to-date figure.
+
+   A daily allowance divides a month by its days and assumes money leaves evenly.
+   Groceries do not. The allowance was built for the drip - coffee, takeout, the
+   impulse buys - so it is told what to watch, and leaves the rest to the plan
+   where it was already accounted for. Nothing chosen still means everything,
+   because a spend-mode user with no plan has nothing to hand it off to. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  spendingMode:true, spendLimit:1500, trackStart:'2026-08-01', day1:{date:'2026-08-01'},
+  categories:[{id:'food',name:'Food'},{id:'groc',name:'Groceries',parentId:'food'},
+              {id:'coffee',name:'Coffee'},{id:'take',name:'Takeout'}],
+  budgets:{'2026-08':{groc:745,coffee:80,take:120}},
+  transactions:[{id:'w',type:'expense',amount:225,catId:'groc',date:'2026-08-25',note:'Walmart'},
+                {id:'c',type:'expense',amount:42.65,catId:'take',date:'2026-08-25',note:'Chic fil a'}]});
+await p.reload(); await p.waitForTimeout(700);
+const twoBudgets = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  applySpending(); calSelDay=25; renderRewardCalendar(); await wait(250);
+  const verdict=()=>document.getElementById('calDay').innerText.split('\n')[1];
+  const out={ watchesAllByDefault:!dayToDayOn(), before:verdict() };
+  /* the plan's view of the very same money, for the contradiction itself */
+  out.planSaysLeft=catAssigned('groc','2026-08')-catUsed('groc','2026-08');
+  document.querySelector('[data-dtd="coffee"]').click(); await wait(180);
+  document.querySelector('[data-dtd="take"]').click(); await wait(180);
+  out.after=verdict();
+  out.card=document.getElementById('calDay').innerText;
+  out.stillShown=/Walmart/.test(out.card);
+  /* a parent has to cover its children or the same hole opens one level down */
+  state.dayToDay=['food']; save(); renderRewardCalendar(); await wait(180);
+  out.parentCovers=/225/.test(document.getElementById('calDay').innerText.split('\n')[2]);
+  /* and it must be reversible */
+  document.getElementById('dtdClear').click(); await wait(180);
+  out.cleared=verdict();
+  return out;
+});
+check('with nothing chosen the allowance still watches everything',
+      twoBudgets.watchesAllByDefault===true);
+check('the contradiction was real: planned money marked over while the plan called it funded',
+      /over/i.test(twoBudgets.before) && twoBudgets.planSaysLeft===520,
+      `${twoBudgets.before} / plan says ${twoBudgets.planSaysLeft} left`);
+check('...telling it what to watch resolves the day it was wrong about',
+      /saved/i.test(twoBudgets.after), `${twoBudgets.before} -> ${twoBudgets.after}`);
+check('...without hiding the money, which is still on the day and explained',
+      twoBudgets.stillShown===true && /plan already funds/i.test(twoBudgets.card),
+      (twoBudgets.card.match(/\$225 of that[^.]*\./)||[''])[0]);
+check('...a parent covers its subcategories, so nothing slips through one level down',
+      twoBudgets.parentCovers===true);
+check('...and it can be handed back to watching everything',
+      /over/i.test(twoBudgets.cleared), twoBudgets.cleared);
+/* The unrelated half of the same message: an entry on the day card was dead
+   text while the identical row on Track opened it. */
+const dayTap = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  calSelDay=25; renderRewardCalendar(); await wait(200);
+  const rows=[...document.querySelectorAll('#calDay .ce')];
+  const out={ count:rows.length,
+              allTappable:rows.every(r=>r.tagName==='BUTTON' && r.hasAttribute('data-txsheet')),
+              labelled:rows.every(r=>/^Open the /.test(r.getAttribute('aria-label')||'')) };
+  rows[0].click(); await wait(300);
+  out.opened=document.getElementById('txSheet').classList.contains('on');
+  closeTxSheet();
+  return out;
+});
+check('every entry on a calendar day opens, like the same row does on Track',
+      dayTap.count===2 && dayTap.allTappable===true && dayTap.opened===true,
+      JSON.stringify(dayTap));
+check('...announced by what pressing it does', dayTap.labelled===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

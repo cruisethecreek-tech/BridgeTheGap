@@ -692,6 +692,17 @@
   .cal-stat{flex:1;min-width:130px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
   .cal-stat .v{font-weight:900;font-size:20px;margin-top:2px}
   .cal-stat .v.good{color:var(--good)} .cal-stat .v.bad{color:var(--bad)}
+  /* What the allowance watches. Folded away once decided, open while it is not. */
+  .dtd{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+  .dtd summary{cursor:pointer;font-size:13.5px;font-weight:700;color:var(--muted)}
+  .dtd summary b{color:var(--text)}
+  .dtd-p{font-size:12.5px;line-height:1.55;color:var(--muted);margin:9px 0 0}
+  .dtd-p b{color:var(--text)}
+  .dtd-list{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+  .dtd-c{text-align:left;background:var(--ink);border:1px solid var(--line);color:var(--muted);
+    border-radius:9px;padding:8px 11px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .dtd-c.on{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);color:var(--text)}
+  .dtd .btn{margin-top:10px}
   .cal-rec{margin-top:14px;background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accent-rgb),.25);border-radius:12px;padding:13px 15px;font-size:14px;line-height:1.55}
   .cal-rec b{color:var(--accent)}
   /* data-fragility guard banner (Home) */
@@ -762,7 +773,10 @@
   .cal-day .cd-save{font-weight:900;font-size:22px;letter-spacing:-.3px}
   .cal-day .cd-save.good{color:var(--good)} .cal-day .cd-save.bad{color:var(--bad)}
   .cal-entries{margin-top:10px}
-  .cal-entries .ce{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .cal-entries .ce{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;
+    border-bottom:1px solid var(--line);font-size:14px;width:100%;text-align:left;
+    background:none;border-left:none;border-right:none;border-top:none;color:var(--text);font-family:inherit;cursor:pointer}
+  .cal-entries .ce:hover .nm{color:var(--accent)}
   .cal-entries .ce .nm{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cal-entries .ce .am{font-weight:800;white-space:nowrap}
   .cal-entries .ce .am.in{color:var(--good)}
@@ -3370,7 +3384,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
+           spendingMode:false, spendLimit:0, dayToDay:[], sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[],
            investReturn:7, investYears:10, lev:{}, theme:'auto',
@@ -3848,10 +3862,19 @@ function renderCalDay(M, allowance){
       /* Shown, and shown as not counted. Money that vanishes from a day card is
          worse than money scored wrongly - this says which it is. */
       const bill=!inc&&!inv&&!!t.recId;
-      return `<div class="ce${bill?' bill':''}"><span class="nm">${nm}${inv?' <span class="ce-put">put away</span>':''}${bill?' <span class="ce-bill">bill &middot; not scored</span>':''}</span><span class="am ${inc?'in':''}${inv?' put':''}${bill?' billam':''}">${sign}${money(t.amount)}</span></div>`;
+      /* Tappable, like every other row that names a transaction. Walmart sat
+         here as dead text while the identical row on Track opened the entry -
+         two ways of drawing the same thing, one of which quietly did nothing. */
+      return `<button class="ce${bill?' bill':''}" data-txsheet="${t.id}" aria-label="Open the ${escapeHtml(nm)} entry"><span class="nm">${nm}${inv?' <span class="ce-put">put away</span>':''}${bill?' <span class="ce-bill">bill &middot; not scored</span>':''}</span><span class="am ${inc?'in':''}${inv?' put':''}${bill?' billam':''}">${sign}${money(t.amount)}</span></button>`;
     }).join('')}</div>`;
   } else {
     rows=`<div class="sub" style="margin-top:8px">Nothing logged this day - a clean ${money(allowance)} saved.</div>`;
+  }
+  const dayPlanned=entries.filter(t=>t.type==='expense'&&!t.recId&&!catWatched(t.catId));
+  const plannedSum=dayPlanned.reduce((s,t)=>s+t.amount,0);
+  if(plannedSum>0){
+    const names=[...new Set(dayPlanned.map(t=>catName(t.catId)||'Uncategorised'))];
+    rows+=`<div class="cal-billnote"><b>${money(plannedSum)}</b> of that is ${escapeHtml(names.slice(0,3).join(', '))} - money your plan already funds, so the allowance leaves it alone. It still counts on <b>Plan</b>, against what you assigned.</div>`;
   }
   if(dayBills>0){
     rows+=`<div class="cal-billnote"><b>${money(dayBills)}</b> of that was a bill you set to repeat, so it is not counted against this day. You decided it once; the allowance is for what you are still choosing.</div>`;
@@ -3999,7 +4022,59 @@ function calIsPre(dateStr, _hasSpend){ return !!state.trackStart && dateStr<stat
    The seam, stated plainly rather than hidden: a bill you type in by hand DOES
    count, because the app cannot tell it from a purchase. Set it to repeat and it
    stops counting, which is the behaviour worth encouraging anyway. */
-function isScoredSpend(t){ return t.type==='expense' && !t.recId; }
+/* ---------- what the allowance is watching ----------
+   From a phone, on a $225 grocery run marked "$219.26 over" while the Plan tab
+   said Food still had $477.35 left: "it's part of my planned budget monies that
+   has been accounted for - is this a direct contradiction?" It was. Two budgets
+   were judging the same dollars by rules that knew nothing about each other: a
+   flat daily line that assumes spending arrives evenly, and a plan that knows
+   groceries come in weekly lumps. The calendar called a planned, funded, normal
+   purchase a failure, and then disagreed with its own month-to-date figure.
+
+   The allowance was built for the drip - coffee, takeout, the impulse buys - and
+   that is what it can honestly measure. So it is told what to watch. With
+   nothing chosen it watches everything, which is right for a spend-mode user who
+   has no plan at all; choose some and it leaves the rest to the plan, where they
+   were already accounted for. A parent covers its subcategories, because
+   selecting "Food" and then discovering Groceries slipped through would be the
+   same fault in a new place. */
+function catWatched(catId){
+  const list=state.dayToDay||[];
+  if(!list.length) return true;                 // nothing chosen: the allowance watches it all
+  if(!catId) return true;                       // uncategorised money is still money that left
+  let id=catId, hops=0;
+  while(id && hops++<4){
+    if(list.includes(id)) return true;
+    const c=state.categories.find(x=>x.id===id);
+    id=c&&c.parentId;
+  }
+  return false;
+}
+function dayToDayOn(){ return !!(state.dayToDay||[]).length; }
+/* The picker, folded away until asked for. It only makes sense once a plan
+   exists, so with no categories it says nothing at all rather than offering an
+   empty list as if the user had forgotten something. */
+function dayToDayHTML(M){
+  const cats=state.categories||[];
+  if(!cats.length) return '';
+  const on=state.dayToDay||[];
+  const ignored=txnsInMonth(M).filter(t=>t.type==='expense'&&!t.recId&&!catWatched(t.catId))
+    .reduce((s,t)=>s+t.amount,0);
+  const rows=topCats().map(c=>{
+    const kids=childrenOf(c.id);
+    const row=(x,depth)=>`<button class="dtd-c${on.includes(x.id)?' on':''}" data-dtd="${x.id}" style="margin-left:${depth*14}px">${escapeHtml(x.name)}</button>`;
+    return row(c,0)+kids.map(k=>row(k,1)+childrenOf(k.id).map(g=>row(g,2)).join('')).join('');
+  }).join('');
+  return `<details class="dtd" ${on.length?'':'open'}>
+    <summary>${on.length?`Watching <b>${on.length}</b> categor${on.length===1?'y':'ies'}${ignored>0?` &middot; ${money(ignored)} this month left to the plan`:''}`:'This is watching <b>everything</b> you spend'}</summary>
+    <p class="dtd-p">${on.length
+      ? `Only these count toward the daily allowance and the streak. Everything else is measured on <b>Plan</b>, against what you assigned it - which is where a grocery run belongs.`
+      : `A daily allowance assumes money leaves evenly, and groceries do not. If your plan already funds them, pick the categories this should actually watch - the day-to-day drip - and the rest stops being judged twice.`}</p>
+    <div class="dtd-list">${rows}</div>
+    ${on.length?`<button class="btn sm ghost" id="dtdClear">Go back to watching everything</button>`:''}
+  </details>`;
+}
+function isScoredSpend(t){ return t.type==='expense' && !t.recId && catWatched(t.catId); }
 function scoredSpentByDay(M){
   const by={};
   txnsInMonth(M).filter(isScoredSpend).forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) by[d]=(by[d]||0)+t.amount; });
@@ -4148,6 +4223,7 @@ function renderRewardCalendar(){
       <div class="cal-stat"><div class="sp-k">Under-budget streak</div><div class="v">${streak} </div></div>
       <div class="cal-stat"><div class="sp-k">${aheadNet>=0?'Ahead this month'+(swept>0?' (unbanked)':''):'Over pace by'}</div><div class="v ${aheadNet>=0?'good':'bad'}">${money(Math.abs(aheadNet))}</div></div>
     </div>
+    ${dayToDayHTML(M)}
     ${overSwept>0.5?`<div class="cal-rec" style="border-color:rgba(247,109,109,.4)">You've banked ${money(overSwept)} more than this month's real surplus now backs (spending went up or the limit came down). Tap a banked day and Undo to square it - the honest move.</div>`:''}
     <div id="calDay"></div>
     <div class="cal-rec">${spendRewardRec(bankedToday, aheadNet)}</div>
@@ -4158,6 +4234,16 @@ function renderRewardCalendar(){
   const nx=document.getElementById('calNext'); if(nx) nx.onclick=()=>stepMonth(1);
   const grid=box.querySelector('.cal-grid');
   if(grid) grid.addEventListener('click',e=>{ const c=e.target.closest('.cal-cell[data-day]'); if(!c) return; calSelDay=+c.dataset.day; renderRewardCalendar(); });
+  /* Toggling what the allowance watches re-scores every day at once, so the
+     whole calendar is redrawn rather than the chip alone. */
+  box.querySelectorAll('[data-dtd]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.dtd; const list=state.dayToDay||(state.dayToDay=[]);
+    const i=list.indexOf(id);
+    if(i>=0) list.splice(i,1); else list.push(id);
+    save(); renderRewardCalendar(); renderSpending(); renderHome();
+  }));
+  const dtdC=document.getElementById('dtdClear');
+  if(dtdC) dtdC.addEventListener('click',()=>{ state.dayToDay=[]; save(); renderRewardCalendar(); renderSpending(); renderHome(); });
   box.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>{
     const d=b.dataset.callog;
     openQuickLogFor(d==='today'?null:d);   // no date = today, and today is what the panel already defaults to
