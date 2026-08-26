@@ -316,6 +316,16 @@ unnamed one is refused rather than filed somewhere else, naming it both logs the
 entry and puts the category on the plan, and no transaction is ever written
 against the literal "new category" choice.
 
+And **one list of ways money comes in**. The property is not "there are eight
+options" - it is that no screen keeps its own copy of that list, which is the
+fault that came back: the log form had a hand-typed set of the five original
+kinds, so two income types added to the model showed up in the entry sheet and
+nowhere else. That check scans the **source file**, because the first version
+read the rendered DOM and counted six - every one of them an option the app had
+just generated from the model, which is the thing being asked for rather than the
+thing being forbidden. Confirmed by hand-typing two options back in and watching
+it fail.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own

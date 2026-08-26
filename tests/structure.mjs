@@ -19,7 +19,7 @@
    had been hiding it silently stopped finding it.
    ============================================================ */
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 
 const results=[]; const check=(name,ok,detail='')=>results.push({ok,name,detail});
 const VIEWS=['home','budget','tx','impulse','debt','goals','reflect','learn','diary','settings'];
@@ -3750,6 +3750,67 @@ check('the entry sheet offers it too, and shows the category the entry already h
 check('...and never files a transaction under the literal "new category" choice',
       newCat.notFiledAsNew===true && newCat.movedTo==='Vet',
       `stayed put: ${newCat.notFiledAsNew}, moved to: ${newCat.movedTo}`);
+
+/* ---- 57. one list of ways money comes in ----
+   Asked from a phone while logging a paycheck, looking at five options:
+   "shouldn't my options that I have in my plan be these?" The answer is no -
+   the Plan is where money GOES and this asks where it CAME FROM, and the Type
+   answers one question the app actually uses (one employer, or something you own
+   or built). But the question found a real fault behind it: the form carried its
+   own hand-typed copy of the five original kinds, so when Dividends and Rent
+   were added to the model they appeared in the entry sheet and nowhere else -
+   the one screen where people actually log a paycheck still offered five.
+
+   So the property is not "there are eight options". It is that NO screen keeps
+   its own copy of this list, which is the fault that can come back. */
+/* Scanned in the FILE, not in the live DOM. The first version of this read
+   document.documentElement.outerHTML and counted six - every one of them an
+   option the app had just generated from the model, which is the thing being
+   asked for rather than the thing being forbidden. A rendered select and a
+   hand-typed one look identical once they are on the page; only the source
+   tells them apart. */
+const rawSrc=readFileSync(process.cwd()+'/app.html','utf8');
+const hardcodedSrcOpts=(rawSrc.match(/<option value="(primary|side|freelance|skillmon|yield|rent)"/g)||[]).length;
+const srcs = await p.evaluate(() => {
+  activateTab('tx'); renderTx();
+  const form=[...document.getElementById('txSrcType').options].map(o=>o.value);
+  return { form, model:INCOME_SOURCES.map(x=>x.k), labels:INCOME_SOURCES.map(x=>x.label) };
+});
+check('the log form offers every way money comes in, not the five it was born with',
+      srcs.form.join(',')===srcs.model.join(','), `form ${srcs.form.join(',')} / model ${srcs.model.join(',')}`);
+check('...and no screen keeps a second copy of that list to drift from',
+      hardcodedSrcOpts===0, `${hardcodedSrcOpts} hand-typed income options found in the source`);
+check('...including capital income, which the model had and the form did not',
+      srcs.form.includes('yield') && srcs.form.includes('rent'));
+/* And the same escape hatch the category pickers got, for the same reason. */
+const other = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  state.transactions=[]; save(); activateTab('tx'); renderTx(); await wait(200);
+  const out={ offered:[...document.getElementById('txSrcType').options].some(o=>o.value==='other') };
+  document.querySelector('#typeToggle button[data-t="income"]').click(); await wait(150);
+  const sel=document.getElementById('txSrcType');
+  sel.value='other'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(120);
+  out.asksForAName=!document.getElementById('txSrcOther').classList.contains('hide');
+  document.getElementById('txAmt').value='715.97';
+  document.getElementById('txSrc').value="Pat's paycheck";
+  document.getElementById('txSrcOther').value='Snow plowing';
+  document.getElementById('addTx').click(); await wait(300);
+  const t=state.transactions[0];
+  out.kept={type:t.srcType, label:t.srcLabel, name:t.source};
+  out.reads=incomeKindLabel(t);
+  /* the two readings that hang off the kind have to land somewhere defensible */
+  out.independent=isIndependent(t.srcType);
+  out.notYield=!isYieldSrc(t.srcType);
+  return out;
+});
+check('income that fits none of them can still be named',
+      other.offered===true && other.asksForAName===true && other.reads==='Snow plowing',
+      JSON.stringify(other.kept));
+check('...and it lands somewhere defensible rather than nowhere',
+      other.independent===true && other.notYield===true,
+      `counts as built-not-primary: ${other.independent}, treated as yield: ${!other.notYield}`);
+check('...without losing the name of the income itself, which is a separate field',
+      other.kept.name==="Pat's paycheck" && other.kept.label==='Snow plowing');
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

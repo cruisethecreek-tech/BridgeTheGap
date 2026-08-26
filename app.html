@@ -2233,7 +2233,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <input type="text" id="txSrc" placeholder="Paycheck, Side gig…">
           </label>
           <label class="fld income-only hide" id="fldSrcType">Type
-            <select id="txSrcType"><option value="primary">Primary Job</option><option value="side">Side Hustle</option><option value="freelance">Freelance / Service</option><option value="sale">Asset / Item Sale</option><option value="skillmon">Skill Monetization</option></select>
+            <select id="txSrcType"></select>
+            <input class="cat-new hide" id="txSrcOther" type="text" placeholder="Call it what it is">
           </label>
           <label class="fld income-only household-only hide" id="fldOwner">Earned by
             <select id="txOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select>
@@ -3186,8 +3187,25 @@ const INCOME_SOURCES=[
   {k:'sale', label:'Asset / Item Sale'},
   {k:'skillmon', label:'Skill Monetization'},
   {k:'yield', label:'Dividends / interest', yield:true},
-  {k:'rent', label:'Rent / royalties', yield:true}
+  {k:'rent', label:'Rent / royalties', yield:true},
+  /* Because a fixed list of five ways to earn money is a claim about the world,
+     and it is wrong. Named rather than shoehorned: it counts as income you built
+     rather than a primary job, and it is not treated as yield - if it arrives
+     without you, Dividends or Rent is the honest choice above. */
+  {k:'other', label:'Something else', other:true}
 ];
+/* The Type answers one question the app actually uses - is this money from one
+   employer, or from something you own or built - so it stays a short list rather
+   than becoming a second set of categories. The NAME of the income is the free
+   field beside it. */
+function incomeKindLabel(t){
+  if(!t||!t.srcType) return '';
+  if(t.srcType==='other') return (t.srcLabel||'').trim()||'Something else';
+  return (INCOME_SOURCES.find(x=>x.k===t.srcType)||{}).label||'';
+}
+function incomeSourceOptions(sel){
+  return INCOME_SOURCES.map(x=>`<option value="${x.k}"${x.k===sel?' selected':''}>${escapeHtml(x.label)}</option>`).join('');
+}
 function isIndependent(srcType){ return !!srcType && srcType!=='primary'; }
 function isYieldSrc(k){ return !!(INCOME_SOURCES.find(x=>x.k===k)||{}).yield; }
 function yieldTotal(month){
@@ -6231,9 +6249,11 @@ document.getElementById('addTx').addEventListener('click',()=>{
   } else {
     const source=document.getElementById('txSrc').value.trim()||'Income';
     const srcType=document.getElementById('txSrcType').value;
+    const srcLabel=((document.getElementById('txSrcOther')||{}).value||'').trim();
     const hours=parseFloat(document.getElementById('txHours').value)||0;
     const prevIndie=indieTotal();
     const tx={id:uid(),type:'income',amount:amt,source,date,note,srcType}; if(hours>0) tx.hours=hours;
+    if(srcType==='other'&&srcLabel) tx.srcLabel=srcLabel;
     if(state.householdOn){ const o=document.getElementById('txOwner'); if(o) tx.owner=o.value; }
     state.transactions.push(tx);
     if(isIndependent(srcType)){ const nowIndie=prevIndie+amt; indieCrossed=INDIE_MILES.find(m=>prevIndie<m&&nowIndie>=m)||null; }
@@ -6913,7 +6933,7 @@ function closeTxSheet(){ txSheetId=null; const el=document.getElementById('txShe
 function editTx(id, patch){
   const t=state.transactions.find(x=>x.id===id); if(!t) return;
   if('amount' in patch) t.amount=Math.max(0,+patch.amount||0);
-  ['date','note','source','catId','srcType','energy','ikind'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
+  ['date','note','source','catId','srcType','srcLabel','energy','ikind'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
   /* Covers the amount AND the kind: flipping "still yours" to "into you" takes
      the money out of the holding, and flipping it back puts it in. */
   if(t.type==='invest') syncInvestAsset();
@@ -6937,7 +6957,7 @@ function renderTxSheet(){
      filed under the wrong category could be moved but an entry that fitted none
      of them was stuck. */
   const catOpts=(state.categories.length?categoryOptions():'')+'<option value="__new">＋ New category…</option>';
-  const srcOpts=INCOME_SOURCES.map(x=>`<option value="${x.k}"${x.k===t.srcType?' selected':''}>${escapeHtml(x.label)}</option>`).join('');
+  const srcOpts=incomeSourceOptions(t.srcType);
 
   const fields=`<div class="cs-sec"><div class="cs-h">The entry</div>
     <div class="txs-f"><span class="txs-k">Amount</span><span class="txs-v">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${t.amount}" data-txedit="amount"></span></div>
@@ -6945,7 +6965,8 @@ function renderTxSheet(){
     ${t.type==='expense'?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId" id="txsCat">${catOpts}</select></span></div>
       <div class="txs-f hide" id="txsNewWrap"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" id="txsCatNew" placeholder="Name the new one" enterkeyhint="done"></span></div>`:''}
     ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
-      <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>`:''}
+      <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>
+      ${t.srcType==='other'?`<div class="txs-f"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" value="${escapeHtml(t.srcLabel||'')}" placeholder="Call it what it is" data-txedit="srcLabel"></span></div>`:''}`:''}
     ${t.type==='invest'?`<div class="txs-f"><span class="txs-k">Into what</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Index fund" data-txedit="source"></span></div>
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="ikind"><option value="holds"${(t.ikind||'holds')==='holds'?' selected':''}>Still yours - it holds value</option><option value="self"${t.ikind==='self'?' selected':''}>Into you - spent on purpose</option></select></span></div>`:''}
     <div class="txs-f"><span class="txs-k">Note</span><span class="txs-v"><input type="text" value="${escapeHtml(t.note||'')}" placeholder="What was it?" data-txedit="note"></span></div>
@@ -6960,6 +6981,8 @@ function renderTxSheet(){
   const facts=[];
   if(H>0 && t.type!=='invest') facts.push([t.type==='income'?'What it bought you':'What it cost you', state.freedomMode?usd(t.amount):fmtLife(t.amount,H)]);
   if(t.type==='income' && t.hours>0) facts.push(['Rate for it', usd(t.amount/t.hours)+'/hr']);
+  if(t.type==='income' && t.srcType) facts.push([isIndependent(t.srcType)?'Counts as':'Counts as',
+    (incomeKindLabel(t)||'Income') + (isIndependent(t.srcType)?' - income you built':' - your primary job')]);
   if(t.recId) facts.push(['Posted by','a repeat you set up']);
   const link=(state.impulse||[]).find(i=>i.txId===t.id);
   if(link) facts.push(['Came from','a gut-check you ran']);
@@ -10461,8 +10484,28 @@ function refreshCatSelects(){
     const keep=sel.value; sel.innerHTML=qlCatOptions();
     if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;
   });
-  syncCatNew();
+  /* Built from the list, not typed out beside it. The form carried its own copy
+     of the five original kinds, so when Dividends and Rent were added to the
+     model to answer a question about capital income they appeared in the entry
+     sheet and nowhere else - the one place people actually log a paycheck still
+     offered five. Two copies of a list is one copy too many. */
+  const st=document.getElementById('txSrcType');
+  if(st){ const keep=st.value; st.innerHTML=incomeSourceOptions();
+    if(keep && [...st.options].some(o=>o.value===keep)) st.value=keep; }
+  syncCatNew(); syncSrcOther();
 }
+function syncSrcOther(){
+  const sel=document.getElementById('txSrcType'), nw=document.getElementById('txSrcOther');
+  if(sel&&nw) nw.classList.toggle('hide', sel.value!=='other');
+}
+(function(){
+  document.addEventListener('change',e=>{
+    if(e.target && e.target.id==='txSrcType'){
+      syncSrcOther();
+      if(e.target.value==='other'){ const n=document.getElementById('txSrcOther'); if(n) n.focus(); }
+    }
+  });
+})();
 /* The name field shows only while "New category" is the choice. */
 function syncCatNew(){
   [['txCat','txCatNew'],['recCat','recCatNew']].forEach(([sid,nid])=>{
