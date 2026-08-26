@@ -5586,7 +5586,7 @@ document.getElementById('catName').addEventListener('keydown',e=>{ if(e.key==='E
 const CAT_PACKS=[
   { k:'essentials', name:'The essentials', icon:'\u{1F3E0}',
     hook:'The five or six that decide whether the month works at all.',
-    truth:'Start here. Everything else in this list is a leak; this one is the floor. If these are not funded, nothing else matters yet.',
+    truth:'Start here, and only here. Every other pack in this list is a leak - money that leaves without being asked. This one is the floor: the handful of things that decide whether the month works at all. Fund these before you touch anything else, because a beautifully organized plan with the rent missing is not a plan, it is a hobby.',
     flat:true,
     cats:[
       {n:'Roof',           w:'Rent or mortgage. The one that ends the month early if it is wrong.'},
@@ -5594,7 +5594,7 @@ const CAT_PACKS=[
       {n:'Power & Wi-Fi',  w:'The utilities that get shut off, in the order they get shut off.'},
       {n:'Getting Around', w:'Fuel, transit, insurance, the repair you are pretending is not coming.'},
       {n:'Debt Payments',  w:'The minimum, at least. Anything above it is offense.'},
-      {n:'Emergency Fund', w:'The reason a flat tyre is an annoyance instead of a crisis.', g:'save'},
+      {n:'Emergency Fund', w:'The reason a flat tire is an annoyance instead of a crisis.', g:'save'},
       {n:'Fun Money',      w:'Budgeted, on purpose. An unbudgeted good time is the one you regret.'},
       {n:'Dream Fund',     w:'The thing you are actually doing all this for.', g:'save'}
     ]},
@@ -5615,7 +5615,7 @@ const CAT_PACKS=[
     hook:'Small, frequent, invisible - which is exactly why it never makes the budget and always makes the statement.',
     truth:'A cut every six weeks and nails every three is not an indulgence, it is a subscription with no cancel button and no monthly email. Priced by the year it is usually somebody’s biggest unbudgeted line. Naming it is not an attack on it - it is how you get to keep it on purpose.',
     cats:[
-      {n:'Hair',                w:'Cuts, colour, the products that go with them.'},
+      {n:'Hair',                w:'Cuts, color, the products that go with them.'},
       {n:'Nails',               w:'Every three weeks is seventeen times a year.'},
       {n:'Skincare',            w:'Replaced quietly, one bottle at a time.'},
       {n:'Makeup',              w:'Small basket, high frequency.'},
@@ -5643,7 +5643,7 @@ const CAT_PACKS=[
       {n:'Food on the road',    w:'Every meal out, for a week, at holiday prices.'},
       {n:'Activities & tickets',w:'The reason you went, and never in the budget.'},
       {n:'Travel insurance',    w:'Cheap until the one time it is not.'},
-      {n:'Bags & gear',         w:'Bought in the fortnight before, all at once.'}
+      {n:'Bags & gear',         w:'Bought in the two weeks before, all at once.'}
     ]},
 
   { k:'occasions', name:'Special occasions', icon:'\u{1F381}',
@@ -5668,6 +5668,22 @@ const CAT_PACKS=[
       {n:'Index funds',         w:'Boring on purpose. Boring is the strategy.', g:'invest'},
       {n:'Into me',             w:'Skills, tools, certifications. Consumed, but it raises the rate.', g:'invest'},
       {n:'Sinking fund',        w:'For the known-but-not-yet: the car, the roof, the move.', g:'save'}
+    ]},
+
+  { k:'family', name:'Kids & family', icon:'\u{1F9F8}',
+    hook:'A child is not one expense. It is forty small ones, and they never arrive alone.',
+    truth:'This is the pack people skip on purpose, and the reason is not laziness - putting a number on your kid feels like putting a price on your kid. So it goes unmeasured, and unmeasured money still gets spent. It comes out of the one line nobody defends: yours. The retirement contribution, the dentist, the thing you were going to do at forty. Measuring what your family costs is not resenting it. It is the only way to stop paying for it with your own future by accident.',
+    cats:[
+      {n:'Childcare',            w:'For a lot of households this is quietly a second rent.'},
+      {n:'School costs',         w:'Fees, supplies, trips - clustered into two months of the year.'},
+      {n:'Activities & sports',  w:'Registration is the small part. Kit, travel and tournaments are the rest.'},
+      {n:'Kids clothes & shoes', w:'Outgrown, not worn out. Which is why it never stops.'},
+      {n:'Diapers & baby gear',  w:'Enormous while it lasts, and it does not last.'},
+      {n:'Parties & gifts',      w:'Theirs, and every classmate’s. More weekends than anyone counts.'},
+      {n:'Babysitting',          w:'The price of being two adults for one evening. Worth naming.'},
+      {n:'Kid tech',             w:'Phone, tablet, the data plan nobody renegotiated.'},
+      {n:'Education fund',       w:'The only line here that is still yours later.', g:'save'},
+      {n:'Family support',       w:'Helping a parent or a sibling. Real, recurring, almost never on a plan.'}
     ]},
 
   { k:'lifestyle', name:'Lifestyle', icon:'\u{2615}',

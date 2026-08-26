@@ -5126,6 +5126,13 @@ const packs = await p.evaluate(async () => {
   o.opened=document.getElementById('packSheet').classList.contains('on');
   o.packs=[...document.querySelectorAll('.pk-card .pk-nm')].map(x=>x.textContent);
   o.everyPackHasAHook=[...document.querySelectorAll('.pk-card .pk-hook')].every(x=>x.textContent.trim().length>20);
+  /* Every pack must earn its place by saying what leaving it off costs. A pack
+     with a name and a list is a folder, and this app does not ship folders. */
+  o.everyPackHasATruth=CAT_PACKS.every(x=>String(x.truth||'').length>140);
+  o.everyRowEverywhereHasAWhy=CAT_PACKS.every(x=>x.cats.every(c=>String(c.w||'').length>10));
+  /* Dollars on the tin, so the copy speaks the same language as the currency.
+     Three UK spellings had already reached user-facing pack copy. */
+  o.copy=CAT_PACKS.map(x=>[x.hook,x.truth,...x.cats.map(c=>c.w)].join(' ')).join(' ');
   document.querySelector('[data-pack="occasions"]').click(); await wait(250);
   o.card=document.getElementById('packSheetBody').innerText;
   o.rows=document.querySelectorAll('.pk-row').length;
@@ -5144,6 +5151,14 @@ const packs = await p.evaluate(async () => {
   document.getElementById('pkAdd').click(); await wait(300);
   o.pyfTagged=(state.categories.find(c=>c.name==='Pay Yourself First')||{}).growth;
   o.retirementTagged=(state.categories.find(c=>c.name==='Retirement')||{}).growth;
+  /* the family pack, and the one thing it has to get right */
+  openPacks('family'); await wait(200);
+  o.family=document.getElementById('packSheetBody').innerText;
+  o.familyTags=document.querySelectorAll('.pk-row .growth-tag').length;
+  document.getElementById('pkAdd').click(); await wait(300);
+  const fg=state.categories.find(c=>c.name==='Kids & family');
+  o.familyNested=!!fg && state.categories.filter(c=>c.parentId===fg.id).length===10;
+  o.eduTagged=(state.categories.find(c=>c.name==='Education fund')||{}).growth;
   /* and a pack category is an ordinary category from that second */
   const bd=state.categories.find(c=>c.name==='Birthdays');
   state.categories=state.categories.filter(c=>c.id!==bd.id); save();
@@ -5154,9 +5169,14 @@ const packs = await p.evaluate(async () => {
 check('the packs button opens a browser rather than dumping categories in',
       packs.addedNothingYet===true && packs.opened===true);
 check('...listing every pack, the essentials among them so their contents are visible at last',
-      packs.packs.length===8 && packs.packs.some(x=>/essentials/i.test(x)), packs.packs.join(' / '));
+      packs.packs.length===9 && packs.packs.some(x=>/essentials/i.test(x)), packs.packs.join(' / '));
 check('...each one saying what it is for, not just what it is called',
       packs.everyPackHasAHook===true);
+check('...and every pack, not just the ones spot-checked, names what skipping it costs',
+      packs.everyPackHasATruth===true && packs.everyRowEverywhereHasAWhy===true);
+check('...in the same language as the currency on the tin',
+      !/\b(colour|tyre|fortnight|whilst|amongst|cheque|nappies|organis|recognis|realis|apologis|prioritis|minimis|maximis|favourite|behaviour|labour|neighbour|licence|defence|kerb|maths|aeroplane)\b/i.test(packs.copy),
+      (packs.copy.match(/\b(colour|tyre|fortnight|whilst|amongst|cheque|nappies|organis|recognis|realis|apologis|prioritis|minimis|maximis|favourite|behaviour|labour|neighbour|licence|defence|kerb|maths|aeroplane)\b/ig)||[]).join(', '));
 check('a pack card says what leaving it off costs',
       /same day every year/i.test(packs.card) && packs.card.length>400,
       packs.card.split('\n').filter(Boolean)[1]||'');
@@ -5169,6 +5189,15 @@ check('...and says so afterwards rather than offering the same pack again',
 check('the money-that-works pack tags what it drops in, so none of it reads as spending',
       packs.pyfTagged==='save' && packs.retirementTagged==='invest',
       `pyf=${packs.pyfTagged} retirement=${packs.retirementTagged}`);
+check('the family pack disarms the guilt instead of pretending it is not there',
+      /price on your kid/i.test(packs.family) && /not resenting it/i.test(packs.family),
+      packs.family.split('\n').filter(Boolean)[2]||'');
+check('...and names the line the money actually comes out of when nobody measures it',
+      /\byours\b/i.test(packs.family) && /retirement/i.test(packs.family));
+check('...with its one keepable line tagged on the card and in the data',
+      packs.familyTags===1 && packs.eduTagged==='save',
+      `tags=${packs.familyTags} edu=${packs.eduTagged}`);
+check('...landing nested like every other pack', packs.familyNested===true);
 check('...and a pack category is an ordinary category from that second',
       packs.deletable===true);
 
