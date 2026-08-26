@@ -397,6 +397,15 @@ default. Plus the two leaks the same audit found: the spend headline must state
 everything that left rather than the watched slice, and the Giving ledger and
 Shield must follow an edited amount instead of keeping the typo.
 
+And **budgeted against actual**: picking a repeating stream pre-fills the amount
+it is set to pay, typing the actual prices a shortfall and an overage live, a
+hand-typed actual survives a stream re-pick (the form must never decide it knows
+the paycheck better than the person holding it), the discrepancy outlives the
+toast as a fact on the entry sheet, and a source with no rule invents no
+expectation. The test targets the hand-logged entry, not the occurrence the rule
+auto-posts on boot - the rule's own posting is exactly on-amount and would mask
+everything.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own

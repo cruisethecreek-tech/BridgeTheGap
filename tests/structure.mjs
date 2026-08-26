@@ -4379,6 +4379,73 @@ const follows = await p.evaluate(() => {
 check('the Giving ledger and the Shield follow an edited amount instead of keeping the typo',
       follows.giving===85 && follows.impulse===85, JSON.stringify(follows));
 
+/* ---- 65. budgeted against actual, at the moment of logging ----
+   Drawn on a screenshot in two inks over the Amount field: the figure a stream
+   is SET UP to pay (green - "budgeted = predetermined") and the figure that
+   actually landed (red - "actual"). The rule already held the first number and
+   the field held the second, and the form never put them next to each other -
+   so a short paycheck logged without comment, and the shortfall surfaced weeks
+   later as an unexplained reconcile gap, if at all.
+
+   The properties: picking a repeating stream pre-fills its usual amount (the
+   usual case costs zero typing), typing the actual prices the difference live
+   in both directions, a hand-typed actual is never clobbered by a stream
+   re-pick, the discrepancy survives on the entry sheet after the toast dies,
+   and a source with no rule invents no expectation. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'joint',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'}],
+  recurring:[{id:'r1',type:'income',amount:2435.22,source:'Kristi',freq:'biweekly',anchor:'2026-08-14',acctId:'joint'}]});
+await p.reload(); await p.waitForTimeout(700);
+const bva = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderTx(); await wait(300);
+  document.querySelector('#typeToggle button[data-t="income"]').click(); await wait(200);
+  const sp=document.getElementById('txSrcPick'), amt=document.getElementById('txAmt'),
+        note=()=>document.getElementById('txAmtNote').innerText;
+  const out={};
+  sp.value='Kristi'; sp.dispatchEvent(new Event('change',{bubbles:true})); await wait(200);
+  out.prefilled=amt.value;
+  amt.value='2300'; amt.dispatchEvent(new Event('input',{bubbles:true})); await wait(120);
+  out.short=note();
+  amt.value='2600'; amt.dispatchEvent(new Event('input',{bubbles:true})); await wait(120);
+  out.over=note();
+  /* a hand-typed actual survives a stream re-pick - replacing it would be the
+     form deciding it knows the paycheck better than the person holding it */
+  amt.value='1000'; amt.dispatchEvent(new Event('input',{bubbles:true}));
+  sp.dispatchEvent(new Event('change',{bubbles:true})); await wait(120);
+  out.handTypedKept=amt.value;
+  amt.value='2300'; amt.dispatchEvent(new Event('input',{bubbles:true}));
+  document.getElementById('addTx').click(); await wait(400);
+  /* find the HAND-LOGGED entry, not the occurrence the rule auto-posted on
+     boot - the rule's own posting is exactly on-amount and would mask the test */
+  const mine=state.transactions.find(t=>t.type==='income' && !t.recId);
+  out.logged=(mine||{}).amount;
+  renderTx(); await wait(200);
+  document.querySelector('[data-txsheet="'+mine.id+'"]').click(); await wait(250);
+  out.sheet=document.getElementById('txSheetBody').innerText;
+  closeTxSheet();
+  /* no rule, no expectation */
+  document.querySelector('#typeToggle button[data-t="income"]').click(); await wait(150);
+  const sp2=document.getElementById('txSrcPick');
+  sp2.value='__new'; sp2.dispatchEvent(new Event('change',{bubbles:true})); await wait(120);
+  out.noRuleNoNote=note()==='';
+  return out;
+});
+check('picking a repeating stream pre-fills the amount it is set to pay',
+      bva.prefilled==='2435.22', bva.prefilled);
+check('...typing the actual prices a shortfall while it is being typed',
+      /135\.22/.test(bva.short) && /less/.test(bva.short), bva.short);
+check('...and an overage, pointing at the rule that now understates',
+      /164\.78/.test(bva.over) && /update the rule/i.test(bva.over), bva.over);
+check('a hand-typed actual is never clobbered by a stream re-pick',
+      bva.handTypedKept==='1000', bva.handTypedKept);
+check('the discrepancy survives on the entry sheet after the toast is gone',
+      /Short of usual/i.test(bva.sheet) && /135\.22/.test(bva.sheet),
+      (bva.sheet.match(/Short of usual[^\n]*\n[^\n]*/)||[''])[0].replace(/\n/g,' '));
+check('a source with no rule behind it invents no expectation',
+      bva.noRuleNoNote===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
