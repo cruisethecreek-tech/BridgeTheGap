@@ -304,6 +304,18 @@ button asks you to act on a time value", and a ledger row in Life mode displays
 **accessible name** where there is one, which is exactly what the control claims
 to do. A command button with no label is still judged on its text.
 
+It also holds **what the streak is allowed to score**. A posted bill must not
+reset the under-budget streak or mark its day over, the bill and the
+discretionary total have to stay two separate numbers, and the bill still has to
+appear on the day card saying it was not scored. The counter-case is asserted
+too, because it is the seam: a bill typed in **by hand** still counts, since
+nothing can tell it from a purchase.
+
+And **making a category where you are standing** - all four pickers offer it, an
+unnamed one is refused rather than filed somewhere else, naming it both logs the
+entry and puts the category on the plan, and no transaction is ever written
+against the literal "new category" choice.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
@@ -399,6 +411,17 @@ hour, and then leave for good once it has been used or waved off.
 Every fault this suite exists for was found by a person looking at their own
 phone, and none were found by the other nine layers - because the arithmetic was
 right and the **pixels** were wrong.
+
+It now also measures **the phone with the system font turned up**, which is where
+the same person found the next two: a category name sliced through the middle of
+a letter, and the Available column shortened to `$4...`. Neither is truncation;
+both are a row lying about how much space it needs, and the suite could not see
+either one because it only ever measured at the browser's default type size. The
+Plan is re-rendered at 320, 390 and 412px with the row text painted half again as
+large, and three rules hold at every one: no dollar figure is shortened (in a
+pill or inside an input), no name is clipped or spilled past its row, and the
+page still does not scroll sideways. Money first, deliberately - a plan whose
+Available column reads `$4...` is not a plan, so the name is what yields.
 
 The one that started it: a transaction row is four things on one line - date,
 what it was, how much, delete. `.tx-amt` was `white-space:nowrap` with no

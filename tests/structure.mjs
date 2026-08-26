@@ -3426,6 +3426,17 @@ const plan = await p.evaluate(() => {
     cols:!!box.querySelector('.plan-cols'),
     pills:box.querySelectorAll('.avail').length,
     tallest:Math.max(...heights),
+    oneLiners:heights.filter(h=>h<=64).length,
+    /* Reported twice from a real phone, both times as "text overflow": a name
+       sliced through the middle of a letter, and money ellipsised to "$4...".
+       Neither is truncation, both are the row lying about how much space it
+       needs. Measured, not eyeballed. */
+    clippedNames:rows.filter(r=>{ const t=r.querySelector('.rw-t');
+      return t && t.scrollHeight>t.clientHeight+1; }).length,
+    spilledNames:rows.filter(r=>{ const t=r.querySelector('.rw-t');
+      return t && t.getBoundingClientRect().bottom > r.getBoundingClientRect().bottom+1; }).length,
+    cutMoney:[...box.querySelectorAll('.avail, .subrow .sub-assign input')]
+      .filter(e=>e.scrollWidth>e.clientWidth+1).length,
     /* the controls that used to live on every row */
     barsInList:box.querySelectorAll('.bar').length,
     repeatsInList:box.querySelectorAll('[data-repeat]').length,
@@ -3438,8 +3449,16 @@ const plan = await p.evaluate(() => {
 });
 check('the plan is one line per category, with a column header over them',
       plan.rows===5 && plan.cols===true && plan.everyRowHasPill===true, JSON.stringify(plan));
-check('...and no row is taller than a line',
-      plan.tallest<=64, `tallest row ${plan.tallest}px`);
+/* A row may take a second line for a long name - that is the row admitting it
+   needs the space rather than cutting a word in half. What it may never do is
+   clip, spill, or shorten a dollar figure, and most rows must still be one
+   line or the list is not compact at all. */
+check('...no name is clipped or spilled, and no dollar figure is shortened',
+      plan.clippedNames===0 && plan.spilledNames===0 && plan.cutMoney===0,
+      JSON.stringify({clipped:plan.clippedNames, spilled:plan.spilledNames, cutMoney:plan.cutMoney}));
+check('...and the list is still a line per category, give or take a long name',
+      plan.oneLiners>=plan.rows-1 && plan.tallest<=96,
+      `${plan.oneLiners} of ${plan.rows} on one line, tallest ${plan.tallest}px`);
 check('...the amount is still typed straight into the list, where it is typed ninety times a month',
       plan.everyLeafTypeable===true);
 check('...and the eleven controls that used to ride along are gone from it',
@@ -3611,6 +3630,126 @@ const delSafe = await p.evaluate(async () => {
 check('deleting from the sheet still unwinds what was behind it, and closes',
       delSafe.gone===true && delSafe.after===0 && delSafe.before===550 && delSafe.closed===true,
       JSON.stringify(delSafe));
+
+/* ---- 55. the streak is about what you still choose ----
+   Asked from a phone: "is your spending streak the same as your recurring
+   budget?" It was, and it should not have been. Every expense counted against
+   the daily allowance, auto-posted bills included - so a rent of $1,250 landing
+   on the 13th put that day $1,200 over and reset the streak, every month,
+   forever. Measured before the fix: twenty clean days ran a streak of 26, and
+   one posted rent cut it to 13.
+
+   The rule now: a bill you already decided on is not a decision you make again
+   on the day it lands, so anything the app posted from a rule is excluded from
+   the allowance, the streak and the pace - and shown anyway, marked as not
+   scored, because hiding money is worse than mis-scoring it. */
+const streakSeed={...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  spendingMode:true, spendLimit:1500, day1:{date:'2026-08-01'}, trackStart:'2026-08-01',
+  categories:[{id:'roof',name:'Roof'},{id:'fun',name:'Fun'}],
+  /* No live rule in the fixture, on purpose: one would post its own rent on
+     boot and the totals below would be counting two of them. The recId is what
+     marks a transaction as posted-by-a-rule, and that is the thing under test. */
+  transactions:Array.from({length:20},(_,i)=>({id:'d'+i,type:'expense',amount:20,catId:'fun',
+    date:'2026-08-'+String(i+1).padStart(2,'0'),note:'Coffee'}))};
+await seed(streakSeed); await p.reload(); await p.waitForTimeout(700);
+const strk = await p.evaluate(() => {
+  const read=()=>{ const st=[...document.querySelectorAll('#rewardCalBox .cal-stat')]
+    .find(x=>/streak/i.test(x.textContent)); return st?+st.querySelector('.v').textContent.trim():null; };
+  const cellOf=d=>(document.querySelector(`.cal-cell[data-day="${d}"]`)||{}).className||'';
+  applySpending(); renderRewardCalendar();
+  const before=read();
+  state.transactions.push({id:'rent',type:'expense',amount:1250,catId:'roof',
+    date:'2026-08-13',note:'Rent',recId:'rr'});
+  save(); renderRewardCalendar();
+  const after=read(), cell=cellOf(13);
+  /* a bill typed in BY HAND still counts - the app cannot tell it from a
+     purchase, and pretending otherwise would be the more dangerous lie */
+  state.transactions.push({id:'hand',type:'expense',amount:900,catId:'roof',date:'2026-08-14',note:'Rent, typed'});
+  save(); renderRewardCalendar();
+  const handTyped=read();
+  state.transactions=state.transactions.filter(t=>t.id!=='hand'); save(); renderRewardCalendar();
+  // and the day card shows the bill while saying it is not scored
+  calSelDay=13; renderRewardCalendar();
+  const card=document.getElementById('calDay').innerText;
+  return { before, after, cell, handTyped, card,
+           bills:billsTotal('2026-08'), scored:Object.values(scoredSpentByDay('2026-08')).reduce((a,b)=>a+b,0) };
+});
+check('a posted bill no longer resets the under-budget streak',
+      strk.before>0 && strk.after===strk.before, `${strk.before} before, ${strk.after} after the rent posted`);
+check('...and the day it landed on is not marked over',
+      !/\bover\b/.test(strk.cell), strk.cell);
+check('...but a bill typed in by hand still counts, because nothing can tell it apart',
+      strk.handTyped < strk.before, `${strk.handTyped} vs ${strk.before}`);
+check('the two totals are kept apart rather than merged',
+      strk.bills===1250 && strk.scored===400, JSON.stringify({bills:strk.bills, scored:strk.scored}));
+check('the bill is still shown on the day, and said to be unscored',
+      /Rent/.test(strk.card) && /not scored/i.test(strk.card) && /1,250/.test(strk.card),
+      strk.card.replace(/\n/g,' ').slice(0,120));
+
+/* ---- 56. a category you can make where you are standing ----
+   Asked from a phone, looking at a category dropdown: "what happens if it's a
+   different field? I'm not able to choose my own." Nothing happened. Every
+   picker listed the categories that already existed and offered no way to make
+   one, so an expense fitting none of them meant leaving the form, crossing to
+   Plan, adding a category and starting the entry again - and the likelier
+   outcome is the expense never gets logged at all. The quick-log rows had
+   solved this; the affordance just never reached the other three pickers. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'roof',name:'Roof'},{id:'food',name:'Food'}],
+  budgets:{'2026-08':{roof:1200,food:600}},
+  transactions:[{id:'x',type:'expense',amount:41.10,catId:'food',date:'2026-08-20',note:'Vet visit'}]});
+await p.reload(); await p.waitForTimeout(700);
+const newCat = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderTx(); await wait(250);
+  const out={};
+  const has=id=>{ const s=document.getElementById(id); return !!s && [...s.options].some(o=>o.value==='__new'); };
+  renderRecurring(); await wait(120);
+  /* The quick-log rows are built on demand, so ask the builder rather than the
+     DOM - the option has to be in the list every row is made from. */
+  out.offered={ log:has('txCat'), recurring:has('recCat'),
+                quick:/value="__new"/.test(qlCatOptions()) };
+  // the log form: refuse a blank name rather than filing it wrongly
+  const sel=document.getElementById('txCat');
+  sel.value='__new'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(120);
+  out.fieldAppears=!document.getElementById('txCatNew').classList.contains('hide');
+  document.getElementById('txAmt').value='34.20';
+  document.getElementById('addTx').click(); await wait(200);
+  out.refusedBlank=state.transactions.length===1;
+  document.getElementById('txCatNew').value='Pet supplies';
+  document.getElementById('addTx').click(); await wait(300);
+  const t=state.transactions.find(x=>x.amount===34.2);
+  out.logged=!!t;
+  out.filedUnder=(state.categories.find(c=>c.id===(t||{}).catId)||{}).name;
+  out.onThePlan=state.categories.some(c=>c.name==='Pet supplies');
+  // the transaction sheet: same option, and it must never file a literal __new
+  document.querySelector('[data-txsheet="x"]').click(); await wait(250);
+  const cs=document.getElementById('txsCat');
+  out.sheetOffers=[...cs.options].some(o=>o.value==='__new');
+  out.sheetShowsCurrent=cs.value==='food';
+  cs.value='__new'; cs.dispatchEvent(new Event('change',{bubbles:true})); await wait(150);
+  out.notFiledAsNew=state.transactions.find(x=>x.id==='x').catId==='food';
+  const n=document.getElementById('txsCatNew'); n.value='Vet';
+  n.dispatchEvent(new Event('change',{bubbles:true})); await wait(300);
+  out.movedTo=(state.categories.find(c=>c.id===state.transactions.find(x=>x.id==='x').catId)||{}).name;
+  closeTxSheet();
+  return out;
+});
+check('every category picker offers a way to make one',
+      newCat.offered.log && newCat.offered.recurring && newCat.offered.quick,
+      JSON.stringify(newCat.offered));
+check('...choosing it asks for the name right there',
+      newCat.fieldAppears===true);
+check('...and an unnamed one is refused rather than filed somewhere else',
+      newCat.refusedBlank===true);
+check('naming it logs the entry and puts the category on the plan',
+      newCat.logged===true && newCat.filedUnder==='Pet supplies' && newCat.onThePlan===true,
+      JSON.stringify({filed:newCat.filedUnder, onPlan:newCat.onThePlan}));
+check('the entry sheet offers it too, and shows the category the entry already has',
+      newCat.sheetOffers===true && newCat.sheetShowsCurrent===true);
+check('...and never files a transaction under the literal "new category" choice',
+      newCat.notFiledAsNew===true && newCat.movedTo==='Vet',
+      `stayed put: ${newCat.notFiledAsNew}, moved to: ${newCat.movedTo}`);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
