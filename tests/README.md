@@ -287,6 +287,23 @@ calendar's streak was pinned to `'3'`, so the assertion broke by itself the next
 morning without a line of code changing. It now removes the pre-start day and
 checks the streak did not move, which is the property that was meant all along.
 
+And **the ledger**, which got the same treatment as the Plan for the same
+reason. One line per entry, the whole row as the target rather than a delete
+cross, the second line and everything on it gone from the list - and, since gone
+is only acceptable if it is somewhere, every field checked as editable in the
+entry's sheet, including the energy tag that had been write-once since it was
+built. Editing an amount has to move the plan with it, a blank date is not an
+instruction, and the one that can drift silently gets its own property: editing
+an investment must move the asset behind it, or net worth is wrong by exactly
+the size of the correction. Deleting from the sheet still has to unwind what was
+behind it.
+
+That section also settled how `life_units.mjs` reads a button. The rule is "no
+button asks you to act on a time value", and a ledger row in Life mode displays
+"-1.4 days" while announcing "Open the Food entry" - so it now judges by
+**accessible name** where there is one, which is exactly what the control claims
+to do. A command button with no label is still judged on its text.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own

@@ -1094,7 +1094,38 @@
      figure UNDER it rather than trailing it; the title wraps, with the category
      chip whole and the note truncating on its own; and nothing on the row can
      shrink into its neighbour. */
-  .tx{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:10px}
+  /* One line: when, what, how much. The row is a button now - the whole thing,
+     not a 24px ✕ at the end of it - and everything the second line used to carry
+     is in the entry's own sheet. */
+  .tx{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;text-align:left;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-top:8px;
+    font:inherit;color:var(--text);cursor:pointer}
+  .tx:hover{border-color:var(--accent)}
+  .tx-main{display:flex;align-items:baseline;gap:7px;min-width:0}
+  /* The note yields first. A category shaved to "F..." tells you nothing, and
+     the category is the half of this line you scan a ledger by - so it takes the
+     width it needs up to a share of the row, and the note truncates around it. */
+  .tx-what{font-weight:800;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
+  .tx-tail{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;max-width:40%}
+  .tx-rep{font-size:12px;color:var(--muted);flex:none}
+  /* ---- the transaction sheet ---- */
+  #txSheetTitle{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding-right:34px}
+  .txs-amt{font-size:26px;font-weight:900;letter-spacing:-.5px}
+  .txs-amt.income{color:var(--income)} .txs-amt.invest{color:var(--accent)}
+  .txs-kind{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .txs-f{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:9px 12px;margin-bottom:6px}
+  .txs-k{font-weight:700;font-size:13.5px;flex:none}
+  .txs-v{display:flex;align-items:center;gap:5px;color:var(--muted);min-width:0;flex:1 1 auto;justify-content:flex-end}
+  .txs-v input,.txs-v select{max-width:100%;padding:8px 10px;font-size:14px}
+  .txs-v input[type=text]{width:170px}
+  .txs-v input[type=number]{width:110px;font-weight:700}
+  .txs-en{display:flex;flex-direction:column;gap:7px}
+  .txs-enb{display:block;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:11px;padding:10px 12px;cursor:pointer;font:inherit;color:var(--text)}
+  .txs-enb.on{border-color:var(--accent);background:rgba(var(--accent-rgb),.1)}
+  .txs-enb b{display:block;font-size:14px}
+  .txs-enb i{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:2px}
   .tx-date{font-size:12px;color:var(--muted);font-weight:700;width:44px;flex:none;text-align:center;line-height:1.2}
   .tx-date b{display:block;font-size:18px;color:var(--text)}
   .tx-main{flex:1 1 auto;min-width:0}
@@ -1109,13 +1140,41 @@
      date and the amount on top like a bank statement, the whole description
      underneath with the full width to itself. Nothing competes, so nothing is
      shaved. */
+  /* That two-line phone layout was the answer to a row carrying six things.
+     The row carries three now and fits on one line at 320px, so the wrap - and
+     the `order` values that came with it, which were silently reshuffling the
+     grid columns and painting the amount over the note - are gone. What stays is
+     the date reading as one baseline rather than a stacked block. */
   @media (max-width:560px){
-    .tx{flex-wrap:wrap;gap:4px 10px}
-    .tx-date{order:1;width:auto;display:flex;align-items:baseline;gap:5px;text-align:left}
-    .tx-date b{display:inline;font-size:15px}
-    .tx-amt{order:2;margin-left:auto;flex-direction:row;align-items:baseline;gap:8px}
-    .tx .del{order:3;margin-right:-4px}
-    .tx-main{order:4;flex:1 1 100%}
+    .tx{grid-template-columns:auto minmax(0,1fr) auto;gap:9px;padding:11px}
+    .tx-date{width:auto;display:flex;align-items:baseline;gap:4px;text-align:left}
+    .tx-date b{display:inline;font-size:14.5px}
+  }
+  /* Below this there is genuinely not room for a date, a description and an
+     amount on one line: a long note gets shaved to about 27px, which is not
+     truncation, it is deletion. So the smallest phones get two lines - date and
+     amount on top like a bank statement, the description underneath with the
+     full width to itself. One line where one line fits, and not a pixel below. */
+  /* The category is the first thing to go. On a phone the row has room for a
+     date, a description and an amount, and adding a fourth thing shaves the
+     description to about 59px - which is not truncation, it is deletion. The
+     category is one tap away in the entry's sheet; a description you cannot read
+     is a row that tells you nothing at all. */
+  /* Measured rather than guessed: a long note (about 210px) beside a long
+     category (about 110px), plus the date, the amount, the gaps and the padding,
+     needs roughly 500px of row. No phone has that. So the category shows on a
+     tablet or a desktop and nowhere else - it is one tap away in the entry's
+     sheet, and a description shaved to 55px is a row that tells you nothing. */
+  @media (max-width:560px){ .tx-tail{display:none} }
+  /* And below this even three will not fit honestly, so it goes to two lines -
+     date and amount on top like a bank statement, the description underneath
+     with the full width to itself. One line where one line fits, and not a pixel
+     below that. */
+  @media (max-width:339px){
+    .tx{grid-template-columns:auto 1fr;gap:3px 9px}
+    .tx-date{grid-column:1}
+    .tx-amt{grid-column:2;justify-self:end}
+    .tx-main{grid-column:1 / -1}
   }
   .tx.income .tx-amt{color:var(--income)}
   .tx.expense .tx-amt{color:var(--text)}
@@ -2760,6 +2819,16 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div id="catSheetBody"></div>
     </div>
   </div>
+  <!-- What a transaction is, and - finally - a way to change one. Until this
+       existed a typo in an amount could only be deleted and retyped, which took
+       the gut-check and the giving record linked to it along with the mistake. -->
+  <div class="modal-overlay" id="txSheet">
+    <div class="modal">
+      <button class="x" id="txSheetX">&#10005;</button>
+      <h3 id="txSheetTitle">Entry</h3>
+      <div id="txSheetBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="talkSheet">
     <div class="modal">
       <button class="x" id="talkX">✕</button>
@@ -3154,6 +3223,10 @@ function normalizeState(s){
      backup or a future build, and it takes the whole stage bar down with it -
      one clamp is cheaper than a defensive read at every place stages are drawn. */
   s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
+  /* And heal the auto asset against the ledger, so an imported or hand-edited
+     backup cannot carry an Invested-capital figure that disagrees with the
+     transactions underneath it. */
+  if(typeof syncInvestAsset==='function' && Array.isArray(s.transactions)) syncInvestAsset(s);
   const goalIds=new Set((s.goals||[]).map(g=>g.id));
   (s.goals||[]).forEach(g=>{ if(!(g.target>0)) g.target=Math.max(1,+g.target||1000); if(g.saved>g.target) g.saved=g.target; if(!(g.saved>=0)) g.saved=0; });
   if(s.sweptDays) Object.keys(s.sweptDays).forEach(k=>{ if(!goalIds.has(s.sweptDays[k].goalId)) delete s.sweptDays[k]; });
@@ -4435,6 +4508,33 @@ function investAssetAdd(delta){
   a.value=Math.round((a.value+delta)*100)/100;
   if(a.value<=0.005) state.assets=state.assets.filter(x=>x!==a);
 }
+/* The auto asset IS the sum of the invest transactions that still hold value,
+   so compute it rather than nudging it by deltas. investAssetAdd was fine while
+   the only operations were add and delete, but editing an amount exposed the
+   flaw: it adds the DIFFERENCE, and if the asset is missing - deleted by hand on
+   Build, or absent from a hand-edited backup - it gets created at the size of
+   the correction rather than the size of the holding. Net worth then drifts by
+   exactly the amount that was corrected, which surfaces months later as a figure
+   nobody can trace. Recomputing cannot drift. */
+function syncInvestAsset(st){
+  /* Takes the state to work on. normalizeState runs inside load(), which happens
+     BEFORE `let state` is initialised - reaching for the global there is a
+     temporal-dead-zone error that takes the whole boot down. */
+  const S=st||state;
+  const total=Math.round(S.transactions
+    .filter(t=>t.type==='invest' && (t.ikind||'holds')!=='self')
+    .reduce((s,t)=>s+(+t.amount||0),0)*100)/100;
+  S.assets=S.assets||[];
+  let a=S.assets.find(x=>x.auto==='invest');
+  if(total<=0.005){ if(a) S.assets=S.assets.filter(x=>x!==a); return; }
+  /* Its own id rather than uid(): this runs inside normalizeState, which runs
+     inside load(), and `const uid` is not initialised until after `let state =
+     load()`. Reaching for it there threw, load() fell back to a default state,
+     and every category the user had quietly vanished on boot. Nothing keys off
+     the shape of an id. */
+  if(!a){ a={id:'inv'+Math.random().toString(36).slice(2,9),name:'Invested capital',value:0,kind:'real',cost:0,auto:'invest'}; S.assets.push(a); }
+  a.value=total;
+}
 function monthInvested(month){ return txnsInMonth(month).filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0); }
 function investedAllTime(){ return state.transactions.filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0); }
 
@@ -4603,6 +4703,7 @@ function closeTopOverlay(){
   const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
+  const ts=document.getElementById('txSheet'); if(ts&&ts.classList.contains('on')){ ts.classList.remove('on'); if(typeof txSheetId!=='undefined') txSheetId=null; return true; }
   const cs=document.getElementById('catSheet'); if(cs&&cs.classList.contains('on')){ cs.classList.remove('on'); if(typeof catSheetId!=='undefined') catSheetId=null; return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
   const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
@@ -6631,46 +6732,154 @@ function renderTxList(){
   list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
   const box=document.getElementById('txList');
   if(!list.length){ box.innerHTML=`<div class="empty" style="margin-top:14px">No transactions here yet. Log one above.</div>`; return; }
+  /* Same move as the Plan tab, for the same reason. A ledger row had a date, a
+     category chip, a note, a second line carrying the energy tag and whether it
+     repeats and which month it was in, a life-cost badge and a delete button -
+     two lines and six things, on a list that is meant to be scanned. It is one
+     line now: when, what, how much. Everything else lives in the transaction's
+     own sheet, which is also where the thing this app could never do finally
+     happens - EDITING one. Until now a typo in an amount could only be deleted
+     and retyped, which quietly took the gut-check and the giving record linked
+     to it along with the mistake. */
   box.innerHTML=list.map(t=>{
     const d=new Date(t.date+'T00:00:00');
     const day=isNaN(d)?'--':d.toLocaleString(undefined,{day:'numeric'});
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
-    /* the chip and the note are separate boxes so the note truncates on its own
-       - together in one nowrap line, a long category name ate the whole width */
-    const title=t.type==='income'?`<span class="tx-note">${escapeHtml(t.source||'Income')}</span>`
-              :t.type==='invest'?(`<span class="tag-cat">Invested</span><span class="tx-note">${escapeHtml(t.source||'Investment')}</span>`)
-              :(`<span class="tag-cat">${escapeHtml(catName(t.catId))}</span><span class="tx-note">${escapeHtml(t.note||'Expense')}</span>`);
-    const en=t.energy?energyOf(t.energy):null;
-    const srcLabel = t.type==='income' && t.srcType ? (INCOME_SOURCES.find(s=>s.k===t.srcType)||{}).label : '';
-    /* the note now names the bill, so "posted automatically" moves to the line
-       that has room for it rather than eating the only line that says what it was */
-    const auto=t.recId?' · repeats':'';
-    const sub=t.type==='income'?((srcLabel?srcLabel:'Income')+auto+(t.note?' · '+escapeHtml(t.note):''))
-            :t.type==='invest'?(((t.ikind||'holds')==='self'?'Into you - spent on purpose':'Still yours - working')+auto+(t.note?' · '+escapeHtml(t.note):'')+(txAllMonths?' · '+monthOf(t.date):''))
-            :((en?en.ic+' ':'')+'Expense'+auto+(txAllMonths?' · '+monthOf(t.date):''));
-    const owner=t.owner||'a', Ho=hourlyFor(owner);
-    let badge='';
-    if(t.type==='income' && t.hours>0) badge=`<span class="tx-yield">${usd(t.amount/t.hours)}/hr</span>`;
-    else if(t.type!=='invest' && Ho>0) badge=`<span class="tx-life">(${state.freedomMode?usd(t.amount):fmtLife(t.amount,Ho)})</span>`;
-    return `<div class="tx ${t.type}">
-      <div class="tx-date">${mon}<b>${day}</b></div>
-      <div class="tx-main"><div class="tx-title">${title}</div><div class="tx-sub">${sub}</div></div>
-      <div class="tx-amt">${t.type==='income'?'+':t.type==='invest'?'→':'−'}${moneyOwner(t.amount,owner)}${badge}</div>
-      <button class="del" data-deltx="${t.id}" title="Delete">✕</button>
-    </div>`;
+    const what = t.type==='income' ? (t.source||'Income')
+               : t.type==='invest' ? (t.source||'Investment')
+               : (t.note || catName(t.catId) || 'Expense');
+    /* The category still earns its place on the row - a ledger you cannot scan
+       by category is a list of prices. It is dimmed and truncates on its own so
+       a long one cannot eat the note. */
+    const tail = t.type==='expense' && t.note ? catName(t.catId)
+               : t.type==='invest' ? ((t.ikind||'holds')==='self'?'into you':'still yours')
+               : '';
+    const owner=t.owner||'a';
+    /* The accessible name says what pressing it DOES. In Life mode the visible
+       amount reads as hours or days, and a control whose announced name is
+       "-1.4 days" sounds like somewhere you enter days; "Open the Food entry"
+       is what actually happens when a thumb lands on it. */
+    return `<button class="tx ${t.type}" data-txsheet="${t.id}" aria-label="Open the ${escapeHtml(what)} entry from ${mon} ${day}">
+      <span class="tx-date">${mon}<b>${day}</b></span>
+      <span class="tx-main"><span class="tx-what">${escapeHtml(what)}</span>${tail?`<span class="tx-tail">${escapeHtml(tail)}</span>`:''}${t.recId?'<span class="tx-rep" title="Posted by a repeat">&#8635;</span>':''}</span>
+      <span class="tx-amt">${t.type==='income'?'+':t.type==='invest'?'→':'−'}${moneyOwner(t.amount,owner)}</span>
+    </button>`;
   }).join('');
-  box.querySelectorAll('button[data-deltx]').forEach(btn=>btn.addEventListener('click',()=>{
-    const id=btn.dataset.deltx;
-    const gone=state.transactions.find(t=>t.id===id);
-    if(gone&&gone.type==='invest'&&(gone.ikind||'holds')!=='self') investAssetAdd(-gone.amount);   // unwind the auto asset so net worth stays honest
-    state.transactions=state.transactions.filter(t=>t.id!==id);
-    // keep the linked ledgers honest: a deleted gift/ransom must leave Giving and the Shield too
-    state.giving=(state.giving||[]).filter(g=>g.txId!==id);
-    state.impulse=(state.impulse||[]).filter(i=>!(i.type==='buy'&&i.txId===id));
-    save(); renderBudget(); renderTx(); if(typeof renderGiving==='function') renderGiving(); if(typeof renderImpulse==='function') renderImpulse(); renderHome();
-    if(gone&&gone.type==='invest') renderNetWorth();
-  }));
 }
+/* Lifted out of the row's click handler so the sheet can call it too. It was
+   never just a filter: an invest that is still yours has an asset behind it, and
+   a gift or a ransom has a record in Giving and in the Shield. Two copies of
+   this and one of them forgets. */
+function deleteTx(id){
+  const gone=state.transactions.find(t=>t.id===id);
+  state.transactions=state.transactions.filter(t=>t.id!==id);
+  if(gone&&gone.type==='invest') syncInvestAsset();   // recompute rather than unwind: it cannot drift
+
+  // keep the linked ledgers honest: a deleted gift/ransom must leave Giving and the Shield too
+  state.giving=(state.giving||[]).filter(g=>g.txId!==id);
+  state.impulse=(state.impulse||[]).filter(i=>!(i.type==='buy'&&i.txId===id));
+  save(); renderBudget(); renderTx(); if(typeof renderGiving==='function') renderGiving(); if(typeof renderImpulse==='function') renderImpulse(); renderHome();
+  if(gone&&gone.type==='invest') renderNetWorth();
+}
+
+/* ---------- the transaction sheet ---------- */
+let txSheetId=null;
+function openTxSheet(id){
+  if(!state.transactions.some(t=>t.id===id)) return;
+  txSheetId=id; renderTxSheet();
+  document.getElementById('txSheet').classList.add('on');
+  pushOverlay();
+}
+function closeTxSheet(){ txSheetId=null; const el=document.getElementById('txSheet'); if(el) el.classList.remove('on'); }
+/* Every edit goes through here so the things hanging off a transaction cannot
+   quietly fall out of step with it. Changing the amount of an invest has to move
+   the asset behind it by the difference, or net worth drifts by exactly the
+   amount of the correction - which is the sort of bug that only shows up months
+   later as a number nobody can trace. */
+function editTx(id, patch){
+  const t=state.transactions.find(x=>x.id===id); if(!t) return;
+  if('amount' in patch) t.amount=Math.max(0,+patch.amount||0);
+  ['date','note','source','catId','srcType','energy','ikind'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
+  /* Covers the amount AND the kind: flipping "still yours" to "into you" takes
+     the money out of the holding, and flipping it back puts it in. */
+  if(t.type==='invest') syncInvestAsset();
+  save();
+  renderBudget(); renderTx(); renderHome();
+  if(typeof renderNetWorth==='function') renderNetWorth();
+  if(typeof renderGiving==='function') renderGiving();
+  if(txSheetId) renderTxSheet();
+}
+function renderTxSheet(){
+  const body=document.getElementById('txSheetBody'); if(!body) return;
+  const t=state.transactions.find(x=>x.id===txSheetId);
+  if(!t){ closeTxSheet(); return; }
+  const owner=t.owner||'a', H=hourlyFor(owner);
+  const kind=t.type==='income'?'Money in':t.type==='invest'?'Money put away':'Money out';
+  const ttl=document.getElementById('txSheetTitle');
+  if(ttl) ttl.innerHTML=`<span class="txs-amt ${t.type}">${t.type==='income'?'+':t.type==='invest'?'→':'−'}${moneyOwner(t.amount,owner)}</span><span class="txs-kind">${kind}</span>`;
+
+  const catOpts=state.categories.filter(c=>!childrenOf(c.id).length)
+    .map(c=>`<option value="${c.id}"${c.id===t.catId?' selected':''}>${escapeHtml(catName(c.id))}</option>`).join('');
+  const srcOpts=INCOME_SOURCES.map(x=>`<option value="${x.k}"${x.k===t.srcType?' selected':''}>${escapeHtml(x.label)}</option>`).join('');
+
+  const fields=`<div class="cs-sec"><div class="cs-h">The entry</div>
+    <div class="txs-f"><span class="txs-k">Amount</span><span class="txs-v">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${t.amount}" data-txedit="amount"></span></div>
+    <div class="txs-f"><span class="txs-k">Date</span><span class="txs-v"><input type="date" value="${escapeHtml(t.date||'')}" data-txedit="date"></span></div>
+    ${t.type==='expense'?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId">${catOpts||'<option value="">No categories yet</option>'}</select></span></div>`:''}
+    ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
+      <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>`:''}
+    ${t.type==='invest'?`<div class="txs-f"><span class="txs-k">Into what</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Index fund" data-txedit="source"></span></div>
+      <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="ikind"><option value="holds"${(t.ikind||'holds')==='holds'?' selected':''}>Still yours - it holds value</option><option value="self"${t.ikind==='self'?' selected':''}>Into you - spent on purpose</option></select></span></div>`:''}
+    <div class="txs-f"><span class="txs-k">Note</span><span class="txs-v"><input type="text" value="${escapeHtml(t.note||'')}" placeholder="What was it?" data-txedit="note"></span></div>
+  </div>`;
+
+  /* The energy tag drives the Circulation chart and it was write-once, set in
+     the log form and never changeable afterwards - so a mis-tag was permanent. */
+  const energy = t.type==='expense' ? `<div class="cs-sec"><div class="cs-h">What kind of money was this</div>
+    <div class="txs-en">${ENERGY.map(e=>`<button class="txs-enb${t.energy===e.k?' on':''}" data-txenergy="${e.k}"><b>${escapeHtml(e.label)}</b><i>${escapeHtml(e.sub)}</i></button>`).join('')}
+      <button class="txs-enb${!t.energy?' on':''}" data-txenergy=""><b>Not tagged</b><i>Leave it out of the Circulation read</i></button></div></div>` : '';
+
+  const facts=[];
+  if(H>0 && t.type!=='invest') facts.push([t.type==='income'?'What it bought you':'What it cost you', state.freedomMode?usd(t.amount):fmtLife(t.amount,H)]);
+  if(t.type==='income' && t.hours>0) facts.push(['Rate for it', usd(t.amount/t.hours)+'/hr']);
+  if(t.recId) facts.push(['Posted by','a repeat you set up']);
+  const link=(state.impulse||[]).find(i=>i.txId===t.id);
+  if(link) facts.push(['Came from','a gut-check you ran']);
+  const gift=(state.giving||[]).find(g=>g.txId===t.id);
+  if(gift) facts.push(['Also recorded in','Giving']);
+  const context = facts.length ? `<div class="cs-sec"><div class="cs-h">Context</div>
+    <div class="cs-card">${facts.map(f=>`<div class="cs-row"><span>${escapeHtml(f[0])}</span><b>${escapeHtml(String(f[1]))}</b></div>`).join('')}</div>
+    ${t.recId?`<p class="cs-note">Changing it here changes this one entry, not the rule behind it. The rule lives in <b>Recurring</b>, further down this tab.</p>`:''}</div>` : '';
+
+  const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
+    <p class="cs-note">This deletes the entry itself${gift?', its record in Giving':''}${link?', and the gut-check it came from':''}${t.type==='invest'&&(t.ikind||'holds')!=='self'?', and takes the money back out of Invested capital':''}. Nothing else moves.</p>
+    <button class="btn sm danger ghost" data-txdel="${t.id}">Delete this entry</button></div>`;
+
+  body.innerHTML=fields+energy+context+danger;
+
+  body.querySelectorAll('[data-txedit]').forEach(el=>{
+    const k=el.dataset.txedit;
+    /* change, not input: re-rendering the sheet on every keystroke would take the
+       cursor out of the field being typed into. */
+    el.addEventListener('change',()=>{
+      const v = k==='amount' ? parseFloat(el.value)||0 : el.value;
+      if(k==='date' && !el.value) { el.value=t.date; return; }     // a blank date is not an instruction
+      editTx(t.id,{[k]:v});
+      if(typeof toast==='function' && k==='amount') toast('Changed to '+money(parseFloat(el.value)||0)+'. Everything built on it moved with it.');
+    });
+  });
+  body.querySelectorAll('[data-txenergy]').forEach(b=>b.addEventListener('click',()=>editTx(t.id,{energy:b.dataset.txenergy||undefined})));
+  body.querySelectorAll('[data-txdel]').forEach(b=>b.addEventListener('click',()=>{ const id=b.dataset.txdel; closeTxSheet(); dismissOverlay(); deleteTx(id); }));
+}
+(function(){
+  const x=document.getElementById('txSheetX'); if(x) x.addEventListener('click',dismissOverlay);
+  const ov=document.getElementById('txSheet');
+  if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) dismissOverlay(); });
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-txsheet]'); if(!b) return;
+    openTxSheet(b.dataset.txsheet);
+  });
+})();
 
 /* ---------- goals ---------- */
 document.getElementById('addGoal').addEventListener('click',()=>{

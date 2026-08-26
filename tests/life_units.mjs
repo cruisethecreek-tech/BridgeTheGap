@@ -92,9 +92,14 @@ for (const [tab, debtBudget] of PASSES) {
     const view=document.querySelector('.view.on');
     /* #timeRows is the week-in-hours ledger: its "+1 hr" controls are GENUINE
        time, not converted money, so they are the one legitimate exception. */
+    /* Judged by accessible name where there is one. That is what a screen reader
+       announces and what the control therefore claims to do - a ledger row that
+       shows "-1.4 days" but announces "Open the Food entry" is a record you can
+       open, not a field you can type days into. A button with no label is still
+       judged on its text. */
     const buttons=[...view.querySelectorAll('button')]
       .filter(el=>!el.closest('#timeRows'))
-      .map(el=>(el.innerText||'').trim()).filter(Boolean);
+      .map(el=>((el.getAttribute('aria-label')||el.innerText)||'').trim()).filter(Boolean);
     /* a caption that does the converting means the figure above it must not */
     const asides=[...view.querySelectorAll('*')].filter(el=>{
       const t=(el.innerText||'').trim();
@@ -125,7 +130,12 @@ for (const [tab, debtBudget] of PASSES) {
     return { buttons, asides, text:view.innerText };
   });
 
-  // ---- 1. no button asks you to act on a time value ----
+  /* ---- 1. no button asks you to act on a time value ----
+     Read by ACCESSIBLE NAME, not by the pixels inside it. The rule is about what
+     a control says it does, and that is precisely what aria-label carries: a
+     ledger row in Life mode displays "-1.4 days" and announces "Open the Food
+     entry", which is not an invitation to type days into anything. A command
+     button with no label still gets judged on its text, as before. */
   for(const t of found.buttons){ checked++;
     if(LIFE.test(t) && !/\+\s*\d+\s*(hr|min)/i.test(t)) fail('button names a time value you cannot type', tab, t);
   }
