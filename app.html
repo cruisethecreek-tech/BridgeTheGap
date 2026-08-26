@@ -1395,6 +1395,32 @@
   .unit-sel{margin-left:6px;padding:6px 8px;border-radius:9px;border:1px solid var(--line);
     background:var(--panel-2);color:var(--text);font:inherit;font-size:13px;font-weight:700;max-width:150px}
   .unit-work{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  /* Category packs. The card has one job the list cannot do: say what skipping
+     it costs, in words, before anything is added. */
+  .pk-lead{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 14px}
+  .pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .pk-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;
+    padding:13px;border-radius:13px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--text);font:inherit;cursor:pointer}
+  .pk-card:hover,.pk-card:focus-visible{border-color:var(--accent);background:rgba(var(--accent-rgb),.08)}
+  .pk-card.done{opacity:.62}
+  .pk-ico{font-size:21px;line-height:1}
+  .pk-nm{font-weight:900;font-size:14.5px}
+  .pk-hook{font-size:12px;line-height:1.45;color:var(--muted)}
+  .pk-hook.big{font-size:14.5px;line-height:1.55;color:var(--text);font-weight:800;margin:10px 0 10px}
+  .pk-n{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
+  .pk-back{margin-bottom:2px}
+  .pk-truth{padding:12px 14px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(var(--accent-rgb),.07);font-size:13px;line-height:1.6;color:var(--muted)}
+  .pk-list{margin:14px 0 0;display:flex;flex-direction:column;gap:1px}
+  .pk-row{padding:10px 12px;border-radius:10px;background:var(--panel-2);overflow-wrap:break-word}
+  .pk-row.here{opacity:.6}
+  .pk-rn{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-weight:800;font-size:14px}
+  .pk-rw{display:block;margin-top:3px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .pk-have{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+  .pk-act{margin-top:16px}
+  .pk-act .btn{width:100%}
+  .pk-fine{margin:9px 0 0;font-size:12px;line-height:1.55;color:var(--muted)}
   .rec-tools{margin:14px 0 4px;align-items:center;gap:8px;flex-wrap:wrap}
   .rec-arrange{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-basis:100%}
   .rec-arrange .ra-k{font-size:12.5px;font-weight:800;color:var(--muted)}
@@ -2236,7 +2262,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <input type="text" id="catName" placeholder="e.g. Groceries, Rent, Fun Money">
           </label>
           <button class="btn primary" id="addCat">Add category</button>
-          <button class="btn ghost" id="starterBtn">Starter set</button>
+          <button class="btn ghost" id="starterBtn" title="Packs of categories most people never budget for, with what each one costs to skip">Category packs</button>
           <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
           <button class="btn ghost" id="mergeBtn" title="Merge duplicate essentials into one">Tidy duplicates</button>
           <button class="btn ghost" id="reorderBtn" title="Put your categories in the order you actually think about them">Reorder</button>
@@ -2975,6 +3001,15 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
        view. That is also the honest split - the list is for the one decision
        being made ninety times a month, and this is for the questions you ask
        about a category twice. -->
+  <!-- Category packs. A list of names teaches nobody anything, so every pack
+       opens a card that says what is inside AND what it costs to leave it off. -->
+  <div class="modal-overlay" id="packSheet">
+    <div class="modal">
+      <button class="x" id="packSheetX">&#10005;</button>
+      <h3 id="packSheetTitle">Category packs</h3>
+      <div id="packSheetBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="catSheet">
     <div class="modal">
       <button class="x" id="catSheetX">&#10005;</button>
@@ -3504,6 +3539,16 @@ function normalizeState(s){
      one clamp is cheaper than a defensive read at every place stages are drawn. */
   s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
   s.rateDraft=null;
+  /* Heal the app's own bug in the app's own data. "Pay Yourself First" is a
+     name this app writes, never one a person types from scratch, and it was
+     being created with no growth tag - so every dollar somebody paid themselves
+     was filed as spent and dropped out of their net worth. Nothing in the
+     interface can un-tag a category, so a PYF row with no tag can only be one
+     this app made wrong. Fixing it on load is the only way the people it already
+     happened to ever see the right number. */
+  (s.categories||[]).forEach(c=>{
+    if(!c.growth && String(c.name||'').toLowerCase()==='pay yourself first') c.growth='save';
+  });
   /* And heal the auto asset against the ledger, so an imported or hand-edited
      backup cannot carry an Invested-capital figure that disagrees with the
      transactions underneath it. */
@@ -5522,16 +5567,227 @@ document.getElementById('addCat').addEventListener('click',()=>{
   state.categories.push({id:uid(),name}); el.value=''; save(); renderBudget(); renderTxForm();
 });
 document.getElementById('catName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
-document.getElementById('starterBtn').addEventListener('click',()=>{
-  // Cover First names first so we never duplicate the essentials
-  ['Roof','Food','Power & Wi-Fi','Getting Around','Debt Payments','Emergency Fund','Fun Money','Dream Fund'].forEach(n=>{
-    const w=WALLS.find(x=>x.cat===n);
-    const exists = w ? state.categories.some(c=>w.match.some(t=>c.name.toLowerCase().includes(t)))
-                     : state.categories.some(c=>c.name.toLowerCase()===n.toLowerCase());
-    if(!exists) state.categories.push({id:uid(),name:n});
+/* ---------- category packs ------------------------------------------------
+   Asked for like this: "these are the things that slowly drive away savings and
+   never get funded until it's too late."
+
+   That sentence is the whole product. Every pack here is a category people
+   already spend money on and almost nobody budgets for, and the reason they go
+   unbudgeted is always the same shape: the cost is real, predictable and
+   annual, but it arrives as a surprise, so it gets paid out of the emergency
+   fund, the fun money or a card. Naming it in the plan is the entire fix. It
+   does not make the money appear - it stops the money being a shock.
+
+   Every pack says out loud what it costs to leave it off, because a list of
+   category names teaches nobody anything. And nothing here is permanent: a pack
+   drops in ordinary categories, and from that second they rename, split, move,
+   get a target or get deleted like any other.
+   ---------------------------------------------------------------------- */
+const CAT_PACKS=[
+  { k:'essentials', name:'The essentials', icon:'\u{1F3E0}',
+    hook:'The five or six that decide whether the month works at all.',
+    truth:'Start here. Everything else in this list is a leak; this one is the floor. If these are not funded, nothing else matters yet.',
+    flat:true,
+    cats:[
+      {n:'Roof',           w:'Rent or mortgage. The one that ends the month early if it is wrong.'},
+      {n:'Food',           w:'Groceries. Not restaurants - those live in Lifestyle.'},
+      {n:'Power & Wi-Fi',  w:'The utilities that get shut off, in the order they get shut off.'},
+      {n:'Getting Around', w:'Fuel, transit, insurance, the repair you are pretending is not coming.'},
+      {n:'Debt Payments',  w:'The minimum, at least. Anything above it is offense.'},
+      {n:'Emergency Fund', w:'The reason a flat tyre is an annoyance instead of a crisis.', g:'save'},
+      {n:'Fun Money',      w:'Budgeted, on purpose. An unbudgeted good time is the one you regret.'},
+      {n:'Dream Fund',     w:'The thing you are actually doing all this for.', g:'save'}
+    ]},
+
+  { k:'health', name:'Health & wellness', icon:'\u{1FA7A}',
+    hook:'Nobody budgets for the body until the body sends an invoice.',
+    truth:'A year of feeling fine reads as a year with no health costs. Then one crown, one specialist or one course of physio lands, and it comes out of the emergency fund - so a completely predictable cost gets filed as an emergency. It was never an emergency. It was a Tuesday you did not plan for.',
+    cats:[
+      {n:'Doctor & dentist',       w:'Copays, the annual clean, the thing you have been putting off.'},
+      {n:'Prescriptions',          w:'Small and monthly, which is how it hides.'},
+      {n:'Therapy & mental health',w:'The one people cut first and miss most.'},
+      {n:'Gym & training',         w:'Budget it or cancel it. Paying for a room you do not enter is neither.'},
+      {n:'Vitamins & supplements', w:'Easy to start, quietly expensive, rarely counted.'},
+      {n:'Glasses & contacts',     w:'Comes round on a schedule and still surprises everyone.'}
+    ]},
+
+  { k:'beauty', name:'Beauty & grooming', icon:'\u{1F485}',
+    hook:'Small, frequent, invisible - which is exactly why it never makes the budget and always makes the statement.',
+    truth:'A cut every six weeks and nails every three is not an indulgence, it is a subscription with no cancel button and no monthly email. Priced by the year it is usually somebody’s biggest unbudgeted line. Naming it is not an attack on it - it is how you get to keep it on purpose.',
+    cats:[
+      {n:'Hair',                w:'Cuts, colour, the products that go with them.'},
+      {n:'Nails',               w:'Every three weeks is seventeen times a year.'},
+      {n:'Skincare',            w:'Replaced quietly, one bottle at a time.'},
+      {n:'Makeup',              w:'Small basket, high frequency.'},
+      {n:'Barber & shave',      w:'The most regular expense most men never write down.'},
+      {n:'Treatments',          w:'Lashes, waxing, whatever you actually book.'}
+    ]},
+
+  { k:'online', name:'Online shopping', icon:'\u{1F4E6}',
+    hook:'The cart that fills itself between paydays.',
+    truth:'One saved card, one tap, no cash leaving your hand and no total at the end. It is engineered to be forgettable, and it works - which is why this is the pack most likely to explain a month you cannot account for. You are not weak. The checkout was designed by people who are very good at their jobs.',
+    cats:[
+      {n:'Marketplace orders',  w:'The everything-store habit. Where most of it actually goes.'},
+      {n:'Clothes & shoes',     w:'Including the returns you did not send back.'},
+      {n:'Home & decor',        w:'Small upgrades, no end state.'},
+      {n:'Tech & gadgets',      w:'Rarely urgent, always justified.'},
+      {n:'Impulse buys',        w:'A line for the ones you cannot defend. Honesty beats a tidy list.'}
+    ]},
+
+  { k:'travel', name:'Trips & travel', icon:'\u{2708}\u{FE0F}',
+    hook:'A trip is not a surprise. You booked it.',
+    truth:'Travel gets treated as an event rather than a cost, so it is paid from savings or a card and then quietly repaid for four months. Divide the trip by the months until it and it becomes a bill you can actually meet - and the trip stops costing you the year after it.',
+    cats:[
+      {n:'Flights & transport', w:'The part people remember to save for.'},
+      {n:'Stays',               w:'The part they underestimate.'},
+      {n:'Food on the road',    w:'Every meal out, for a week, at holiday prices.'},
+      {n:'Activities & tickets',w:'The reason you went, and never in the budget.'},
+      {n:'Travel insurance',    w:'Cheap until the one time it is not.'},
+      {n:'Bags & gear',         w:'Bought in the fortnight before, all at once.'}
+    ]},
+
+  { k:'occasions', name:'Special occasions', icon:'\u{1F381}',
+    hook:'Christmas is on the same day every year and still arrives as an emergency.',
+    truth:'These are the most predictable costs you have. You know the birthdays. You know the date. Funded a twelfth at a time they are ordinary; funded in December they are the reason January hurts. This is the pack that most often turns a good year into a bad one in six weeks.',
+    cats:[
+      {n:'Christmas & holidays',w:'The big one. Start it in January and it stops being a bill.'},
+      {n:'Birthdays',           w:'Count them once. The number is always higher than people guess.'},
+      {n:'Weddings & showers',  w:'Gift, outfit, travel, hotel. Rarely just the gift.'},
+      {n:'Anniversaries',       w:'The date is not a surprise to anyone but a budget.'},
+      {n:'Graduations',         w:'Seasonal, clustered, and always in the same two months.'},
+      {n:'Funerals & flowers',  w:'The one nobody wants to plan for, and the one that never waits.'}
+    ]},
+
+  { k:'invest', name:'Money that works', icon:'\u{1F331}',
+    hook:'Every other pack here is money leaving. This one is money moving.',
+    truth:'These are not expenses and this app does not treat them as one. Assign to them like any other line - so they compete for the dollar instead of living on whatever is left - and when the money moves it is logged as put away, not spent, and stays in your net worth. That is the whole difference between paying yourself and paying everyone else.',
+    growthPack:true,
+    cats:[
+      {n:'Pay Yourself First',  w:'Off the top, before spending gets a vote.', g:'save'},
+      {n:'Retirement',          w:'The one where starting beats optimising, by a lot.', g:'invest'},
+      {n:'Index funds',         w:'Boring on purpose. Boring is the strategy.', g:'invest'},
+      {n:'Into me',             w:'Skills, tools, certifications. Consumed, but it raises the rate.', g:'invest'},
+      {n:'Sinking fund',        w:'For the known-but-not-yet: the car, the roof, the move.', g:'save'}
+    ]},
+
+  { k:'lifestyle', name:'Lifestyle', icon:'\u{2615}',
+    hook:'The habits that decide your month without ever being decided.',
+    truth:'None of this is waste and this app will never tell you to stop. But unpriced, it is the difference between a plan that works and one that mysteriously does not - and priced, most people find one line they genuinely do not want and two they would happily double. You cannot make that trade until the numbers are on the table.',
+    cats:[
+      {n:'Subscriptions',       w:'The quiet ones. Try the Membership sweep below.'},
+      {n:'Eating out',          w:'Separate from groceries or neither number means anything.'},
+      {n:'Coffee & drinks out', w:'Three a week at six dollars is $78 a month. Price it, then decide.'},
+      {n:'Hobbies',             w:'The good kind of spending, still worth a number.'},
+      {n:'Pets',                w:'Food, vet, the emergency that is not optional.'},
+      {n:'Nights out',          w:'Rounds, rides home, the next morning.'}
+    ]}
+];
+/* Is this category already here, under any name close enough to count? The
+   essentials answer to the walls, which match loosely on purpose ("Rent",
+   "Mortgage" and "Rent/mortgage" are one thing), and everything else answers to
+   its own name. Adding a pack twice must never double the list. */
+function packCatExists(name){
+  const w=(typeof WALLS!=='undefined') ? WALLS.find(x=>x.cat===name) : null;
+  const lower=String(name).toLowerCase();
+  return w ? state.categories.some(c=>w.match.some(t=>c.name.toLowerCase().includes(t)))
+           : state.categories.some(c=>c.name.toLowerCase()===lower);
+}
+function packById(k){ return CAT_PACKS.find(x=>x.k===k); }
+/* What adding this pack would actually do, worked out before anything is
+   written, so the card can say it rather than the toast saying it afterwards. */
+function packPlan(k){
+  const p=packById(k); if(!p) return null;
+  const add=p.cats.filter(c=>!packCatExists(c.n));
+  const have=p.cats.filter(c=>packCatExists(c.n));
+  const groupNeeded=!p.flat && !packCatExists(p.name);
+  return {pack:p, add, have, groupNeeded};
+}
+/* Nested under one group, because eight loose rows per pack turns the plan into
+   a wall of names - which is the thing this app keeps having to undo. The
+   essentials stay flat: they are the top level, not a drawer inside it. */
+function addPack(k){
+  const plan=packPlan(k); if(!plan || !plan.add.length) return 0;
+  const p=plan.pack;
+  let parentId=null;
+  if(!p.flat){
+    let g=state.categories.find(c=>!c.parentId && c.name.toLowerCase()===p.name.toLowerCase());
+    if(!g){ g={id:uid(), name:p.name}; state.categories.push(g); }
+    parentId=g.id;
+    if(typeof collapsedCats!=='undefined') collapsedCats.delete(g.id);
+  }
+  plan.add.forEach(c=>{
+    const row={id:uid(), name:c.n};
+    if(parentId) row.parentId=parentId;
+    if(c.g) row.growth=c.g;
+    state.categories.push(row);
   });
-  save(); renderBudget(); renderTxForm();
-});
+  save();
+  return plan.add.length;
+}
+/* The button used to drop eight categories in with no warning and no way to see
+   what they were first - answered here: "we got the basic starter set but what's
+   all included?" Nothing gets added now until you have read what is in it. */
+let packOpen=null;
+function openPacks(k){
+  packOpen=k||null;
+  const el=document.getElementById('packSheet'); if(!el) return;
+  el.classList.add('on');
+  renderPacks();
+}
+function closePacks(){ packOpen=null; const el=document.getElementById('packSheet'); if(el) el.classList.remove('on'); }
+function renderPacks(){
+  const body=document.getElementById('packSheetBody'), ttl=document.getElementById('packSheetTitle');
+  if(!body) return;
+  if(!packOpen){
+    if(ttl) ttl.textContent='Category packs';
+    body.innerHTML=`<p class="pk-lead">These are the things that quietly drain a year and never get funded until it is too late. Not because anyone is careless - because a cost with no name on the plan gets paid out of something else.</p>`
+      + `<div class="pk-grid">${CAT_PACKS.map(p=>{
+          const pl=packPlan(p.k);
+          const done=pl.add.length===0;
+          return `<button class="pk-card${done?' done':''}" data-pack="${p.k}">
+            <span class="pk-ico">${p.icon}</span>
+            <span class="pk-nm">${escapeHtml(p.name)}</span>
+            <span class="pk-hook">${escapeHtml(p.hook)}</span>
+            <span class="pk-n">${done?'all here already':`${p.cats.length} categories`}</span>
+          </button>`;
+        }).join('')}</div>`;
+    body.querySelectorAll('[data-pack]').forEach(b=>b.addEventListener('click',()=>openPacks(b.dataset.pack)));
+    return;
+  }
+  const pl=packPlan(packOpen); if(!pl){ packOpen=null; return renderPacks(); }
+  const p=pl.pack;
+  if(ttl) ttl.innerHTML=`${p.icon} ${escapeHtml(p.name)}`;
+  body.innerHTML=`<button class="btn sm ghost pk-back" id="pkBack">&#8249; All packs</button>
+    <p class="pk-hook big">${escapeHtml(p.hook)}</p>
+    <div class="pk-truth">${escapeHtml(p.truth)}</div>
+    <div class="pk-list">${p.cats.map(c=>{
+      const here=packCatExists(c.n);
+      return `<div class="pk-row${here?' here':''}">
+        <span class="pk-rn">${escapeHtml(c.n)}${c.g?`<span class="growth-tag mini">${escapeHtml(GROWTH_TAG_SHORT[c.g]||'not spent')}</span>`:''}${here?'<span class="pk-have">already yours</span>':''}</span>
+        <span class="pk-rw">${escapeHtml(c.w)}</span>
+      </div>`;
+    }).join('')}</div>
+    ${pl.add.length
+      ? `<div class="pk-act">
+           <button class="btn primary" id="pkAdd">Add ${pl.add.length} ${pl.add.length===1?'category':'categories'}</button>
+           <p class="pk-fine">${p.flat?'They land at the top level.':`They land in one <b>${escapeHtml(p.name)}</b> group so the plan stays readable.`} From that second they are ordinary categories - rename, split, move or delete any of them.</p>
+         </div>`
+      : `<div class="pk-act"><p class="pk-fine">Every one of these is already on your plan. Nothing to add.</p></div>`}`;
+  const back=document.getElementById('pkBack'); if(back) back.addEventListener('click',()=>openPacks(null));
+  const add=document.getElementById('pkAdd');
+  if(add) add.addEventListener('click',()=>{
+    const n=addPack(packOpen);
+    if(!n) return;
+    const name=p.name;
+    renderBudget(); renderTxForm(); renderHome();
+    renderPacks();
+    if(typeof toast==='function')
+      toast(`${n} added${p.flat?'':` under ${name}`}. Give them numbers when you know them - a category with no amount is still better than a cost with no name.`);
+  });
+}
+document.getElementById('starterBtn').addEventListener('click',()=>openPacks(null));
+document.getElementById('packSheetX').addEventListener('click',closePacks);
+document.getElementById('packSheet').addEventListener('click',e=>{ if(e.target.id==='packSheet') closePacks(); });
 /* Choosing a category in the Recurring form already tells us the amount - it is
    sitting on that category's Assign box - so asking for it again is asking the
    user to look it up and retype it. Fill it in, and say where the number came
@@ -6257,7 +6513,20 @@ function wireDeepen(scope){
 function runDeepen(k){
   const M=state.activeMonth, income=monthIncome(M);
   if(k==='payfirst'){
-    const c=findOrCreateCat('Pay Yourself First');
+    /* Asked directly: "I'm having an issue with the pay yourself first concept.
+       Is it an expense? Or is it an investment?" Neither on its own, and the app
+       was quietly answering "expense", which is the wrong half.
+
+       It has to be a PLAN LINE, because zero-based means every dollar gets a job
+       and this one has to compete for the dollar against the fun money. A thing
+       that is not a budget line is "whatever is left" - which is precisely the
+       failure the lesson describes.
+
+       And the money that moves has to be an INVESTMENT, because an expense is
+       money that is gone and this money is still yours. Created without a growth
+       tag it was neither: the plan counted it, and then every dollar you paid
+       yourself vanished out of net worth as though you had spent it. */
+    const c=findOrCreateCat('Pay Yourself First','save');
     if(!(assignedFor(c.id,M)>0) && income>0) budgetFor(M)[c.id]=Math.max(25,Math.round(income*0.1));
     save(); activateTab('budget'); renderBudget();
     setTimeout(()=>{
@@ -6771,10 +7040,18 @@ let txType='expense', txFilter='all', txAllMonths=false;
   const sel=document.getElementById('txCat'); if(!sel) return;
   sel.addEventListener('change',()=>{
     const c=state.categories.find(x=>x.id===sel.value);
-    if(!c || c.growth!=='invest' || txType!=='expense') return;
+    /* 'save' belongs here as much as 'invest' does. Both are money that moved
+       and is still yours, and the toggle was only catching one of them - so a
+       category tagged "Saved, not spent" could be logged as an expense and
+       disappear out of net worth, which is the exact thing the tag promises
+       will not happen. 'debt' is deliberately left out: paying down a balance
+       is not a thing you can hold afterwards. */
+    if(!c || !(c.growth==='invest'||c.growth==='save') || txType!=='expense') return;
     const t=document.querySelector('#typeToggle button[data-t="invest"]'); if(!t) return;
     t.click();
-    if(typeof toast==='function') toast(`${c.name} is money you invest, not money you spend - switched to Invest.`);
+    if(typeof toast==='function') toast(c.growth==='save'
+      ? `${c.name} is money you keep, not money you spend - logging it as money put away.`
+      : `${c.name} is money you invest, not money you spend - switched to Invest.`);
   });
 })();
 document.getElementById('typeToggle').addEventListener('click',e=>{

@@ -5024,6 +5024,154 @@ check('...both lists can be open at once, and one Done ends both',
       ord.bothAtOnce===true && ord.doneEndsBoth===true && ord.bodyClean===true,
       JSON.stringify({both:ord.bothAtOnce,done:ord.doneEndsBoth,body:ord.bodyClean}));
 
+/* ---- 72. is paying yourself an expense or an investment ----
+   Asked exactly like that: "I'm having an issue with the pay yourself first
+   concept. Is it an expense? Or is it an investment?"
+
+   Neither on its own, and the app had been quietly answering "expense", which is
+   the wrong half. It has to be a PLAN LINE, because zero-based means every
+   dollar gets a job and this one has to compete for the dollar against the fun
+   money - a thing that is not a budget line is "whatever is left", which is
+   precisely the failure the lesson describes. And the money that moves has to be
+   an INVESTMENT, because an expense is money that is gone and this money is
+   still yours.
+
+   runDeepen created it with findOrCreateCat('Pay Yourself First') and no growth
+   tag, so it was neither: the plan counted it, and every dollar somebody paid
+   themselves was filed as spent. The property below is not "net worth is
+   unchanged" - this app deliberately keeps net worth on the TYPED bank balance
+   and treats the ledger as an expectation. The property is what the money
+   BECOMES: paid to yourself it becomes something you still hold, spent it
+   becomes nothing. That is the whole answer.
+
+   It is healed on load as well as fixed at the source, because a form check
+   cannot reach the people it already happened to. "Pay Yourself First" is a name
+   this app writes and no interface can un-tag a category, so an untagged one can
+   only be a row this app made wrong. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'pyf',name:'Pay Yourself First'},{id:'f',name:'Food'}],
+  budgets:{'2026-08':{pyf:400}},
+  accounts:[{id:'ac',name:'Checking',balance:2000,updated:'2026-08-01'}],
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(450);
+const pyf = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  o.healed=state.categories.find(c=>c.id==='pyf').growth;
+  o.nothingElseTagged=!state.categories.find(c=>c.id==='f').growth;
+  o.assigned=assignedFor('pyf','2026-08');          // it is a plan line like any other
+  const a0=sumAssets(), e0=bankExpected();
+  state.transactions.push({id:'x',type:'invest',amount:400,date:'2026-08-05',
+    catId:'pyf',source:'Savings',ikind:'holds',acctId:'ac'});
+  syncInvestAsset(); save();
+  o.becameAnAsset=sumAssets()-a0;
+  o.countsAsUsed=catUsed('pyf','2026-08');
+  openCatSheet('pyf'); await wait(150);
+  o.sheet=document.getElementById('catSheetBody').innerText; closeCatSheet();
+  const aMid=sumAssets();
+  state.transactions.push({id:'y',type:'expense',amount:400,date:'2026-08-06',catId:'f',acctId:'ac'});
+  syncInvestAsset(); save();
+  o.spendingBecameNothing=sumAssets()===aMid;
+  o.bothLeftTheAccount=(e0-bankExpected());
+  /* and the log form refuses to file it as spending in the first place */
+  activateTab('tx'); await wait(200);
+  document.querySelector('#typeToggle button[data-t="expense"]').click(); await wait(150);
+  const sel=document.getElementById('txCat'); sel.value='pyf';
+  sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(250);
+  o.formSwitched=document.querySelector('#typeToggle button.on').dataset.t;
+  return o;
+});
+check('an untagged Pay Yourself First is healed on load, where the people it already happened to are',
+      pyf.healed==='save', String(pyf.healed));
+check('...without tagging anything else behind your back', pyf.nothingElseTagged===true);
+check('it is a plan line, so it competes for the dollar instead of living on what is left',
+      pyf.assigned===400, String(pyf.assigned));
+check('...and the money paid to yourself becomes something you still hold',
+      pyf.becameAnAsset===400, String(pyf.becameAnAsset));
+check('...while the same money spent becomes nothing', pyf.spendingBecameNothing===true);
+check('...though both leave the account, so the bank expects the same either way',
+      Math.abs(pyf.bothLeftTheAccount-800)<0.005, String(pyf.bothLeftTheAccount));
+check('...counted as used by the plan, so the month can still reach zero',
+      pyf.countsAsUsed===400, String(pyf.countsAsUsed));
+check('...and read as put away rather than spent',
+      /Put away/i.test(pyf.sheet) && /still yours/i.test(pyf.sheet));
+check('the log form will not let it be filed as an expense at all',
+      pyf.formSwitched==='invest', String(pyf.formSwitched));
+
+/* ---- 73. the costs nobody budgets for, named before they arrive ----
+   "These are the things that slowly drive away savings and never get funded
+   until it's too late." That sentence is the pack.
+
+   Every category in these packs is money people already spend and almost nobody
+   plans for, and the reason is always the same shape: the cost is real,
+   predictable and often annual, but it arrives as a surprise, so it gets paid
+   out of the emergency fund, the fun money or a card. Naming it does not make
+   the money appear. It stops the money being a shock.
+
+   The old button dumped eight categories in with no warning and no way to see
+   what they were - which is what prompted "we got the basic starter set but
+   what's all included?". Nothing is added now until the card has been read, and
+   the essentials are in the same list so their contents are finally visible too.
+   Every row carries a reason, because a list of names teaches nobody anything. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'f',name:'Food'}]});
+await p.reload(); await p.waitForTimeout(450);
+const packs = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('budget'); await wait(200);
+  const before=state.categories.length;
+  document.getElementById('starterBtn').click(); await wait(250);
+  o.addedNothingYet=state.categories.length===before;
+  o.opened=document.getElementById('packSheet').classList.contains('on');
+  o.packs=[...document.querySelectorAll('.pk-card .pk-nm')].map(x=>x.textContent);
+  o.everyPackHasAHook=[...document.querySelectorAll('.pk-card .pk-hook')].every(x=>x.textContent.trim().length>20);
+  document.querySelector('[data-pack="occasions"]').click(); await wait(250);
+  o.card=document.getElementById('packSheetBody').innerText;
+  o.rows=document.querySelectorAll('.pk-row').length;
+  o.everyRowHasAWhy=[...document.querySelectorAll('.pk-rw')].every(x=>x.textContent.trim().length>10);
+  const n0=state.categories.length;
+  document.getElementById('pkAdd').click(); await wait(300);
+  o.added=state.categories.length-n0;
+  const g=state.categories.find(c=>c.name==='Special occasions');
+  o.nested=!!g && state.categories.filter(c=>c.parentId===g.id).length===6;
+  o.nowSaysNothingToAdd=/Nothing to add/i.test(document.getElementById('packSheetBody').innerText);
+  const n1=state.categories.length;
+  addPack('occasions');
+  o.twiceAddsNothing=state.categories.length===n1;
+  /* the growth pack tags what it drops in */
+  openPacks('invest'); await wait(200);
+  document.getElementById('pkAdd').click(); await wait(300);
+  o.pyfTagged=(state.categories.find(c=>c.name==='Pay Yourself First')||{}).growth;
+  o.retirementTagged=(state.categories.find(c=>c.name==='Retirement')||{}).growth;
+  /* and a pack category is an ordinary category from that second */
+  const bd=state.categories.find(c=>c.name==='Birthdays');
+  state.categories=state.categories.filter(c=>c.id!==bd.id); save();
+  o.deletable=!state.categories.some(c=>c.name==='Birthdays');
+  closePacks();
+  return o;
+});
+check('the packs button opens a browser rather than dumping categories in',
+      packs.addedNothingYet===true && packs.opened===true);
+check('...listing every pack, the essentials among them so their contents are visible at last',
+      packs.packs.length===8 && packs.packs.some(x=>/essentials/i.test(x)), packs.packs.join(' / '));
+check('...each one saying what it is for, not just what it is called',
+      packs.everyPackHasAHook===true);
+check('a pack card says what leaving it off costs',
+      /same day every year/i.test(packs.card) && packs.card.length>400,
+      packs.card.split('\n').filter(Boolean)[1]||'');
+check('...and shows every category with a reason beside it',
+      packs.rows===6 && packs.everyRowHasAWhy===true, `rows=${packs.rows}`);
+check('adding drops them under one group so the plan stays readable',
+      packs.added===7 && packs.nested===true, `added=${packs.added}`);
+check('...and says so afterwards rather than offering the same pack again',
+      packs.nowSaysNothingToAdd===true && packs.twiceAddsNothing===true);
+check('the money-that-works pack tags what it drops in, so none of it reads as spending',
+      packs.pyfTagged==='save' && packs.retirementTagged==='invest',
+      `pyf=${packs.pyfTagged} retirement=${packs.retirementTagged}`);
+check('...and a pack category is an ordinary category from that second',
+      packs.deletable===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

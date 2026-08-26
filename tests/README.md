@@ -554,6 +554,24 @@ was the test's, not the app's - it used a `freq` key that does not exist, which
 `recFreq` silently coerces to monthly. Fixtures written from memory rather than
 from the option list are their own small version of the same disease.
 
+It holds **what the money becomes**. The Pay Yourself First section is worth
+reading for what it does *not* assert: "net worth is unchanged" was the obvious
+property and it is wrong for this app, which deliberately keeps net worth on the
+typed bank balance and treats the ledger as an expectation. The first draft
+asserted it anyway, failed, and the failure was the test's misunderstanding
+rather than a bug. The property that actually answers "expense or investment?" is
+what the money *becomes*: paid to yourself it becomes something you still hold,
+spent it becomes nothing, and both leave the account. The section also pins the
+load-time heal, because a source fix never reaches the people the bug already
+happened to.
+
+Three fixtures in this stretch were wrong in the same way - a `freq` key that
+does not exist, a state with no accounts so no money could visibly move, an
+assertion about a model the app does not use. Each was caught by a failing test
+and each was mine, not the app's. That is the tax on writing fixtures from memory
+instead of from the code, and it is the same disease `hostile.mjs` exists to
+treat: the inputs you think to supply are the ones you already know work.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
