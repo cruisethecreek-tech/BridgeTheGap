@@ -16,10 +16,72 @@ node tests/talk_through.mjs          # understanding before labelling
 node tests/structure.mjs             # one place to reflect, nothing shown too early
 node tests/layout.mjs                # ten tabs, four phone widths, no text on text
 node tests/funnel.mjs                # one honest ask, by link and never by script
+node tests/hostile.mjs               # the inputs nobody thinks to supply
 ```
 
 Requires a Chromium that Playwright can drive; the scripts point at
 `/opt/pw-browsers/chromium` and are run from the repo root.
+
+## Why `hostile.mjs` exists, and what it cannot do
+
+Asked directly, after a bug reached a phone that 615 passing properties had not
+caught: *"I'm not understanding how your audits don't catch this."*
+
+The answer is structural and worth writing down. **Every other suite here is a
+regression net.** Each section is named after something a person found, and the
+property was written after the report. A net built that way documents history
+and is permanently one report behind whoever is using the app. The fixtures make
+it worse, because they get written from the working example: the recurring-source
+fixture said `source:'Hollywood'` - already named - so the bug lived in the input
+nobody thought to supply.
+
+`hostile.mjs` is the one suite that does not know what the bugs are. It supplies
+the inputs nobody thinks to supply, to every form, and asserts properties that
+hold for all of them: nothing in, nothing invented; no impossible number reaches
+your data; no impossible number reaches the screen; nothing throws.
+
+Building it taught the same lesson twice, in miniature:
+
+1. **v1 clicked every button with the form emptied and missed the bug it was
+   written for**, because `recType` defaults to `expense` and the nameless
+   source lives in the income branch. A fuzzer that leaves the dropdowns alone
+   only ever exercises the path already known to work. So it walks every option
+   of every select.
+2. **v2 emptied every field at once and still missed it**, because an all-empty
+   form is stopped by the first guard on the handler - "Enter an amount" - and no
+   guard after it is ever reached. **A form with one hole in it** is the shape
+   that finds the missing guard, and it is also the shape of what people actually
+   do: they fill the form and miss a box. So it is leave-one-out: fill everything
+   plausibly, blank exactly one field, submit, for every field on every branch of
+   every form.
+
+Only after both corrections did it find the bug on its own, with the fix
+reverted:
+
+```
+FAIL  no form with one box left empty invents an identity for the record it creates
+      addRec [recType=income] missing:recSrc INVENTED: transactions.source = "Income"
+```
+
+A third lesson came from the harness rather than the app. The first `reset()`
+assigned a parsed fixture straight to `state`, and three page errors appeared
+that no user could ever hit - because `load()` merges a stored state over
+`defaultState()`, and skipping that door handed the app a shape that cannot
+exist. **A harness that enters through a door the user cannot use reports faults
+they cannot hit, and hides the ones they can.** It resets through `load()` now.
+
+Against the fixed code it is 8 of 8 across **289 form submissions on 18 forms**,
+with `tkSave` printed as still unreachable - it lives several steps into the
+talk-through flow. That line is deliberate output rather than a silent skip: a
+form nobody probed is not a form that passed.
+
+**What this suite does not do.** It covers one class: input handling, invented
+identity, impossible numbers. It would not have caught the ledger readout whose
+two figures looked like they disagreed, or the assign field that was missing its
+period picker for months. Those are faults of *meaning* and *absence* - the app
+was arithmetically correct and said the wrong thing, or correctly did not say a
+thing it should have. Nothing in this folder finds those. A person using the app
+on a real phone finds those, and that is not a gap this suite can close.
 
 ## 1. `math_audit.mjs` - property fuzz
 Generates hundreds of random but plausible app states (nested categories, mixed
