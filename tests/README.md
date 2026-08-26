@@ -247,6 +247,46 @@ last one carries a control string it must match, because a never-fires rule
 proves nothing; the feature's own "it will not tell you whether to do it" is
 deliberately outside the pattern.
 
+It also holds **charts you can interrogate**. Every time-series drew a shape and
+stopped, so the properties are: every point is a thumb-sized band rather than a
+3px dot, the chart says something before you touch it, tapping a different point
+changes what it says, the arrow keys walk it and focus survives the redraw, the
+readout names what the number is made of (including income the setup chat wrote
+rather than letting it pass as yours), a month with nothing logged is called
+unlogged and never printed as zero, and the donut slices respond to a tap the way
+their legend always did.
+
+And the **welcome gate**, the one screen in the app that blocks. It checks the
+twelve ideas the card exists to say - ground zero, the distance, accountability
+over budgeting, listening/watching/do-better, and the boundary that the app is
+not real, cannot want it for you, cannot waste your time, and that the effort is
+entirely the user's - as patterns rather than sentences, so copy can change and
+none of them can quietly leave with it. It also checks the flow in both
+directions: accepting starts the chat and records it, a re-run by someone who
+already accepted is not made to read it again, and the setup screen stays usable
+however the gate was left. The reachability check took three attempts to become
+real: the first read one layout four times and called it four phones, the second
+set `scrollTop` by hand (which works on a container made unscrollable, so it
+passed with the button welded off-screen), and only the third resizes for real,
+scrolls with the wheel like a thumb, and presses the button. That version was
+confirmed by making the CTA unreachable and watching it fail.
+
+It also holds **the compact Plan**. The list has to be one line per category
+under a column header, no row taller than a line, the amount still typed
+straight into it, and the eleven controls that used to ride along gone from it -
+which is only acceptable if the sheet has them, so the sheet is checked control
+by control (assign, repeat, delete, pencil, split, bar) plus the history the list
+never had room for. A pool opens too, lists what is inside it, and does not offer
+an amount field of its own. And two negative checks: the sheet must not invent a
+carry-forward this app has never had, and a category funded then invested from
+must read as used up on the Plan while the spending breakdown still refuses to
+call that investment spending.
+
+Fixing this section also turned up a **date bomb in an older one**: the reward
+calendar's streak was pinned to `'3'`, so the assertion broke by itself the next
+morning without a line of code changing. It now removes the pre-start day and
+checks the streak did not move, which is the property that was meant all along.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own

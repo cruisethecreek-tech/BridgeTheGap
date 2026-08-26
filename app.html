@@ -284,6 +284,12 @@
   .subrow.reordering .sub-assign,.subrow.reordering .btn.danger,.subrow.reordering .sub-split-btn,
   .cat.reordering .rep,.subrow.reordering .rep{display:none!important}
   .subrow.reordering .sub-name,.cat.reordering .cat-name{flex:1;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
+  /* In reorder mode the Available pill goes too. Nothing on that row is being
+     read while a row is being moved, and every column the name does not have to
+     share with is a name that stays readable under a thumb. */
+  .subrow.reordering .avail,.cat.grp.reordering .avail,.cat.grp.reordering .cat-assign{display:none!important}
+  .subrow.reordering{grid-template-columns:auto minmax(0,1fr)}
+  .cat.grp.reordering .cat-top{grid-template-columns:auto auto minmax(0,1fr)}
   .areaguide{background:rgba(var(--accent-rgb),.09);border:1px solid rgba(var(--accent-rgb),.34);border-radius:16px;padding:16px 18px;margin-bottom:16px}
   .areaguide .ag-k{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent)}
   .areaguide .ag-t{font-weight:800;font-size:16px;margin:4px 0 6px;color:var(--text)}
@@ -955,6 +961,108 @@
   .cat-meta .rem.good{color:var(--good)}.cat-meta .rem.over{color:var(--accent)}
   .cat.overspent{border-color:#4a221e}.cat.overspent .bar>span{background:var(--accent-2)}
 
+
+  /* ---------- Plan: one line per category ----------
+     Three columns and nothing else. The name is a door into the category's own
+     sheet, the middle is the only field being typed into ninety times a month,
+     and the pill on the right is the answer to the only question the list is
+     for. Everything that used to sit on the row lives behind the door now. */
+  .plan-cols{display:grid;grid-template-columns:minmax(0,1fr) 88px 80px;gap:8px;align-items:end;
+    padding:0 10px 7px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .plan-cols span:not(:first-child){text-align:right}
+  .cat.grp{background:transparent;border:none;border-radius:0;padding:0;margin-top:10px}
+  .cat.grp .cat-top{display:grid;grid-template-columns:auto minmax(0,1fr) 88px 80px;gap:8px;align-items:center;
+    background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px;flex-wrap:nowrap}
+  .cat.grp .cat-name{font-size:15px;flex:none;min-width:0}
+  .cat.grp .cat-assign{display:block;text-align:right;font-weight:800;font-size:14px;color:var(--text)}
+  .cat.grp .cat-assign i{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--muted)}
+  .cat.grp.overspent .cat-top{border-color:rgba(var(--accent-2-rgb),.45)}
+  .subrow{display:grid;grid-template-columns:minmax(0,1fr) 88px 80px;gap:8px;align-items:center;
+    padding:9px 10px;margin-top:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+  .subrow.lvl1{margin-left:12px}
+  .subrow.lvl2{margin-left:24px}
+  .subrow.overspent{border-color:rgba(var(--accent-2-rgb),.45)}
+  /* break-word rather than anywhere. "anywhere" is allowed to split a word even
+     when wrapping to the next line would have fitted it whole, which is how
+     "Food" ended up broken across two lines in a column that had room for it. */
+  .rw-nm{background:none;border:none;padding:0;text-align:left;color:var(--text);font:inherit;font-weight:700;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-wrap:break-word;min-width:0;cursor:pointer;width:100%}
+  .rw-nm:hover{color:var(--accent)}
+  /* These two carry flex sizing from the old stacked layout, including a
+     min-width floor. Inside a grid track a min-width larger than the track does
+     not shrink it - it overflows into the next column, which is how a category
+     name ended up printed on top of the "$" beside it. */
+  .subrow .sub-name,.cat.grp .cat-name{min-width:0;flex:none;display:block;overflow:hidden}
+  .subrow .sub-assign{display:flex;align-items:center;gap:5px;min-width:0}
+  .growth-tag.mini{font-size:9.5px;padding:1px 5px;letter-spacing:.2px}
+  .rep-dot{font-size:12px;color:var(--muted);flex:none}
+  .subrow .sub-assign input{width:100%}
+  .avail{display:inline-block;width:100%;text-align:center;border:1px solid transparent;border-radius:999px;
+    padding:6px 8px;font-weight:800;font-size:13px;white-space:nowrap;font-family:inherit;overflow:hidden;text-overflow:ellipsis}
+  .subrow[data-catsheet],.cat.grp[data-catsheet] .cat-top,.cs-sub[data-catsheet]{cursor:pointer}
+  .avail.good{background:rgba(53,201,154,.16);color:var(--good);border-color:rgba(53,201,154,.35)}
+  .avail.over{background:rgba(var(--accent-2-rgb),.18);color:var(--accent-2);border-color:rgba(var(--accent-2-rgb),.45)}
+  .avail.spent{background:rgba(230,178,77,.16);color:var(--accent);border-color:rgba(230,178,77,.35)}
+  .avail.none{background:var(--ink);color:var(--muted);border-color:var(--line)}
+  @media(max-width:365px){
+    .plan-cols{grid-template-columns:minmax(0,1fr) 74px 68px;gap:6px;padding:0 8px 7px}
+    .cat.grp .cat-top{grid-template-columns:auto minmax(0,1fr) 74px 68px;gap:6px;padding:9px 8px}
+    .subrow{grid-template-columns:minmax(0,1fr) 74px 68px;gap:6px;padding:8px}
+    .avail{font-size:12px;padding:6px 3px}
+    .subrow .sub-assign input{padding:6px;font-size:13px}
+    .subrow.lvl1{margin-left:8px} .subrow.lvl2{margin-left:16px}
+  }
+
+  /* ---------- the category sheet ---------- */
+  #catSheetTitle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-right:34px}
+  .cs-sec{margin-top:16px}
+  .cs-sec:first-child{margin-top:4px}
+  .cs-h{font-size:11.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .cs-card{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
+  .cs-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;font-size:14px;color:var(--muted)}
+  .cs-row b{color:var(--text);font-weight:800;font-size:15px}
+  .cs-row.sub{font-size:12.5px;padding:0 0 6px}
+  .cs-row.sub b{font-size:13px;font-weight:700}
+  .cs-row.big{border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
+  .cs-row.big .avail{width:auto;padding:5px 12px;cursor:default}
+  .cs-card .bar{margin-top:10px}
+  .cs-assign{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;
+    background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+  .cs-k{font-weight:700;font-size:14px}
+  .cs-in{display:flex;align-items:center;gap:6px;color:var(--muted)}
+  .cs-in input{width:110px;padding:9px 10px;font-size:15px;font-weight:700}
+  .cs-note{font-size:13px;line-height:1.55;color:var(--muted);margin:9px 0 0}
+  .cs-rename{margin-bottom:12px;display:flex;gap:8px}
+  .cs-rep{display:flex;align-items:flex-start;gap:11px}
+  .cs-repk{font-size:13px;line-height:1.55;color:var(--muted)}
+  .cs-repk b{color:var(--text)}
+  .cs-sub{display:grid;grid-template-columns:1fr 78px 78px;gap:8px;align-items:center;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px}
+  .cs-subn{background:none;border:none;padding:0;text-align:left;color:var(--text);font:inherit;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .cs-subn:hover{color:var(--accent)}
+  .cs-suba{text-align:right;font-size:13px;color:var(--muted);font-weight:700}
+  .cs-hist{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:11px 13px}
+  .cs-hrow{display:grid;grid-template-columns:34px 1fr auto auto;gap:9px;align-items:center;padding:5px 0;font-size:12.5px}
+  .cs-hm{color:var(--muted);font-weight:800}
+  .cs-hbars{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .cs-hbars i{display:block;height:5px;border-radius:3px;min-width:2px}
+  .hb-a{background:rgba(230,178,77,.55)}
+  .hb-s{background:var(--accent-2)}
+  .cs-hv{text-align:right;font-weight:700;white-space:nowrap}
+  .cs-hv em{display:block;font-style:normal;font-size:11px;font-weight:600;color:var(--muted)}
+  .cs-hd{text-align:right;font-weight:700;color:var(--good);white-space:nowrap;font-size:12px}
+  .cs-hd.over{color:var(--accent-2)}
+  .cs-hkey{display:flex;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+  .cs-hkey span{display:flex;align-items:center;gap:5px}
+  .cs-hkey i{width:14px;height:5px;border-radius:3px}
+  .cs-txs{margin-top:9px}
+  .cs-tx{display:grid;grid-template-columns:52px 1fr auto;gap:9px;align-items:center;padding:8px 0;
+    border-bottom:1px solid var(--line);font-size:13.5px}
+  .cs-tx:last-of-type{border-bottom:none}
+  .cs-txd{color:var(--muted);font-size:12px;font-weight:700}
+  .cs-txn{overflow-wrap:anywhere}
+  .cs-txv{font-weight:800;white-space:nowrap}
+
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
 
   /* ---------- Transactions ---------- */
@@ -1211,6 +1319,36 @@
   .intake-top .x{margin-left:auto;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
   .intake-prog{height:3px;background:var(--line)}
   .intake-prog>span{display:block;height:100%;background:var(--accent);width:0;transition:width .35s ease}
+  /* The welcome gate. It replaces the log rather than floating over it, so there
+     is one thing on screen and one button to press; the overflow lives on the
+     scroller and not on the card, or the CTA drops off the bottom of a short
+     phone with no way to reach it. */
+  .ia-welcome{display:none;flex:1;overflow-y:auto;padding:22px 16px calc(26px + env(safe-area-inset-bottom))}
+  .ia-welcome.on{display:block}
+  .iaw-card{max-width:560px;margin:0 auto;text-align:center}
+  .iaw-eye{display:inline-block;font-size:11.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+  .iaw-t{font-size:30px;line-height:1.15;letter-spacing:-.7px;margin:14px 0 0;font-weight:900}
+  /* Focused on open so a screen reader lands on the heading rather than on the
+     close button. It is not an interactive control, so it must not look like one. */
+  .iaw-t:focus{outline:none}
+  .iaw-lead{font-size:15px;line-height:1.6;color:var(--muted);margin:13px 0 0;text-align:left}
+  .iaw-lead b{color:var(--text)}
+  .iaw-three{margin-top:18px;display:flex;flex-direction:column;gap:9px;text-align:left}
+  .iaw-row{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
+  .iaw-k{display:block;font-weight:900;font-size:15px}
+  .iaw-d{display:block;font-size:13.5px;line-height:1.5;color:var(--muted);margin-top:3px}
+  /* Deliberately not styled like the three cards above it. That block is what
+     the app promises to do; this one is the boundary, and a boundary that looks
+     like every other paragraph gets read like every other paragraph. */
+  .iaw-real{margin-top:18px;text-align:left;background:rgba(var(--accent-rgb),.06);
+    border:1px solid rgba(var(--accent-rgb),.35);border-left-width:4px;border-radius:14px;padding:14px 15px}
+  .iaw-real>b{display:block;font-size:14.5px;margin-bottom:7px}
+  .iaw-real p{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 9px}
+  .iaw-real p:last-child{margin-bottom:0}
+  .iaw-go{width:100%;margin-top:20px;font-size:16px;padding:15px}
+  .iaw-fine{font-size:12px;color:var(--muted);line-height:1.5;margin:11px 0 0}
+  @media(max-width:360px){ .iaw-t{font-size:26px} }
   .intake-log{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:11px;max-width:640px;margin:0 auto;width:100%}
   .bub{max-width:84%;padding:13px 15px;border-radius:16px;font-size:15px;line-height:1.5;animation:fade .25s ease}
   .bub.bot{background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:5px;align-self:flex-start}
@@ -1596,6 +1734,26 @@
   .cbar .fill{height:100%;background:linear-gradient(90deg,#5a7d1f,var(--accent));border-radius:6px;transition:width .4s ease}
   .cbar .val{width:88px;flex-shrink:0;text-align:right;font-weight:800;line-height:1.15}
   .months{display:flex;gap:8px;align-items:flex-end;height:170px;margin-top:10px}
+  /* One readout style for every chart in the app. It sits directly under the
+     thing it describes, because on a phone a floating tooltip covers the very
+     point you just tapped - the same reason the "?" explanations are inline. */
+  .bd-arc{cursor:pointer}
+  .bd-row.sel{background:rgba(var(--accent-rgb),.1);border-radius:8px}
+  .chit{fill:transparent;cursor:pointer}
+  .chit.on{fill:rgba(var(--accent-rgb),.09)}
+  [data-chartkeys]{outline:none}
+  [data-chartkeys]:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
+  .cread{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
+    padding:11px 13px;font-size:13.5px;line-height:1.55;color:var(--text)}
+  .cread b{font-weight:800}
+  .cread .cr-bits{display:block;margin-top:5px;font-size:12.5px;color:var(--muted);font-weight:600}
+  .cread .cr-note{display:block;margin-top:7px;font-size:12px;color:var(--muted);line-height:1.5}
+  .cread .cr-flag{display:block;margin-top:9px;padding:9px 11px;border-radius:9px;font-size:12.5px;line-height:1.5;
+    border:1px solid rgba(230,178,77,.4);background:rgba(230,178,77,.08)}
+  .cread .trail-btn{margin-top:8px}
+  .months{cursor:pointer}
+  .mcol.on .bi,.mcol.on .be{outline:2px solid var(--accent);outline-offset:1px}
+  .mcol.on .ml{color:var(--text);font-weight:800}
   .mcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%}
   .mcol .pair{display:flex;gap:3px;align-items:flex-end;width:100%;flex:1;justify-content:center}
   .mcol .bi,.mcol .be{width:44%;border-radius:4px 4px 0 0;min-height:2px;transition:height .4s ease}
@@ -2589,6 +2747,19 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <div class="gl-panel" id="glanceBody"></div>
   </div>
 
+  <!-- Everything a category is, in the one place there is room for it. Asked for
+       directly after a long scroll on the Plan tab: keep the list to a line per
+       category and put the history, the repeat and the target behind a detail
+       view. That is also the honest split - the list is for the one decision
+       being made ninety times a month, and this is for the questions you ask
+       about a category twice. -->
+  <div class="modal-overlay" id="catSheet">
+    <div class="modal">
+      <button class="x" id="catSheetX">&#10005;</button>
+      <h3 id="catSheetTitle">Category</h3>
+      <div id="catSheetBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="talkSheet">
     <div class="modal">
       <button class="x" id="talkX">✕</button>
@@ -2646,6 +2817,33 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <button class="x" id="intakeX" title="Close">✕</button>
     </div>
     <div class="intake-prog"><span id="intakeBar"></span></div>
+    <!-- The door, before the questions. Asked for directly: something that has to
+         be read and accepted before the setup chat starts. It exists to set the
+         terms rather than to sell anything, and the whole card turns on one
+         sentence most software will not say - this thing is not real, it cannot
+         want the outcome for you, and the work is entirely yours. An app that
+         opens by promising to change your life has already told its first lie. -->
+    <div class="ia-welcome" id="iaWelcome" role="dialog" aria-labelledby="iaWelTitle" aria-modal="true">
+      <div class="iaw-card">
+        <span class="iaw-eye">Ground zero</span>
+        <h1 class="iaw-t" id="iaWelTitle">Everybody starts at zero.</h1>
+        <p class="iaw-lead">Zero is not a verdict and it is not your balance. It is just where you are standing today, and everyone is standing on it - the person with nothing in the account and the person with plenty. Today is the only day either of them actually has.</p>
+        <p class="iaw-lead">What matters is the <b>distance</b>. Between here and next month. Between here and five years, ten, twenty. That gap is the only thing this app is interested in, and it closes exactly one way: what comes in against what goes out, decided by you, over and over.</p>
+        <p class="iaw-lead">You can use it to budget. That is not really what it is. It is an <b>accountability</b> app, and this is the part it does:</p>
+        <div class="iaw-three">
+          <div class="iaw-row"><span class="iaw-k">I am listening.</span><span class="iaw-d">Tell me what lands and what leaves. I keep all of it, and I do not get tired of the boring entries.</span></div>
+          <div class="iaw-row"><span class="iaw-k">I am watching.</span><span class="iaw-d">I will show you the pattern you would rather not look at, in your own numbers, without softening it.</span></div>
+          <div class="iaw-row"><span class="iaw-k">You can do better.</span><span class="iaw-d">Not as an insult. As the only reason worth opening this.</span></div>
+        </div>
+        <div class="iaw-real">
+          <b>Now the part you should hear before you start.</b>
+          <p>I am not real. I am a tool - some arithmetic, some questions you would avoid, and a memory better than yours. I cannot want this for you. I cannot spend the money or refuse to. I cannot even waste your time, because I have none to waste; every minute this costs is one you decided to spend.</p>
+          <p>So the effort is yours. All of it. If you genuinely want the thing you say you want, nobody in here is going to do it for you, and nothing in here will pretend otherwise. What I will do is keep an honest record and refuse to flatter it.</p>
+        </div>
+        <button class="btn primary iaw-go" id="iaWelGo">I'm ready to work &rarr;</button>
+        <p class="iaw-fine">Everything you enter stays in this browser. Nothing is uploaded, nothing is sold, and there is no account to make.</p>
+      </div>
+    </div>
     <div class="intake-log" id="intakeLog"></div>
     <div class="intake-dock" id="intakeDock"></div>
   </div>
@@ -2931,7 +3129,7 @@ function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
            assets:[], liabilities:[], impulse:[], hourlyWage:0, recurring:[], lessons:[], seenGuide:{}, guidesOff:false,
-           onboarded:false, intake:{}, register:'middle', vault:[],
+           onboarded:false, welcomed:false, intake:{}, register:'middle', vault:[],
            freedomMode:false, trueRate:{}, trueRateSkipped:false, units:{}, tripwires:[], network:[], enough:0, skills:[],
            giving:[], givingPct:0, lastBackup:null,
            uiMode:'auto', stageReached:1, day1:null,
@@ -3700,6 +3898,101 @@ function applySpending(){
   renderSpending();
 }
 
+/* ============================================================
+   CHARTS YOU CAN INTERROGATE
+
+   Said plainly, and correctly: "these graphs mean actually nothing unless you're
+   able to click on them." Every time-series in the app drew a shape and stopped.
+   No axis, no values, no way to ask a peak what it was made of - a picture of
+   your money rather than an account of it. The one screen where a towering July
+   bar is the most important fact in the app was also the screen least able to
+   explain it.
+
+   One layer, five charts. Each point gets a full-height invisible hit band so a
+   thumb lands on the month rather than on a 3px dot; tapping selects it, the
+   selection persists across re-renders, and a readout under the chart says what
+   that point IS - not just its number but what the number is made of, what
+   changed since the point before it, and where to go to argue with it. Nothing
+   is selected on arrival, so the readout opens on the most recent point: a chart
+   that says nothing until you touch it is the same chart it was before.
+
+   Keyboard works too - the chart takes focus, the arrows walk it, Home and End
+   jump to the ends. That is not a nicety; a readout you can only reach with a
+   precise tap excludes people, and the bands exist precisely because precise
+   taps are the problem. */
+const chartPick={};
+const CHART_REDRAW={};
+function pickOf(id,n){ const v=chartPick[id]; return (v==null||v<0||v>=n)?n-1:v; }
+/* Bands, not dots. Each one owns the space up to the midpoint between its
+   neighbours, so every pixel of the chart belongs to some month and there is no
+   dead zone to tap into. */
+function chartHits(id,n,X,w,h){
+  const sel=pickOf(id,n); let out='';
+  for(let i=0;i<n;i++){
+    const x0=i===0?0:(X(i-1)+X(i))/2;
+    const x1=i===n-1?w:(X(i)+X(i+1))/2;
+    out+=`<rect class="chit${i===sel?' on':''}" x="${x0.toFixed(1)}" y="0" width="${Math.max(1,x1-x0).toFixed(1)}" height="${h}" data-cidx="${i}" data-cfor="${id}"></rect>`;
+  }
+  return out;
+}
+function chartFocusAttrs(id,n,label){
+  return `tabindex="0" role="application" data-chartkeys="${id}" data-cn="${n}" aria-label="${escapeHtml(label)}. Use the arrow keys to walk through it."`;
+}
+function chartRead(inner){ return `<div class="cread">${inner}</div>`; }
+document.addEventListener('click',e=>{
+  const r=e.target.closest('[data-cidx]'); if(!r) return;
+  chartPick[r.dataset.cfor]=+r.dataset.cidx;
+  const f=CHART_REDRAW[r.dataset.cfor]; if(f) f();
+});
+document.addEventListener('keydown',e=>{
+  const host=e.target.closest && e.target.closest('[data-chartkeys]'); if(!host) return;
+  const id=host.dataset.chartkeys, n=+host.dataset.cn||0; if(!n) return;
+  const cur=pickOf(id,n); let next=null;
+  if(e.key==='ArrowRight'||e.key==='ArrowUp') next=Math.min(n-1,cur+1);
+  else if(e.key==='ArrowLeft'||e.key==='ArrowDown') next=Math.max(0,cur-1);
+  else if(e.key==='Home') next=0;
+  else if(e.key==='End') next=n-1;
+  if(next==null) return;
+  e.preventDefault();
+  chartPick[id]=next;
+  const f=CHART_REDRAW[id]; if(f) f();
+  /* Re-rendering blew the focus away, which made the second arrow press do
+     nothing - the classic way keyboard support gets shipped broken. */
+  setTimeout(()=>{ const el=document.querySelector(`[data-chartkeys="${id}"]`); if(el) el.focus({preventScroll:true}); },0);
+});
+/* The readouts. Each one answers "what is this point made of", because a month
+   label and a dollar figure is what the tooltip already failed to be. */
+function inOutRead(m){
+  const inc=monthIncome(m), exp=monthExpense(m), inv=monthInvested(m);
+  const list=txnsInMonth(m);
+  if(!list.length) return `<b>${fmtMonth(m)}</b> - nothing logged. Not a zero month, an unlogged one, and the chart cannot tell the difference.${trailBtn('logspend','Log something for it','ghost')}`;
+  const top=t=>list.filter(x=>x.type===t).sort((a,b)=>b.amount-a.amount)[0];
+  const bi=top('income'), be=top('expense');
+  const kept=inc-exp-inv;
+  let out=`<b>${fmtMonth(m)}</b> &middot; <b style="color:var(--good)">${money(inc)}</b> in, <b style="color:var(--accent-2)">${money(exp)}</b> out`
+    + (inv>0?`, <b>${money(inv)}</b> put away`:'')
+    + ` &middot; ${kept>=0?'kept':'short by'} <b>${money(Math.abs(kept))}</b>.`;
+  const bits=[];
+  if(bi) bits.push(`biggest in: ${escapeHtml(bi.source||'Income')} ${money(bi.amount)}`);
+  if(be) bits.push(`biggest out: ${escapeHtml(catName(be.catId)||be.note||'Uncategorized')} ${money(be.amount)}`);
+  bits.push(`${list.length} entr${list.length===1?'y':'ies'}`);
+  out+=`<span class="cr-bits">${bits.join(' &middot; ')}</span>`;
+  /* The whole reason this readout exists. A month whose income is mostly a row
+     the setup chat wrote, dated the 1st, looks like the best month of your life
+     until something says otherwise. */
+  const seeded=list.filter(t=>t.type==='income'&&t.note==='Intake').reduce((s,t)=>s+t.amount,0);
+  if(seeded>0 && inc>0) out+=`<span class="cr-flag"><b>${money(seeded)}</b> of that income (${Math.round(seeded/inc*100)}%) was written by the setup chat rather than logged by you. If it never actually landed, this bar is taller than your life was.${trailBtn('income','Open the log','ghost')}</span>`;
+  return out;
+}
+function ledgerRead(m,bal,prev){
+  const inc=monthIncome(m), exp=monthExpense(m), inv=monthInvested(m);
+  const move=prev==null?null:bal-prev;
+  let out=`<b>${fmtMonth(m)}</b> &middot; running total <b>${money(bal)}</b>`;
+  if(move!=null) out+=` &middot; ${move>=0?'up':'down'} <b>${money(Math.abs(move))}</b> that month`;
+  out+=`.<span class="cr-bits">${money(inc)} in &minus; ${money(exp)} out${inv>0?` &minus; ${money(inv)} put away`:''} = ${money(inc-exp-inv)} for the month</span>`;
+  out+=`<span class="cr-note">This line is every transaction ever logged, added up to that point. It is not your bank balance and it is not net worth.</span>`;
+  return out;
+}
 /* ---------- Debt Payoff Planner (snowball / avalanche) ---------- */
 function simulateDebts(debts, monthly, strategy){
   let ds=debts.map(d=>({name:d.name, bal:+d.balance||0, apr:+d.apr||0, min:+d.minPayment||0, interest:0, paidMonth:null}));
@@ -3824,6 +4117,7 @@ function renderDebt(){
   renderInvestCompare();
   renderLeverage();
 }
+CHART_REDRAW.debtChart=()=>renderDebtResults();
 function renderDebtResults(){
   const box=document.getElementById('debtResults'); if(!box) return;
   const debts=state.debts.filter(d=>(+d.balance||0)>0);
@@ -3870,6 +4164,7 @@ function renderDebtResults(){
   const pts=plan.schedule.filter((_,i)=>i%Math.max(1,Math.ceil(plan.schedule.length/40))===0);
   const w=600,h=120,pad=10, mx=Math.max(1,...pts.map(p=>p.total));
   const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad), Y=v=>h-pad-(v/mx)*(h-2*pad);
+  const dSel=pickOf('debtChart',pts.length);
   const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.total).toFixed(1)}`).join(' ');
   const area=`${line} L${X(pts.length-1).toFixed(1)},${h-pad} L${X(0).toFixed(1)},${h-pad} Z`;
   const savesInterest=other.totalInterest-plan.totalInterest, savesMonths=other.months-plan.months;
@@ -3888,7 +4183,16 @@ function renderDebtResults(){
     ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
     ${cmp?`<div class="debt-cmp">${cmp}</div>`:''}
     <div class="debt-cmp">${voice(VOICE.debtOut,null)}</div>
-    <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/></svg>
+    <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px" ${chartFocusAttrs('debtChart',pts.length,'What you still owe, month by month')}><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/><circle cx="${X(dSel).toFixed(1)}" cy="${Y(pts[dSel].total).toFixed(1)}" r="5" fill="#e6b24d" stroke="var(--panel)" stroke-width="2"/>${chartHits('debtChart',pts.length,X,w,h)}</svg>
+    ${(()=>{
+      const step=Math.max(1,Math.ceil(plan.schedule.length/40));
+      const monthsIn=dSel*step;
+      const when=shiftMonth(state.activeMonth, monthsIn);
+      const gone=totalBal-pts[dSel].total;
+      return chartRead(`<b>${fmtMonth(when)}</b> &middot; still owed <b>${money(pts[dSel].total)}</b>`
+        + (monthsIn>0?` &middot; <b>${money(gone)}</b> killed by then`:' - where you are today')
+        + `.<span class="cr-bits">${monthsIn===0?'Month one of the plan':debtDur(monthsIn)+' from now'} &middot; paying ${actMoney(budget)}/mo${H>0&&pts[dSel].total>0?` &middot; ${fmtHours(pts[dSel].total/H)} of your life still on the hook`:''}</span>`);
+    })()}
     <div class="po-head">Payoff order</div>
     <div class="po-list">${orderHTML}</div>
     <p class="sub" style="margin-top:12px">You're putting <b>${actMoney(budget)}</b>/mo at <b>${actMoney(totalBal)}</b> of debt. Every extra dollar above your ${actMoney(totalMin)} minimums is what buys back those months. Results are estimates.</p>`;
@@ -4299,6 +4603,7 @@ function closeTopOverlay(){
   const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
+  const cs=document.getElementById('catSheet'); if(cs&&cs.classList.contains('on')){ cs.classList.remove('on'); if(typeof catSheetId!=='undefined') catSheetId=null; return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
   const sh=document.getElementById('intentSheet'); if(sh&&sh.classList.contains('on')){ sh.classList.remove('on'); if(typeof setFabOpen==='function') setFabOpen(false); return true; }
   const ik=document.getElementById('intake'); if(ik&&ik.classList.contains('on')){ ik.classList.remove('on'); document.body.style.overflow=''; return true; }
@@ -4550,6 +4855,7 @@ function retroSeries(){
   }
   return {series:f,gran:v.gran,from,to};
 }
+CHART_REDRAW.retroChart=()=>renderRetro();
 function renderRetro(){
   const el=document.getElementById('retroBox'); if(!el) return;
   const all=(state.snapshots||[]);
@@ -4567,11 +4873,18 @@ function renderRetro(){
   if(pts.length>=2){
     const w=600,h=140,pad=14, vals=pts.map(p=>p.netWorth), mn=Math.min(0,...vals), mx=Math.max(1,...vals);
     const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad), Y=val=>h-pad-((val-mn)/((mx-mn)||1))*(h-2*pad);
+    const rSel=pickOf('retroChart',pts.length);
     const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.netWorth).toFixed(1)}`).join(' ');
     const area=`${line} L${X(pts.length-1).toFixed(1)},${h-pad} L${X(0).toFixed(1)},${h-pad} Z`;
-    const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.netWorth).toFixed(1)}" r="3" fill="#e6b24d"/>`).join('');
-    const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-2}" fill="#8b93a3" font-size="9" text-anchor="middle">${escapeHtml(p.label)}</text>`).join('');
-    chart=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:12px"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg>`;
+    const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.netWorth).toFixed(1)}" r="${i===rSel?5.5:3}" fill="#e6b24d"${i===rSel?' stroke="var(--panel)" stroke-width="2"':''}/>`).join('');
+    const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-2}" fill="${i===rSel?'var(--text)':'#8b93a3'}" font-size="9" font-weight="${i===rSel?'800':'400'}" text-anchor="middle">${escapeHtml(p.label)}</text>`).join('');
+    const rp=pts[rSel], rprev=rSel>0?pts[rSel-1]:null;
+    const rmove=rprev&&rprev.netWorth!=null?rp.netWorth-rprev.netWorth:null;
+    chart=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:12px" ${chartFocusAttrs('retroChart',pts.length,'Net worth over time')}><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}${chartHits('retroChart',pts.length,X,w,h)}</svg>`
+      + chartRead(`<b>${escapeHtml(rp.label)}</b> &middot; net worth <b>${nw(rp.netWorth)}</b>`
+          + (rmove!=null?` &middot; ${rmove>=0?'up':'down'} <b>${nw(Math.abs(rmove))}</b> since ${escapeHtml(rprev.label)}`:'')
+          + `.<span class="cr-bits">Runway ${rw(rp.runway)} &middot; Stage ${rp.stage||1}</span>`
+          + `<span class="cr-note">Taken from the snapshot for that period. It moves when what you own or owe moves, not when you log a coffee.</span>`);
   }
   // period table
   const rowsHTML=series.map(s=>`<tr><td>${escapeHtml(s.label)}</td><td>${s.netWorth==null?'-':nw(s.netWorth)}</td><td>${rw(s.runway)}</td><td>Stage ${s.stage||1}</td></tr>`).join('');
@@ -4772,6 +5085,12 @@ let collapsedCats=new Set();
 const ROW_FREQS=['weekly','biweekly','monthly','quarterly'];   // the four people actually use; the full six stay in the Recurring panel
 function fmtDayShort(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}); }catch(_){ return d; } }
 function recForCat(catId){ return (state.recurring||[]).find(r=>r.type==='expense' && r.catId===catId) || null; }
+let catSheetId=null;
+/* Anything that changes a category has to land on both surfaces at once. The
+   list and the sheet show the same numbers, and a sheet still displaying last
+   second's figure while the list behind it has moved on is the kind of thing
+   people stop trusting an app over. */
+function planRefresh(){ renderBudget(); if(catSheetId) renderCatSheet(); }
 function repeatCtrlHTML(catId, assigned){
   if(catReorder) return '';
   const r=recForCat(catId), on=!!r;
@@ -4800,15 +5119,18 @@ function wireRepeat(box){
     const id=cb.dataset.repeat, M=state.activeMonth;
     if(!cb.checked){
       state.recurring=(state.recurring||[]).filter(r=>!(r.type==='expense'&&r.catId===id));
-      save(); renderBudget(); renderRecurring(); renderTx();
+      save(); planRefresh(); renderRecurring(); renderTx();
       if(typeof toast==='function') toast('Stopped repeating. Anything already posted stays.');
       return;
     }
     const amt=assignedFor(id,M);
     if(!(amt>0)){
-      cb.checked=false; renderBudget();
-      // a repeat with no amount posts nothing, so send them to the number first
-      setTimeout(()=>{ const inp=document.querySelector('#cats input[data-cat="'+id+'"]');
+      cb.checked=false; planRefresh();
+      /* Send them to the number first - and to the copy of it they are actually
+         looking at. The tick now lives in the category sheet, so pointing at the
+         list underneath would scroll a field they cannot see. */
+      setTimeout(()=>{ const inp=document.querySelector('#catSheet.on input[data-cat="'+id+'"]')
+                          || document.querySelector('#cats input[data-cat="'+id+'"]');
         if(inp){ inp.scrollIntoView({behavior:'smooth',block:'center'}); inp.focus(); inp.select&&inp.select(); } },80);
       if(typeof toast==='function') toast('Give it an amount first - then it can repeat that amount.');
       return;
@@ -4822,7 +5144,7 @@ function wireRepeat(box){
     const anchor = todayStr()>first ? shiftMonth(M,1)+'-01' : first;
     const rec={id:uid(), type:'expense', amount:amt, catId:id, freq:'monthly', anchor, day:1, src:'row'};
     state.recurring.push(rec);
-    save(); renderBudget(); renderRecurring(); renderTx();
+    save(); planRefresh(); renderRecurring(); renderTx();
     if(typeof toast==='function') toast(`${catName(id)} repeats monthly at ${money(amt)}. First one lands ${fmtDayShort(anchor)} - change the date beside it if that is wrong.`);
   }));
   box.querySelectorAll('[data-repdate]').forEach(inp=>inp.addEventListener('change',()=>{
@@ -4830,13 +5152,13 @@ function wireRepeat(box){
     const v=inp.value;
     if(!v){ inp.value=recAnchor(r); return; }        // a blank date is not an instruction
     r.anchor=v; r.day=Math.min(28,Math.max(1,+v.slice(8,10)||1));
-    save(); renderBudget(); renderRecurring(); renderTx();
+    save(); planRefresh(); renderRecurring(); renderTx();
     const nx=recNextDue(r);
     if(typeof toast==='function') toast(nx?`Next one: ${fmtDayShort(nx)}.`:'Date set.');
   }));
   box.querySelectorAll('[data-repfreq]').forEach(sel=>sel.addEventListener('change',()=>{
     const r=recForCat(sel.dataset.repfreq); if(!r) return;
-    r.freq=sel.value; save(); renderBudget(); renderRecurring();
+    r.freq=sel.value; save(); planRefresh(); renderRecurring();
     if(typeof toast==='function') toast(`Now ${recFreqMeta(r).short} - about ${money(recMonthly(r))} a month.`);
   }));
 }
@@ -5028,6 +5350,17 @@ function descendantsOf(id){
 }
 function catDepth(id){ let d=1,c=state.categories.find(x=>x.id===id),hops=0; while(c&&c.parentId&&hops++<6){ d++; c=state.categories.find(x=>x.id===c.parentId); } return d; }
 function catSpent(id,M){ return spentFor(id,M)+descendantsOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
+/* Money that left a category's assignment is not always SPENDING. A Retirement
+   category funded at $400 with $400 logged against it as an invest showed
+   "$400 available" every single month, because spentFor counts expenses only -
+   so the pool could never be used up and Left to spend was overstated by every
+   dollar anyone had ever invested. Spending analytics still want expenses alone
+   (an invest is not a leak and must never appear in the breakdown as one), so
+   the two questions get two functions instead of one that answers neither well.
+   This one is "what came out of this pool", and it is what the Plan runs on. */
+function investedFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='invest'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
+function catInvested(id,M){ return investedFor(id,M)+descendantsOf(id).reduce((s,k)=>s+investedFor(k.id,M),0); }
+function catUsed(id,M){ return catSpent(id,M)+catInvested(id,M); }
 /* Budgeting works in BOTH directions, because people know their numbers at
    different levels. Top-down: assign $300 to Power & Wi-Fi and split it into
    Electric/Water/Internet. Bottom-up: you know water is $70 and electric is $120
@@ -5336,74 +5669,89 @@ function renderBudget(){
     box.innerHTML=`<div class="empty">No categories yet. Add one above, or hit “Starter set” to skip the blank page.</div>`;
   } else {
     const tops=topCats();
-    box.innerHTML=tops.map((c,ti)=>{
-      const a=catAssigned(c.id,M), sp=catSpent(c.id,M), rem=a-sp;   // rolled up: subs you filled in count even if the parent is blank
-      const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
-      const over=sp>a&&sp>0;
-      const rc=rem<0?'over':(rem>0?'good':'');
+    /* The list used to be the whole app on one screen: every category carried a
+       progress bar, a meta line, a repeat control with its own date picker, a
+       split button, a delete button, a rename pencil, an add-subcategory row and
+       sometimes a wall guide. Eleven controls per category, times twenty
+       categories, is a scroll nobody finishes - and the one question a plan is
+       supposed to answer, "what is left in this", was buried in the middle of it.
+
+       So the list answers exactly that question and nothing else: name, what you
+       assigned, what is left. Everything else moved into the category's own
+       sheet, one tap away, where there is room to show it properly. */
+    const rowFor=(c,depth)=>{
+      const a=catAssigned(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
-      const rebalance = over ? `<div class="rebalance">
-          <div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
-          <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div>
-        </div>` : '';
-      const subsHTML = (isGroup && !collapsed) ? kids.map((k,ki)=>{
-        // a sub can be a group itself: Gas → Car 1 / Car 2, Groceries → Walmart / Meijer (three levels max)
-        const gkids=childrenOf(k.id), kGroup=gkids.length>0;
-        const ka=assignedFor(k.id,M), kTot=catAssigned(k.id,M), ks=kGroup?catSpent(k.id,M):spentFor(k.id,M);
-        const rollTag=kGroup&&kTot>ka?`<span class="roll-tag" title="Added up from its subs">= ${money(kTot)}</span>`:'';
-        let h=`<div class="subrow${catReorder?' reordering':''}${k.id===catEditId?' editing':''}" data-row="${k.id}" data-lvl="${c.id}">${reorderCtrlHTML(k.id)}<span class="sub-name">${k.id===catEditId
-          ? `<input type="text" class="cat-rename" value="${escapeHtml(k.name)}" data-rename="${k.id}" placeholder="Subcategory name"><button class="btn sm primary" data-renamesave="${k.id}">Save</button>`
-          : `${escapeHtml(k.name)}<button class="mini-edit cat-edit" data-editcat="${k.id}" title="Rename ${escapeHtml(k.name)} (keeps your transactions)">✎</button>${kGroup?`<span class="cat-count">${gkids.length}</span>`:''}${rollTag}`}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${ka||0}" data-cat="${k.id}"></span>${kGroup?'':repeatCtrlHTML(k.id)}<span class="sub-spent">${money(ks)} spent</span>${!kGroup&&!splitting.has(k.id)?`<button class="sub-split-btn" data-addsubfirst="${k.id}" title="Split ${escapeHtml(k.name)} further (e.g. Gas → Car 1, Car 2)">⑂ split</button>`:''}<button class="btn sm danger ghost" data-del="${k.id}">✕</button></div>`;
-        if(kGroup){
-          h+=gkids.map(g=>`<div class="subrow subsub${catReorder?' reordering':''}${g.id===catEditId?' editing':''}" data-row="${g.id}" data-lvl="${k.id}">${reorderCtrlHTML(g.id)}<span class="sub-name">${g.id===catEditId
-            ? `<input type="text" class="cat-rename" value="${escapeHtml(g.name)}" data-rename="${g.id}" placeholder="Subcategory name"><button class="btn sm primary" data-renamesave="${g.id}">Save</button>`
-            : `${escapeHtml(g.name)}<button class="mini-edit cat-edit" data-editcat="${g.id}" title="Rename ${escapeHtml(g.name)} (keeps your transactions)">✎</button>`}</span><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(g.id,M)||0}" data-cat="${g.id}"></span>${repeatCtrlHTML(g.id)}<span class="sub-spent">${money(spentFor(g.id,M))} spent</span><button class="btn sm danger ghost" data-del="${g.id}">✕</button></div>`).join('');
-          h+=splitNoteHTML(k.id,M,k.name);
-        }
-        if(kGroup||splitting.has(k.id)) h+=`<div class="addsub-row subsub"><input type="text" placeholder="Add under ${escapeHtml(k.name)} (Car 1, Walmart…)" enterkeyhint="done" data-addsub-input="${k.id}"><button class="btn sm" data-addsub="${k.id}">＋ Add</button></div>`;
-        return h;
-      }).join('') : '';
-      const showAddRow = (isGroup || splitting.has(c.id)) && !collapsed;
-      const addSub = showAddRow
-        ? `<div class="addsub-row"><input type="text" placeholder="Add subcategory (Electric, Gas, Water…)" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">＋ Add</button></div>`
-        : (!isGroup ? `<button class="addsub-first" data-addsubfirst="${c.id}">＋ Split into subcategories</button>` : '');
-      return `<div class="cat ${over?'overspent':''}${catReorder?' reordering':''}" data-row="${c.id}" data-lvl="">
-        <div class="cat-top">
-          ${reorderCtrlHTML(c.id)}
-          ${isGroup?`<button class="cat-toggle" data-toggle="${c.id}">${collapsed?'▸':'▾'}</button>`:''}
-          ${c.id===catEditId
-            ? `<span class="cat-name"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></span>`
-            : `<span class="cat-name">${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename (keeps your transactions)">✎</button>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag" title="This money is not spending - logging against it defaults to Invest">${GROWTH_TAG[c.growth]||'Not spending'}</span>`:''}${isGroup&&a>assignedFor(c.id,M)?`<span class="roll-tag" title="Added up from your subs">= ${money(a)}</span>`:''}</span>`}
-          <span class="cat-assign">Assign $ <input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${assignedFor(c.id,M)||0}" data-cat="${c.id}" ${isGroup?`placeholder="or fill the subs"`:''}></span>
-          ${isGroup?'':repeatCtrlHTML(c.id)}
-          <button class="btn sm danger ghost" data-del="${c.id}">✕</button>
-        </div>
-        <div class="bar"><span style="width:${pct}%"></span></div>
-        <div class="cat-meta"><span>Spent ${money(sp)} of ${money(a)}</span><span class="rem ${rc}">${rem<0?money(-rem)+' over':money(rem)+' left'}</span></div>
-        ${splitNoteHTML(c.id,M,'')}
-        ${rebalance}
-        ${subsHTML}
-        ${addSub}
-        ${wallGuideHTML(c,M)}
+      const own=assignedFor(c.id,M);
+      const pillCls = rem<0 ? 'over' : (a>0 ? (rem>0?'good':'spent') : 'none');
+      /* Renaming happens in the sheet, never here. Two live inputs carrying the
+         same data-rename would have the save button picking one of them at
+         random, and the row has no room for a text field anyway. */
+      const nameHTML = `<button class="rw-nm" data-catsheet="${c.id}" title="Open ${escapeHtml(c.name)}">${escapeHtml(c.name)}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag mini" title="${escapeHtml(GROWTH_TAG[c.growth]||'Not spending')}">${escapeHtml(GROWTH_TAG_SHORT[c.growth]||'not spent')}</span>`:''}${recForCat(c.id)?'<span class="rep-dot" title="This repeats">&#8635;</span>':''}</button>`;
+      if(isGroup){
+        return `<div class="cat grp${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
+          <div class="cat-top">
+            ${reorderCtrlHTML(c.id)}
+            <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
+            <span class="cat-name">${nameHTML}</span>
+            <span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}</span>
+            <span class="avail ${pillCls} gcol">${money(rem)}</span>
+          </div>
+        </div>`;
+      }
+      /* The pill is a SPAN, not a button, and the row carries the target instead.
+         In Life mode every figure in the app reads as hours, and a BUTTON whose
+         label is "-4.9 hrs" reads as somewhere you type hours - which you cannot.
+         The name beside it is a real button and is the accessible door; making
+         the whole row tappable just means a thumb does not have to find it. */
+      return `<div class="subrow lvl${depth}${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
+        ${reorderCtrlHTML(c.id)}
+        <span class="sub-name">${nameHTML}</span>
+        <span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <span class="avail ${pillCls}" title="What is left">${money(rem)}</span>
       </div>`;
-    }).join('');
+    };
+    const walk=(c,depth)=>{
+      let h=rowFor(c,depth);
+      if(childrenOf(c.id).length && !collapsedCats.has(c.id))
+        h+=childrenOf(c.id).map(k=>walk(k,depth+1)).join('');
+      return h;
+    };
+    box.innerHTML=`<div class="plan-cols"><span>Category</span><span>Assigned</span><span>Available</span></div>`
+      + tops.map(c=>walk(c,0)).join('');
   }
+  wirePlan(box, true);
+}
+/* One set of controls, two homes. The Plan list keeps the fast path - a name, a
+   number and what is left - and everything that used to hang off each row now
+   lives in that category's own sheet. Both surfaces render the same controls, so
+   they have to be wired by the same code or they drift: the tick that starts a
+   repeat, the rename, the split, the delete. A second copy of this block is how
+   a button quietly stops working on one screen and nobody notices for a month. */
+function wirePlan(box, isMain){
+  /* Read here rather than captured from the caller. When this block lived inside
+     renderBudget it closed over that render's M; extracted, it referenced a
+     variable that no longer existed, so every handler that wrote a budget threw
+     silently on click - the negative clamp among them. Reading the live active
+     month is also more correct: a handler bound before the month changed must
+     write to the month the user is looking at now. */
+  const M=state.activeMonth;
   wireDeepen(box);
   box.querySelectorAll('[data-assignnow]').forEach(b=>b.addEventListener('click',()=>{
     const id=b.dataset.assignnow, sum=kidsAssigned(id,M);
-    budgetFor(M)[id]=sum; save(); renderBudget(); renderHome();
+    budgetFor(M)[id]=sum; save(); planRefresh(); renderHome();
     const c=state.categories.find(x=>x.id===id);
     if(typeof toast==='function') toast((c?c.name:'That pool')+' set to '+money(sum)+' - the subs add up to it exactly.');
   }));
   box.querySelectorAll('[data-wallnext]').forEach(b=>b.addEventListener('click',()=>goToWall(b.dataset.wallnext)));
-  box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; renderBudget(); }));
+  box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; planRefresh(); }));
   let budgetAdvancing=false;
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
     /* Clamp at the point of entry: the field says min=0 but typing "-500" got
        past it, and a negative assignment SUBTRACTS from the assigned total -
        zero-based math you can print money against. (Independent audit, F1.) */
     inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=Math.max(0,parseFloat(inp.value)||0); save(); refreshBudgetSummary(); });
-    inp.addEventListener('change',()=>{ if(budgetAdvancing) return; renderBudget(); });
+    inp.addEventListener('change',()=>{ if(budgetAdvancing) return; planRefresh(); });
     inp.addEventListener('keydown',e=>{
       if(e.key!=='Enter') return;
       e.preventDefault();
@@ -5411,38 +5759,38 @@ function renderBudget(){
       budgetAdvancing=true;
       const ids=[...box.querySelectorAll('input[data-cat]')].map(x=>x.dataset.cat);
       const nextId=ids[ids.indexOf(inp.dataset.cat)+1];
-      renderBudget();
+      planRefresh();
       const next=nextId?box.querySelector('input[data-cat="'+nextId+'"]'):null;
       if(next){ next.focus(); if(next.select) next.select(); }
       else { const add=document.getElementById('catName'); if(add) add.focus(); }   // past the last: on to adding a category
       budgetAdvancing=false;
     });
   });
-  box.querySelectorAll('button[data-editcat]').forEach(btn=>btn.addEventListener('click',()=>{ catEditId=btn.dataset.editcat; renderBudget(); const inp=box.querySelector('input[data-rename]'); if(inp){ inp.focus(); inp.select&&inp.select(); } }));
-  const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); renderBudget(); renderTx(); };
+  box.querySelectorAll('button[data-editcat]').forEach(btn=>btn.addEventListener('click',()=>{ catEditId=btn.dataset.editcat; planRefresh(); const inp=box.querySelector('input[data-rename]'); if(inp){ inp.focus(); inp.select&&inp.select(); } }));
+  const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); planRefresh(); renderTx(); };
   box.querySelectorAll('button[data-renamesave]').forEach(btn=>btn.addEventListener('click',()=>saveRename(btn.dataset.renamesave)));
-  box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; renderBudget(); } }));
+  box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; planRefresh(); } }));
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.del;
     const toRemove=new Set([id,...descendantsOf(id).map(k=>k.id)]);   // the whole subtree goes, all three levels
     state.categories=state.categories.filter(c=>!toRemove.has(c.id));
     Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
     // keep transactions for history; they become "Uncategorized"
-    save(); renderBudget(); renderTx();
+    save(); planRefresh(); renderTx();
   }));
   wireReorder(box); wireRepeat(box);
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
-  box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); renderBudget(); }));
+  box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); planRefresh(); }));
   // "Split into subcategories" reveals an inline input (no jarring browser prompt) and focuses it
   box.querySelectorAll('button[data-addsubfirst]').forEach(btn=>btn.addEventListener('click',()=>{
-    const id=btn.dataset.addsubfirst; splitting.add(id); renderBudget();
+    const id=btn.dataset.addsubfirst; splitting.add(id); planRefresh();
     const inp=box.querySelector('input[data-addsub-input="'+id+'"]'); if(inp) inp.focus();
   }));
   const addSubcat=(parentId,name)=>{
     name=(name||'').trim(); if(!name) return;
     if(catDepth(parentId)>=3){ if(typeof toast==='function') toast('Three levels is the limit - deeper than this stops being a plan and starts being filing.'); return; }
     const newId=uid();
-    state.categories.push({id:newId,name,parentId}); splitting.add(parentId); save(); renderBudget(); renderTxForm();
+    state.categories.push({id:newId,name,parentId}); splitting.add(parentId); save(); planRefresh(); renderTxForm();
     // Land on the NEW sub's amount, not the next name box. Naming a category and
     // then having to hunt for its $0 to fill in is the wrong order: you named it
     // because you know what it costs. Adding several at once is the rarer case,
@@ -5456,16 +5804,138 @@ function renderBudget(){
   }));
   box.querySelectorAll('input[data-addsub-input]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addSubcat(inp.dataset.addsubInput, inp.value); } }));
 }
+
+/* ---------- the category sheet ---------- */
+function openCatSheet(id){
+  if(!state.categories.some(c=>c.id===id)) return;
+  catSheetId=id; catEditId=null;
+  renderCatSheet();
+  document.getElementById('catSheet').classList.add('on');
+  pushOverlay();
+}
+function closeCatSheet(){ catSheetId=null; const el=document.getElementById('catSheet'); if(el) el.classList.remove('on'); }
+function catMonthHistory(id,n){
+  const out=[]; let m=state.activeMonth;
+  for(let i=0;i<n;i++){ out.unshift({m, a:catAssigned(id,m), s:catUsed(id,m)}); m=shiftMonth(m,-1); }
+  return out;
+}
+function renderCatSheet(){
+  const body=document.getElementById('catSheetBody'); if(!body) return;
+  const c=state.categories.find(x=>x.id===catSheetId);
+  if(!c){ closeCatSheet(); return; }
+  const M=state.activeMonth;
+  const kids=childrenOf(c.id), isGroup=kids.length>0;
+  const a=catAssigned(c.id,M), own=assignedFor(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
+  const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
+  const t=document.getElementById('catSheetTitle');
+  if(t) t.innerHTML=`${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename ${escapeHtml(c.name)} (keeps your transactions)">&#9998;</button>`;
+
+  const rename = c.id===catEditId
+    ? `<div class="cs-rename"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></div>` : '';
+
+  /* No carry-forward line here, on purpose. This app has never rolled a leftover
+     into next month, and a row labelled "from last month" would be inventing a
+     number the arithmetic behind it does not support. What the month held is
+     what the month held. */
+  const balance=`<div class="cs-sec"><div class="cs-h">Balance</div>
+    <div class="cs-card">
+      <div class="cs-row"><span>Assigned for ${monShort(M)}</span><b>${money(a)}</b></div>
+      ${isGroup&&a>own?`<div class="cs-row sub"><span>of which straight to ${escapeHtml(c.name)}</span><b>${money(own)}</b></div>`:''}
+      <div class="cs-row"><span>${c.growth?'Put away':'Spent'} in ${monShort(M)}</span><b>${money(sp)}</b></div>
+      ${c.growth?`<div class="cs-row sub"><span>${escapeHtml(GROWTH_TAG[c.growth])} - this money is still yours</span><b></b></div>`:''}
+      <div class="cs-row big"><span>Available</span><b class="avail ${rem<0?'over':(a>0?(rem>0?'good':'spent'):'none')}">${money(rem)}</b></div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+    </div>
+    ${!isGroup?`<div class="cs-assign"><span class="cs-k">Assign this month</span><span class="cs-in">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span></div>`
+      :`<p class="cs-note">This is a pool. Its number is whatever its subcategories add up to${own>0?`, plus the ${money(own)} you put straight against it`:''}. Assign inside the subs below.</p>`}
+    ${rem<0?`<div class="rebalance"><div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
+      <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div></div>`:''}
+    ${splitNoteHTML(c.id,M,isGroup?'':c.name)}
+  </div>`;
+
+  /* The repeat control was on every row, which is where it was least useful:
+     eleven of them on screen at once, none of them explained. One category, one
+     switch, with the sentence that says what ticking it actually does. */
+  const r=recForCat(c.id);
+  const target=`<div class="cs-sec"><div class="cs-h">Repeats</div>
+    <div class="cs-card">
+      ${isGroup?`<p class="cs-note" style="margin:0">A pool does not repeat - its subcategories do. Open one of them below to set it.</p>`
+        :`<div class="cs-rep">${repeatCtrlHTML(c.id)}<span class="cs-repk">${r?`Repeats ${escapeHtml(recFreqMeta(r).short||recFreqMeta(r).label)} at <b>${money(r.amount)}</b>${recNextDue(r)?` &middot; next on <b>${fmtDayShort(recNextDue(r))}</b>`:''}. It posts itself, so you do not have to remember it.`:`Tick this if the bill comes back every month. The app will post it on the day it lands, at the amount you assigned, and stop pretending you will remember.`}</span></div>`}
+    </div></div>`;
+
+  const subs = isGroup||splitting.has(c.id)
+    ? `<div class="cs-sec"><div class="cs-h">Inside it</div>
+        ${kids.map(k=>{
+          const ka=catAssigned(k.id,M), ks=catUsed(k.id,M), kr=ka-ks;
+          return `<div class="cs-sub" data-catsheet="${k.id}"><button class="cs-subn" data-catsheet="${k.id}">${escapeHtml(k.name)}${childrenOf(k.id).length?`<span class="cat-count">${childrenOf(k.id).length}</span>`:''}</button>
+            <span class="cs-suba">${money(ka)}</span><span class="avail ${kr<0?'over':(ka>0?(kr>0?'good':'spent'):'none')}">${money(kr)}</span></div>`;
+        }).join('')}
+        ${catDepth(c.id)<3?`<div class="addsub-row"><input type="text" placeholder="Add under ${escapeHtml(c.name)}" enterkeyhint="done" data-addsub-input="${c.id}"><button class="btn sm" data-addsub="${c.id}">&#65291; Add</button></div>`
+          :`<p class="cs-note">Three levels is the limit. Deeper than this stops being a plan and starts being filing.</p>`}
+      </div>`
+    : `<div class="cs-sec"><div class="cs-h">Inside it</div>
+        <p class="cs-note">Nothing yet. Splitting is for when one number stops telling you enough - Power &amp; Wi-Fi into Electric, Gas, Water; Groceries into the two shops you actually use.</p>
+        <button class="btn sm" data-addsubfirst="${c.id}">Split into subcategories</button></div>`;
+
+  /* The reason a detail view is worth building at all. A category with a number
+     against it and no past is a guess; the same category with six months behind
+     it is evidence, and the app already had every figure needed to show it. */
+  const hist=catMonthHistory(c.id,6).filter(h=>h.a>0||h.s>0);
+  const txs=state.transactions
+    .filter(t=>t.catId===c.id || descendantsOf(c.id).some(d=>d.id===t.catId))
+    .sort((x,y)=>y.date.localeCompare(x.date)).slice(0,6);
+  const history=`<div class="cs-sec"><div class="cs-h">History</div>
+    ${hist.length?`<div class="cs-hist">${hist.map(h=>{
+        const d=h.a-h.s, w=Math.max(...hist.map(x=>Math.max(x.a,x.s)),1);
+        return `<div class="cs-hrow"><span class="cs-hm">${monShort(h.m)}</span>
+          <span class="cs-hbars"><i class="hb-a" style="width:${h.a/w*100}%"></i><i class="hb-s" style="width:${h.s/w*100}%"></i></span>
+          <span class="cs-hv">${money(h.s)}<em>of ${money(h.a)}</em></span>
+          <span class="cs-hd ${d<0?'over':''}">${d<0?money(-d)+' over':money(d)+' left'}</span></div>`;
+      }).join('')}<div class="cs-hkey"><span><i class="hb-a"></i>assigned</span><span><i class="hb-s"></i>${c.growth?'put away':'spent'}</span></div></div>`
+      :`<p class="cs-note">No months with anything in them yet. Assign something and log against it, and this fills itself in.</p>`}
+    ${txs.length?`<div class="cs-txs">${txs.map(t=>`<div class="cs-tx"><span class="cs-txd">${fmtDayShort(t.date)}</span><span class="cs-txn">${escapeHtml(t.note||catName(t.catId)||c.name)}</span><span class="cs-txv">${money(t.amount)}</span></div>`).join('')}
+        ${trailBtn('logspend','Log another','ghost')}</div>`
+      :`<div class="cs-txs"><p class="cs-note">Nothing logged against it.${trailBtn('logspend','Log one','ghost')}</p></div>`}
+  </div>`;
+
+  const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
+    <p class="cs-note">Deleting a category keeps every transaction you logged against it - they become Uncategorized, so no history is lost${isGroup?`. Its ${kids.length} subcategor${kids.length>1?'ies go':'y goes'} with it`:''}.</p>
+    <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button></div>`;
+
+  body.innerHTML=rename+balance+target+subs+history+wallGuideHTML(c,M)+danger;
+  /* The whole sheet, not just its body - the rename pencil lives in the title,
+     and wiring only the body left it as a button that did nothing. */
+  wirePlan(document.getElementById('catSheet'), false);
+}
+(function(){
+  const x=document.getElementById('catSheetX'); if(x) x.addEventListener('click',dismissOverlay);
+  const ov=document.getElementById('catSheet');
+  if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) dismissOverlay(); });
+  /* Delegated, because the rows that open this are re-rendered constantly and
+     the sheet itself contains more of them. */
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('[data-catsheet]'); if(!b) return;
+    if(catReorder) return;                 // a drag handle is not a doorway
+    /* The row is the target, but it also HOLDS the assign field, the collapse
+       chevron and the delete button. Tapping any of those must do its own job -
+       a row that swallows its own controls is worse than one you cannot tap. */
+    if(e.target.closest('input,select,textarea,label')) return;
+    const btn=e.target.closest('button');
+    if(btn && !btn.hasAttribute('data-catsheet')) return;
+    openCatSheet(b.dataset.catsheet);
+  });
+})();
+
 /* essential = one of the Cover First walls */
 function isEssentialCat(name){ const n=(name||'').toLowerCase(); return (typeof WALLS!=='undefined'?WALLS:[]).some(w=>w.match.some(t=>n.includes(t))); }
 /* Pillar 4A: pull unused funds from flexible categories into the overspent one */
 function autoRebalance(catId){
   const M=state.activeMonth, target=state.categories.find(c=>c.id===catId); if(!target) return;
-  let need=catSpent(catId,M)-catAssigned(catId,M); if(need<=0){ renderBudget(); return; }
+  let need=catUsed(catId,M)-catAssigned(catId,M); if(need<=0){ renderBudget(); return; }
   // donors: top-level non-essential pools with surplus, "Fun Money" style first.
   // Only genuinely FREE money can move - a pool's dollars already committed to its
   // own subcategories aren't spare, so the movable amount is capped by both.
-  const freeOf=c=>Math.min(catAssigned(c.id,M)-catSpent(c.id,M), assignedFor(c.id,M)-kidsAssigned(c.id,M));
+  const freeOf=c=>Math.min(catAssigned(c.id,M)-catUsed(c.id,M), assignedFor(c.id,M)-kidsAssigned(c.id,M));
   const donors=topCats().filter(c=>c.id!==catId && !isEssentialCat(c.name) && freeOf(c)>0)
     .sort((x,y)=>{ const fx=/fun|misc|extra|blow|guilt|play/.test(x.name.toLowerCase())?0:1, fy=/fun|misc|extra|blow|guilt|play/.test(y.name.toLowerCase())?0:1; if(fx!==fy) return fx-fy; return freeOf(y)-freeOf(x); });
   let moved=0;
@@ -9752,7 +10222,7 @@ function monShort(m){ return new Date(m+'-01T00:00:00').toLocaleString(undefined
    ============================================================ */
 const BD_RANGES=[{n:1,label:'1 mo'},{n:3,label:'3 mo'},{n:6,label:'6 mo'},{n:12,label:'12 mo'}];
 const BD_COLORS=['#e6b24d','#e0663c','#35c99a','#5b9bd5','#b47ee0','#e0c15b','#4dc3c3','#e07a9e','#8ecf6b','#c98f4d','#7f8de0','#d45f5f'];
-let bdRange=1, bdSide='out', bdDrill=null;
+let bdRange=1, bdSide='out', bdDrill=null, bdSel=null;
 function bdMonths(n){ const arr=[]; let m=state.activeMonth; for(let i=0;i<n;i++){ arr.unshift(m); m=shiftMonth(m,-1); } return arr; }
 function bdSpanLabel(){
   const ms=bdMonths(bdRange);
@@ -9793,9 +10263,13 @@ function bdDonutSVG(rows,total){
   if(!rows.length||total<=0) return '';
   const R=54, C=2*Math.PI*R;
   let off=0;
+  /* The slices used to be the one part of this panel you could not touch - the
+     legend beside them was clickable, the picture was not, and nothing about a
+     picture tells you that. A tapped slice now does exactly what its row does:
+     highlights, and drills in when there is something underneath. */
   const arcs=rows.map((r,i)=>{
-    const frac=r.val/total, len=frac*C;
-    const el=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${BD_COLORS[i%BD_COLORS.length]}" stroke-width="22" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)"><title>${escapeHtml(r.name)}: ${escapeHtml(money(r.val))}</title></circle>`;
+    const frac=r.val/total, len=frac*C, on=bdSel===i;
+    const el=`<circle class="bd-arc${on?' on':''}" cx="70" cy="70" r="${R}" fill="none" stroke="${BD_COLORS[i%BD_COLORS.length]}" stroke-width="${on?26:22}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)" data-bdslice="${i}"><title>${escapeHtml(r.name)}: ${escapeHtml(money(r.val))}</title></circle>`;
     off+=len; return el;
   }).join('');
   return `<svg viewBox="0 0 140 140" class="bd-donut" role="img" aria-label="${bdSide==='in'?'Income':'Spending'} breakdown">${arcs}
@@ -10723,6 +11197,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
   } else {
     bar.innerHTML=`<p class="sub rf-lead">Last 6 months. Green should be taller than red. Every single time.</p>`;
     body.innerHTML=`<div id="monthChart" class="months"></div>
+      <div id="monthRead"></div>
       <div class="legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Income</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Spending</span></div>`;
     renderCharts();
   }
@@ -10743,7 +11218,7 @@ function renderBreakdown(){
         <div class="bd-legend">${rows.map((r,i)=>{
           const pct=total>0?Math.round(r.val/total*100):0;
           const can=bdSide==='out'&&r.id&&r.kids>0;
-          return `<${can?'button':'div'} class="bd-row${can?' can':''}"${can?` data-bddrill="${r.id}"`:''}>
+          return `<${can?'button':'div'} class="bd-row${can?' can':''}${bdSel===i?' sel':''}"${can?` data-bddrill="${r.id}"`:''} data-bdrow="${i}">
             <span class="bd-dot" style="background:${BD_COLORS[i%BD_COLORS.length]}"></span>
             <span class="bd-nm">${escapeHtml(r.name)}${can?' <span class="bd-more">▸</span>':''}</span>
             <span class="bd-v">${escapeHtml(money(r.val))}<i>${pct}%</i></span>
@@ -10757,9 +11232,14 @@ function renderBreakdown(){
     </div>
     <div class="bd-span">${escapeHtml(bdSpanLabel())}</div>
     ${crumb}${body}`;
-  box.querySelectorAll('button[data-bdside]').forEach(b=>b.onclick=()=>{ bdSide=b.dataset.bdside; bdDrill=null; renderBreakdown(); });
-  box.querySelectorAll('button[data-bdrange]').forEach(b=>b.onclick=()=>{ bdRange=+b.dataset.bdrange; renderBreakdown(); });
-  box.querySelectorAll('button[data-bddrill]').forEach(b=>b.onclick=()=>{ bdDrill=b.dataset.bddrill; renderBreakdown(); });
+  box.querySelectorAll('[data-bdslice]').forEach(a=>a.addEventListener('click',()=>{
+    const i=+a.dataset.bdslice, r=rows[i];
+    if(bdSide==='out'&&r&&r.id&&r.kids>0){ bdSel=null; bdDrill=r.id; renderBreakdown(); return; }
+    bdSel = bdSel===i ? null : i; renderBreakdown();
+  }));
+  box.querySelectorAll('button[data-bdside]').forEach(b=>b.onclick=()=>{ bdSide=b.dataset.bdside; bdDrill=null; bdSel=null; renderBreakdown(); });
+  box.querySelectorAll('button[data-bdrange]').forEach(b=>b.onclick=()=>{ bdRange=+b.dataset.bdrange; bdSel=null; renderBreakdown(); });
+  box.querySelectorAll('button[data-bddrill]').forEach(b=>b.onclick=()=>{ bdDrill=b.dataset.bddrill; bdSel=null; renderBreakdown(); });
   const bk=document.getElementById('bdBack');
   if(bk) bk.onclick=()=>{ const c=state.categories.find(x=>x.id===bdDrill); bdDrill=c&&c.parentId?c.parentId:null; renderBreakdown(); };
 }
@@ -10796,7 +11276,7 @@ function investedUpTo(m){ return state.transactions.filter(t=>t.type==='invest'&
 let trendPick='spent';
 function trendMonths(n){ const a=[]; let m=state.activeMonth; for(let i=0;i<n;i++){ a.unshift(m); m=shiftMonth(m,-1); } return a; }
 /* One line chart, reused. Returns '' when there is nothing honest to draw. */
-function trendSVG(pts,color){
+function trendSVG(pts,color,sel){
   const real=pts.filter(p=>p.v!=null);
   if(real.length<2) return '';
   const w=600,h=150,pad=14;
@@ -10807,11 +11287,41 @@ function trendSVG(pts,color){
   pts.forEach((p,i)=>{
     if(p.v==null) return;                       // a month with no snapshot is a gap, not a zero
     d+=`${started?'L':'M'}${X(i).toFixed(1)},${Y(p.v).toFixed(1)} `; started=true;
-    dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3" fill="${color}"/>`;
+    dots+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${i===sel?5.5:3}" fill="${color}"${i===sel?' stroke="var(--panel)" stroke-width="2"':''}/>`;
   });
-  const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto" role="img"><path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg>`;
+  const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="${i===sel?'var(--text)':'#8b93a3'}" font-size="9" font-weight="${i===sel?'800':'400'}" text-anchor="middle">${monShort(p.m)}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto" ${chartFocusAttrs('trendBody',pts.length,'Trend line, last six months')}><path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}${chartHits('trendBody',pts.length,X,w,h)}</svg>`;
 }
+/* A snapshot series has real holes in it - months before you started, or months
+   the app never got to record. Saying "$0" there would be a lie the chart is
+   already careful not to draw, so the readout has to be careful too. */
+function trendRead(S,pts,i){
+  const p=pts[i];
+  if(p.v==null) return `<b>${fmtMonth(p.m)}</b> - no ${escapeHtml(S.label.toLowerCase())} recorded for this month. Not zero: unrecorded. ${S.from==='snap'?'The snapshot is taken once a month, so months before you started here stay blank forever.':'Nothing was logged in this window.'}`;
+  /* A ledger series returns a real 0 for a month with nothing in it, which reads
+     as "you spent nothing" when the truth is "you logged nothing". The snapshot
+     series already draws that case as a gap; this is the same honesty applied to
+     the half of the chart that cannot. */
+  if(S.from==='ledger' && !txnsInMonth(p.m).length)
+    return `<b>${fmtMonth(p.m)}</b> - nothing logged that month, so this sits at zero. Unlogged, not spent-nothing, and the line cannot tell those apart.${trailBtn('logspend','Log something for it','ghost')}`;
+  let prev=null; for(let j=i-1;j>=0;j--){ if(pts[j].v!=null){ prev=pts[j]; break; } }
+  const move=prev?p.v-prev.v:null;
+  let out=`<b>${fmtMonth(p.m)}</b> &middot; ${escapeHtml(S.label)} <b style="color:${S.color}">${money(p.v)}</b>`;
+  if(move!=null) out+=` &middot; ${move>0?'up':move<0?'down':'flat'}${move!==0?` <b>${money(Math.abs(move))}</b>`:''} since ${monShort(prev.m)}`;
+  out+='.';
+  if(S.from==='ledger'){
+    const list=txnsInMonth(p.m);
+    const kind = S.k==='invest' ? 'invest' : S.k==='spent' ? 'expense' : null;
+    const rows=kind?list.filter(t=>t.type===kind):list;
+    const big=rows.slice().sort((a,b)=>b.amount-a.amount)[0];
+    const bits=[`${rows.length} entr${rows.length===1?'y':'ies'} behind it`];
+    if(big) bits.push(`biggest: ${escapeHtml(kind==='expense'?(catName(big.catId)||big.note||'Uncategorized'):(big.source||big.note||'Entry'))} ${money(big.amount)}`);
+    out+=`<span class="cr-bits">${bits.join(' &middot; ')}</span>`;
+  }
+  if(S.from==='snap') out+=`<span class="cr-note">Read from that month's snapshot. Editing an account today overwrites today's number, never an old one.${trailBtn('account','Update my balances','ghost')}</span>`;
+  return out;
+}
+CHART_REDRAW.trendBody=()=>renderTrendSeries();
 function renderTrendSeries(){
   const pick=document.getElementById('trendPick'), body=document.getElementById('trendBody');
   if(!pick||!body) return;
@@ -10825,19 +11335,23 @@ function renderTrendSeries(){
     const sn=snaps.find(x=>x.month===m);
     return {m, v: sn && sn[S.field]!=null ? sn[S.field] : null};
   });
-  const svg=trendSVG(pts,S.color);
+  const tSel=pickOf('trendBody',pts.length);
+  const svg=trendSVG(pts,S.color,tSel);
   const have=pts.filter(p=>p.v!=null);
   const last=have.length?have[have.length-1]:null;
   const first=have.length?have[0]:null;
   const move=(last&&first&&have.length>1)?last.v-first.v:null;
   body.innerHTML = svg
     ? `<div class="trend-wrap">${svg}</div>
+       ${chartRead(trendRead(S,pts,tSel))}
        <div class="legend"><span class="k">${escapeHtml(S.label)} now: <b style="color:${S.color}">${money(last.v)}</b>${move!=null?` &middot; ${move>=0?'up':'down'} <b>${money(Math.abs(move))}</b> across ${have.length} months`:''}</span></div>
        <p class="sub" style="margin-top:6px">${escapeHtml(S.note)}${S.from==='snap'?' Read from the monthly snapshot the app takes, so it starts when you did - an account edit overwrites the old number, and nothing can recover what was never recorded.':''}</p>`
     : `<div class="empty">${S.from==='snap'
         ? `Not enough snapshots yet. The app records ${escapeHtml(S.label.toLowerCase())} once a month, so this line needs a second month before it can be a line at all.`
         : `Nothing logged yet for ${escapeHtml(S.label.toLowerCase())} across these months.`}</div>`;
 }
+CHART_REDRAW.monthChart=()=>renderCharts();
+CHART_REDRAW.trendChart=()=>renderCharts();
 function renderCharts(){
   const M=state.activeMonth;
   const ml=document.getElementById('chartMonth'); if(ml) ml.textContent=fmtMonth(M);
@@ -10852,22 +11366,36 @@ function renderCharts(){
   const months=last6Months(), data=months.map(m=>({m,inc:monthIncome(m),exp:monthExpense(m)}));
   const maxM=Math.max(1,...data.map(d=>Math.max(d.inc,d.exp)));
   const mc=document.getElementById('monthChart');
-  if(mc) mc.innerHTML=data.map(d=>`<div class="mcol"><div class="pair"><div class="bi" style="height:${d.inc/maxM*100}%" title="Income ${money(d.inc)}"></div><div class="be" style="height:${d.exp/maxM*100}%" title="Spent ${money(d.exp)}"></div></div><div class="ml">${monShort(d.m)}</div></div>`).join('');
+  if(mc){
+    /* The whole column is the target, not the two thin bars inside it. A 44%-wide
+       bar on a six-column chart is about 20px on a phone, which is under every
+       published minimum for a touch target and well under a real thumb. */
+    const mSel=pickOf('monthChart',data.length);
+    mc.innerHTML=data.map((d,i)=>`<div class="mcol${i===mSel?' on':''}" data-cidx="${i}" data-cfor="monthChart"><div class="pair"><div class="bi" style="height:${d.inc/maxM*100}%"></div><div class="be" style="height:${d.exp/maxM*100}%"></div></div><div class="ml">${monShort(d.m)}</div></div>`).join('');
+    mc.setAttribute('tabindex','0'); mc.setAttribute('role','application');
+    mc.dataset.chartkeys='monthChart'; mc.dataset.cn=String(data.length);
+    mc.setAttribute('aria-label','Income against spending, last six months. Use the arrow keys to walk through it.');
+    const mr=document.getElementById('monthRead');
+    if(mr) mr.innerHTML=chartRead(inOutRead(data[mSel].m));
+  }
   // cumulative balance trend
   const pts=months.map(m=>({m,bal:state.transactions.filter(t=>monthOf(t.date)<=m).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0)}));
   const w=600,h=150,pad=12, vals=pts.map(p=>p.bal), mn=Math.min(0,...vals), mx=Math.max(1,...vals);
   const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad), Y=v=>h-pad-((v-mn)/((mx-mn)||1))*(h-2*pad);
   const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.bal).toFixed(1)}`).join(' ');
   const area=`${line} L${X(pts.length-1).toFixed(1)},${h-pad} L${X(0).toFixed(1)},${h-pad} Z`;
-  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.bal).toFixed(1)}" r="3" fill="#e6b24d"/>`).join('');
-  const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="#8b93a3" font-size="9" text-anchor="middle">${monShort(p.m)}</text>`).join('');
+  const tSel=pickOf('trendChart',pts.length);
+  const dots=pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.bal).toFixed(1)}" r="${i===tSel?5.5:3}" fill="#e6b24d"${i===tSel?' stroke="var(--panel)" stroke-width="2"':''}/>`).join('');
+  const labs=pts.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-1}" fill="${i===tSel?'var(--text)':'#8b93a3'}" font-size="9" font-weight="${i===tSel?'800':'400'}" text-anchor="middle">${monShort(p.m)}</text>`).join('');
   const tc=document.getElementById('trendChart'), latest=pts[pts.length-1].bal;
   /* "Latest balance" sat under "Net worth today" as a second big number with no
      stated relationship to it, and it is a third thing entirely: not net worth,
      not what is in the bank, but everything the LEDGER has net-added since the
      first thing was logged. Three numbers, three meanings, one card. Named for
      what it is, with the reconciliation one tap away. */
-  if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto"><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}</svg><div class="legend"><span class="k">Logged in minus logged out, all time: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b>${whyBtn('loggedNet')}</span></div>`;
+  if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto" ${chartFocusAttrs('trendChart',pts.length,'Running logged total, last six months')}><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}${chartHits('trendChart',pts.length,X,w,h)}</svg>`
+    + chartRead(ledgerRead(pts[tSel].m, pts[tSel].bal, tSel>0?pts[tSel-1].bal:null))
+    + `<div class="legend"><span class="k">Logged in minus logged out, all time: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b>${whyBtn('loggedNet')}</span></div>`;
   renderBreakdown();
   renderCirculation();
   renderGlance();
@@ -11438,8 +11966,35 @@ function iaResumeOffer(){
   return true;
 }
 function openIntake(){ iaStep=0; iaAns={}; iaForceInput=false; iaCommitted=false; if(state.hoursPerWeek>0) iaAns.hoursPerWeek=state.hoursPerWeek; document.getElementById('intakeLog').innerHTML=''; document.getElementById('intakeBar').style.width='0%'; document.getElementById('intake').classList.add('on'); document.body.style.overflow='hidden'; pushOverlay();
+  /* The gate goes up once, for someone who has never agreed to the terms. A
+     re-run of setup by somebody who already read it would be the app clearing
+     its throat at a person mid-sentence. */
+  /* Reset the surface before deciding what goes on it. Closing the gate with
+     Back leaves the log and dock hidden, and without this a later re-run would
+     open on an empty screen with no way forward. */
+  iaHideWelcome();
+  if(!state.welcomed){ iaShowWelcome(); return; }
   if(!iaResumeOffer()) runIntakeStep();
 }   // a re-run starts from the hours already on record, so the pill shows the live value
+function iaShowWelcome(){
+  const w=document.getElementById('iaWelcome'); if(!w){ if(!iaResumeOffer()) runIntakeStep(); return; }
+  w.classList.add('on');
+  document.getElementById('intakeLog').style.display='none';
+  document.getElementById('intakeDock').style.display='none';
+  /* A progress bar above a page with no questions on it is a bar measuring
+     nothing. */
+  const pr=document.querySelector('.intake-prog'); if(pr) pr.style.visibility='hidden';
+  w.scrollTop=0;
+  const go=document.getElementById('iaWelGo');
+  if(go) go.onclick=()=>{ state.welcomed=true; save(); iaHideWelcome(); if(!iaResumeOffer()) runIntakeStep(); };
+  setTimeout(()=>{ const t=document.getElementById('iaWelTitle'); if(t){ t.setAttribute('tabindex','-1'); t.focus({preventScroll:true}); } },60);
+}
+function iaHideWelcome(){
+  const w=document.getElementById('iaWelcome'); if(w) w.classList.remove('on');
+  const lg=document.getElementById('intakeLog'); if(lg) lg.style.display='';
+  const dk=document.getElementById('intakeDock'); if(dk) dk.style.display='';
+  const pr=document.querySelector('.intake-prog'); if(pr) pr.style.visibility='';
+}
 /* Answers whose gate no longer passes are lies waiting to be committed - e.g.
    full-path walls after switching to spend mode, or "dreaming of owning" after
    the roof amount was zeroed. Sweep them whenever the flow moves. */
@@ -12405,7 +12960,7 @@ function commitIntake(){
 // "Setup chat" left the global footer for Settings > Setup & data ("Re-run setup
 // chat"), so this listener has nothing to bind to; intakeBtn2 carries it now.
 (function(){ const b=document.getElementById('intakeBtn'); if(b) b.addEventListener('click',openIntake); })();
-document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); dismissOverlay(); });
+document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); iaHideWelcome(); dismissOverlay(); });
 
 /* ---------- boot ---------- */
 function boot(){
@@ -12821,6 +13376,12 @@ function growthKindFor(name){
   return '';
 }
 const GROWTH_TAG={invest:'Invested, not spent', save:'Saved, not spent', debt:'Debt paid down'};
+/* The Plan row has one line and no room for "Invested, not spent" beside a name,
+   an amount and a pill. A coloured dot would have fitted and said nothing - and
+   the whole reason this tag exists is that a retirement contribution was reading
+   as money spent, which a dot does not fix. So: the shortest true word, with the
+   full sentence one tap away in the category's sheet. */
+const GROWTH_TAG_SHORT={invest:'not spent', save:'not spent', debt:'paid down'};
 /* intake budget math: total money in, and total given a job so far */
 function intakeIncomeTotal(a){ return (+a.income||0) + ((a.extraIncome||[]).reduce((s,x)=>s+(+x.amount||0),0)); }
 function intakeAssignedTotal(a){ const walls=(+a.roof||0)+(+a.food||0)+(+a.util||0)+(+a.transport||0); const exp=(a.expenses||[]).reduce((s,x)=>s+(+x.amount||0),0); return walls+exp; }

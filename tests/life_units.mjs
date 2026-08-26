@@ -198,7 +198,13 @@ const named = await p.evaluate(() => {
   activateTab('home'); calSelDay=3; renderRewardCalendar(); renderAll();
   const home=document.getElementById('view-home').innerText;
   activateTab('budget');
-  const plan=document.getElementById('view-budget').innerText;
+  /* The roll-up prompt moved off the Plan row and into the category's own sheet
+     when the list was cut back to a line each. Same sentence, same rule about
+     what it may say, one tap further in - so the test follows it there. */
+  const grp=state.categories.find(c=>state.categories.some(k=>k.parentId===c.id));
+  if(grp && typeof openCatSheet==='function') openCatSheet(grp.id);
+  const plan=document.getElementById('view-budget').innerText
+    + '\n' + ((document.getElementById('catSheetBody')||{}).innerText||'');
   return {
     allowance:(home.match(/Your daily allowance is [^)]*\)/)||[''])[0],
     spent:(home.match(/Spent this month\n[^\n]*/)||[''])[0].replace('\n',' '),
