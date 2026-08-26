@@ -4197,7 +4197,7 @@ function renderRewardCalendar(){
   if(lim<=0){
     /* No limit means no calendar, which used to mean no way to log from here
        either - the emptiest version of the screen was also the most useless. */
-    box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit and this turns into a daily allowance - beat it each day to build a reward streak.</p>${trailBtn('limit','Set my monthly limit','solid')}<button class="btn primary cal-log" data-callog="today">Log an expense</button></div>`;
+    box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit and this turns into a daily allowance - beat it each day to build a reward streak.</p>${trailBtn('limit','Set my monthly limit','solid')}<button class="btn primary cal-log" data-callog="today">Log money moving</button></div>`;
     box.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>openQuickLogFor());
     return;
   }
@@ -4257,7 +4257,12 @@ function renderRewardCalendar(){
       <div class="wk-bar ${wkOver?'over':''}"><span style="width:${wkPct}%"></span></div>
       <div class="sub" style="margin-top:6px;font-size:12px">${money(wkAllow)} allowance across ${wkDays} day${wkDays===1?'':'s'} so far this week.${(isCur&&wkSpent===0&&wkPut===0)?' Nothing logged yet - a zero only counts if it is true.':''}</div>
       ${wkPut>0?`<div class="wk-put">\u2192 <b>${money(wkPut)}</b> put away this week. ${voice(VOICE.movedIt,null)}</div>`:''}
-      ${isCur?`<button class="btn primary cal-log" data-callog="today">Log an expense</button>`:''}
+      ${/* not "an expense": this opens the quick log, which takes money out, money
+            in and money put away. A button narrower than the thing it opens sends
+            people looking for a second button that does not exist. And not "an
+            event" either - the word says nothing about money, which is the one
+            thing every line in here has in common. */''}
+      ${isCur?`<button class="btn primary cal-log" data-callog="today">Log money moving</button>`:''}
     </div>` : '';
   const org=state.trackStart||'';
   let orgNote='';
@@ -5817,6 +5822,37 @@ function descendantsOf(id){
   walk(id); return out;
 }
 function catDepth(id){ let d=1,c=state.categories.find(x=>x.id===id),hops=0; while(c&&c.parentId&&hops++<6){ d++; c=state.categories.find(x=>x.id===c.parentId); } return d; }
+/* ---------- moving a category under another ----------
+   From a phone, mid-drag, with Coffee / drinks out sitting one row above the
+   Food group and no way to tuck it inside: "coffee and drinks should be able to
+   be reordered and placed in a subcategory under food." The drag stays
+   level-locked on purpose - a thumb slip that quietly re-files a category is
+   worse than a drag that cannot - so the move lives on the category's sheet,
+   where there is room to say the part that matters: it is the same category
+   after the move. Same id, so its assignments, its history, its repeat rule and
+   its place on the watch list all ride along untouched. Only the filing
+   changes. */
+function subtreeHeight(id){
+  const kids=childrenOf(id);
+  if(!kids.length) return 1;
+  return 1+Math.max(...kids.map(k=>subtreeHeight(k.id)));
+}
+function eligibleParents(id){
+  const below=new Set(descendantsOf(id).map(d=>d.id));
+  const h=subtreeHeight(id);
+  return state.categories.filter(p=>
+    p.id!==id && !below.has(p.id) && catDepth(p.id)+h<=3);
+}
+function moveCatUnder(id, parentId){
+  const c=state.categories.find(x=>x.id===id); if(!c) return false;
+  if(parentId){
+    if(!eligibleParents(id).some(p=>p.id===parentId)) return false;   // depth and cycles enforced here, not trusted from the UI
+    c.parentId=parentId;
+    collapsedCats.delete(parentId);                                    // the move must be visible, not filed into a closed drawer
+  } else delete c.parentId;
+  save();
+  return true;
+}
 function catSpent(id,M){ return spentFor(id,M)+descendantsOf(id).reduce((s,k)=>s+spentFor(k.id,M),0); }
 /* Money that left a category's assignment is not always SPENDING. A Retirement
    category funded at $400 with $400 logged against it as an invest showed
@@ -6367,11 +6403,24 @@ function renderCatSheet(){
       :`<div class="cs-txs"><p class="cs-note">Nothing logged against it.${trailBtn('logspend','Log one','ghost')}</p></div>`}
   </div>`;
 
+  /* Where it lives. Options are computed from what is actually legal - never
+     itself, never its own descendants, never anywhere that would breach the
+     three-level ceiling - so the select cannot offer a move the engine would
+     refuse. */
+  const parents=eligibleParents(c.id);
+  const whereLives=`<div class="cs-sec"><div class="cs-h">Where it lives</div>
+    <div class="txs-f"><span class="txs-k">Lives under</span><span class="txs-v"><select data-csmove="${c.id}">
+      <option value=""${!c.parentId?' selected':''}>Top level - its own thing</option>
+      ${parents.map(p=>`<option value="${p.id}"${p.id===c.parentId?' selected':''}>${escapeHtml(catName(p.id))}</option>`).join('')}
+    </select></span></div>
+    <p class="cs-note">Moving it changes the filing and nothing else - the money assigned to it, everything logged against it, and any repeat it carries all come along. ${isGroup?`Its own subcategories move with it too.`:''}</p>
+  </div>`;
+
   const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
     <p class="cs-note">Deleting a category keeps every transaction you logged against it - they become Uncategorized, so no history is lost${isGroup?`. Its ${kids.length} subcategor${kids.length>1?'ies go':'y goes'} with it`:''}.</p>
     <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button></div>`;
 
-  body.innerHTML=rename+balance+target+subs+history+wallGuideHTML(c,M)+danger;
+  body.innerHTML=rename+balance+target+subs+whereLives+history+wallGuideHTML(c,M)+danger;
   /* The whole sheet, not just its body - the rename pencil lives in the title,
      and wiring only the body left it as a button that did nothing. */
   wirePlan(document.getElementById('catSheet'), false);
@@ -6380,6 +6429,18 @@ function renderCatSheet(){
   const x=document.getElementById('catSheetX'); if(x) x.addEventListener('click',dismissOverlay);
   const ov=document.getElementById('catSheet');
   if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) dismissOverlay(); });
+  document.addEventListener('change',e=>{
+    const sel=e.target.closest && e.target.closest('[data-csmove]'); if(!sel) return;
+    const id=sel.dataset.csmove, to=sel.value||null;
+    const c=state.categories.find(x=>x.id===id); if(!c) return;
+    const was=c.parentId||null;
+    if((to||null)===(was||null)) return;
+    if(!moveCatUnder(id, to)){ sel.value=was||''; return; }
+    planRefresh();
+    if(typeof toast==='function') toast(to
+      ? `${c.name} now lives under ${catName(to)}. Everything it held came along.`
+      : `${c.name} is its own thing again, back at the top level.`);
+  });
   /* Delegated, because the rows that open this are re-rendered constantly and
      the sheet itself contains more of them. */
   document.addEventListener('click',e=>{

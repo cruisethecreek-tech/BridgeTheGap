@@ -1782,8 +1782,12 @@ const callog = await p.evaluate(async () => {
   const pastMonth=btns().filter(b=>b.d==='today').length;
   return {onCal, zeroNote, past, wantDate, todaySel, landed, noLimit, pastMonth};
 });
+/* Pinned to the exact words once, which blocked a correction: the button opens
+   the quick log, and that takes money out, in AND put away, so "an expense" was
+   narrower than the thing behind it. The property is that ONE button on the
+   calendar opens today's log - not what it happens to be called. */
 check('the reward calendar carries the one action the mode is for',
-      callog.onCal.length===1 && callog.onCal[0].d==='today' && /Log an expense/.test(callog.onCal[0].t),
+      callog.onCal.length===1 && callog.onCal[0].d==='today' && /\bLog\b/i.test(callog.onCal[0].t),
       callog.onCal.map(b=>b.t).join(' | '));
 check('...and an unlogged zero says so rather than reading as a clean week', callog.zeroNote===true);
 check('tapping an earlier day offers to log to THAT day',
@@ -4521,6 +4525,93 @@ check('deleting the destination account drops its deposits back into the auto as
       JSON.stringify(dest.afterDelete));
 check('a recurring invest rule carries its destination onto what it posts',
       dest.rulePosts==='hysa', String(dest.rulePosts));
+
+/* ---- 67. a category can move house ----
+   From a phone, mid-drag, with Coffee / drinks out sitting one row above the
+   Food group and no way to tuck it inside: "coffee and drinks should be able to
+   be reordered and placed in a subcategory under food." The drag stays
+   level-locked deliberately - a thumb slip that quietly re-files a category is
+   worse than a drag that cannot - so the move lives on the category's sheet,
+   where there is room to say the part that matters: it is the SAME category
+   afterwards. Same id, so its assignment, its history, its repeat rule and its
+   place on the allowance watch list all ride along. Only the filing changes.
+
+   The offered list is computed from what is legal rather than filtered in the
+   UI, so a move the engine would refuse can never be shown: never itself, never
+   its own descendants (a category cannot become its own grandchild), and never
+   anywhere that would breach the three-level ceiling once its own subtree is
+   accounted for. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'coffee',name:'Coffee / drinks out'},
+              {id:'food',name:'Food'},{id:'walmart',name:'Walmart',parentId:'food'},{id:'aldi',name:'Aldi',parentId:'food'},
+              {id:'power',name:'Power & Wi-Fi'},{id:'gas',name:'Embridge gas',parentId:'power'},
+              {id:'deep',name:'Deep',parentId:'walmart'}],
+  budgets:{'2026-08':{coffee:80,walmart:400,aldi:200}},
+  dayToDay:['coffee'],
+  recurring:[{id:'r1',type:'expense',amount:80,catId:'coffee',freq:'monthly',anchor:'2026-08-28',day:28}],
+  transactions:[{id:'c1',type:'expense',amount:12,catId:'coffee',date:'2026-08-20',note:'Latte'}]});
+await p.reload(); await p.waitForTimeout(700);
+const house = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); renderBudget(); await wait(200);
+  openCatSheet('coffee'); await wait(200);
+  const sel=document.querySelector('[data-csmove="coffee"]');
+  const out={ offers:[...sel.options].map(o=>o.value),
+              excludesSelf:![...sel.options].some(o=>o.value==='coffee'),
+              offersTopLevel:[...sel.options].some(o=>o.value==='') };
+  sel.value='food'; sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(300);
+  out.nowUnder=state.categories.find(c=>c.id==='coffee').parentId;
+  out.path=catName('coffee');
+  /* the whole point: it is the same category, carrying everything */
+  out.carried={ assigned:assignedFor('coffee','2026-08'),
+                tx:state.transactions[0].catId,
+                rule:state.recurring[0].catId,
+                watched:catWatched('coffee') };
+  out.parentRollsUp=catAssigned('food','2026-08');
+  out.drawnNested=!!document.querySelector('#cats .subrow[data-row="coffee"]');
+  /* Walmart already has a child, so it may not move under something that is
+     itself a child - that would make four levels */
+  openCatSheet('walmart'); await wait(200);
+  out.walmartOffers=[...document.querySelector('[data-csmove="walmart"]').options].map(o=>o.value);
+  /* and a category cannot be filed inside its own descendant */
+  openCatSheet('food'); await wait(200);
+  out.foodOffers=[...document.querySelector('[data-csmove="food"]').options].map(o=>o.value);
+  /* reversible */
+  openCatSheet('coffee'); await wait(200);
+  const back=document.querySelector('[data-csmove="coffee"]');
+  back.value=''; back.dispatchEvent(new Event('change',{bubbles:true})); await wait(300);
+  out.backToTop=!state.categories.find(c=>c.id==='coffee').parentId;
+  closeCatSheet();
+  return out;
+});
+check('a category can be filed under another one, from its own sheet',
+      house.nowUnder==='food' && house.path==='Food › Coffee / drinks out', house.path);
+check('...and it is the same category afterwards, carrying everything it held',
+      house.carried.assigned===80 && house.carried.tx==='coffee'
+      && house.carried.rule==='coffee' && house.carried.watched===true,
+      JSON.stringify(house.carried));
+check('...so the new parent rolls it up', house.parentRollsUp===680, String(house.parentRollsUp));
+check('...and the list draws it nested', house.drawnNested===true);
+/* The three moves that must never be offered. */
+check('it is never offered itself as a home', house.excludesSelf===true);
+check('...never a home that would make a fourth level',
+      !house.walmartOffers.includes('gas') && !house.walmartOffers.includes('aldi'),
+      house.walmartOffers.join(','));
+check('...and never inside its own descendant', !house.foodOffers.includes('walmart'),
+      house.foodOffers.join(','));
+check('...while top level is always a way back', house.offersTopLevel===true && house.backToTop===true);
+/* Copy, from the same session: the calendar button opens the quick log, which
+   takes money out, in and put away - so it must not say "an expense". */
+const label = await p.evaluate(() => {
+  /* the calendar only draws in spend mode with a limit - without both, the
+     button does not exist and the check would pass on an empty string */
+  state.spendingMode=true; state.spendLimit=1500; save();
+  activateTab('home'); applySpending(); renderRewardCalendar();
+  const b=document.querySelector('#rewardCalBox [data-callog]');
+  return b?b.textContent.trim():'';
+});
+check('the button that opens the quick log is not narrower than what it opens',
+      label.length>0 && !/expense/i.test(label) && /money/i.test(label), label||'(no button rendered)');
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
