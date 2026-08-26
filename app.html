@@ -1117,6 +1117,17 @@
   .cs-txn{overflow-wrap:anywhere}
   .cs-txv{font-weight:800;white-space:nowrap}
 
+  /* A bill on the day card is shown and visibly not scored. Dimmed rather than
+     hidden - money that disappears from a day is worse than money counted in the
+     wrong column. */
+  .ce.bill .nm,.ce .am.billam{color:var(--muted)}
+  .ce-bill{font-size:10.5px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;color:var(--muted);
+    border:1px solid var(--line);border-radius:6px;padding:1px 6px;white-space:nowrap}
+  .cal-billnote{margin-top:10px;font-size:12.5px;line-height:1.55;color:var(--muted);
+    background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .cal-billnote b{color:var(--text)}
+  .sp-bills{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--muted)}
+  .sp-bills b{color:var(--text)}
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
 
   /* ---------- Transactions ---------- */
@@ -1568,6 +1579,11 @@
   /* a guess should not look like a decision - it is marked until you confirm or
      change it, and the mark clears the moment you touch the dropdown */
   .ql-row .ql-cat.guessed{border-color:var(--accent);border-left-width:4px;background:rgba(var(--accent-rgb),.07)}
+  /* The name field for a category being made on the spot. Same idea as the
+     quick log's, in the two forms that never had one. */
+  .cat-new{margin-top:6px;background:var(--panel);border:1px solid var(--accent);color:var(--text);
+    border-radius:9px;padding:9px 10px;font-size:14px;width:100%}
+  .cat-new.hide{display:none}
   .ql-row .ql-new{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--accent);color:var(--text);border-radius:9px;padding:9px 10px;font-size:13px}
   .ql-row .ql-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex:none}
   .ql-row .ql-del:hover{color:var(--bad)}
@@ -2163,7 +2179,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <select id="recType"><option value="expense">Expense</option><option value="income">Income</option><option value="invest">Invest</option></select>
           </label>
           <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
-          <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select></label>
+          <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select>
+            <input class="cat-new hide" id="recCatNew" type="text" placeholder="Name the new one"></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
           <div class="ufld income-only-rec hide" id="recHoursWrap"><span class="fl-k">Hours it takes<span id="recHoursUnit"></span></span>
@@ -2210,6 +2227,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </label>
           <label class="fld expense-only" id="fldCat">Category
             <select id="txCat"></select>
+            <input class="cat-new hide" id="txCatNew" type="text" placeholder="Name the new one">
           </label>
           <label class="fld income-only hide" id="fldSrc">Source
             <input type="text" id="txSrc" placeholder="Paycheck, Side gig…">
@@ -3611,7 +3629,11 @@ function renderSpending(){
   const box=document.getElementById('spendingBox'); if(!box) return;
   if(!state.spendingMode){ box.innerHTML=''; return; }
   const M=state.activeMonth;
-  const spent=txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  /* The same definition as the daily allowance, or the two contradict each
+     other on the same screen: a limit bar that counts rent while the streak
+     above it does not is two different answers to one question. */
+  const spent=txnsInMonth(M).filter(isScoredSpend).reduce((s,t)=>s+t.amount,0);
+  const bills=billsTotal(M);
   const lim=state.spendLimit||0, H=effectiveHourly(), income=monthIncome(M);
   /* This listed expenses only, so the headline could say "$145 put away" and the
      list underneath it would show nothing but coffee. */
@@ -3627,6 +3649,7 @@ function renderSpending(){
     limHTML=`<div class="sp-limit">
       <div class="sp-bar ${over?'over':''}"><span style="width:${over?100:pct}%"></span></div>
       <div class="sp-limnote ${over?'over':'good'}">${over?money(spent-lim)+' over your '+money(lim)+' limit':money(lim-spent)+' left of your '+money(lim)+' this month'}</div>
+      ${bills>0?`<div class="sp-bills">Plus <b>${money(bills)}</b> of bills you set to repeat, which this limit does not count - you already decided those. ${trailBtn('plan','See what repeats','ghost')}</div>`:''}
     </div>`;
   }
   const recentHTML = recent.length
@@ -3714,7 +3737,8 @@ function renderCalDay(M, allowance){
   if(calSelDay<1){ el.innerHTML='<div class="sub" style="margin-top:10px">This month hasn\'t started yet - come back and tap a day once it\'s underway.</div>'; return; }
   const [y,mo]=M.split('-').map(Number), d=calSelDay;
   const entries=dayEntries(M,d);
-  const spent=entries.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const spent=entries.filter(isScoredSpend).reduce((s,t)=>s+t.amount,0);
+  const dayBills=entries.filter(t=>t.type==='expense'&&t.recId).reduce((s,t)=>s+t.amount,0);
   const dayPut=entries.filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0);
   const isPre = calIsPre(M+'-'+String(d).padStart(2,'0'));   // declared before anything that reads it
   const saved=allowance-spent;
@@ -3727,10 +3751,16 @@ function renderCalDay(M, allowance){
          the same money, still yours, moved somewhere better. */
       const nm=(inc||inv)?escapeHtml(t.source||t.note||(inv?'Put away':'Income')):escapeHtml(t.note||catName(t.catId)||'Purchase');
       const sign=inc?'+':inv?'\u2192':'-';
-      return `<div class="ce"><span class="nm">${nm}${inv?' <span class="ce-put">put away</span>':''}</span><span class="am ${inc?'in':''}${inv?' put':''}">${sign}${money(t.amount)}</span></div>`;
+      /* Shown, and shown as not counted. Money that vanishes from a day card is
+         worse than money scored wrongly - this says which it is. */
+      const bill=!inc&&!inv&&!!t.recId;
+      return `<div class="ce${bill?' bill':''}"><span class="nm">${nm}${inv?' <span class="ce-put">put away</span>':''}${bill?' <span class="ce-bill">bill &middot; not scored</span>':''}</span><span class="am ${inc?'in':''}${inv?' put':''}${bill?' billam':''}">${sign}${money(t.amount)}</span></div>`;
     }).join('')}</div>`;
   } else {
     rows=`<div class="sub" style="margin-top:8px">Nothing logged this day - a clean ${money(allowance)} saved.</div>`;
+  }
+  if(dayBills>0){
+    rows+=`<div class="cal-billnote"><b>${money(dayBills)}</b> of that was a bill you set to repeat, so it is not counted against this day. You decided it once; the allowance is for what you are still choosing.</div>`;
   }
   const dd=M+'-'+String(d).padStart(2,'0');
   const swept=(state.sweptDays||{})[dd];
@@ -3856,12 +3886,38 @@ function ensureTrackStart(){ if(!state.trackStart){ state.trackStart=genuineTxDa
    just is not marked against a rule that had not started. The second argument is
    kept so old call sites stay valid, and deliberately ignored. */
 function calIsPre(dateStr, _hasSpend){ return !!state.trackStart && dateStr<state.trackStart; }
+/* ---------- what the allowance is actually about ----------
+   Asked directly: "is your spending streak the same as your recurring budget?"
+   It was, and it should not have been. Every expense counted against the daily
+   allowance, auto-posted bills included - so a rent of $1,250 landing on the
+   13th put that day $1,200 over and reset the streak to zero, every month,
+   forever. A streak that resets on rent day is not measuring you, it is
+   measuring the calendar. Tested before the fix: twenty clean days ran a streak
+   of 26; adding one posted rent cut it to 13.
+
+   A bill you already decided on is not a decision you make again on the day it
+   lands. The allowance is about the money you still choose, so anything the app
+   posted from a rule is excluded from the streak, the daily allowance and the
+   pace. It is still shown - on the day card and in every total - because hiding
+   money is worse than mis-scoring it; it just is not scored, in exactly the way
+   a pre-start day is shown and not scored.
+
+   The seam, stated plainly rather than hidden: a bill you type in by hand DOES
+   count, because the app cannot tell it from a purchase. Set it to repeat and it
+   stops counting, which is the behaviour worth encouraging anyway. */
+function isScoredSpend(t){ return t.type==='expense' && !t.recId; }
+function scoredSpentByDay(M){
+  const by={};
+  txnsInMonth(M).filter(isScoredSpend).forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) by[d]=(by[d]||0)+t.amount; });
+  return by;
+}
+function billsTotal(M){ return txnsInMonth(M).filter(t=>t.type==='expense'&&t.recId).reduce((s,t)=>s+t.amount,0); }
 function calElapsedDays(M){
   const [y,mo]=M.split('-').map(Number); const dim=new Date(y,mo,0).getDate();
   const tm=(typeof thisMonth==='function')?thisMonth():M;
   if(M>tm) return 0;
   const last = M===tm ? Math.min(dim, new Date().getDate()) : dim;
-  const spent={}; txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spent[d]=1; });
+  const spent={}; txnsInMonth(M).filter(isScoredSpend).forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spent[d]=1; });
   let n=0;
   for(let d=1; d<=last; d++){ if(!calIsPre(M+'-'+String(d).padStart(2,'0'), spent[d])) n++; }
   return n;
@@ -3909,8 +3965,7 @@ function renderRewardCalendar(){
   const [y,mo]=M.split('-').map(Number);
   const dim=new Date(y,mo,0).getDate(), allowance=lim/dim, firstWd=new Date(y,mo-1,1).getDay();
   const tm=thisMonth(), isCur=(M===tm), isFuture=(M>tm), todayDay=isCur?new Date().getDate():(isFuture?0:dim);
-  const spentByDay={};
-  txnsInMonth(M).filter(t=>t.type==='expense').forEach(t=>{ const d=+((t.date||'').slice(8,10)); if(d) spentByDay[d]=(spentByDay[d]||0)+t.amount; });
+  const spentByDay=scoredSpentByDay(M);
   if(calSelDay==null || calSelDay>todayDay) calSelDay=todayDay;
   const dayStr=d=>M+'-'+String(d).padStart(2,'0');
   let cells=''; for(let i=0;i<firstWd;i++) cells+=`<div class="cal-cell empty"></div>`;
@@ -6154,7 +6209,12 @@ document.getElementById('addTx').addEventListener('click',()=>{
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
   let indieCrossed=null;
   if(txType==='expense'){
-    const catId=document.getElementById('txCat').value;
+    /* Creates the category if that is what the picker was set to, so an expense
+       that fits none of the existing ones can be logged where it is being
+       typed rather than sending someone to another tab mid-entry. */
+    const catId=resolveCatChoice('txCat','txCatNew');
+    if(!catId && (document.getElementById('txCat')||{}).value==='__new'){
+      if(typeof toast==='function') toast('Name the new category and it will be made as you log this.'); return; }
     /* A hard stop in the middle of logging that names a tab and leaves you on
        this one is the worst version of this fault: the person has already typed
        the amount. Take them to it. */
@@ -6872,14 +6932,18 @@ function renderTxSheet(){
   const ttl=document.getElementById('txSheetTitle');
   if(ttl) ttl.innerHTML=`<span class="txs-amt ${t.type}">${t.type==='income'?'+':t.type==='invest'?'→':'−'}${moneyOwner(t.amount,owner)}</span><span class="txs-kind">${kind}</span>`;
 
-  const catOpts=state.categories.filter(c=>!childrenOf(c.id).length)
-    .map(c=>`<option value="${c.id}"${c.id===t.catId?' selected':''}>${escapeHtml(catName(c.id))}</option>`).join('');
+  /* The same list every other picker shows, plus the same way out of it. This
+     one used to offer leaf categories only and no way to make one, so an entry
+     filed under the wrong category could be moved but an entry that fitted none
+     of them was stuck. */
+  const catOpts=(state.categories.length?categoryOptions():'')+'<option value="__new">＋ New category…</option>';
   const srcOpts=INCOME_SOURCES.map(x=>`<option value="${x.k}"${x.k===t.srcType?' selected':''}>${escapeHtml(x.label)}</option>`).join('');
 
   const fields=`<div class="cs-sec"><div class="cs-h">The entry</div>
     <div class="txs-f"><span class="txs-k">Amount</span><span class="txs-v">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${t.amount}" data-txedit="amount"></span></div>
     <div class="txs-f"><span class="txs-k">Date</span><span class="txs-v"><input type="date" value="${escapeHtml(t.date||'')}" data-txedit="date"></span></div>
-    ${t.type==='expense'?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId">${catOpts||'<option value="">No categories yet</option>'}</select></span></div>`:''}
+    ${t.type==='expense'?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId" id="txsCat">${catOpts}</select></span></div>
+      <div class="txs-f hide" id="txsNewWrap"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" id="txsCatNew" placeholder="Name the new one" enterkeyhint="done"></span></div>`:''}
     ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>`:''}
     ${t.type==='invest'?`<div class="txs-f"><span class="txs-k">Into what</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Index fund" data-txedit="source"></span></div>
@@ -6911,6 +6975,8 @@ function renderTxSheet(){
 
   body.innerHTML=fields+energy+context+danger;
 
+  const csel=document.getElementById('txsCat');
+  if(csel) csel.value = [...csel.options].some(o=>o.value===t.catId) ? t.catId : '';
   body.querySelectorAll('[data-txedit]').forEach(el=>{
     const k=el.dataset.txedit;
     /* change, not input: re-rendering the sheet on every keystroke would take the
@@ -6918,10 +6984,28 @@ function renderTxSheet(){
     el.addEventListener('change',()=>{
       const v = k==='amount' ? parseFloat(el.value)||0 : el.value;
       if(k==='date' && !el.value) { el.value=t.date; return; }     // a blank date is not an instruction
+      /* "New category" is a request, not a value - filing a transaction under
+         the literal string __new would lose it. Ask for the name first. */
+      if(k==='catId' && v==='__new'){
+        const w=document.getElementById('txsNewWrap'), n=document.getElementById('txsCatNew');
+        if(w) w.classList.remove('hide');
+        if(n) n.focus();
+        return;
+      }
       editTx(t.id,{[k]:v});
       if(typeof toast==='function' && k==='amount') toast('Changed to '+money(parseFloat(el.value)||0)+'. Everything built on it moved with it.');
     });
   });
+  const nci=document.getElementById('txsCatNew');
+  if(nci){
+    const make=()=>{ const name=(nci.value||'').trim();
+      if(!name){ nci.style.borderColor='var(--bad)'; return; }
+      const c=findOrCreateCat(name); save(); refreshCatSelects();
+      editTx(t.id,{catId:c.id});
+      if(typeof toast==='function') toast(`Filed under "${c.name}" - it is on your plan now, waiting for an amount.`); };
+    nci.addEventListener('change',make);
+    nci.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); make(); } });
+  }
   body.querySelectorAll('[data-txenergy]').forEach(b=>b.addEventListener('click',()=>editTx(t.id,{energy:b.dataset.txenergy||undefined})));
   body.querySelectorAll('[data-txdel]').forEach(b=>b.addEventListener('click',()=>{ const id=b.dataset.txdel; closeTxSheet(); dismissOverlay(); deleteTx(id); }));
 }
@@ -10293,7 +10377,12 @@ document.getElementById('addRec').addEventListener('click',()=>{
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
   // day is kept in sync for anything still reading the old field
   const item={id:uid(),type,amount:amt,freq,anchor,day:Math.min(28,Math.max(1,+anchor.slice(8,10)||1))};
-  if(type==='expense'){ const catId=document.getElementById('recCat').value; if(!catId){ if(typeof toast==='function') toast('Needs a category first - taking you to Plan. Add one and come straight back.'); goTrail('category'); return; } item.catId=catId; }
+  if(type==='expense'){
+    const catId=resolveCatChoice('recCat','recCatNew');
+    if(!catId && (document.getElementById('recCat')||{}).value==='__new'){
+      if(typeof toast==='function') toast('Name the new category and it will be made as you set this up.'); return; }
+    if(!catId){ if(typeof toast==='function') toast('Needs a category first - taking you to Plan. Add one and come straight back.'); goTrail('category'); return; }
+    item.catId=catId; }
   else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
@@ -10348,15 +10437,67 @@ document.getElementById('postRec').addEventListener('click',()=>{
 });
 /* Every select that lists categories, refreshed from one place. Adding a category
    anywhere has to reach all of them, or a form sits there insisting you have none. */
+/* Asked from a phone, looking at a category dropdown: "what happens if it's a
+   different field? I'm not able to choose my own." Nothing happened, which was
+   the fault. Every picker offered the categories that already existed and no way
+   to make one, so an expense that fit none of them meant leaving the form,
+   crossing to Plan, adding a category, coming back and starting the entry again
+   - and the likelier outcome is that the expense simply never gets logged.
+
+   The quick-log rows had solved this already, with a "＋ New category…" option
+   and a name field that appears beside it. That affordance just never reached
+   the other three pickers. One shared option list and one shared handler now,
+   so a picker cannot quietly lose it again. */
 function refreshCatSelects(){
-  const opts=state.categories.length?categoryOptions():'<option value="">Add a category first</option>';
+  const opts=(state.categories.length?categoryOptions():'')
+    +'<option value="__new">＋ New category…</option>';
   document.querySelectorAll('#recCat, #txCat, .ql-cat').forEach(sel=>{
-    if(!sel) return;
+    if(sel.classList.contains('ql-cat')) return;   // the quick log builds its own, with its invest and income lanes
     const keep=sel.value;
     sel.innerHTML=opts;
     if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;   // do not lose a chosen category on a redraw
   });
+  document.querySelectorAll('.ql-cat').forEach(sel=>{
+    const keep=sel.value; sel.innerHTML=qlCatOptions();
+    if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;
+  });
+  syncCatNew();
 }
+/* The name field shows only while "New category" is the choice. */
+function syncCatNew(){
+  [['txCat','txCatNew'],['recCat','recCatNew']].forEach(([sid,nid])=>{
+    const sel=document.getElementById(sid), nw=document.getElementById(nid);
+    if(!sel||!nw) return;
+    nw.classList.toggle('hide', sel.value!=='__new');
+  });
+}
+/* Reads the picker, creating the category if that is what was asked for.
+   Returns the id to file against, or null if they asked for a new one and did
+   not name it - the caller must not silently file it somewhere else. */
+function resolveCatChoice(selId, newId){
+  const sel=document.getElementById(selId); if(!sel) return null;
+  if(sel.value!=='__new') return sel.value||null;
+  const nw=document.getElementById(newId);
+  const name=((nw&&nw.value)||'').trim();
+  if(!name){ if(nw){ nw.focus(); nw.style.borderColor='var(--bad)'; } return null; }
+  const c=findOrCreateCat(name);
+  if(nw){ nw.value=''; nw.style.borderColor=''; }
+  save(); refreshCatSelects(); renderBudget();
+  sel.value=c.id; syncCatNew();
+  if(typeof toast==='function') toast(`Added "${c.name}" to your plan. Give it an amount on Plan when you know one.`);
+  return c.id;
+}
+(function(){
+  document.addEventListener('change',e=>{
+    if(e.target && (e.target.id==='txCat'||e.target.id==='recCat')){
+      syncCatNew();
+      if(e.target.value==='__new'){
+        const nw=document.getElementById(e.target.id==='txCat'?'txCatNew':'recCatNew');
+        if(nw) nw.focus();
+      }
+    }
+  });
+})();
 function renderRecurring(){
   refreshCatSelects();
   const pr=document.getElementById('postRec');

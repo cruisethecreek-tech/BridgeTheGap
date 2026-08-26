@@ -304,6 +304,18 @@ button asks you to act on a time value", and a ledger row in Life mode displays
 **accessible name** where there is one, which is exactly what the control claims
 to do. A command button with no label is still judged on its text.
 
+It also holds **what the streak is allowed to score**. A posted bill must not
+reset the under-budget streak or mark its day over, the bill and the
+discretionary total have to stay two separate numbers, and the bill still has to
+appear on the day card saying it was not scored. The counter-case is asserted
+too, because it is the seam: a bill typed in **by hand** still counts, since
+nothing can tell it from a purchase.
+
+And **making a category where you are standing** - all four pickers offer it, an
+unnamed one is refused rather than filed somewhere else, naming it both logs the
+entry and puts the category on the plan, and no transaction is ever written
+against the literal "new category" choice.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
