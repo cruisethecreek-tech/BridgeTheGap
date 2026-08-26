@@ -326,6 +326,20 @@ just generated from the model, which is the thing being asked for rather than th
 thing being forbidden. Confirmed by hand-typing two options back in and watching
 it fail.
 
+It also holds **the ledger meeting the bank**. Three properties are the feature
+and the rest is presentation: a logged entry names the account it moved money
+through, the bank total does *not* move when you log (nothing came from the
+bank), and the expected balance does - on the right account only. Then the
+payoff: reconciling against what the bank actually says has to surface the
+difference as money that never got logged, and say so in words rather than
+leaving it as a number to spot.
+
+Two edges are pinned because they fail silently: a balance typed today must not
+be double-counted by entries dated today, and accepting the app's own projected
+figure must record no gap, since nothing came from outside and a gap there would
+be invented evidence. The double-count guard was confirmed by relaxing the date
+comparison and watching it fail.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
