@@ -4284,6 +4284,101 @@ check('every entry on a calendar day opens, like the same row does on Track',
       JSON.stringify(dayTap));
 check('...announced by what pressing it does', dayTap.labelled===true);
 
+/* ---- 64. the stale-reference sweep ----
+   A deep-dive audit of everything that points at something else. The pattern:
+   a list or a field holds an id, the thing it names gets deleted, and the code
+   reading it fails SILENTLY - not with an error but with a wrong number that
+   looks fine. The worst found: a dayToDay watch list left holding only deleted
+   categories made catWatched false for every real one, so the allowance watched
+   nothing, every day scored perfect, and the streak became fiction. The same
+   shape one field over: an acctId pointing at a deleted account counts toward
+   no balance AND is skipped by the backfill, so the delete-confirm's promise of
+   "a new home" was false.
+
+   Each reference is healed at three layers - the delete path, load-time
+   normalize, and (for rules) the moment of use - because any one of them alone
+   leaves a window. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  spendingMode:true, spendLimit:1500, trackStart:'2026-08-01', day1:{date:'2026-08-01'},
+  categories:[{id:'coffee',name:'Coffee'},{id:'f',name:'Food'}],
+  accounts:[{id:'live',name:'Live',kind:'checking',balance:100,updated:'2026-08-01'}],
+  /* a backup carrying every kind of ghost at once */
+  dayToDay:['ghostCat','coffee'],
+  recurring:[{id:'r',type:'expense',amount:10,catId:'f',freq:'monthly',anchor:'2026-08-05',day:5,acctId:'ghostAcct'}],
+  transactions:[{id:'t1',type:'expense',amount:50,catId:'f',date:'2026-08-20',acctId:'ghostAcct'}]});
+await p.reload(); await p.waitForTimeout(700);
+const sweep = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const out={};
+  /* load healed the backup's ghosts */
+  out.loadHealed={ dayToDay:state.dayToDay.slice(), txAcct:state.transactions.find(t=>t.id==='t1').acctId,
+                   ruleAcct:state.recurring[0].acctId };
+  /* the freed entry is an orphan the backfill can now rescue */
+  activateTab('goals'); renderAccounts(); await wait(200);
+  out.backfillOffers=/no account on/.test(document.getElementById('acctBackfill').innerText);
+  /* deleting a watched category through its sheet prunes the watch list */
+  activateTab('budget'); renderBudget(); await wait(200);
+  openCatSheet('coffee'); await wait(200);
+  document.querySelector('#catSheetBody [data-del="coffee"]').click(); await wait(300);
+  out.catDeletePrunes=state.dayToDay.length===0;
+  /* deleting an account through its confirm frees entries and rules at once */
+  state.transactions=[{id:'t2',type:'expense',amount:5,catId:'f',date:'2026-08-21',acctId:'live'}];
+  state.recurring=[{id:'r2',type:'expense',amount:5,catId:'f',freq:'monthly',anchor:'2026-08-06',day:6,acctId:'live'}];
+  save(); activateTab('goals'); renderAccounts(); await wait(200);
+  document.querySelector('[data-acctdel="live"]').click(); await wait(200);
+  document.querySelector('[data-acctdelyes="live"]').click(); await wait(300);
+  out.acctDeleteFrees={ tx:!state.transactions[0].acctId, rule:!state.recurring[0].acctId };
+  /* a rule with a dead account posts through the default at the moment of use */
+  state.accounts=[{id:'nu',name:'New',kind:'checking',balance:0,updated:'2026-08-26'}];
+  state.recurring=[{id:'r3',type:'expense',amount:7,catId:'f',freq:'monthly',anchor:'2026-08-07',day:7,acctId:'stillGhost'}];
+  state.transactions=[]; save(); postRecurring('2026-08');
+  out.postGuard=(state.transactions[0]||{}).acctId;
+  return out;
+});
+check('a loaded backup has every ghost reference healed at once',
+      sweep.loadHealed.dayToDay.join(',')==='coffee' && sweep.loadHealed.txAcct===undefined
+      && sweep.loadHealed.ruleAcct===undefined, JSON.stringify(sweep.loadHealed));
+check('...and the freed entry becomes an orphan the catch-up offers a home',
+      sweep.backfillOffers===true);
+check('deleting a watched category prunes the watch list, so it can never watch only ghosts',
+      sweep.catDeletePrunes===true);
+check('deleting an account frees its entries and rules in the same stroke',
+      sweep.acctDeleteFrees.tx===true && sweep.acctDeleteFrees.rule===true);
+check('a rule pointing at a dead account posts through the default, never the ghost',
+      sweep.postGuard==='nu', String(sweep.postGuard));
+/* The scoped-versus-total leak: the headline must never understate what left. */
+const totals = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  state.categories=[{id:'g',name:'Groceries'},{id:'c2',name:'Coffee'}];
+  state.dayToDay=['c2']; state.recurring=[];
+  state.transactions=[
+    {id:'i',type:'income',amount:3000,date:'2026-08-01',source:'Pay'},
+    {id:'big',type:'expense',amount:900,catId:'g',date:'2026-08-10'},
+    {id:'sm',type:'expense',amount:20,catId:'c2',date:'2026-08-11'}];
+  save(); applySpending(); renderSpending(); await wait(250);
+  const txt=document.getElementById('spendingBox').innerText;
+  /* innerText folds these differently per browser, so match loosely: the label
+     and the total both present, not a pinned line shape */
+  return { hasTile:/Spent this month/.test(txt), hasTotal:/\$920/.test(txt),
+           pct:(txt.match(/you've spent [^ ]+/)||[''])[0],
+           namesExcluded:/categories your plan funds/.test(txt) };
+});
+check('the spend headline states everything that left, not just the watched slice',
+      totals.hasTile && totals.hasTotal && /31%/.test(totals.pct),
+      JSON.stringify({tile:totals.hasTile, total:totals.hasTotal, pct:totals.pct}));
+check('...while the limit bar names what it excludes instead of hiding it',
+      totals.namesExcluded===true);
+/* Linked records follow an edited amount. */
+const follows = await p.evaluate(() => {
+  state.transactions=[{id:'g1',type:'expense',amount:100,catId:'g',date:'2026-08-20',note:'Gift'}];
+  state.giving=[{id:'gv',name:'Church',amount:100,date:'2026-08-20',txId:'g1'}];
+  state.impulse=[{id:'im',type:'buy',name:'Gift',amount:100,date:'2026-08-20',txId:'g1'}];
+  save(); editTx('g1',{amount:85});
+  return { giving:state.giving[0].amount, impulse:state.impulse[0].amount };
+});
+check('the Giving ledger and the Shield follow an edited amount instead of keeping the typo',
+      follows.giving===85 && follows.impulse===85, JSON.stringify(follows));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
