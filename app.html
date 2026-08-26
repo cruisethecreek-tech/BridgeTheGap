@@ -1140,6 +1140,12 @@
     border:1px solid rgba(230,178,77,.4);background:rgba(230,178,77,.08);color:var(--muted)}
   .ac-gap b{color:var(--text)}
   .ac-gap.short{border-color:rgba(var(--accent-2-rgb),.4);background:rgba(var(--accent-2-rgb),.08)}
+  .ac-backfill{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:13px 15px}
+  .bf-h{font-size:15px;font-weight:800}
+  .bf-p{font-size:13px;line-height:1.55;color:var(--muted);margin:7px 0 0}
+  .bf-p b{color:var(--text)}
+  .ac-backfill select{margin:0 2px}
+  .ac-backfill .btn{margin-top:11px}
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
 
   /* ---------- Transactions ---------- */
@@ -2511,6 +2517,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <button class="btn sm primary" id="addAcct">＋ Add</button>
           </div>
           <div id="acctList"></div>
+          <div id="acctBackfill"></div>
           <div id="acctSummary"></div>
         </div>
       </details>
@@ -8411,6 +8418,7 @@ const ACCT_PURPOSES=[
   {k:'retire', label:'Retirement'}
 ];
 function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
+let backfillAcct=null;
 function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
 /* ---------- the ledger and the bank, finally introduced ----------
    Asked directly: "how do I change my bank balance to reflect the income I
@@ -8912,6 +8920,44 @@ function renderAccounts(){
     if(typeof captureSnapshot==='function') captureSnapshot();
     renderAccounts(); renderNetWorth(); renderHome();
   }));
+  /* ---- the one-time catch-up ----
+     Everything logged before accounts carried one has no account on it, so it
+     counts toward nothing. Rather than leaving that history stranded, offer to
+     file it in one move - and say, before it happens, exactly what it will do to
+     the expected balance, which is usually far less than people fear: only
+     entries dated AFTER an account's balance date can move it at all, so filing
+     a year of old history typically moves the number by nothing. */
+  const back=document.getElementById('acctBackfill');
+  if(back){
+    const orphans=state.transactions.filter(t=>!t.acctId);
+    if(!accts.length || !orphans.length){ back.innerHTML=''; }
+    else {
+      const target=(state.accounts||[]).find(a=>a.id===(backfillAcct||defaultAcctId()))||accts[0];
+      const willMove=orphans.filter(t=>(t.date||'')>(target.updated||''))
+        .reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+      const picker = accts.length>1
+        ? `<select id="backfillPick">${acctOptions(target.id)}</select>` : `<b>${escapeHtml(target.name)}</b>`;
+      back.innerHTML=`<div class="ac-backfill">
+        <div class="bf-h"><b>${orphans.length}</b> entr${orphans.length===1?'y has':'ies have'} no account on ${orphans.length===1?'it':'them'}</div>
+        <p class="bf-p">Anything logged before accounts existed counts toward nothing. File ${orphans.length===1?'it':'them all'} to ${picker} in one move.</p>
+        <p class="bf-p">${Math.abs(willMove)>0.005
+          ? `This will move ${escapeHtml(target.name)}'s expected balance by <b>${willMove>=0?'+':'&minus;'}${usd(Math.abs(willMove))}</b> - only the ${orphans.filter(t=>(t.date||'')>(target.updated||'')).length} dated after ${target.updated||'its balance date'} can affect it. The rest is history, and history does not move a balance you have already checked.`
+          : `Every one of them is dated on or before ${target.updated||'its balance date'}, so the expected balance will not move at all. They just stop being homeless.`}</p>
+        <button class="btn sm primary" id="backfillGo">File ${orphans.length===1?'it':'them'} to ${escapeHtml(target.name)}</button>
+      </div>`;
+      const pick=document.getElementById('backfillPick');
+      if(pick) pick.addEventListener('change',()=>{ backfillAcct=pick.value; renderAccounts(); });
+      const go=document.getElementById('backfillGo');
+      if(go) go.addEventListener('click',()=>{
+        const n=orphans.length;
+        orphans.forEach(t=>{ t.acctId=target.id; });
+        backfillAcct=null; save();
+        if(typeof captureSnapshot==='function') captureSnapshot();
+        renderAccounts(); renderNetWorth(); renderTx(); renderHome();
+        if(typeof toast==='function') toast(`${n} entr${n===1?'y':'ies'} filed to ${target.name}. Every one of them can be moved individually on Track if any belongs somewhere else.`);
+      });
+    }
+  }
   const sum=document.getElementById('acctSummary'); if(!sum) return;
   if(!accts.length){ sum.innerHTML=''; return; }
   const em=earmarked('emergency'), col=earmarked('college'), ess=essentialMonthly();

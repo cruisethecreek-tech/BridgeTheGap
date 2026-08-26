@@ -334,6 +334,13 @@ payoff: reconciling against what the bank actually says has to surface the
 difference as money that never got logged, and say so in words rather than
 leaving it as a number to spot.
 
+The **one-time catch-up** that files account-less history is checked on its
+promise rather than its mechanism: the preview names how far the expected balance
+will move, and the actual move has to match it to the cent. A bulk action that
+surprises you with the size of its own effect is worse than no bulk action. It
+also has to stop offering itself once nothing is homeless, and never appear when
+there is no account to file to.
+
 Two edges are pinned because they fail silently: a balance typed today must not
 be double-counted by entries dated today, and accepting the app's own projected
 figure must record no gap, since nothing came from outside and a gap there would

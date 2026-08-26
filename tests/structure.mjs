@@ -3902,6 +3902,64 @@ check('a balance set today is not double-counted by what was logged today',
 check('bills the app posts itself name an account too, or the expectation ignores them',
       bankEdges.postedCarryAccount===true);
 
+/* ---- 59. the one-time catch-up ----
+   Everything logged before transactions carried an account has none, so it
+   counts toward nothing - and telling somebody to re-enter a year of history is
+   not an answer. One move files it all. The property that matters is not that it
+   works but that it TELLS THE TRUTH FIRST: the preview names exactly how far the
+   expected balance will move, and the move has to match. A bulk action that
+   surprises you with the size of its own effect is worse than no bulk action. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-20'},
+            {id:'sav',name:'Savings',kind:'savings',balance:9000,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'}],
+  transactions:[
+    {id:'old1',type:'income',amount:3200,date:'2026-07-01',source:'Paycheck'},
+    {id:'old2',type:'expense',amount:900,catId:'f',date:'2026-07-05'},
+    {id:'new1',type:'expense',amount:120,catId:'f',date:'2026-08-24'},
+    {id:'has',type:'expense',amount:10,catId:'f',date:'2026-08-25',acctId:'chk'}]});
+await p.reload(); await p.waitForTimeout(700);
+const bf = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); renderAccounts(); await wait(250);
+  const box=document.getElementById('acctBackfill');
+  const out={ offered:!!document.getElementById('backfillGo'),
+              counts:/3 entries/.test(box.innerText),
+              /* the promise, read off the screen before anything happens */
+              promised:(box.innerText.match(/by\s*[-−+]?\$[\d,.]+/)||[''])[0],
+              expectedBefore:acctExpected(state.accounts[0]),
+              bankBefore:bankTotal() };
+  document.getElementById('backfillGo').click(); await wait(300);
+  out.after={ orphans:state.transactions.filter(t=>!t.acctId).length,
+              expected:acctExpected(state.accounts[0]),
+              bank:bankTotal() };
+  out.moved=Math.round((out.after.expected-out.expectedBefore)*100)/100;
+  renderAccounts(); await wait(150);
+  out.offerGone=document.getElementById('acctBackfill').innerText.trim()==='';
+  return out;
+});
+check('history with no account on it is offered a home, counted honestly',
+      bf.offered===true && bf.counts===true, bf.promised);
+check('...the preview names how far the expected balance will move',
+      /120/.test(bf.promised), bf.promised);
+check('...and the move is exactly what was promised, not a surprise',
+      bf.moved===-120, `promised ${bf.promised}, moved ${bf.moved}`);
+check('...only entries after the balance date can move it - the rest is just history',
+      bf.after.expected===1870 && bf.expectedBefore===1990,
+      `${bf.expectedBefore} -> ${bf.after.expected}`);
+check('...the bank total is untouched, because nothing came from the bank',
+      bf.after.bank===bf.bankBefore && bf.after.bank===11000);
+check('...nothing is left homeless, and the offer stops being made',
+      bf.after.orphans===0 && bf.offerGone===true);
+/* It must not appear with nowhere to file to. */
+const bfNone = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  state.accounts=[]; state.transactions=[{id:'z',type:'expense',amount:5,catId:'f',date:'2026-08-24'}];
+  save(); renderAccounts(); await wait(200);
+  return document.getElementById('acctBackfill').innerText.trim();
+});
+check('...and is never offered when there is no account to file to', bfNone==='', bfNone.slice(0,50));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
