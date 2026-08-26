@@ -3275,8 +3275,15 @@ function knownSources(){
   const add=(name,srcType,acctId,fromRule)=>{
     const n=(name||'').trim(); if(!n) return;
     const key=n.toLowerCase();
-    if(seen.has(key)){ /* a rule outranks a past entry for the same name */
-      if(fromRule){ const e=out.find(x=>x.name.toLowerCase()===key); if(e){ e.fromRule=true; if(srcType) e.srcType=srcType; if(acctId) e.acctId=acctId; } }
+    if(seen.has(key)){
+      const e=out.find(x=>x.name.toLowerCase()===key); if(!e) return;
+      /* a rule outranks a past entry for the same name - but either may fill a
+         blank the other left. A rule stores no srcType, so without this,
+         picking a stream the rules own would never fill the Type even though
+         every past entry of it carries one. */
+      if(fromRule) e.fromRule=true;
+      if(srcType && !e.srcType) e.srcType=srcType;
+      if(acctId && !e.acctId) e.acctId=acctId;
       return; }
     seen.add(key); out.push({name:n, srcType:srcType||'', acctId:acctId||'', fromRule:!!fromRule});
   };
@@ -3407,6 +3414,19 @@ function normalizeState(s){
      backup cannot carry an Invested-capital figure that disagrees with the
      transactions underneath it. */
   if(typeof syncInvestAsset==='function' && Array.isArray(s.transactions)) syncInvestAsset(s);
+  /* The stale-reference sweep for everything that points at something else.
+     Found by audit, and the first one was severe: a dayToDay list left holding
+     only deleted categories made catWatched false for every real one - the
+     allowance watched NOTHING, every day scored perfect, and the streak became
+     fiction. An acctId pointing at a deleted account is the same shape one
+     field over: the entry counts toward no balance, and because it is not
+     empty, the backfill never offers it a home - clearing it is what turns a
+     dangling pointer back into an orphan the catch-up can rescue. */
+  const catIds=new Set((s.categories||[]).map(c=>c.id));
+  s.dayToDay=(s.dayToDay||[]).filter(id=>catIds.has(id));
+  const accIds=new Set((s.accounts||[]).map(a=>a.id));
+  (s.transactions||[]).forEach(t=>{ if(t.acctId && !accIds.has(t.acctId)) delete t.acctId; });
+  (s.recurring||[]).forEach(r=>{ if(r.acctId && !accIds.has(r.acctId)) delete r.acctId; });
   const goalIds=new Set((s.goals||[]).map(g=>g.id));
   (s.goals||[]).forEach(g=>{ if(!(g.target>0)) g.target=Math.max(1,+g.target||1000); if(g.saved>g.target) g.saved=g.target; if(!(g.saved>=0)) g.saved=0; });
   if(s.sweptDays) Object.keys(s.sweptDays).forEach(k=>{ if(!goalIds.has(s.sweptDays[k].goalId)) delete s.sweptDays[k]; });
@@ -3740,7 +3760,15 @@ function renderSpending(){
   /* The same definition as the daily allowance, or the two contradict each
      other on the same screen: a limit bar that counts rent while the streak
      above it does not is two different answers to one question. */
+  /* Two figures, because they answer two questions. totalSpent is every dollar
+     that actually left this month - the tile, the life-hours line and the
+     "of your income" sentence must not understate it, or scoping the allowance
+     down to coffee makes the headline claim you spent 1% of a month in which
+     $900 of groceries left. The scoped figure belongs only to the limit bar,
+     which is explicitly measuring the watched slice and names what it left out. */
+  const totalSpent=monthExpense(M);
   const spent=txnsInMonth(M).filter(isScoredSpend).reduce((s,t)=>s+t.amount,0);
+  const planned=Math.max(0, totalSpent-spent-billsTotal(M));
   const bills=billsTotal(M);
   const lim=state.spendLimit||0, H=effectiveHourly(), income=monthIncome(M);
   /* This listed expenses only, so the headline could say "$145 put away" and the
@@ -3748,7 +3776,7 @@ function renderSpending(){
   const recent=state.transactions.filter(t=>t.type==='expense'||t.type==='invest').slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,5);
   let incHTML='';
   if(income>0){
-    const pct=Math.round(spent/income*100), left=Math.max(0,income-spent);
+    const pct=Math.round(totalSpent/income*100), left=Math.max(0,income-totalSpent);
     incHTML=`<div class="sp-income">Of your <b>${money(income)}</b> income this month, you've spent <b>${pct}%</b> - <b>${money(left)}</b> still in hand.</div>`;
   }
   let limHTML='';
@@ -3757,7 +3785,7 @@ function renderSpending(){
     limHTML=`<div class="sp-limit">
       <div class="sp-bar ${over?'over':''}"><span style="width:${over?100:pct}%"></span></div>
       <div class="sp-limnote ${over?'over':'good'}">${over?money(spent-lim)+' over your '+money(lim)+' limit':money(lim-spent)+' left of your '+money(lim)+' this month'}</div>
-      ${bills>0?`<div class="sp-bills">Plus <b>${money(bills)}</b> of bills you set to repeat, which this limit does not count - you already decided those. ${trailBtn('plan','See what repeats','ghost')}</div>`:''}
+      ${bills>0||planned>0?`<div class="sp-bills">${bills>0?`Plus <b>${money(bills)}</b> of bills you set to repeat`:''}${bills>0&&planned>0?' and ':planned>0?'Plus ':''}${planned>0?`<b>${money(planned)}</b> in categories your plan funds`:''} - this limit does not count ${bills>0&&planned>0?'them':'that'}, because you already decided ${bills>0&&planned>0?'them':'it'}. ${trailBtn('plan','See the plan','ghost')}</div>`:''}
     </div>`;
   }
   const recentHTML = recent.length
@@ -3806,9 +3834,9 @@ function renderSpending(){
   const everPut=(typeof investedAllTime==='function')?investedAllTime():0;
   box.innerHTML=`<div class="panel spending">
     <div class="sp-top">
-      <div><div class="sp-k">Spent this month</div><div class="sp-spent">${actMoney(spent)}</div></div>
+      <div><div class="sp-k">Spent this month</div><div class="sp-spent">${actMoney(totalSpent)}</div></div>
       ${putAway>0?`<div><div class="sp-k">Put away</div><div class="sp-spent good">${actMoney(putAway)}</div></div>`:''}
-      ${H>0?`<div style="text-align:right"><div class="sp-k">That's</div><div style="font-weight:800">${fmtHours(spent/H)} of life</div></div>`:''}
+      ${H>0?`<div style="text-align:right"><div class="sp-k">That's</div><div style="font-weight:800">${fmtHours(totalSpent/H)} of life</div></div>`:''}
     </div>
     ${putAway>0
       ? `<div class="sp-kept">${escapeHtml(putAwayLine(putAway,spent,H))}</div>`
@@ -6164,6 +6192,7 @@ function wirePlan(box, isMain){
     const id=btn.dataset.del;
     const toRemove=new Set([id,...descendantsOf(id).map(k=>k.id)]);   // the whole subtree goes, all three levels
     state.categories=state.categories.filter(c=>!toRemove.has(c.id));
+    state.dayToDay=(state.dayToDay||[]).filter(x=>!toRemove.has(x));   // a watch list of ghosts watches nothing
     Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
     // keep transactions for history; they become "Uncategorized"
     save(); planRefresh(); renderTx();
@@ -7157,7 +7186,14 @@ function closeTxSheet(){ txSheetId=null; const el=document.getElementById('txShe
    later as a number nobody can trace. */
 function editTx(id, patch){
   const t=state.transactions.find(x=>x.id===id); if(!t) return;
-  if('amount' in patch) t.amount=Math.max(0,+patch.amount||0);
+  if('amount' in patch){
+    t.amount=Math.max(0,+patch.amount||0);
+    /* The records that mirror this transaction move with it, or the Giving
+       ledger and the Shield quietly keep the typo after the typo is fixed. Same
+       principle as the invest asset: linked things follow the ledger. */
+    (state.giving||[]).forEach(g=>{ if(g.txId===t.id) g.amount=t.amount; });
+    (state.impulse||[]).forEach(i=>{ if(i.type==='buy'&&i.txId===t.id) i.amount=t.amount; });
+  }
   ['date','note','source','catId','srcType','srcLabel','energy','ikind','acctId'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
   /* Covers the amount AND the kind: flipping "still yours" to "into you" takes
      the money out of the holding, and flipping it back puts it in. */
@@ -9141,7 +9177,15 @@ function renderAccounts(){
   box.querySelectorAll('button[data-acctdelno]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=null; renderAccounts(); }));
   box.querySelectorAll('button[data-acctdelyes]').forEach(b=>b.addEventListener('click',()=>{
     acctDelId=null;
-    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdelyes); save();
+    const gone=b.dataset.acctdelyes;
+    state.accounts=(state.accounts||[]).filter(x=>x.id!==gone);
+    /* The confirm promised these entries could be given a new home. A dangling
+       acctId is worse than none - it counts toward nothing AND the backfill
+       skips it, so the promise would be false. Freed, they become orphans and
+       the catch-up card appears offering exactly that home. */
+    state.transactions.forEach(t=>{ if(t.acctId===gone) delete t.acctId; });
+    (state.recurring||[]).forEach(r=>{ if(r.acctId===gone) delete r.acctId; });
+    save();
     if(typeof captureSnapshot==='function') captureSnapshot();
     renderAccounts(); renderNetWorth(); renderTx(); renderHome();
   }));
@@ -11110,7 +11154,7 @@ function postRecurring(month){
          entries the app wrote on your behalf. Falls back to the default rather
          than nothing, because a rule set up before accounts existed still lands
          somewhere real. */
-      const raid=r.acctId||defaultAcctId();
+      const raid=(r.acctId && (state.accounts||[]).some(a=>a.id===r.acctId)) ? r.acctId : defaultAcctId();
       if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id}; if(r.owner) tx.owner=r.owner; if(raid) tx.acctId=raid; state.transactions.push(tx); }
       else if(r.type==='invest'){ const ik=r.ikind||'holds'; const tx={id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik}; if(raid) tx.acctId=raid; state.transactions.push(tx); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
       else { const tx={id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:recTxNote(r),recId:r.id}; if(raid) tx.acctId=raid; state.transactions.push(tx); }

@@ -387,6 +387,16 @@ spend-mode user has no plan to hand off to), and the whole thing has to be
 reversible. Plus the small one from the same message: every entry on a calendar
 day has to open, like the identical row on Track always did.
 
+And **the stale-reference sweep**: a backup carrying every kind of ghost at once
+(a watch list naming a deleted category, a transaction and a rule naming a
+deleted account) has to come back healed on load, the freed entry has to become
+an orphan the catch-up offers a home, deleting a watched category has to prune
+the watch list, deleting an account has to free its entries and rules in the
+same stroke, and a rule pointing at a dead account has to post through the
+default. Plus the two leaks the same audit found: the spend headline must state
+everything that left rather than the watched slice, and the Giving ledger and
+Shield must follow an edited amount instead of keeping the typo.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
