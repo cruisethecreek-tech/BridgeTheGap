@@ -1395,6 +1395,28 @@
   .unit-sel{margin-left:6px;padding:6px 8px;border-radius:9px;border:1px solid var(--line);
     background:var(--panel-2);color:var(--text);font:inherit;font-size:13px;font-weight:700;max-width:150px}
   .unit-work{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  .own-note{flex-basis:100%;margin:2px 0 0;padding:9px 11px;border-radius:10px;
+    border:1px solid var(--line);background:rgba(var(--accent-rgb),.06);
+    font-size:12.5px;line-height:1.5;color:var(--muted);overflow-wrap:break-word}
+  .own-note b{color:var(--text)}
+  /* The assign field is the one people touch most and it was the only money
+     field in the app with no rhythm attached to it. It is a .ufld now, so it
+     carries the same period picker as every other amount - which means the
+     column layout wins over the old flat row, and cs-assign only keeps the box. */
+  .ufld.cs-assign{align-items:stretch;justify-content:flex-start}
+  /* Price the habit. Two numbers and a rhythm, multiplied out loud. */
+  .cs-rate{margin-top:8px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:11px;padding:10px 12px}
+  .cs-rk{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:8px}
+  .cs-rrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--muted);font-weight:700}
+  .cs-rrow input{width:66px;min-width:0;padding:8px 9px;font-size:15px;font-weight:800}
+  .cs-rrow select{padding:8px 9px;border-radius:9px;border:1px solid var(--line);
+    background:var(--ink);color:var(--text);font:inherit;font-size:13px;font-weight:700;max-width:150px}
+  .cs-rout{margin-top:9px;font-size:12.5px;line-height:1.5;color:var(--muted);overflow-wrap:break-word}
+  .cs-rout b{color:var(--text)}
+  .cs-rout .sub{opacity:.85}
+  .cs-rate #crUse{display:block;width:100%;margin-top:9px}
+  .cs-rate #crUse[disabled]{opacity:.45;cursor:not-allowed}
   /* Tripwires. The truth box leads, deliberately: someone reading "get a warning
      when you open Amazon" needs to know within one sentence that the app is not
      watching them. */
@@ -2231,7 +2253,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <input class="cat-new hide" id="recCatNew" type="text" placeholder="Name the new one"></label>
           <label class="fld hide" id="recAcctWrap">Which account<select id="recAcct"></select></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
-          <label class="fld income-only-rec household-only hide" id="recOwnerWrap">Earned by<select id="recOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select></label>
+          <label class="fld income-only-rec hide" id="recOwnerWrap">Whose money<select id="recOwner"><option value="a">Mine</option><option value="b">Partner</option><option value="joint">Both of us</option></select></label>
           <div class="ufld income-only-rec hide" id="recHoursWrap"><span class="fl-k">Hours it takes<span id="recHoursUnit"></span></span>
             <span class="fl-in"><input type="number" id="recHours" min="0" step="0.5" inputmode="decimal" placeholder="opt." style="width:90px"></span>
             <div class="unit-work" id="recHoursW"></div></div>
@@ -2291,9 +2313,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <select id="txSrcType"></select>
             <input class="cat-new hide" id="txSrcOther" type="text" placeholder="Call it what it is">
           </label>
-          <label class="fld income-only household-only hide" id="fldOwner">Earned by
-            <select id="txOwner"><option value="a">You</option><option value="b">Partner</option><option value="joint">Joint</option></select>
+          <label class="fld income-only hide" id="fldOwner">Whose money
+            <select id="txOwner"><option value="a">Mine</option><option value="b">Partner</option><option value="joint">Both of us</option></select>
           </label>
+          <div class="own-note hide" id="txOwnerNote"></div>
           <label class="fld income-only hide" id="fldHours">Hours it took
             <input type="number" id="txHours" min="0" step="0.5" placeholder="opt." style="width:90px">
           </label>
@@ -3343,16 +3366,31 @@ function incomeSourceOptions(sel){
   return INCOME_SOURCES.map(x=>`<option value="${x.k}"${x.k===sel?' selected':''}>${escapeHtml(x.label)}</option>`).join('');
 }
 function isIndependent(srcType){ return !!srcType && srcType!=='primary'; }
+/* Type says what KIND of money it is; owner says whose it is. Independence is
+   both: a partner's freelance cheque is real freelance income and it is not your
+   escape from a primary job, so it must not fill your independence bar. Asked
+   from a phone - "this was my spouse's income and therefore it contributes to my
+   balance but not my working hours." Exactly right, and it goes further than the
+   hours: it should not count as something you built either. */
+function isIndieTx(t){ return !!t && t.type==='income' && isIndependent(t.srcType) && (t.owner||'a')==='a'; }
+/* What choosing anything but "Mine" actually changes, said where the choice is
+   made rather than in a settings page nobody opened. */
+function ownerNoteHTML(owner){
+  const nb=state.nameB||'Partner';
+  if(owner==='b') return `Counts in the balance and in every month total, and stays out of <b>your</b> true hourly rate and your independence milestones. ${escapeHtml(nb)} earned those hours, not you.`;
+  if(owner==='joint') return `Counts in the balance and in every month total. It stays out of <b>your</b> true hourly rate, because splitting it in half would be inventing a number neither of you earned.`;
+  return '';
+}
 function isYieldSrc(k){ return !!(INCOME_SOURCES.find(x=>x.k===k)||{}).yield; }
 function yieldTotal(month){
   const list=month?txnsInMonth(month):state.transactions;
   return list.filter(t=>t.type==='income'&&isYieldSrc(t.srcType)).reduce((s,t)=>s+t.amount,0);
 }
-function indieTotal(){ return state.transactions.filter(t=>t.type==='income'&&isIndependent(t.srcType)).reduce((s,t)=>s+t.amount,0); }
+function indieTotal(){ return state.transactions.filter(isIndieTx).reduce((s,t)=>s+t.amount,0); }
 const INDIE_MILES=[50,500,1000,5000];
 function offenseDefense(M){
   const inc=txnsInMonth(M).filter(t=>t.type==='income');
-  const indieIncome=inc.filter(t=>isIndependent(t.srcType)).reduce((s,t)=>s+t.amount,0);
+  const indieIncome=inc.filter(isIndieTx).reduce((s,t)=>s+t.amount,0);
   const skillInvest=(state.skills||[]).filter(s=>monthOf(s.date)===M).reduce((a,s)=>a+(s.cost||0),0);
   const offense=indieIncome+skillInvest;
   /* "Visa" under a parent named "Debt Payments" is a debt payment - the name
@@ -3430,7 +3468,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, dayToDay:[], sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
+           spendingMode:false, spendLimit:0, dayToDay:[], rateDraft:null, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[],
            investReturn:7, investYears:10, lev:{}, theme:'auto',
@@ -3449,6 +3487,7 @@ function normalizeState(s){
      backup or a future build, and it takes the whole stage bar down with it -
      one clamp is cheaper than a defensive read at every place stages are drawn. */
   s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
+  s.rateDraft=null;
   /* And heal the auto asset against the ledger, so an imported or hand-edited
      backup cannot carry an Invested-capital figure that disagrees with the
      transactions underneath it. */
@@ -3724,7 +3763,9 @@ function renderHousehold(){
 }
 function renderHouseholdLabels(){
   document.querySelectorAll('#txOwner, #recOwner').forEach(sel=>{
-    if(sel && sel.options.length>=2){ sel.options[0].textContent=state.nameA||'You'; sel.options[1].textContent=state.nameB||'Partner'; }
+    if(sel && sel.options.length>=2){
+      sel.options[0].textContent=(state.nameA&&state.nameA!=='You')?state.nameA:'Mine';
+      sel.options[1].textContent=state.nameB||'Partner'; }
   });
   const na=document.getElementById('hhNameA'), nb=document.getElementById('hhNameB'), wb=document.getElementById('hhWageB');
   if(na&&document.activeElement!==na) na.value=(state.nameA&&state.nameA!=='You')?state.nameA:'';
@@ -3737,6 +3778,7 @@ function applyHousehold(){
   const hf=document.getElementById('hhFields'); if(hf) hf.style.display=on?'':'none';
   const cb=document.getElementById('hhOn'); if(cb) cb.checked=on;
   renderHouseholdLabels(); renderHousehold();
+  if(typeof drawOwnerNote==='function') drawOwnerNote();
   if(typeof renderSync==='function') renderSync();
 }
 
@@ -4421,12 +4463,29 @@ function inOutRead(m){
   if(seeded>0 && inc>0) out+=`<span class="cr-flag"><b>${money(seeded)}</b> of that income (${Math.round(seeded/inc*100)}%) was written by the setup chat rather than logged by you. If it never actually landed, this bar is taller than your life was.${trailBtn('income','Open the log','ghost')}</span>`;
   return out;
 }
-function ledgerRead(m,bal,prev){
+/* Two figures sit inches apart on this card - the running total at whichever
+   point you tapped, and the all-time total in the legend under the chart - and
+   until you tap the LAST point they do not match. Reported from a phone with
+   both circled in red: "these numbers don't agree." They do agree; the card just
+   never said what the gap was. So it says it now, in both directions - what has
+   been logged since the month you picked, and, when you pick the last month,
+   that this is the same figure as the one below. */
+function ledgerRead(m,bal,prev,latest,isLast,since){
   const inc=monthIncome(m), exp=monthExpense(m), inv=monthInvested(m);
   const move=prev==null?null:bal-prev;
   let out=`<b>${fmtMonth(m)}</b> &middot; running total <b>${money(bal)}</b>`;
   if(move!=null) out+=` &middot; ${move>=0?'up':'down'} <b>${money(Math.abs(move))}</b> that month`;
   out+=`.<span class="cr-bits">${money(inc)} in &minus; ${money(exp)} out${inv>0?` &minus; ${money(inv)} put away`:''} = ${money(inc-exp-inv)} for the month</span>`;
+  if(latest!=null){
+    const gap=Math.round((latest-bal)*100)/100;
+    if(isLast){
+      out+=`<span class="cr-bits">Last point on the line, so this is the same <b>${money(latest)}</b> as the all-time figure below.</span>`;
+    } else if(Math.abs(gap)<0.005){
+      out+=`<span class="cr-bits">Nothing has moved since${since?` across ${escapeHtml(since)}`:''}, so the all-time figure below is the same <b>${money(latest)}</b>.</span>`;
+    } else {
+      out+=`<span class="cr-bits">${since?`${escapeHtml(since)} since then: `:'Since then: '}<b>${gap>=0?'up':'down'} ${money(Math.abs(gap))}</b>, which is why the all-time figure below reads <b>${money(latest)}</b>.</span>`;
+    }
+  }
   out+=`<span class="cr-note">This line is every transaction ever logged, added up to that point. It is not your bank balance and it is not net worth.</span>`;
   return out;
 }
@@ -5602,7 +5661,7 @@ function wireRepeat(box){
       /* Send them to the number first - and to the copy of it they are actually
          looking at. The tick now lives in the category sheet, so pointing at the
          list underneath would scroll a field they cannot see. */
-      setTimeout(()=>{ const inp=document.querySelector('#catSheet.on input[data-cat="'+id+'"]')
+      setTimeout(()=>{ const inp=(document.querySelector('#catSheet.on')&&document.getElementById('csA'+id))
                           || document.querySelector('#cats input[data-cat="'+id+'"]');
         if(inp){ inp.scrollIntoView({behavior:'smooth',block:'center'}); inp.focus(); inp.select&&inp.select(); } },80);
       if(typeof toast==='function') toast('Give it an amount first - then it can repeat that amount.');
@@ -6324,6 +6383,55 @@ function catMonthHistory(id,n){
   for(let i=0;i<n;i++){ out.unshift({m, a:catAssigned(id,m), s:catUsed(id,m)}); m=shiftMonth(m,-1); }
   return out;
 }
+/* ---------- how many times, at how much ----------
+   From a phone, on a category assigned $150: "assign this month should hold the
+   frequency of how many times per week. They go to get for example a coffee.
+   It's hard for people to plan with just one set number if they don't have the
+   options to make a rational decision."
+
+   Two separate gaps, and the first one really had been lost: every other money
+   field in the app carries a period picker - the spending limit, the debt
+   payment, the true-rate fields - and the one people touch most, the category
+   assignment, never got one. $35 a week is a thought; $151.67 a month is
+   arithmetic homework.
+
+   The second gap is the one that makes it a decision rather than a guess.
+   Nobody decides "$104 of coffee". They decide "three a week, about six
+   dollars" and want to know what that costs. So the builder does that
+   multiplication out loud and offers the answer - and because it names the two
+   numbers behind it, cutting the habit becomes a thing you can price rather
+   than a number you shave. */
+function rateMonthly(st){
+  const n=+st.n||0, amt=+st.amt||0;
+  const per=PERIODS.find(x=>x.k===st.per)||PERIODS.find(x=>x.k==='week');
+  return { n, amt, per, monthly: n>0&&amt>0 ? Math.round(n*amt*per.per*100)/100 : 0 };
+}
+function rateOutHTML(st){
+  const {n,amt,per,monthly}=rateMonthly(st);
+  return monthly>0
+    ? `<b>${n} &times; ${usd(amt)} ${escapeHtml(per.label)}</b> works out to <b>${money(monthly)}</b> a month${state.hourlyWage>0?` &middot; ${fmtHours(monthly/effectiveHourly())} of your life`:''}.`
+    : `<span class="sub">Fill both and this works out the month for you.</span>`;
+}
+function rateBuilderHTML(c){
+  const st=(state.rateDraft&&state.rateDraft.id===c.id)?state.rateDraft:{n:'',per:'week',amt:''};
+  const {monthly}=rateMonthly(st);
+  const per=PERIODS.find(x=>x.k===st.per)||PERIODS.find(x=>x.k==='week');
+  /* The button is always in the dom and never re-rendered from scratch. The
+     first draft only drew it once the numbers were complete, which on a phone
+     meant your first tap landed where a button was about to be. */
+  return `<div class="cs-rate">
+    <div class="cs-rk">Not sure what to put? Price the habit.</div>
+    <div class="cs-rrow">
+      <input type="number" id="crN" min="0" step="1" inputmode="decimal" placeholder="3" value="${st.n||''}" aria-label="How many times">
+      <span>times</span>
+      <select id="crPer" aria-label="How often">${['day','week','biweek','month'].map(periodMeta).map(pp=>`<option value="${pp.k}"${pp.k===per.k?' selected':''}>${escapeHtml(pp.label)}</option>`).join('')}</select>
+      <span>at $</span>
+      <input type="number" id="crAmt" min="0" step="0.01" inputmode="decimal" placeholder="6" value="${st.amt||''}" aria-label="How much each time">
+    </div>
+    <div class="cs-rout" id="crOut">${rateOutHTML(st)}</div>
+    <button class="btn sm primary" id="crUse"${monthly>0?'':' disabled'}>${monthly>0?`Assign ${money(monthly)}`:'Assign it'}</button>
+  </div>`;
+}
 function renderCatSheet(){
   const body=document.getElementById('catSheetBody'); if(!body) return;
   const c=state.categories.find(x=>x.id===catSheetId);
@@ -6342,6 +6450,10 @@ function renderCatSheet(){
      into next month, and a row labelled "from last month" would be inventing a
      number the arithmetic behind it does not support. What the month held is
      what the month held. */
+  /* Per category, so the unit is remembered per category: coffee is a
+     per-week thought and rent is a per-month one, and forcing one rhythm on
+     both is what made this field hard to plan with. */
+  const aid='csA'+c.id;
   const balance=`<div class="cs-sec"><div class="cs-h">Balance</div>
     <div class="cs-card">
       <div class="cs-row"><span>Assigned for ${monShort(M)}</span><b>${money(a)}</b></div>
@@ -6351,7 +6463,12 @@ function renderCatSheet(){
       <div class="cs-row big"><span>Available</span><b class="avail ${rem<0?'over':(a>0?(rem>0?'good':'spent'):'none')}">${money(rem)}</b></div>
       <div class="bar"><span style="width:${pct}%"></span></div>
     </div>
-    ${!isGroup?`<div class="cs-assign"><span class="cs-k">Assign this month</span><span class="cs-in">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span></div>`
+    ${!isGroup?`<div class="ufld cs-assign">
+        <span class="fl-k">Assign<span id="${aid}Unit"></span></span>
+        <span class="fl-in">$<input type="number" id="${aid}" inputmode="decimal" min="0" step="0.01" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <div class="unit-work" id="${aid}W"></div>
+      </div>
+      ${rateBuilderHTML(c)}`
       :`<p class="cs-note">This is a pool. Its number is whatever its subcategories add up to${own>0?`, plus the ${money(own)} you put straight against it`:''}. Assign inside the subs below.</p>`}
     ${rem<0?`<div class="rebalance"><div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
       <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div></div>`:''}
@@ -6421,6 +6538,33 @@ function renderCatSheet(){
     <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button></div>`;
 
   body.innerHTML=rename+balance+target+subs+whereLives+history+wallGuideHTML(c,M)+danger;
+  if(!isGroup){
+    /* Speaks monthly through get/set like every other unit field, so whatever
+       rhythm is on screen the stored number stays the month - the invariant the
+       whole plan is built on. */
+    wireUnitField({id:aid, dflt:'month', kinds:['day','week','biweek','month','year'],
+      get:()=>assignedFor(c.id,M),
+      set:v=>{ budgetFor(M)[c.id]=Math.max(0,Math.round(v*100)/100); save(); renderBudget(); renderHome(); }});
+    const draft=()=>{ const d=state.rateDraft&&state.rateDraft.id===c.id?state.rateDraft:{id:c.id,n:'',per:'week',amt:''};
+      d.id=c.id; state.rateDraft=d; return d; };
+    const nEl=document.getElementById('crN'), pEl=document.getElementById('crPer'), aEl=document.getElementById('crAmt');
+    const outEl=document.getElementById('crOut'), use=document.getElementById('crUse');
+    /* Patch the readout in place rather than re-render the sheet: a full redraw
+       on every keystroke would take the keyboard down mid-number. */
+    const sync=()=>{ const d=draft(); d.n=nEl.value; d.per=pEl.value; d.amt=aEl.value;
+      const {monthly}=rateMonthly(d);
+      if(outEl) outEl.innerHTML=rateOutHTML(d);
+      if(use){ use.disabled=!(monthly>0); use.textContent=monthly>0?`Assign ${money(monthly)}`:'Assign it'; } };
+    [nEl,pEl,aEl].forEach(el=>{ if(!el) return; el.addEventListener('input',sync); el.addEventListener('change',sync); });
+    if(use) use.addEventListener('click',()=>{
+      const d=draft(); d.n=nEl.value; d.per=pEl.value; d.amt=aEl.value;
+      const {monthly,per}=rateMonthly(d);
+      if(!(monthly>0)) return;
+      budgetFor(M)[c.id]=monthly; save();
+      renderBudget(); renderHome(); renderCatSheet();
+      if(typeof toast==='function') toast(`${c.name} set to ${money(monthly)} a month - ${d.n} times ${per.label} at ${usd(+d.amt||0)}.`);
+    });
+  }
   /* The whole sheet, not just its body - the rename pencil lives in the title,
      and wiring only the body left it as a button that did nothing. */
   wirePlan(document.getElementById('catSheet'), false);
@@ -6515,6 +6659,7 @@ document.getElementById('typeToggle').addEventListener('click',e=>{
   document.querySelectorAll('.expense-only').forEach(x=>x.classList.toggle('hide',txType!=='expense'));
   document.querySelectorAll('.income-only').forEach(x=>x.classList.toggle('hide',txType!=='income'));
   document.querySelectorAll('.invest-only').forEach(x=>x.classList.toggle('hide',txType!=='invest'));
+  if(typeof drawOwnerNote==='function') drawOwnerNote();
 });
 let txEnergy='';
 document.getElementById('energySel').addEventListener('click',e=>{
@@ -6573,9 +6718,13 @@ document.getElementById('addTx').addEventListener('click',()=>{
       toast(amt<expAmt
         ? `Logged ${usd(amt)} - ${usd(expAmt-amt)} short of what ${source} usually pays. Worth finding out why.`
         : `Logged ${usd(amt)} - ${usd(amt-expAmt)} more than usual. If that is the new normal, update the rule on Plan.`);
-    if(state.householdOn){ const o=document.getElementById('txOwner'); if(o) tx.owner=o.value; }
+    /* Saved whatever household mode is set to. Household mode names a partner
+       and their wage; it was never meant to gate recording whose money this is,
+       and gating it meant the honest answer was invisible to anyone who had not
+       found a checkbox in Settings. */
+    const o=document.getElementById('txOwner'); if(o && o.value!=='a') tx.owner=o.value;
     state.transactions.push(tx);
-    if(isIndependent(srcType)){ const nowIndie=prevIndie+amt; indieCrossed=INDIE_MILES.find(m=>prevIndie<m&&nowIndie>=m)||null; }
+    if(isIndieTx(tx)){ const nowIndie=prevIndie+amt; indieCrossed=INDIE_MILES.find(m=>prevIndie<m&&nowIndie>=m)||null; }
   }
   txEnergy=''; document.querySelectorAll('#energySel button').forEach(x=>x.classList.remove('on'));
   const clrAmt=document.getElementById('txAmt'); clrAmt.value=''; delete clrAmt.dataset.autofilled;
@@ -6595,7 +6744,8 @@ document.getElementById('addTx').addEventListener('click',()=>{
     let m;
     if(indieCrossed) m=`<b>${money(indieCrossed)} independent milestone!</b> ${escapeHtml(pickVoice(INDIE_WIN))}`;
     else if(txType==='invest') m=`${escapeHtml(pickVoice(GROWTH_WIN))}`;
-    else if(txType==='income'&&isIndependent(document.getElementById('txSrcType').value)) m=`${escapeHtml(pickVoice(INDIE_WIN))}`;
+    else if(txType==='income'&&isIndependent(document.getElementById('txSrcType').value)
+            &&((document.getElementById('txOwner')||{}).value||'a')==='a') m=`${escapeHtml(pickVoice(INDIE_WIN))}`;
     else m=`${escapeHtml(pickVoice(BLINDSPOT_COPY))}`;
     lw.innerHTML=`<div class="logwin">${m}</div>`; setTimeout(()=>{ if(lw.firstChild) lw.innerHTML=''; },7000);
   }
@@ -7394,8 +7544,15 @@ function renderTxSheet(){
   const facts=[];
   if(H>0 && t.type!=='invest') facts.push([t.type==='income'?'What it bought you':'What it cost you', state.freedomMode?usd(t.amount):fmtLife(t.amount,H)]);
   if(t.type==='income' && t.hours>0) facts.push(['Rate for it', usd(t.amount/t.hours)+'/hr']);
-  if(t.type==='income' && t.srcType) facts.push([isIndependent(t.srcType)?'Counts as':'Counts as',
-    (incomeKindLabel(t)||'Income') + (isIndependent(t.srcType)?' - income you built':' - your primary job')]);
+  /* Whose it is comes first, because it is the fact that changes the arithmetic
+     everywhere else on this screen. */
+  if(t.type==='income' && (t.owner||'a')!=='a')
+    facts.push(['Whose', t.owner==='joint' ? 'Both of you - outside your true hourly rate'
+      : `${state.nameB||'Partner'}'s - outside your true hourly rate`]);
+  if(t.type==='income' && t.srcType) facts.push(['Counts as',
+    (incomeKindLabel(t)||'Income') + (isIndieTx(t)?' - income you built'
+      : isIndependent(t.srcType)?' - not against your independence, it is not your money'
+      : ' - your primary job')]);
   /* the toast at log time is gone in four seconds; the discrepancy is not */
   if(t.type==='income'){
     const expAmt=txExpectedFor(t.source);
@@ -10969,7 +11126,7 @@ function recEditLoad(id){
   set('recDate', r.anchor || (r.day ? state.activeMonth+'-'+String(Math.min(28,Math.max(1,+r.day||1))).padStart(2,'0') : todayStr()));
   if(r.type==='expense') set('recCat', r.catId||'');
   else { set('recSrc', r.source||''); if(r.type==='invest') set('recInvKind', r.ikind||'holds');
-         else { if(state.householdOn) set('recOwner', r.owner||'a');
+         else { set('recOwner', r.owner||'a');
                 set('recHours', r.hours>0 ? Math.round(r.hours/periodMeta(unitOf('recHours','month')).per*100)/100 : '');
                 if(typeof drawRecHours==='function') drawRecHours(); } }
   /* Which account this rule moves money through, for every type - a paycheck
@@ -11008,7 +11165,7 @@ document.getElementById('addRec').addEventListener('click',()=>{
     item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
-    if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; }
+    const ro=document.getElementById('recOwner'); if(ro && ro.value!=='a') item.owner=ro.value;
     /* Stored as hours a MONTH, whatever unit they typed it in - the blended-rate
        engine only ever divides by a month. */
     const hRaw=parseFloat((document.getElementById('recHours')||{}).value);
@@ -11175,8 +11332,30 @@ function syncSrcOther(){
       syncSrcOther();
       if(e.target.value==='other'){ const n=document.getElementById('txSrcOther'); if(n) n.focus(); }
     }
+    if(e.target && (e.target.id==='txOwner'||e.target.id==='recOwner')) syncOwnerNote(e.target.value);
   });
 })();
+/* Naming a second earner IS turning household mode on. Making them find a
+   checkbox in Settings afterwards, to see the money they just logged appear in a
+   split panel, is a second job for a fact they already stated. */
+function drawOwnerNote(){
+  const box=document.getElementById('txOwnerNote'); if(!box) return;
+  const owner=((document.getElementById('txOwner')||{}).value)||'a';
+  const txt=(txType==='income') ? ownerNoteHTML(owner) : '';
+  box.innerHTML=txt; box.classList.toggle('hide',!txt);
+}
+/* The picker keeps its choice between entries on purpose - two paycheques in a
+   row is the normal case for a household - so the note has to stay on screen
+   saying whose the NEXT one will be. A remembered setting with nothing on screen
+   about it is how you mis-tag your own paycheque. */
+function syncOwnerNote(owner){
+  drawOwnerNote();
+  if(owner && owner!=='a' && !state.householdOn){
+    state.householdOn=true; save(); applyHousehold();
+    if(typeof toast==='function')
+      toast(`Two earners it is - the household split is on. Name them and add their wage in Settings whenever you like.`);
+  }
+}
 /* The name field shows only while "New category" is the choice. */
 function syncCatNew(){
   [['txCat','txCatNew'],['recCat','recCatNew']].forEach(([sid,nid])=>{
@@ -12549,7 +12728,8 @@ function renderCharts(){
      first thing was logged. Three numbers, three meanings, one card. Named for
      what it is, with the reconciliation one tap away. */
   if(tc) tc.innerHTML=`<svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto" ${chartFocusAttrs('trendChart',pts.length,'Running logged total, last six months')}><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5" stroke-linejoin="round"/>${dots}${labs}${chartHits('trendChart',pts.length,X,w,h)}</svg>`
-    + chartRead(ledgerRead(pts[tSel].m, pts[tSel].bal, tSel>0?pts[tSel-1].bal:null))
+    + chartRead(ledgerRead(pts[tSel].m, pts[tSel].bal, tSel>0?pts[tSel-1].bal:null,
+        latest, tSel===pts.length-1, pts.slice(tSel+1).map(p=>monShort(p.m)).join(', ')))
     + `<div class="legend"><span class="k">Logged in minus logged out, all time: <b style="color:${latest<0?'var(--bad)':'var(--good)'}">${money(latest)}</b>${whyBtn('loggedNet')}</span></div>`;
   renderBreakdown();
   renderCirculation();

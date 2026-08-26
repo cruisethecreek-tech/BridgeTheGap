@@ -3486,7 +3486,10 @@ const sheet = await p.evaluate(async () => {
   const b=document.getElementById('catSheetBody');
   const has=sel=>!!b.querySelector(sel);
   const out={ on, title:(document.getElementById('catSheetTitle')||{}).innerText||'',
-    assigned:has('input[data-cat="elec"]'), repeat:has('[data-repeat="elec"]'),
+    /* the property is "the sheet carries a way to assign this category's
+       number", not which selector carries it - the assign field became a unit
+       field (id csA<catId>) when it got a period picker */
+    assigned:has('#csAelec')||has('input[data-cat="elec"]'), repeat:has('[data-repeat="elec"]'),
     del:has('[data-del="elec"]'), pencil:!!document.querySelector('#catSheetTitle .cat-edit'),
     split:has('[data-addsubfirst="elec"]'), bar:has('.bar'),
     history:has('.cs-hist'), txs:has('.cs-tx'),
@@ -3496,7 +3499,7 @@ const sheet = await p.evaluate(async () => {
   document.querySelector('#cats [data-catsheet="bills"] .rw-nm').click(); await wait(200);
   out.groupText=document.getElementById('catSheetBody').innerText;
   out.groupSubs=document.querySelectorAll('#catSheetBody .cs-sub').length;
-  out.groupHasAssign=!!document.querySelector('#catSheetBody input[data-cat="bills"]');
+  out.groupHasAssign=!!document.querySelector('#catSheetBody #csAbills, #catSheetBody input[data-cat="bills"]');
   document.getElementById('catSheetX').click(); await wait(150);
   return out;
 });
@@ -4612,6 +4615,224 @@ const label = await p.evaluate(() => {
 });
 check('the button that opens the quick log is not narrower than what it opens',
       label.length>0 && !/expense/i.test(label) && /money/i.test(label), label||'(no button rendered)');
+
+/* ---- 68. assign in the rhythm you actually live in ----
+   "Assign this month should hold the frequency of how many times per week by
+   weekly month. They go to get for example a coffee. Somehow that feature got
+   lost it's hard for people to plan with just one set number if they don't have
+   the options to make a rational decision."
+
+   Correct, and the gap was structural: every other money field in this app -
+   the spend limit, the debt budget, the true-rate fields, the recurring hours -
+   carries a period picker through wireUnitField. The category assignment, the
+   field people touch more than any other, was the only one locked to a month.
+   It is a unit field now, remembered per category, because coffee is a per-week
+   thought and rent is a per-month one and forcing one rhythm on both is exactly
+   what made the field hard to plan with.
+
+   The second half is the one that makes it a decision rather than a guess.
+   Nobody decides "$104 of coffee". They decide "three a week, about six
+   dollars". So the builder does that multiplication out loud and offers the
+   answer. Because it names the two numbers behind the total, cutting the habit
+   becomes something you can price - drop to two a week - rather than a number
+   you shave blind.
+
+   The stored value stays monthly through get/set, which is the invariant the
+   whole plan rests on. And the Assign button is in the dom from the start,
+   disabled: the first draft only drew it once both numbers were filled, which
+   on a phone means your first tap lands where a button is about to be. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24,
+  categories:[{id:'food',name:'Food'},{id:'cof',name:'Coffee',parentId:'food'},{id:'rent',name:'Rent'}],
+  budgets:{'2026-08':{cof:0,rent:1200}},
+  transactions:[{id:'i1',type:'income',amount:3200,date:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(400);
+await p.evaluate(()=>{ activateTab('budget'); openCatSheet('cof'); });
+await p.waitForTimeout(250);
+const rate = await p.evaluate(async () => {
+  const out={};
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const sel=document.querySelector('#csAcofUnit select');
+  out.hasPicker=!!sel;
+  out.kinds=sel?[...sel.options].map(o=>o.value).join(','):'';
+  /* a rhythm that is not the month, entered by hand, must still land monthly */
+  sel.value='week'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+  await wait(60);
+  const amt=document.getElementById('csAcof');
+  /* the field commits on 'input' like every other unit field in the app */
+  amt.value='35'; amt.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(60);
+  out.storedMonthly=assignedFor('cof','2026-08');
+  out.work=(document.getElementById('csAcofW')||{}).innerText||'';
+  /* committing must not redraw the sheet out from under the person typing */
+  amt.focus(); amt.value='36'; amt.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(60);
+  out.assignKeptFocus=document.activeElement===document.getElementById('csAcof');
+  /* remembered per category, not globally */
+  closeCatSheet(); openCatSheet('rent'); await wait(60);
+  out.rentUnit=(document.querySelector('#csArentUnit select')||{}).value;
+  closeCatSheet(); openCatSheet('cof'); await wait(60);
+  out.cofUnit=(document.querySelector('#csAcofUnit select')||{}).value;
+  /* the builder: a button before the numbers, and no full redraw while typing */
+  const use=document.getElementById('crUse');
+  out.buttonUpFront=!!use;
+  out.deadUntilFilled=use?use.disabled:null;
+  const n=document.getElementById('crN'), per=document.getElementById('crPer'), each=document.getElementById('crAmt');
+  n.value='3'; n.dispatchEvent(new Event('input',{bubbles:true}));
+  per.value='week'; per.dispatchEvent(new Event('change',{bubbles:true}));
+  each.focus();
+  each.value='6'; each.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(60);
+  out.keptFocus=document.activeElement===each;
+  out.liveWithoutBlur=!document.getElementById('crUse').disabled;
+  out.readout=(document.getElementById('crOut')||{}).innerText||'';
+  out.buttonNames=document.getElementById('crUse').textContent;
+  document.getElementById('crUse').click();
+  await wait(80);
+  out.written=assignedFor('cof','2026-08');
+  out.shownInOwnRhythm=+document.getElementById('csAcof').value;
+  /* a pool has no number of its own to price */
+  closeCatSheet(); openCatSheet('food'); await wait(60);
+  out.poolHasNoField=!document.getElementById('csAfood');
+  out.poolHasNoBuilder=!document.querySelector('.cs-rate');
+  closeCatSheet();
+  return out;
+});
+check('the assign field carries a period picker like every other amount',
+      rate.hasPicker===true && /week/.test(rate.kinds), rate.kinds);
+check('...and whatever rhythm is on screen, the stored number is the month',
+      Math.abs(rate.storedMonthly-151.67)<0.06, String(rate.storedMonthly));
+check('...and writing one does not redraw the sheet out from under the keyboard',
+      rate.assignKeptFocus===true);
+check('...with the multiplication shown, not assumed',
+      /week/i.test(rate.work) && /151/.test(rate.work), rate.work);
+check('the rhythm is remembered per category, not app-wide',
+      rate.cofUnit==='week' && rate.rentUnit==='month',
+      `coffee=${rate.cofUnit} rent=${rate.rentUnit}`);
+check('the habit builder prices a decision instead of asking for a total',
+      /78/.test(rate.readout) && /3/.test(rate.readout) && /6/.test(rate.readout), rate.readout);
+check('...its button is there before the numbers are, and dead until they land',
+      rate.buttonUpFront===true && rate.deadUntilFilled===true);
+check('...it comes alive on the keystroke, without taking the keyboard down',
+      rate.keptFocus===true && rate.liveWithoutBlur===true,
+      `focus=${rate.keptFocus} live=${rate.liveWithoutBlur}`);
+check('...it names the number it is about to assign', /78/.test(rate.buttonNames), rate.buttonNames);
+check('...and assigning writes the month, read back in the chosen rhythm',
+      Math.abs(rate.written-78)<0.02 && Math.abs(rate.shownInOwnRhythm-18)<0.2,
+      `stored=${rate.written} shown=${rate.shownInOwnRhythm}`);
+check('a pool gets neither control - its number is its subcategories',
+      rate.poolHasNoField===true && rate.poolHasNoBuilder===true);
+
+/* ---- 69. two numbers that look like they disagree, and one that had no home ----
+   From a phone, two figures circled in red inches apart: the trend chart's
+   running total at July ($13,700) and the all-time figure in the legend under it
+   ($13,388.19). "These numbers don't agree."
+
+   They do agree - the gap is August - but nothing on the card said so, and the
+   card was already the one whose whole job is telling three near-identical
+   numbers apart. So the readout reconciles in both directions now: pick a middle
+   month and it names what has been logged since and lands on the figure below;
+   pick the last point and it says this IS that figure. The second half matters
+   as much as the first, because it teaches the relationship on the tap where the
+   numbers happen to match.
+
+   The same message asked the question the app had no answer to: "this was my
+   spouse's income and therefore it contributes to my balance but not my working
+   hours. What option would I choose?" None of the eight - every Type describes
+   something YOU did. The answer existed as an owner field the arithmetic already
+   respected (personalMonthlyIncome filters owner 'a'), gated behind a household
+   checkbox in Settings nobody had found. A fact about the money was hidden
+   behind a preference about the interface, so the honest answer was unreachable
+   from the screen asking the question. "Whose money" is on the income form now,
+   for everybody, defaulting to mine; naming a second earner turns the household
+   split on by itself, because that is what naming a second earner means.
+
+   Independence follows whose it is, not just what kind it is. A partner's
+   freelance cheque is real freelance income and is not your escape from a
+   primary job, so it must not fill your independence bar. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'f',name:'Food'}],
+  transactions:[{id:'a',type:'income',amount:13700,date:'2026-07-15',source:'Kristi',srcType:'primary'},
+                {id:'b',type:'expense',amount:311.81,date:'2026-08-03',catId:'f'}]});
+await p.reload(); await p.waitForTimeout(450);
+const recon = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); rfTab='worth'; renderReflectTab(); await wait(250);
+  const n=document.querySelectorAll('#trendChart [data-cidx]').length;
+  /* the svg is rebuilt on every pick, so the hit rects must be re-queried */
+  const hit=i=>document.querySelectorAll('#trendChart [data-cidx]')[i]
+      .dispatchEvent(new MouseEvent('click',{bubbles:true}));
+  const read=()=>(document.querySelector('#trendChart .cread')||{}).innerText||'';
+  const legend=(document.querySelector('#trendChart .legend')||{}).innerText||'';
+  hit(n-2); await wait(200); const mid=read();
+  hit(n-1); await wait(200); const last=read();
+  return {n, mid, last, legend};
+});
+check('a middle point on the ledger line reconciles with the all-time figure below',
+      /13,388\.19/.test(recon.mid) && /down \$311\.81/.test(recon.mid),
+      recon.mid.replace(/\n/g,' | ').slice(0,180));
+check('...naming the months in between rather than leaving a bare gap',
+      /Aug/.test(recon.mid), recon.mid.replace(/\n/g,' | ').slice(0,120));
+check('...and the last point says it IS that figure, so the tap where they match teaches why',
+      /same/i.test(recon.last) && /13,388\.19/.test(recon.last),
+      recon.last.replace(/\n/g,' | ').slice(0,180));
+check('...which is the number actually printed in the legend',
+      /13,388\.19/.test(recon.legend), recon.legend.replace(/\n/g,' | '));
+
+const whose = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const out={};
+  activateTab('tx'); await wait(200);
+  document.querySelector('#typeToggle button[data-t="income"]').click(); await wait(200);
+  const f=document.getElementById('fldOwner');
+  /* reachable from the screen that asks the question, with no settings trip */
+  out.onForm=!!f && !f.classList.contains('hide') && f.offsetHeight>0;
+  out.householdOffFirst=!state.householdOn;
+  out.defaultsMine=document.getElementById('txOwner').value==='a';
+  out.quietByDefault=document.getElementById('txOwnerNote').classList.contains('hide');
+  const o=document.getElementById('txOwner');
+  o.value='b'; o.dispatchEvent(new Event('change',{bubbles:true})); await wait(150);
+  out.note=document.getElementById('txOwnerNote').innerText;
+  out.householdOnAfter=!!state.householdOn;
+  /* log it the way a person would */
+  document.getElementById('txAmt').value='13700';
+  const sp=document.getElementById('txSrcPick');
+  if(sp && !sp.classList.contains('hide')) sp.value='Kristi';
+  else { const si=document.getElementById('txSrc'); si.classList.remove('hide'); si.value='Kristi'; }
+  document.getElementById('txSrcType').value='primary';
+  document.getElementById('addTx').click(); await wait(300);
+  const t=state.transactions.filter(x=>x.type==='income').slice(-1)[0];
+  out.stored=t&&t.owner;
+  out.inMonthTotal=monthIncome('2026-08');
+  out.outOfPersonal=personalMonthlyIncome();      // July's 13,700 only - August's is hers
+  /* whose it is beats what kind it is, for independence */
+  state.transactions.push({id:'z',type:'income',amount:900,date:'2026-08-10',source:'Her gig',srcType:'freelance',owner:'b'});
+  save(); out.indieWithHers=indieTotal();
+  state.transactions.push({id:'y',type:'income',amount:500,date:'2026-08-11',source:'My gig',srcType:'freelance'});
+  save(); out.indieWithMine=indieTotal();
+  /* switching away from income must not leave the note hanging over an expense */
+  document.querySelector('#typeToggle button[data-t="expense"]').click(); await wait(150);
+  out.noteGoneOnExpense=document.getElementById('txOwnerNote').classList.contains('hide');
+  return out;
+});
+check('"whose money" is answerable from the form that asks, with no settings trip',
+      whose.onForm===true && whose.householdOffFirst===true,
+      `onForm=${whose.onForm} householdWasOff=${whose.householdOffFirst}`);
+check('...defaulting to mine, saying nothing until there is something to say',
+      whose.defaultsMine===true && whose.quietByDefault===true);
+check('...and when it is not mine, it says what that changes, where the choice is made',
+      /hourly rate/i.test(whose.note) && /balance/i.test(whose.note), whose.note);
+check('...naming a second earner is what turns the household split on',
+      whose.householdOnAfter===true);
+check('a partner-owned entry is stored as theirs', whose.stored==='b', String(whose.stored));
+check('...counts in the month exactly like any other money in', whose.inMonthTotal===13700,
+      String(whose.inMonthTotal));
+check('...and stays out of the personal income that powers your true hourly rate',
+      whose.outOfPersonal===13700, String(whose.outOfPersonal));
+check('their freelance cheque is real freelance income and is not your independence',
+      whose.indieWithHers===0, String(whose.indieWithHers));
+check('...while yours still is', whose.indieWithMine===500, String(whose.indieWithMine));
+check('...and the note does not hang over an expense once you switch away',
+      whose.noteGoneOnExpense===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
