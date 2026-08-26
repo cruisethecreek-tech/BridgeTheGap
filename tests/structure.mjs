@@ -768,9 +768,17 @@ const named = await p.evaluate(async () => {
   const byId=id=>(state.transactions.find(t=>t.id===id)||{});
   const recent=[...document.querySelectorAll('.sp-recent .r .nm')].map(e=>e.textContent.trim());
   activateTab('tx'); await wait(400);
-  const subs=[...document.querySelectorAll('.tx-sub')].map(e=>e.textContent.trim());
+  /* The ledger row is one line now - when, what, how much - so "posted
+     automatically" has no second line to move to. It is a mark on the row and a
+     sentence in the entry's sheet instead. Same property: a posted bill says so,
+     and one somebody typed by hand does not. */
+  const marks=[...document.querySelectorAll('#txList .tx')].map(r=>({
+    id:r.dataset.txsheet, rep:!!r.querySelector('.tx-rep') }));
+  openTxSheet('t1'); const sheetSaysRepeat=/repeat/i.test(document.getElementById('txSheetBody').innerText);
+  openTxSheet('t6'); const handTypedSaysRepeat=/repeat/i.test(document.getElementById('txSheetBody').innerText);
+  closeTxSheet();
   return { t1:byId('t1').note, t2:byId('t2').note, t4:byId('t4').note, t5:byId('t5').note,
-           t6:byId('t6').note, recent, subs,
+           t6:byId('t6').note, recent, marks, sheetSaysRepeat, handTypedSaysRepeat,
            anySayRecurringAlone: recent.some(r=>r==='Recurring') };
 });
 check('a posted bill is named, not just called "Recurring"',
@@ -784,9 +792,11 @@ check('a note somebody typed themselves is never rewritten',
       named.t6==='Recurring bill I typed myself', named.t6);
 check('no row in the recent list just says "Recurring"',
       named.anySayRecurringAlone===false, named.recent.join(' | '));
-check('...and "posted automatically" moves to the line that has room for it',
-      named.subs.some(x=>/repeats/.test(x)) && !named.subs.every(x=>/repeats/.test(x)),
-      named.subs.slice(0,4).join(' | '));
+check('...and "posted automatically" is marked on the row and said in the sheet',
+      named.marks.some(m=>m.rep) && named.marks.some(m=>!m.rep)
+      && named.sheetSaysRepeat===true && named.handTypedSaysRepeat===false,
+      JSON.stringify({marked:named.marks.filter(m=>m.rep).length, of:named.marks.length,
+                      sheet:named.sheetSaysRepeat, handTyped:named.handTypedSaysRepeat}));
 
 /* ---- 19. the debt planner tells you what is actually wrong ----
    The state a beginner reaches first - a debt added before they have looked up
@@ -3484,6 +3494,123 @@ check('...while the spending breakdown still refuses to call an investment spend
       growthPool.spent===0 && !/Retirement/.test(growthPool.breakdown),
       growthPool.breakdown.replace(/\n/g,' ').slice(0,80));
 await p.setViewportSize({width:390,height:1000});
+
+/* ---- 54. the ledger is one line, and an entry can finally be changed ----
+   The same move as the Plan tab, and it carried the same risk: a row that used
+   to hold six things now holds three, so everything that left has to be provably
+   somewhere else. It also closed a gap that had been open the whole time - there
+   was no way to EDIT a transaction, only to delete it, and deleting one takes
+   the gut-check and the giving record attached to it along with the typo.
+
+   The edit path is where the real danger is. An invest that is still yours has
+   an asset behind it; changing the amount without moving that asset drifts net
+   worth by exactly the size of the correction, which surfaces months later as a
+   number nobody can trace. That gets its own check. */
+await seed({...FULL, activeMonth:'2026-08',
+  categories:[{id:'food',name:'Food'},{id:'roof',name:'Roof'}],
+  budgets:{'2026-08':{food:600,roof:1200}},
+  /* the asset the app itself would have created for that invest */
+  assets:[{id:'ia',name:'Invested capital',value:400,kind:'real',cost:0,auto:'invest'}],
+  transactions:[
+    {id:'x1',type:'income',amount:3200,date:'2026-08-01',source:'Paycheck',srcType:'primary'},
+    {id:'x2',type:'expense',amount:712.40,catId:'food',date:'2026-08-09',note:'Big grocery run',energy:'baseline'},
+    {id:'x3',type:'invest',amount:400,date:'2026-08-02',source:'Index fund',ikind:'holds'},
+    {id:'x4',type:'expense',amount:1200,catId:'roof',date:'2026-08-01',note:'Rent',recId:'rr'}],
+  recurring:[{id:'rr',type:'expense',amount:1200,catId:'roof',freq:'monthly',anchor:'2026-08-01',day:1}]});
+await p.reload(); await p.waitForTimeout(700);
+const txRows = await p.evaluate(() => {
+  activateTab('tx'); renderTx();
+  const rows=[...document.querySelectorAll('#txList .tx')];
+  return {
+    rows:rows.length,
+    tallest:Math.max(...rows.map(r=>Math.round(r.getBoundingClientRect().height))),
+    allButtons:rows.every(r=>r.tagName==='BUTTON' && r.hasAttribute('data-txsheet')),
+    labelled:rows.every(r=>/^Open the /.test(r.getAttribute('aria-label')||'')),
+    /* what used to ride along on the second line */
+    subsInList:document.querySelectorAll('#txList .tx-sub').length,
+    delsInList:document.querySelectorAll('#txList [data-deltx]').length
+  };
+});
+check('the ledger is one line per entry', txRows.rows===4 && txRows.tallest<=56, JSON.stringify(txRows));
+check('...and the whole row is the target, not a delete cross at the end of it',
+      txRows.allButtons===true && txRows.delsInList===0);
+check('...announced by what pressing it does, not by the figure printed on it',
+      txRows.labelled===true);
+check('...with the second line and everything on it gone from the list',
+      txRows.subsInList===0);
+const txs = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  document.querySelector('[data-txsheet="x2"]').click(); await wait(200);
+  const b=()=>document.getElementById('txSheetBody');
+  const out={ on:document.getElementById('txSheet').classList.contains('on'),
+    title:document.getElementById('txSheetTitle').innerText,
+    amount:!!b().querySelector('[data-txedit="amount"]'),
+    date:!!b().querySelector('[data-txedit="date"]'),
+    cat:!!b().querySelector('[data-txedit="catId"]'),
+    note:!!b().querySelector('[data-txedit="note"]'),
+    energy:b().querySelectorAll('[data-txenergy]').length,
+    energyOn:(b().querySelector('[data-txenergy].on')||{}).dataset,
+    del:!!b().querySelector('[data-txdel]') };
+  /* editing an ordinary expense moves the plan with it */
+  const before=catUsed('food','2026-08');
+  const inp=b().querySelector('[data-txedit="amount"]');
+  inp.value='650'; inp.dispatchEvent(new Event('change',{bubbles:true})); await wait(250);
+  out.edited={ stored:state.transactions.find(t=>t.id==='x2').amount,
+               planBefore:before, planAfter:catUsed('food','2026-08') };
+  /* re-tagging is possible at all, which it was not before */
+  b().querySelector('[data-txenergy="fear"]').click(); await wait(200);
+  out.retagged=state.transactions.find(t=>t.id==='x2').energy;
+  /* a blank date is not an instruction */
+  const di=b().querySelector('[data-txedit="date"]');
+  di.value=''; di.dispatchEvent(new Event('change',{bubbles:true})); await wait(200);
+  out.blankDateIgnored=state.transactions.find(t=>t.id==='x2').date;
+  document.getElementById('txSheetX').click(); await wait(200);
+  /* the one that can drift silently: an invest carries an asset behind it */
+  const assetOf=()=>((state.assets||[]).find(a=>a.auto==='invest')||{}).value||0;
+  document.querySelector('[data-txsheet="x3"]').click(); await wait(200);
+  out.assetBefore=assetOf();
+  const ai=b().querySelector('[data-txedit="amount"]');
+  ai.value='550'; ai.dispatchEvent(new Event('change',{bubbles:true})); await wait(250);
+  out.assetAfter=assetOf();
+  out.investStored=state.transactions.find(t=>t.id==='x3').amount;
+  document.getElementById('txSheetX').click(); await wait(200);
+  /* a posted bill says where it came from, and says what editing it does not do */
+  document.querySelector('[data-txsheet="x4"]').click(); await wait(200);
+  out.repeatText=b().innerText;
+  document.getElementById('txSheetX').click(); await wait(200);
+  return out;
+});
+check('tapping an entry opens it', txs.on===true && /712|MONEY OUT/i.test(txs.title), txs.title.replace(/\n/g,' '));
+check('...and every part of it can be changed, which none of it could before',
+      txs.amount && txs.date && txs.cat && txs.note && txs.del,
+      JSON.stringify({amount:txs.amount,date:txs.date,cat:txs.cat,note:txs.note,del:txs.del}));
+check('...including the energy tag, which used to be write-once',
+      txs.energy===4 && txs.retagged==='fear', `${txs.energy} choices, now ${txs.retagged}`);
+check('editing an amount moves the plan with it',
+      txs.edited.stored===650 && txs.edited.planAfter===txs.edited.planBefore-62.40,
+      JSON.stringify(txs.edited));
+check('...and a blank date is not an instruction', txs.blankDateIgnored==='2026-08-09', txs.blankDateIgnored);
+/* The silent one. Change an invest and the asset behind it must move by the
+   difference, or net worth drifts by exactly the size of the correction. */
+check('editing an investment moves the asset behind it, so net worth cannot drift',
+      txs.investStored===550 && txs.assetBefore===400 && txs.assetAfter===550,
+      JSON.stringify({stored:txs.investStored, asset:`${txs.assetBefore} -> ${txs.assetAfter}`}));
+check('a posted bill says so, and says that editing it does not touch the rule',
+      /repeat/i.test(txs.repeatText) && /rule/i.test(txs.repeatText),
+      txs.repeatText.replace(/\n/g,' ').slice(0,110));
+/* Deleting still has to take the things hanging off it. */
+const delSafe = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const assetOf=()=>((state.assets||[]).find(a=>a.auto==='invest')||{}).value||0;
+  const before=assetOf();
+  document.querySelector('[data-txsheet="x3"]').click(); await wait(200);
+  document.querySelector('#txSheetBody [data-txdel]').click(); await wait(300);
+  return { before, after:assetOf(), gone:!state.transactions.some(t=>t.id==='x3'),
+           closed:!document.getElementById('txSheet').classList.contains('on') };
+});
+check('deleting from the sheet still unwinds what was behind it, and closes',
+      delSafe.gone===true && delSafe.after===0 && delSafe.before===550 && delSafe.closed===true,
+      JSON.stringify(delSafe));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
