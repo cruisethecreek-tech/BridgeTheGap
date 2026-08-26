@@ -377,6 +377,16 @@ and this entry's share of the category's spending. That relationship always
 existed in the data; the test is that it is now visible from the thing that
 caused it.
 
+And **the two budgets that were judging the same dollar**. The section asserts
+the contradiction first - planned money marked over on one screen while the plan
+calls it funded on another - then that scoping the allowance resolves the day it
+was wrong about, without hiding the money: the excluded spend stays on the day
+card, named and explained. A parent has to cover its subcategories or the hole
+reopens one level down, nothing chosen has to keep watching everything (a
+spend-mode user has no plan to hand off to), and the whole thing has to be
+reversible. Plus the small one from the same message: every entry on a calendar
+day has to open, like the identical row on Track always did.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
