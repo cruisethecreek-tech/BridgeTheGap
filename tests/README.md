@@ -460,6 +460,21 @@ is. The fixture logs it through the form the way a person would, because a
 property proved by writing straight to state would have passed while the picker
 was still hidden.
 
+It holds **a stream has to be named**. The bug underneath was not the blank
+field - it was that a blank field became the string "Income", two rules called
+"Income" merged, and the app then told someone a correct paycheck was $836.97
+short. So the properties are pinned at both layers, and deliberately: the form
+refuses a nameless rule, *and* `txExpectedFor` declines to answer on an ambiguous
+name. A form check alone would have left every rule already saved still
+fabricating shortfalls, and a suite that only tested the form would have called
+that fixed.
+
+The same section holds the smallest property in the file: a field that would
+throw its answer away does not ask for it. `recomputeBlendedWage` reads only your
+own hours, so the hours box on a partner-owned rule was collecting a number
+nothing would ever read. Asking for a number and ignoring it is the same fault as
+inventing one, pointed the other way, and neither shows up in arithmetic tests.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own

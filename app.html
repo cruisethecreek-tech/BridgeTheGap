@@ -2254,6 +2254,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld hide" id="recAcctWrap">Which account<select id="recAcct"></select></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec hide" id="recOwnerWrap">Whose money<select id="recOwner"><option value="a">Mine</option><option value="b">Partner</option><option value="joint">Both of us</option></select></label>
+          <div class="own-note hide" id="recOwnerNote"></div>
           <div class="ufld income-only-rec hide" id="recHoursWrap"><span class="fl-k">Hours it takes<span id="recHoursUnit"></span></span>
             <span class="fl-in"><input type="number" id="recHours" min="0" step="0.5" inputmode="decimal" placeholder="opt." style="width:90px"></span>
             <div class="unit-work" id="recHoursW"></div></div>
@@ -3307,11 +3308,11 @@ function knownSources(){
          blank the other left. A rule stores no srcType, so without this,
          picking a stream the rules own would never fill the Type even though
          every past entry of it carries one. */
-      if(fromRule) e.fromRule=true;
+      if(fromRule){ e.fromRule=true; e.rules=(e.rules||0)+1; }
       if(srcType && !e.srcType) e.srcType=srcType;
       if(acctId && !e.acctId) e.acctId=acctId;
       return; }
-    seen.add(key); out.push({name:n, srcType:srcType||'', acctId:acctId||'', fromRule:!!fromRule});
+    seen.add(key); out.push({name:n, srcType:srcType||'', acctId:acctId||'', fromRule:!!fromRule, rules:fromRule?1:0});
   };
   (state.recurring||[]).filter(r=>r.type==='income').forEach(r=>{
     add(r.source,r.srcType,r.acctId,true);
@@ -3337,9 +3338,15 @@ function knownSources(){
    line under the field prices the difference while it is being typed - which is
    the moment the person can still do something about it, like ask why the check
    is short. */
+/* Refuses to answer when two rules share a name. The rules dedupe by name, so
+   with a clash "what this stream is supposed to pay" is whichever rule was
+   loaded last - and the app would tell someone their paycheck was short by the
+   difference between two unrelated streams. Nothing said is better than a
+   fabricated shortfall; the form warns at creation, and this is the second lock
+   on the same door for the rules already saved. */
 function txExpectedFor(name){
   const k=knownSources().find(x=>x.name===name);
-  return (k && k.fromRule && k.amount>0) ? k.amount : 0;
+  return (k && k.fromRule && (k.rules||0)<=1 && k.amount>0) ? k.amount : 0;
 }
 function txAmtNoteHTML(){
   const n=document.getElementById('txAmtNote'); if(!n) return;
@@ -11092,6 +11099,7 @@ function recSyncTypeFields(){
   const rs=document.getElementById('recSrc'); if(rs) rs.placeholder=inv?'Roth IRA, index fund…':'Paycheck…';
   document.getElementById('recOwnerWrap').classList.toggle('hide',!inc);
   const rhw=document.getElementById('recHoursWrap'); if(rhw) rhw.classList.toggle('hide',!inc);
+  if(typeof drawOwnerNote==='function') drawOwnerNote();
   if(inc) drawRecHours();
   const rik=document.getElementById('recInvKindWrap'); if(rik) rik.classList.toggle('hide',!inv);
   const rdw=document.getElementById('recDestWrap'); if(rdw) rdw.classList.toggle('hide', !inv || !(state.accounts||[]).length);
@@ -11148,6 +11156,8 @@ document.getElementById('addRec').addEventListener('click',()=>{
   const freq=document.getElementById('recFreq').value;
   const anchor=document.getElementById('recDate').value||todayStr();
   if(!amt||amt<=0){ alert('Enter an amount.'); return; }
+  const needSource=msg=>{ if(typeof toast==='function') toast(msg);
+    const e=document.getElementById('recSrc'); if(e){ e.focus(); e.select&&e.select(); } };
   // day is kept in sync for anything still reading the old field
   const item={id:uid(),type,amount:amt,freq,anchor,day:Math.min(28,Math.max(1,+anchor.slice(8,10)||1))};
   const racct=(document.getElementById('recAcct')||{}).value||defaultAcctId();
@@ -11161,10 +11171,27 @@ document.getElementById('addRec').addEventListener('click',()=>{
   else if(type==='invest'){
     const rd=(document.getElementById('recDest')||{}).value||'';
     if(rd){ item.destAcctId=rd; item.source=acctName(rd)||'Investment'; }
-    else item.source=document.getElementById('recSrc').value.trim()||'Investment';
+    else {
+      const dest=document.getElementById('recSrc').value.trim();
+      if(!dest) return needSource('Name where it goes - "Roth IRA", "index fund" - and this becomes a destination you can pick from when you log.');
+      item.source=dest; }
     item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
   else {
-    item.source=document.getElementById('recSrc').value.trim()||'Income';
+    /* An expense rule with no category is refused; an income rule with no name
+       used to be quietly called "Income". That is not a small difference. These
+       rules ARE the app's list of named income streams - they fill the Source
+       picker on the log form, and txExpectedFor() matches on the name to say
+       whether a paycheck came up short. Two rules both called "Income" collapse
+       into one entry, so a $1,600 paycheck logged against a $2,436.97 stream was
+       told it was $836.97 short when it was exactly right. A stream you cannot
+       name is a stream the app cannot reason about. */
+    const src=document.getElementById('recSrc').value.trim();
+    if(!src) return needSource('Give this one a name - "Hollywood", "Kristi", "Bonus" - so the app can tell your paychecks apart when you log them.');
+    item.source=src;
+    const clash=(state.recurring||[]).some(r=>r.type==='income' && r.id!==recEditId
+      && (r.source||'').trim().toLowerCase()===src.toLowerCase());
+    if(clash && !confirm(`You already have an income rule called "${src}". Two streams with the same name cannot be told apart - the app will stop guessing what either is supposed to pay. Add it anyway?`)) {
+      const e=document.getElementById('recSrc'); if(e){ e.focus(); e.select&&e.select(); } return; }
     const ro=document.getElementById('recOwner'); if(ro && ro.value!=='a') item.owner=ro.value;
     /* Stored as hours a MONTH, whatever unit they typed it in - the blended-rate
        engine only ever divides by a month. */
@@ -11339,10 +11366,22 @@ function syncSrcOther(){
    checkbox in Settings afterwards, to see the money they just logged appear in a
    split panel, is a second job for a fact they already stated. */
 function drawOwnerNote(){
-  const box=document.getElementById('txOwnerNote'); if(!box) return;
-  const owner=((document.getElementById('txOwner')||{}).value)||'a';
-  const txt=(txType==='income') ? ownerNoteHTML(owner) : '';
-  box.innerHTML=txt; box.classList.toggle('hide',!txt);
+  const put=(id,txt)=>{ const b=document.getElementById(id); if(!b) return;
+    b.innerHTML=txt; b.classList.toggle('hide',!txt); };
+  put('txOwnerNote', txType==='income' ? ownerNoteHTML(((document.getElementById('txOwner')||{}).value)||'a') : '');
+  const rt=(document.getElementById('recType')||{}).value;
+  const ro=((document.getElementById('recOwner')||{}).value)||'a';
+  /* Only your own hours set your rate - recomputeBlendedWage filters to owner
+     'a' - so on a rule that is not yours the hours box is a question whose
+     answer is thrown away. Asking for a number and ignoring it is the same
+     fault as inventing one. It goes away, and the note says why rather than
+     leaving a field to vanish unexplained. */
+  const notMine = rt==='income' && ro!=='a';
+  const rhw=document.getElementById('recHoursWrap');
+  if(rhw && rt==='income') rhw.classList.toggle('hide', notMine);
+  put('recOwnerNote', rt==='income'
+    ? (ownerNoteHTML(ro) + (notMine?' Hours are not asked for it, because only your own hours set your rate.':''))
+    : '');
 }
 /* The picker keeps its choice between entries on purpose - two paycheques in a
    row is the normal case for a household - so the note has to stay on screen
