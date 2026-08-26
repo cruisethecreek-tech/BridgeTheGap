@@ -3486,7 +3486,10 @@ const sheet = await p.evaluate(async () => {
   const b=document.getElementById('catSheetBody');
   const has=sel=>!!b.querySelector(sel);
   const out={ on, title:(document.getElementById('catSheetTitle')||{}).innerText||'',
-    assigned:has('input[data-cat="elec"]'), repeat:has('[data-repeat="elec"]'),
+    /* the property is "the sheet carries a way to assign this category's
+       number", not which selector carries it - the assign field became a unit
+       field (id csA<catId>) when it got a period picker */
+    assigned:has('#csAelec')||has('input[data-cat="elec"]'), repeat:has('[data-repeat="elec"]'),
     del:has('[data-del="elec"]'), pencil:!!document.querySelector('#catSheetTitle .cat-edit'),
     split:has('[data-addsubfirst="elec"]'), bar:has('.bar'),
     history:has('.cs-hist'), txs:has('.cs-tx'),
@@ -3496,7 +3499,7 @@ const sheet = await p.evaluate(async () => {
   document.querySelector('#cats [data-catsheet="bills"] .rw-nm').click(); await wait(200);
   out.groupText=document.getElementById('catSheetBody').innerText;
   out.groupSubs=document.querySelectorAll('#catSheetBody .cs-sub').length;
-  out.groupHasAssign=!!document.querySelector('#catSheetBody input[data-cat="bills"]');
+  out.groupHasAssign=!!document.querySelector('#catSheetBody #csAbills, #catSheetBody input[data-cat="bills"]');
   document.getElementById('catSheetX').click(); await wait(150);
   return out;
 });
@@ -4612,6 +4615,112 @@ const label = await p.evaluate(() => {
 });
 check('the button that opens the quick log is not narrower than what it opens',
       label.length>0 && !/expense/i.test(label) && /money/i.test(label), label||'(no button rendered)');
+
+/* ---- 68. assign in the rhythm you actually live in ----
+   "Assign this month should hold the frequency of how many times per week by
+   weekly month. They go to get for example a coffee. Somehow that feature got
+   lost it's hard for people to plan with just one set number if they don't have
+   the options to make a rational decision."
+
+   Correct, and the gap was structural: every other money field in this app -
+   the spend limit, the debt budget, the true-rate fields, the recurring hours -
+   carries a period picker through wireUnitField. The category assignment, the
+   field people touch more than any other, was the only one locked to a month.
+   It is a unit field now, remembered per category, because coffee is a per-week
+   thought and rent is a per-month one and forcing one rhythm on both is exactly
+   what made the field hard to plan with.
+
+   The second half is the one that makes it a decision rather than a guess.
+   Nobody decides "$104 of coffee". They decide "three a week, about six
+   dollars". So the builder does that multiplication out loud and offers the
+   answer. Because it names the two numbers behind the total, cutting the habit
+   becomes something you can price - drop to two a week - rather than a number
+   you shave blind.
+
+   The stored value stays monthly through get/set, which is the invariant the
+   whole plan rests on. And the Assign button is in the dom from the start,
+   disabled: the first draft only drew it once both numbers were filled, which
+   on a phone means your first tap lands where a button is about to be. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24,
+  categories:[{id:'food',name:'Food'},{id:'cof',name:'Coffee',parentId:'food'},{id:'rent',name:'Rent'}],
+  budgets:{'2026-08':{cof:0,rent:1200}},
+  transactions:[{id:'i1',type:'income',amount:3200,date:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(400);
+await p.evaluate(()=>{ activateTab('budget'); openCatSheet('cof'); });
+await p.waitForTimeout(250);
+const rate = await p.evaluate(async () => {
+  const out={};
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const sel=document.querySelector('#csAcofUnit select');
+  out.hasPicker=!!sel;
+  out.kinds=sel?[...sel.options].map(o=>o.value).join(','):'';
+  /* a rhythm that is not the month, entered by hand, must still land monthly */
+  sel.value='week'; sel.dispatchEvent(new Event('change',{bubbles:true}));
+  await wait(60);
+  const amt=document.getElementById('csAcof');
+  /* the field commits on 'input' like every other unit field in the app */
+  amt.value='35'; amt.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(60);
+  out.storedMonthly=assignedFor('cof','2026-08');
+  out.work=(document.getElementById('csAcofW')||{}).innerText||'';
+  /* committing must not redraw the sheet out from under the person typing */
+  amt.focus(); amt.value='36'; amt.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(60);
+  out.assignKeptFocus=document.activeElement===document.getElementById('csAcof');
+  /* remembered per category, not globally */
+  closeCatSheet(); openCatSheet('rent'); await wait(60);
+  out.rentUnit=(document.querySelector('#csArentUnit select')||{}).value;
+  closeCatSheet(); openCatSheet('cof'); await wait(60);
+  out.cofUnit=(document.querySelector('#csAcofUnit select')||{}).value;
+  /* the builder: a button before the numbers, and no full redraw while typing */
+  const use=document.getElementById('crUse');
+  out.buttonUpFront=!!use;
+  out.deadUntilFilled=use?use.disabled:null;
+  const n=document.getElementById('crN'), per=document.getElementById('crPer'), each=document.getElementById('crAmt');
+  n.value='3'; n.dispatchEvent(new Event('input',{bubbles:true}));
+  per.value='week'; per.dispatchEvent(new Event('change',{bubbles:true}));
+  each.focus();
+  each.value='6'; each.dispatchEvent(new Event('input',{bubbles:true}));
+  await wait(60);
+  out.keptFocus=document.activeElement===each;
+  out.liveWithoutBlur=!document.getElementById('crUse').disabled;
+  out.readout=(document.getElementById('crOut')||{}).innerText||'';
+  out.buttonNames=document.getElementById('crUse').textContent;
+  document.getElementById('crUse').click();
+  await wait(80);
+  out.written=assignedFor('cof','2026-08');
+  out.shownInOwnRhythm=+document.getElementById('csAcof').value;
+  /* a pool has no number of its own to price */
+  closeCatSheet(); openCatSheet('food'); await wait(60);
+  out.poolHasNoField=!document.getElementById('csAfood');
+  out.poolHasNoBuilder=!document.querySelector('.cs-rate');
+  closeCatSheet();
+  return out;
+});
+check('the assign field carries a period picker like every other amount',
+      rate.hasPicker===true && /week/.test(rate.kinds), rate.kinds);
+check('...and whatever rhythm is on screen, the stored number is the month',
+      Math.abs(rate.storedMonthly-151.67)<0.06, String(rate.storedMonthly));
+check('...and writing one does not redraw the sheet out from under the keyboard',
+      rate.assignKeptFocus===true);
+check('...with the multiplication shown, not assumed',
+      /week/i.test(rate.work) && /151/.test(rate.work), rate.work);
+check('the rhythm is remembered per category, not app-wide',
+      rate.cofUnit==='week' && rate.rentUnit==='month',
+      `coffee=${rate.cofUnit} rent=${rate.rentUnit}`);
+check('the habit builder prices a decision instead of asking for a total',
+      /78/.test(rate.readout) && /3/.test(rate.readout) && /6/.test(rate.readout), rate.readout);
+check('...its button is there before the numbers are, and dead until they land',
+      rate.buttonUpFront===true && rate.deadUntilFilled===true);
+check('...it comes alive on the keystroke, without taking the keyboard down',
+      rate.keptFocus===true && rate.liveWithoutBlur===true,
+      `focus=${rate.keptFocus} live=${rate.liveWithoutBlur}`);
+check('...it names the number it is about to assign', /78/.test(rate.buttonNames), rate.buttonNames);
+check('...and assigning writes the month, read back in the chosen rhythm',
+      Math.abs(rate.written-78)<0.02 && Math.abs(rate.shownInOwnRhythm-18)<0.2,
+      `stored=${rate.written} shown=${rate.shownInOwnRhythm}`);
+check('a pool gets neither control - its number is its subcategories',
+      rate.poolHasNoField===true && rate.poolHasNoBuilder===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

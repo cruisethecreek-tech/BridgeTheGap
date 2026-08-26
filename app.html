@@ -1395,6 +1395,24 @@
   .unit-sel{margin-left:6px;padding:6px 8px;border-radius:9px;border:1px solid var(--line);
     background:var(--panel-2);color:var(--text);font:inherit;font-size:13px;font-weight:700;max-width:150px}
   .unit-work{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  /* The assign field is the one people touch most and it was the only money
+     field in the app with no rhythm attached to it. It is a .ufld now, so it
+     carries the same period picker as every other amount - which means the
+     column layout wins over the old flat row, and cs-assign only keeps the box. */
+  .ufld.cs-assign{align-items:stretch;justify-content:flex-start}
+  /* Price the habit. Two numbers and a rhythm, multiplied out loud. */
+  .cs-rate{margin-top:8px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:11px;padding:10px 12px}
+  .cs-rk{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:8px}
+  .cs-rrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--muted);font-weight:700}
+  .cs-rrow input{width:66px;min-width:0;padding:8px 9px;font-size:15px;font-weight:800}
+  .cs-rrow select{padding:8px 9px;border-radius:9px;border:1px solid var(--line);
+    background:var(--ink);color:var(--text);font:inherit;font-size:13px;font-weight:700;max-width:150px}
+  .cs-rout{margin-top:9px;font-size:12.5px;line-height:1.5;color:var(--muted);overflow-wrap:break-word}
+  .cs-rout b{color:var(--text)}
+  .cs-rout .sub{opacity:.85}
+  .cs-rate #crUse{display:block;width:100%;margin-top:9px}
+  .cs-rate #crUse[disabled]{opacity:.45;cursor:not-allowed}
   /* Tripwires. The truth box leads, deliberately: someone reading "get a warning
      when you open Amazon" needs to know within one sentence that the app is not
      watching them. */
@@ -3430,7 +3448,7 @@ function defaultState(){
            uiMode:'auto', stageReached:1, day1:null,
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
-           spendingMode:false, spendLimit:0, dayToDay:[], sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
+           spendingMode:false, spendLimit:0, dayToDay:[], rateDraft:null, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[],
            investReturn:7, investYears:10, lev:{}, theme:'auto',
@@ -3449,6 +3467,7 @@ function normalizeState(s){
      backup or a future build, and it takes the whole stage bar down with it -
      one clamp is cheaper than a defensive read at every place stages are drawn. */
   s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
+  s.rateDraft=null;
   /* And heal the auto asset against the ledger, so an imported or hand-edited
      backup cannot carry an Invested-capital figure that disagrees with the
      transactions underneath it. */
@@ -5602,7 +5621,7 @@ function wireRepeat(box){
       /* Send them to the number first - and to the copy of it they are actually
          looking at. The tick now lives in the category sheet, so pointing at the
          list underneath would scroll a field they cannot see. */
-      setTimeout(()=>{ const inp=document.querySelector('#catSheet.on input[data-cat="'+id+'"]')
+      setTimeout(()=>{ const inp=(document.querySelector('#catSheet.on')&&document.getElementById('csA'+id))
                           || document.querySelector('#cats input[data-cat="'+id+'"]');
         if(inp){ inp.scrollIntoView({behavior:'smooth',block:'center'}); inp.focus(); inp.select&&inp.select(); } },80);
       if(typeof toast==='function') toast('Give it an amount first - then it can repeat that amount.');
@@ -6324,6 +6343,55 @@ function catMonthHistory(id,n){
   for(let i=0;i<n;i++){ out.unshift({m, a:catAssigned(id,m), s:catUsed(id,m)}); m=shiftMonth(m,-1); }
   return out;
 }
+/* ---------- how many times, at how much ----------
+   From a phone, on a category assigned $150: "assign this month should hold the
+   frequency of how many times per week. They go to get for example a coffee.
+   It's hard for people to plan with just one set number if they don't have the
+   options to make a rational decision."
+
+   Two separate gaps, and the first one really had been lost: every other money
+   field in the app carries a period picker - the spending limit, the debt
+   payment, the true-rate fields - and the one people touch most, the category
+   assignment, never got one. $35 a week is a thought; $151.67 a month is
+   arithmetic homework.
+
+   The second gap is the one that makes it a decision rather than a guess.
+   Nobody decides "$104 of coffee". They decide "three a week, about six
+   dollars" and want to know what that costs. So the builder does that
+   multiplication out loud and offers the answer - and because it names the two
+   numbers behind it, cutting the habit becomes a thing you can price rather
+   than a number you shave. */
+function rateMonthly(st){
+  const n=+st.n||0, amt=+st.amt||0;
+  const per=PERIODS.find(x=>x.k===st.per)||PERIODS.find(x=>x.k==='week');
+  return { n, amt, per, monthly: n>0&&amt>0 ? Math.round(n*amt*per.per*100)/100 : 0 };
+}
+function rateOutHTML(st){
+  const {n,amt,per,monthly}=rateMonthly(st);
+  return monthly>0
+    ? `<b>${n} &times; ${usd(amt)} ${escapeHtml(per.label)}</b> works out to <b>${money(monthly)}</b> a month${state.hourlyWage>0?` &middot; ${fmtHours(monthly/effectiveHourly())} of your life`:''}.`
+    : `<span class="sub">Fill both and this works out the month for you.</span>`;
+}
+function rateBuilderHTML(c){
+  const st=(state.rateDraft&&state.rateDraft.id===c.id)?state.rateDraft:{n:'',per:'week',amt:''};
+  const {monthly}=rateMonthly(st);
+  const per=PERIODS.find(x=>x.k===st.per)||PERIODS.find(x=>x.k==='week');
+  /* The button is always in the dom and never re-rendered from scratch. The
+     first draft only drew it once the numbers were complete, which on a phone
+     meant your first tap landed where a button was about to be. */
+  return `<div class="cs-rate">
+    <div class="cs-rk">Not sure what to put? Price the habit.</div>
+    <div class="cs-rrow">
+      <input type="number" id="crN" min="0" step="1" inputmode="decimal" placeholder="3" value="${st.n||''}" aria-label="How many times">
+      <span>times</span>
+      <select id="crPer" aria-label="How often">${['day','week','biweek','month'].map(periodMeta).map(pp=>`<option value="${pp.k}"${pp.k===per.k?' selected':''}>${escapeHtml(pp.label)}</option>`).join('')}</select>
+      <span>at $</span>
+      <input type="number" id="crAmt" min="0" step="0.01" inputmode="decimal" placeholder="6" value="${st.amt||''}" aria-label="How much each time">
+    </div>
+    <div class="cs-rout" id="crOut">${rateOutHTML(st)}</div>
+    <button class="btn sm primary" id="crUse"${monthly>0?'':' disabled'}>${monthly>0?`Assign ${money(monthly)}`:'Assign it'}</button>
+  </div>`;
+}
 function renderCatSheet(){
   const body=document.getElementById('catSheetBody'); if(!body) return;
   const c=state.categories.find(x=>x.id===catSheetId);
@@ -6342,6 +6410,10 @@ function renderCatSheet(){
      into next month, and a row labelled "from last month" would be inventing a
      number the arithmetic behind it does not support. What the month held is
      what the month held. */
+  /* Per category, so the unit is remembered per category: coffee is a
+     per-week thought and rent is a per-month one, and forcing one rhythm on
+     both is what made this field hard to plan with. */
+  const aid='csA'+c.id;
   const balance=`<div class="cs-sec"><div class="cs-h">Balance</div>
     <div class="cs-card">
       <div class="cs-row"><span>Assigned for ${monShort(M)}</span><b>${money(a)}</b></div>
@@ -6351,7 +6423,12 @@ function renderCatSheet(){
       <div class="cs-row big"><span>Available</span><b class="avail ${rem<0?'over':(a>0?(rem>0?'good':'spent'):'none')}">${money(rem)}</b></div>
       <div class="bar"><span style="width:${pct}%"></span></div>
     </div>
-    ${!isGroup?`<div class="cs-assign"><span class="cs-k">Assign this month</span><span class="cs-in">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span></div>`
+    ${!isGroup?`<div class="ufld cs-assign">
+        <span class="fl-k">Assign<span id="${aid}Unit"></span></span>
+        <span class="fl-in">$<input type="number" id="${aid}" inputmode="decimal" min="0" step="0.01" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <div class="unit-work" id="${aid}W"></div>
+      </div>
+      ${rateBuilderHTML(c)}`
       :`<p class="cs-note">This is a pool. Its number is whatever its subcategories add up to${own>0?`, plus the ${money(own)} you put straight against it`:''}. Assign inside the subs below.</p>`}
     ${rem<0?`<div class="rebalance"><div class="rb-msg">${escapeHtml(pickVoiceCtx(REBALANCE_COPY,c.name))}</div>
       <div class="rb-row"><span class="rb-over">${money(-rem)} past plan</span><button class="btn sm primary" data-rebal="${c.id}">Auto-Rebalance</button></div></div>`:''}
@@ -6421,6 +6498,33 @@ function renderCatSheet(){
     <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button></div>`;
 
   body.innerHTML=rename+balance+target+subs+whereLives+history+wallGuideHTML(c,M)+danger;
+  if(!isGroup){
+    /* Speaks monthly through get/set like every other unit field, so whatever
+       rhythm is on screen the stored number stays the month - the invariant the
+       whole plan is built on. */
+    wireUnitField({id:aid, dflt:'month', kinds:['day','week','biweek','month','year'],
+      get:()=>assignedFor(c.id,M),
+      set:v=>{ budgetFor(M)[c.id]=Math.max(0,Math.round(v*100)/100); save(); renderBudget(); renderHome(); }});
+    const draft=()=>{ const d=state.rateDraft&&state.rateDraft.id===c.id?state.rateDraft:{id:c.id,n:'',per:'week',amt:''};
+      d.id=c.id; state.rateDraft=d; return d; };
+    const nEl=document.getElementById('crN'), pEl=document.getElementById('crPer'), aEl=document.getElementById('crAmt');
+    const outEl=document.getElementById('crOut'), use=document.getElementById('crUse');
+    /* Patch the readout in place rather than re-render the sheet: a full redraw
+       on every keystroke would take the keyboard down mid-number. */
+    const sync=()=>{ const d=draft(); d.n=nEl.value; d.per=pEl.value; d.amt=aEl.value;
+      const {monthly}=rateMonthly(d);
+      if(outEl) outEl.innerHTML=rateOutHTML(d);
+      if(use){ use.disabled=!(monthly>0); use.textContent=monthly>0?`Assign ${money(monthly)}`:'Assign it'; } };
+    [nEl,pEl,aEl].forEach(el=>{ if(!el) return; el.addEventListener('input',sync); el.addEventListener('change',sync); });
+    if(use) use.addEventListener('click',()=>{
+      const d=draft(); d.n=nEl.value; d.per=pEl.value; d.amt=aEl.value;
+      const {monthly,per}=rateMonthly(d);
+      if(!(monthly>0)) return;
+      budgetFor(M)[c.id]=monthly; save();
+      renderBudget(); renderHome(); renderCatSheet();
+      if(typeof toast==='function') toast(`${c.name} set to ${money(monthly)} a month - ${d.n} times ${per.label} at ${usd(+d.amt||0)}.`);
+    });
+  }
   /* The whole sheet, not just its body - the rename pencil lives in the title,
      and wiring only the body left it as a button that did nothing. */
   wirePlan(document.getElementById('catSheet'), false);

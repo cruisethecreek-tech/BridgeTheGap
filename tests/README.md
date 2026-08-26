@@ -427,6 +427,19 @@ opens. It asserts the property now. Two of this session's failures were the same
 shape: a check that queries a surface the fixture never rendered passes on an
 empty string, so the new one asserts the label is non-empty before judging it.
 
+It holds **assign in the rhythm you live in**. The category assignment was the
+only money field in the app with no period picker on it, which made "$104 of
+coffee" the only way to say "three a week at six dollars". The properties are the
+ones that survive a rewrite: the field offers rhythms, whatever rhythm is on
+screen the *stored* number is still the month, the rhythm is remembered per
+category rather than app-wide, and the habit builder multiplies out loud and
+writes the month it names. Two of them are phone properties rather than maths
+ones - the Assign button exists **before** the numbers do (disabled), because a
+button that materialises on completion eats your first tap; and it comes alive on
+the keystroke without a re-render, because redrawing the sheet mid-number takes
+the keyboard down with it. Neither is visible in a screenshot and both were
+wrong in the first draft.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
