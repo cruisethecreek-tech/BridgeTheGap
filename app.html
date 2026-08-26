@@ -2235,6 +2235,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <div class="ufld income-only-rec hide" id="recHoursWrap"><span class="fl-k">Hours it takes<span id="recHoursUnit"></span></span>
             <span class="fl-in"><input type="number" id="recHours" min="0" step="0.5" inputmode="decimal" placeholder="opt." style="width:90px"></span>
             <div class="unit-work" id="recHoursW"></div></div>
+          <label class="fld invest-only-rec hide" id="recDestWrap">Lands in<select id="recDest"></select></label>
           <label class="fld invest-only-rec hide" id="recInvKindWrap">Kind<select id="recInvKind"><option value="holds">Holds its value</option><option value="self">Into me (health, skills)</option></select></label>
           <label class="fld">Repeats
             <select id="recFreq"><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="semimonthly">Twice a month</option><option value="monthly" selected>Monthly</option><option value="quarterly">Every 3 months</option><option value="yearly">Once a year</option></select>
@@ -2297,6 +2298,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <input type="number" id="txHours" min="0" step="0.5" placeholder="opt." style="width:90px">
           </label>
           <label class="fld invest-only hide" id="fldInv">Where it went
+            <select id="txInvPick" class="hide"></select>
             <input type="text" id="txInv" placeholder="Roth IRA, index fund, supplements…">
           </label>
           <label class="fld invest-only hide" id="fldInvKind">Kind
@@ -3462,8 +3464,11 @@ function normalizeState(s){
   const catIds=new Set((s.categories||[]).map(c=>c.id));
   s.dayToDay=(s.dayToDay||[]).filter(id=>catIds.has(id));
   const accIds=new Set((s.accounts||[]).map(a=>a.id));
-  (s.transactions||[]).forEach(t=>{ if(t.acctId && !accIds.has(t.acctId)) delete t.acctId; });
-  (s.recurring||[]).forEach(r=>{ if(r.acctId && !accIds.has(r.acctId)) delete r.acctId; });
+  (s.transactions||[]).forEach(t=>{ if(t.acctId && !accIds.has(t.acctId)) delete t.acctId;
+    if(t.destAcctId && !accIds.has(t.destAcctId)) delete t.destAcctId; });
+  (s.recurring||[]).forEach(r=>{ if(r.acctId && !accIds.has(r.acctId)) delete r.acctId;
+    if(r.destAcctId && !accIds.has(r.destAcctId)) delete r.destAcctId; });
+  if(typeof syncInvestAsset==='function' && Array.isArray(s.transactions)) syncInvestAsset(s);
   const goalIds=new Set((s.goals||[]).map(g=>g.id));
   (s.goals||[]).forEach(g=>{ if(!(g.target>0)) g.target=Math.max(1,+g.target||1000); if(g.saved>g.target) g.saved=g.target; if(!(g.saved>=0)) g.saved=0; });
   if(s.sweptDays) Object.keys(s.sweptDays).forEach(k=>{ if(!goalIds.has(s.sweptDays[k].goalId)) delete s.sweptDays[k]; });
@@ -4875,8 +4880,16 @@ function syncInvestAsset(st){
      BEFORE `let state` is initialised - reaching for the global there is a
      temporal-dead-zone error that takes the whole boot down. */
   const S=st||state;
+  /* An invest whose destination is a TRACKED account lives in that account's
+     balance, which already feeds net worth through bankTotal(). Counting it
+     here too would print the same dollars twice - once as "Roth IRA" and once
+     as "Invested capital". Only investments into things the app does not track
+     as accounts belong in the auto asset. A destination that stops existing
+     falls back in automatically, so the money is counted once, always, rather
+     than twice or zero times. */
+  const accIds=new Set((S.accounts||[]).map(a=>a.id));
   const total=Math.round(S.transactions
-    .filter(t=>t.type==='invest' && (t.ikind||'holds')!=='self')
+    .filter(t=>t.type==='invest' && (t.ikind||'holds')!=='self' && !(t.destAcctId && accIds.has(t.destAcctId)))
     .reduce((s,t)=>s+(+t.amount||0),0)*100)/100;
   S.assets=S.assets||[];
   let a=S.assets.find(x=>x.auto==='invest');
@@ -6471,12 +6484,17 @@ document.getElementById('addTx').addEventListener('click',()=>{
   } else if(txType==='invest'){
     const dest=document.getElementById('txInv').value.trim()||'Investment';
     const ikind=(document.getElementById('txInvKind')||{}).value||'holds';
-    const ivTx={id:uid(),type:'invest',amount:amt,source:dest,date,note,ikind};
+    const pick=document.getElementById('txInvPick');
+    const destId=(pick && !pick.classList.contains('hide')) ? pick.value : '';
+    const ivTx={id:uid(),type:'invest',amount:amt,source:destId?acctName(destId):dest,date,note,ikind};
+    if(destId) ivTx.destAcctId=destId;
     const ivAid=txAcctChoice(); if(ivAid) ivTx.acctId=ivAid;   // the cash still left an account
     state.transactions.push(ivTx);
     // supplements, a course, a tool: real growth, but the money is CONSUMED. Only
     // money that keeps its value becomes an asset, or net worth quietly lies.
-    if(ikind!=='self') investAssetAdd(amt);
+    // Recomputed rather than delta-added: a tracked destination lives in that
+    // account's balance and must stay out of the auto asset entirely.
+    if(ikind!=='self') syncInvestAsset();
     document.getElementById('txInv').value='';
   } else {
     const source=txSourceChoice();
@@ -7240,7 +7258,9 @@ function editTx(id, patch){
     (state.giving||[]).forEach(g=>{ if(g.txId===t.id) g.amount=t.amount; });
     (state.impulse||[]).forEach(i=>{ if(i.type==='buy'&&i.txId===t.id) i.amount=t.amount; });
   }
-  ['date','note','source','catId','srcType','srcLabel','energy','ikind','acctId'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
+  ['date','note','source','catId','srcType','srcLabel','energy','ikind','acctId','destAcctId'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
+  if('destAcctId' in patch && !patch.destAcctId) delete t.destAcctId;
+  if('destAcctId' in patch && t.destAcctId) t.source=acctName(t.destAcctId)||t.source;
   /* Covers the amount AND the kind: flipping "still yours" to "into you" takes
      the money out of the holding, and flipping it back puts it in. */
   if(t.type==='invest') syncInvestAsset();
@@ -7275,7 +7295,8 @@ function renderTxSheet(){
     ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>
       ${t.srcType==='other'?`<div class="txs-f"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" value="${escapeHtml(t.srcLabel||'')}" placeholder="Call it what it is" data-txedit="srcLabel"></span></div>`:''}`:''}
-    ${t.type==='invest'?`<div class="txs-f"><span class="txs-k">Into what</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Index fund" data-txedit="source"></span></div>
+    ${t.type==='invest'?`<div class="txs-f"><span class="txs-k">Lands in</span><span class="txs-v"><select data-txedit="destAcctId">${destAcctOptions(t.destAcctId)}</select></span></div>
+      ${!t.destAcctId?`<div class="txs-f"><span class="txs-k">Into what</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Index fund" data-txedit="source"></span></div>`:''}
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="ikind"><option value="holds"${(t.ikind||'holds')==='holds'?' selected':''}>Still yours - it holds value</option><option value="self"${t.ikind==='self'?' selected':''}>Into you - spent on purpose</option></select></span></div>`:''}
     <div class="txs-f"><span class="txs-k">Note</span><span class="txs-v"><input type="text" value="${escapeHtml(t.note||'')}" placeholder="What was it?" data-txedit="note"></span></div>
     ${(state.accounts||[]).length?`<div class="txs-f"><span class="txs-k">Account</span><span class="txs-v"><select data-txedit="acctId"><option value="">Not said</option>${acctOptions(t.acctId)}</select></span></div>`:''}
@@ -8744,8 +8765,15 @@ function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0
    have been in the figure you copied. Strictly after, or it double-counts. */
 function acctLoggedSince(a){
   if(!a||!a.updated) return 0;
-  return state.transactions.filter(t=>t.acctId===a.id && (t.date||'')>a.updated)
+  /* Two sides of a move: acctId is where money left FROM (income adds, all else
+     subtracts), destAcctId is where an investment LANDED (always adds). One
+     transaction can touch both accounts - Joint Checking down, Roth IRA up -
+     which is exactly what a transfer is. */
+  let sum=state.transactions.filter(t=>t.acctId===a.id && (t.date||'')>a.updated)
     .reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+  sum+=state.transactions.filter(t=>t.type==='invest' && t.destAcctId===a.id && (t.date||'')>a.updated)
+    .reduce((s,t)=>s+t.amount,0);
+  return sum;
 }
 function acctExpected(a){ return Math.round(((+a.balance||0)+acctLoggedSince(a))*100)/100; }
 function bankExpected(){ return (state.accounts||[]).reduce((s,a)=>s+acctExpected(a),0); }
@@ -8765,6 +8793,17 @@ function defaultAcctId(){
   return (liq[0]||list[0]).id;
 }
 function acctName(id){ const a=(state.accounts||[]).find(x=>x.id===id); return a?a.name:''; }
+/* Destinations an investment can land in: the tracked accounts, investment kind
+   first because that is what a destination usually is, then a way out - money
+   also goes into things the app does not track as accounts (a brokerage it has
+   never been told about, a course, equipment), and those keep living in the
+   auto Invested-capital asset exactly as before. */
+function destAcctOptions(sel){
+  const list=(state.accounts||[]).slice()
+    .sort((a,b)=>(acctKind(a.kind).liquid?1:0)-(acctKind(b.kind).liquid?1:0));
+  return list.map(a=>`<option value="${a.id}"${a.id===sel?' selected':''}>${escapeHtml(a.name)}</option>`).join('')
+    +`<option value=""${!sel?' selected':''}>Somewhere I don't track here - just name it</option>`;
+}
 function acctOptions(sel){
   return (state.accounts||[]).map(a=>`<option value="${a.id}"${a.id===sel?' selected':''}>${escapeHtml(a.name)}</option>`).join('');
 }
@@ -9236,8 +9275,11 @@ function renderAccounts(){
        acctId is worse than none - it counts toward nothing AND the backfill
        skips it, so the promise would be false. Freed, they become orphans and
        the catch-up card appears offering exactly that home. */
-    state.transactions.forEach(t=>{ if(t.acctId===gone) delete t.acctId; });
-    (state.recurring||[]).forEach(r=>{ if(r.acctId===gone) delete r.acctId; });
+    state.transactions.forEach(t=>{ if(t.acctId===gone) delete t.acctId; if(t.destAcctId===gone) delete t.destAcctId; });
+    (state.recurring||[]).forEach(r=>{ if(r.acctId===gone) delete r.acctId; if(r.destAcctId===gone) delete r.destAcctId; });
+    /* investments that landed in the deleted account fall back into the auto
+       Invested-capital asset - counted once, always, never zero times */
+    syncInvestAsset();
     save();
     if(typeof captureSnapshot==='function') captureSnapshot();
     renderAccounts(); renderNetWorth(); renderTx(); renderHome();
@@ -10834,6 +10876,7 @@ function recSyncTypeFields(){
   const rhw=document.getElementById('recHoursWrap'); if(rhw) rhw.classList.toggle('hide',!inc);
   if(inc) drawRecHours();
   const rik=document.getElementById('recInvKindWrap'); if(rik) rik.classList.toggle('hide',!inv);
+  const rdw=document.getElementById('recDestWrap'); if(rdw) rdw.classList.toggle('hide', !inv || !(state.accounts||[]).length);
 }
 document.getElementById('recType').addEventListener('change',recSyncTypeFields);
 
@@ -10872,6 +10915,8 @@ function recEditLoad(id){
      lands somewhere and a bill leaves from somewhere. */
   const ra=document.getElementById('recAcct');
   if(ra && r.acctId && [...ra.options].some(o=>o.value===r.acctId)) ra.value=r.acctId;
+  const rd=document.getElementById('recDest');
+  if(rd && r.type==='invest') rd.value=(r.destAcctId && [...rd.options].some(o=>o.value===r.destAcctId)) ? r.destAcctId : '';
   const add=document.getElementById('addRec'); if(add) add.textContent='Save';
   const c=document.getElementById('recCancel'); if(c) c.classList.remove('hide');
   renderRecurring();
@@ -10895,7 +10940,11 @@ document.getElementById('addRec').addEventListener('click',()=>{
       if(typeof toast==='function') toast('Name the new category and it will be made as you set this up.'); return; }
     if(!catId){ if(typeof toast==='function') toast('Needs a category first - taking you to Plan. Add one and come straight back.'); goTrail('category'); return; }
     item.catId=catId; }
-  else if(type==='invest'){ item.source=document.getElementById('recSrc').value.trim()||'Investment'; item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
+  else if(type==='invest'){
+    const rd=(document.getElementById('recDest')||{}).value||'';
+    if(rd){ item.destAcctId=rd; item.source=acctName(rd)||'Investment'; }
+    else item.source=document.getElementById('recSrc').value.trim()||'Investment';
+    item.ikind=(document.getElementById('recInvKind')||{}).value||'holds'; }
   else {
     item.source=document.getElementById('recSrc').value.trim()||'Income';
     if(state.householdOn){ const o=document.getElementById('recOwner'); if(o) item.owner=o.value; }
@@ -10998,6 +11047,16 @@ function refreshCatSelects(){
       si.classList.toggle('hide', sp.value!=='__new');
     }
   }
+  /* the invest destination pickers, filled from the same accounts list */
+  [['txInvPick','txInv'],['recDest',null]].forEach(([sid,freeId])=>{
+    const sel=document.getElementById(sid); if(!sel) return;
+    const keep=sel.value;
+    if(!(state.accounts||[]).length){ sel.classList.add('hide'); if(freeId) document.getElementById(freeId).classList.remove('hide'); return; }
+    sel.innerHTML=destAcctOptions(keep||undefined);
+    if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;
+    sel.classList.remove('hide');
+    if(freeId){ const fi=document.getElementById(freeId); if(fi) fi.classList.toggle('hide', sel.value!==''); }
+  });
   [['txAcct','fldAcct'],['recAcct','recAcctWrap']].forEach(([sid,wid])=>{
     const ac=document.getElementById(sid), acw=document.getElementById(wid);
     if(!ac) return;
@@ -11025,6 +11084,10 @@ function syncSrcOther(){
     }
   });
   document.addEventListener('change',e=>{
+    if(e.target && e.target.id==='txInvPick'){
+      const fi=document.getElementById('txInv');
+      if(fi){ fi.classList.toggle('hide', e.target.value!==''); if(e.target.value==='') fi.focus(); }
+    }
     if(e.target && e.target.id==='txSrcPick'){
       const sp=e.target, si=document.getElementById('txSrc');
       if(sp.value==='__new'){ if(si){ si.classList.remove('hide'); si.value=''; si.focus(); } return; }
@@ -11224,7 +11287,12 @@ function postRecurring(month){
          somewhere real. */
       const raid=(r.acctId && (state.accounts||[]).some(a=>a.id===r.acctId)) ? r.acctId : defaultAcctId();
       if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id}; if(r.owner) tx.owner=r.owner; if(raid) tx.acctId=raid; state.transactions.push(tx); }
-      else if(r.type==='invest'){ const ik=r.ikind||'holds'; const tx={id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik}; if(raid) tx.acctId=raid; state.transactions.push(tx); if(ik!=='self') investAssetAdd(r.amount); }   // automated investing - the habit that beats willpower
+      else if(r.type==='invest'){ const ik=r.ikind||'holds';
+        const tx={id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik};
+        if(raid) tx.acctId=raid;
+        if(r.destAcctId && (state.accounts||[]).some(a=>a.id===r.destAcctId)) tx.destAcctId=r.destAcctId;
+        state.transactions.push(tx);
+        if(ik!=='self') syncInvestAsset(); }   // automated investing - the habit that beats willpower
       else { const tx={id:uid(),type:'expense',amount:r.amount,catId:r.catId,date,note:recTxNote(r),recId:r.id}; if(raid) tx.acctId=raid; state.transactions.push(tx); }
       added++;
     });

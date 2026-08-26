@@ -4446,6 +4446,82 @@ check('the discrepancy survives on the entry sheet after the toast is gone',
 check('a source with no rule behind it invents no expectation',
       bva.noRuleNoNote===true);
 
+/* ---- 66. an investment lands somewhere ----
+   From a phone, on the recurring invest form: "where it goes should attach to
+   an account." Right - and the attachment carries a trap the free-text field
+   never had. A tracked destination lives in that account's balance, which
+   already feeds net worth through bankTotal(); the auto Invested-capital asset
+   feeds net worth too. Count a deposit in both and the same dollars print
+   twice. Count it in neither - say, after the destination account is deleted -
+   and they vanish. The invariant is: counted once, always.
+
+   So one transaction now moves BOTH sides - the source account's expectation
+   down, the destination's up, which is what a transfer is - and the auto asset
+   holds only investments into things the app does not track as accounts. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'joint',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-20'},
+            {id:'roth',name:'Roth IRA',kind:'invest',balance:5000,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'}]});
+await p.reload(); await p.waitForTimeout(700);
+const dest = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderTx(); await wait(300);
+  document.querySelector('#typeToggle button[data-t="invest"]').click(); await wait(200);
+  const pick=document.getElementById('txInvPick');
+  const out={ pickerShown:!pick.classList.contains('hide'),
+              investKindFirst:[...pick.options][0].textContent==='Roth IRA',
+              escapeHatch:[...pick.options].some(o=>o.value==='') };
+  pick.value='roth'; pick.dispatchEvent(new Event('change',{bubbles:true}));
+  document.getElementById('txAmt').value='100';
+  document.getElementById('txAcct').value='joint';
+  document.getElementById('txDate').value='2026-08-26';
+  document.getElementById('addTx').click(); await wait(400);
+  const t=state.transactions.find(x=>x.type==='invest');
+  out.namedItself=t.source==='Roth IRA';
+  out.bothSides={ joint:acctExpected(state.accounts[0]), roth:acctExpected(state.accounts[1]) };
+  out.autoAsset=((state.assets||[]).find(a=>a.auto==='invest')||{}).value||0;
+  out.netWorth=netWorth();
+  /* the free-text lane keeps feeding the auto asset - money into things the app
+     does not track as accounts is still real */
+  document.querySelector('#typeToggle button[data-t="invest"]').click(); await wait(150);
+  const p2=document.getElementById('txInvPick');
+  p2.value=''; p2.dispatchEvent(new Event('change',{bubbles:true})); await wait(120);
+  out.freeTextReturns=!document.getElementById('txInv').classList.contains('hide');
+  document.getElementById('txInv').value='Crypto thing';
+  document.getElementById('txAmt').value='50';
+  document.getElementById('addTx').click(); await wait(400);
+  out.autoAfterFree=((state.assets||[]).find(a=>a.auto==='invest')||{}).value||0;
+  /* deleting the destination account: its deposits fall back into the auto
+     asset rather than vanishing from net worth */
+  activateTab('goals'); renderAccounts(); await wait(200);
+  document.querySelector('[data-acctdel="roth"]').click(); await wait(200);
+  document.querySelector('[data-acctdelyes="roth"]').click(); await wait(300);
+  out.afterDelete={ destCleared:!state.transactions.find(x=>x.amount===100).destAcctId,
+                    autoAsset:((state.assets||[]).find(a=>a.auto==='invest')||{}).value||0 };
+  /* and a recurring invest rule carries its destination onto what it posts */
+  state.accounts.push({id:'hysa',name:'HYSA',kind:'savings',balance:0,updated:'2026-08-01'});
+  state.recurring=[{id:'ri',type:'invest',amount:25,source:'HYSA',freq:'monthly',anchor:'2026-08-10',day:10,ikind:'holds',destAcctId:'hysa'}];
+  state.transactions=[]; save(); postRecurring('2026-08');
+  out.rulePosts=(state.transactions[0]||{}).destAcctId;
+  return out;
+});
+check('the invest form offers the tracked accounts, investment kind first, with a way out',
+      dest.pickerShown && dest.investKindFirst && dest.escapeHatch, JSON.stringify(dest));
+check('a tracked destination names the entry after itself', dest.namedItself===true);
+check('one investment moves both sides - source down, destination up',
+      dest.bothSides.joint===1900 && dest.bothSides.roth===5100, JSON.stringify(dest.bothSides));
+/* The trap this feature carries: the same dollars must never print twice. */
+check('...and stays out of the auto asset, so net worth counts the money exactly once',
+      dest.autoAsset===0 && dest.netWorth===7000,
+      `auto ${dest.autoAsset}, net worth ${dest.netWorth}`);
+check('money into things the app does not track still lives in Invested capital',
+      dest.freeTextReturns===true && dest.autoAfterFree===50);
+check('deleting the destination account drops its deposits back into the auto asset',
+      dest.afterDelete.destCleared===true && dest.afterDelete.autoAsset===150,
+      JSON.stringify(dest.afterDelete));
+check('a recurring invest rule carries its destination onto what it posts',
+      dest.rulePosts==='hysa', String(dest.rulePosts));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

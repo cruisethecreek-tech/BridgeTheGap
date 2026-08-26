@@ -406,6 +406,14 @@ expectation. The test targets the hand-logged entry, not the occurrence the rule
 auto-posts on boot - the rule's own posting is exactly on-amount and would mask
 everything.
 
+And **the invest destination**, whose one invariant is that the dollars are
+counted once, always: a tracked destination moves both sides of the transfer
+(source expectation down, destination up), stays out of the auto
+Invested-capital asset so net worth never prints the same money twice, falls
+back into it when the destination account is deleted so it never vanishes
+either, keeps the free-text lane for things the app does not track, and rides a
+recurring rule onto everything it posts.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
