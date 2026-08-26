@@ -1140,6 +1140,14 @@
     border:1px solid rgba(230,178,77,.4);background:rgba(230,178,77,.08);color:var(--muted)}
   .ac-gap b{color:var(--text)}
   .ac-gap.short{border-color:rgba(var(--accent-2-rgb),.4);background:rgba(var(--accent-2-rgb),.08)}
+  /* Asked in place, on the row itself. A dialog over the top would hide the
+     very thing being asked about. */
+  .rec.confirming,.acct-row.confirming{border-color:rgba(var(--accent-2-rgb),.5);background:rgba(var(--accent-2-rgb),.07);display:block}
+  .rec-conf{padding:2px 0}
+  .rc-q{font-weight:800;font-size:15px}
+  .rc-w{font-size:13px;line-height:1.55;color:var(--muted);margin-top:5px}
+  .rc-w b{color:var(--text)}
+  .rc-a{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
   .ac-backfill{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:13px 15px}
   .bf-h{font-size:15px;font-weight:800}
   .bf-p{font-size:13px;line-height:1.55;color:var(--muted);margin:7px 0 0}
@@ -1597,6 +1605,14 @@
   /* a guess should not look like a decision - it is marked until you confirm or
      change it, and the mark clears the moment you touch the dropdown */
   .ql-row .ql-cat.guessed{border-color:var(--accent);border-left-width:4px;background:rgba(var(--accent-rgb),.07)}
+  /* Where the whole batch came from, asked once above the lines. */
+  .ql-acct{background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin:10px 0 4px}
+  .ql-acct.asking{border-color:var(--accent);background:rgba(var(--accent-rgb),.09)}
+  .ql-acct label{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;flex-wrap:wrap}
+  .ql-acct select{flex:1;min-width:130px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 8px;font-size:14px}
+  .ql-acct.one{font-size:14px;font-weight:700}
+  .ql-acct-n{display:block;margin-top:5px;font-size:12px;line-height:1.5;color:var(--muted);font-weight:600}
+  .ql-acct-n b{color:var(--text)}
   /* The name field for a category being made on the spot. Same idea as the
      quick log's, in the two forms that never had one. */
   .cat-new{margin-top:6px;background:var(--panel);border:1px solid var(--accent);color:var(--text);
@@ -6614,6 +6630,38 @@ function suggestCatFor(text){
   Object.keys(score).forEach(id=>{ if(score[id]>top){ top=score[id]; best=id; } });
   return top>=4 ? best : '';
 }
+/* One account for the batch, not one per line. A notepad of purchases came off
+   a single card and asking eleven times would be worse than not asking - but
+   without it every line of the fastest way into this app lands with no account
+   on it, which is exactly the history the catch-up on Build exists to rescue.
+   Asked once, at the top, where it reads as a heading rather than a chore. */
+function qlAcctRowHTML(){
+  const accts=state.accounts||[];
+  if(!accts.length) return '';
+  if(accts.length===1) return `<div class="ql-acct one">Coming out of <b>${escapeHtml(accts[0].name)}</b><span class="ql-acct-n">the only account you have told me about</span></div>`;
+  return `<div class="ql-acct"><label>Coming out of <select id="qlAcct">${acctOptions(defaultAcctId())}</select></label>
+    <span class="ql-acct-n">All the lines below go against this one. Change any of them afterwards on Track.</span></div>`;
+}
+/* Not a modal. The panel is already open, the rows are already filled, and a
+   sheet over the top would hide the very lines being checked - the same reason
+   the "?" explanations are inline. It highlights the picker that is already
+   there and says why it is being asked. */
+function qlAskAccount(n){
+  const accts=state.accounts||[];
+  if(!accts.length) return;
+  const wrap=document.querySelector('.ql-acct'); if(!wrap) return;
+  wrap.classList.add('asking');
+  const note=wrap.querySelector('.ql-acct-n');
+  if(note) note.innerHTML = accts.length>1
+    ? `<b>Which account did these ${n} come out of?</b> Set it once here and every line goes against it.`
+    : `All ${n} will go against <b>${escapeHtml(accts[0].name)}</b>. Add another account on Build if that is wrong.`;
+  wrap.scrollIntoView({behavior:'smooth',block:'center'});
+  const sel=document.getElementById('qlAcct'); if(sel) setTimeout(()=>sel.focus(),400);
+}
+function qlAcctChoice(){
+  const sel=document.getElementById('qlAcct');
+  return (sel && sel.value) || defaultAcctId();
+}
 function qlRow(){ return `<div class="ql-row">
     <input class="ql-what" type="text" placeholder="What was it? (e.g. Coffee, Roth IRA)">
     <span class="ql-dol">$<input class="ql-amt" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></span>
@@ -6662,7 +6710,8 @@ function renderQuickLog(){
     <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Snap my notepad</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
-    <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
+    ${qlAcctRowHTML()}
+    <div class="ql-list" id="qlList">${qlRow()}</div>
     <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn primary" id="qlSave">Log them all →</button></div>
   </div>`;
   document.getElementById('qlDate').value=qlDatePrefill||todayStr(); qlDatePrefill=null;   // consumed once - the next open is today again unless told otherwise
@@ -6707,6 +6756,11 @@ function renderQuickLog(){
           row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt; guessRow(row); filled++;
         });
         note.textContent='Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
+        /* A photo is the one path where somebody hands over a whole batch at
+           once without touching a single field, so the account is the question
+           most likely to go unanswered - and every line of it would land with
+           no account on it. Raised here, once, where they are already looking. */
+        qlAskAccount(filled);
       }
     }catch(e){ if(gen===qlGen) note.textContent="Couldn't fetch the reader (offline, maybe). The photo still works as your reference - type the lines in yourself."; }
     readBtn.disabled=false;
@@ -6735,6 +6789,7 @@ function renderQuickLog(){
   document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
   document.getElementById('qlSave').onclick=()=>{
     const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0, put=0, came=0;
+    const batchAcct=qlAcctChoice();   // read once: every line in this batch came from the same place
     box.querySelectorAll('.ql-row').forEach(el=>{
       const what=(el.querySelector('.ql-what').value||'').trim();
       const amt=parseFloat(el.querySelector('.ql-amt').value);
@@ -6743,17 +6798,23 @@ function renderQuickLog(){
       /* Money that did NOT leave. Same row, same two fields, different verb. */
       if(catId==='__invest'){
         const dest=what||'Savings';
-        state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note:'',ikind:'holds'});
+        const ivT={id:uid(),type:'invest',amount:amt,source:dest,date,note:'',ikind:'holds'};
+        if(batchAcct) ivT.acctId=batchAcct;
+        state.transactions.push(ivT);
         investAssetAdd(amt);          // it is still yours, so net worth has to know
         added++; put+=amt; el.remove(); return;
       }
       if(catId==='__income'){
-        state.transactions.push({id:uid(),type:'income',amount:amt,source:what||'Income',date,note:''});
+        const inT={id:uid(),type:'income',amount:amt,source:what||'Income',date,note:''};
+        if(batchAcct) inT.acctId=batchAcct;
+        state.transactions.push(inT);
         added++; came+=amt; el.remove(); return;
       }
       if(catId==='__new'){ const nm=(el.querySelector('.ql-new').value||'').trim()||what||'Spending'; catId=findOrCreateCat(nm).id; }
       if(!catId) uncat++;   // honest: a row nothing could be guessed for lands as Uncategorized, and says so
-      state.transactions.push({id:uid(),type:'expense',amount:amt,catId,date,note:what}); added++;
+      const exT={id:uid(),type:'expense',amount:amt,catId,date,note:what};
+      if(batchAcct) exT.acctId=batchAcct;
+      state.transactions.push(exT); added++;
       el.remove();   // logged rows leave; flagged rows stay on screen for fixing
     });
     if(!added){ if(typeof toast==='function') toast(namedNoAmt?'Add an amount to the highlighted line'+(namedNoAmt>1?'s':'')+'.':'Nothing to log yet - name a purchase and give it an amount.'); return; }   // never a silent no-op
@@ -8418,7 +8479,7 @@ const ACCT_PURPOSES=[
   {k:'retire', label:'Retirement'}
 ];
 function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
-let backfillAcct=null;
+let backfillAcct=null, recDelId=null, acctDelId=null;
 function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
 /* ---------- the ledger and the bank, finally introduced ----------
    Asked directly: "how do I change my bank balance to reflect the income I
@@ -8878,7 +8939,19 @@ function renderAccounts(){
     const gapLine = (a.lastGap!==undefined && Math.abs(+a.lastGap)>0.005)
       ? `<div class="ac-gap ${+a.lastGap<0?'short':'over'}"><b>${usd(Math.abs(+a.lastGap))}</b> ${+a.lastGap<0?'left without being logged':'arrived without being logged'} last time you checked${a.lastRecon?' ('+a.lastRecon+')':''}. That is the number this app exists to find.</div>`
       : '';
-    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">Bank said this${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove">✕</button></div>`;
+    /* Same reasoning as the recurring rules, with one more consequence now that
+       entries name an account: removing it leaves whatever pointed at it with
+       nowhere to be, so the count is stated before rather than discovered
+       after. */
+    if(acctDelId===a.id){
+      const pointing=state.transactions.filter(t=>t.acctId===a.id).length;
+      return `<div class="acct-row confirming"><div class="rec-conf">
+        <div class="rc-q">Remove <b>${escapeHtml(a.name)}</b>?</div>
+        <div class="rc-w">Its <b>${usd(+a.balance||0)}</b> leaves your net worth and your runway. ${pointing?`The <b>${pointing}</b> entr${pointing===1?'y':'ies'} logged against it stay on Track, but stop counting toward any balance until you give ${pointing===1?'it':'them'} a new home.`:'Nothing is logged against it.'}</div>
+        <div class="rc-a"><button class="btn sm danger" data-acctdelyes="${a.id}">Remove it</button><button class="btn sm ghost" data-acctdelno="1">Keep it</button></div>
+      </div></div>`;
+    }
+    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">Bank said this${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
   }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
@@ -8915,10 +8988,13 @@ function renderAccounts(){
     renderAccounts(); renderNetWorth(); renderHome();
     if(typeof toast==='function') toast(`${escapeHtml(a.name)} set to ${usd(a.balance)} from what you logged. Check it against the bank when you can - that is the half this cannot do.`);
   }));
-  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{
-    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdel); save();
+  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=b.dataset.acctdel; renderAccounts(); }));
+  box.querySelectorAll('button[data-acctdelno]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=null; renderAccounts(); }));
+  box.querySelectorAll('button[data-acctdelyes]').forEach(b=>b.addEventListener('click',()=>{
+    acctDelId=null;
+    state.accounts=(state.accounts||[]).filter(x=>x.id!==b.dataset.acctdelyes); save();
     if(typeof captureSnapshot==='function') captureSnapshot();
-    renderAccounts(); renderNetWorth(); renderHome();
+    renderAccounts(); renderNetWorth(); renderTx(); renderHome();
   }));
   /* ---- the one-time catch-up ----
      Everything logged before accounts carried one has no account on it, so it
@@ -10729,10 +10805,36 @@ function renderRecurring(){
     // "+1 mo" and the dollar figure you typed was nowhere on screen.
     const alt = state.freedomMode ? usd(r.amount) : (effectiveHourly()>0 ? fmtLife(r.amount) : '');
     const sign = r.type==='income'?'+':r.type==='invest'?'→':'−';
-    return `<div class="rec ${r.type}${recEditId===r.id?' editing':''}"><span class="tag">${tag}</span><span class="nm">${label}<i class="rec-when">${meta.short} · next ${nextTxt}${equiv}${alt?' · '+alt:''}</i></span><span class="am">${sign}${money(r.amount)}</span><button class="edit" data-editrec="${r.id}" title="Edit">✎</button><button class="del" data-delrec="${r.id}" title="Delete">✕</button></div>`;
+    /* One tap used to end a schedule with nothing in between. A rule is not a
+       row of data - it is the thing standing between somebody and forgetting
+       their rent, and rebuilding it means remembering an amount, a cadence and
+       an anchor date they set weeks ago. So the ✕ asks, in place, and the answer
+       carries the fact people actually want: the money already posted is real
+       and is not going anywhere. Inline rather than a browser confirm, for the
+       same reason everything else here is - a dialog hides the row you are
+       being asked about. */
+    if(recDelId===r.id){
+      const posted=state.transactions.filter(t=>t.recId===r.id).length;
+      return `<div class="rec ${r.type} confirming"><div class="rec-conf">
+        <div class="rc-q">Stop <b>${label}</b> repeating?</div>
+        <div class="rc-w">No more will post. ${posted?`The <b>${posted}</b> already logged stay on Track - this only removes the schedule, never the money that already moved.`:'Nothing has posted from it yet, so nothing is lost.'}</div>
+        <div class="rc-a"><button class="btn sm danger" data-delrecyes="${r.id}">Stop it</button><button class="btn sm ghost" data-delrecno="1">Keep it</button></div>
+      </div></div>`;
+    }
+    return `<div class="rec ${r.type}${recEditId===r.id?' editing':''}"><span class="tag">${tag}</span><span class="nm">${label}<i class="rec-when">${meta.short} · next ${nextTxt}${equiv}${alt?' · '+alt:''}</i></span><span class="am">${sign}${money(r.amount)}</span><button class="edit" data-editrec="${r.id}" title="Edit">✎</button><button class="del" data-delrec="${r.id}" title="Stop this repeating">✕</button></div>`;
   }).join('');
   box.querySelectorAll('button[data-editrec]').forEach(b=>b.addEventListener('click',()=>recEditLoad(b.dataset.editrec)));
-  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ if(recEditId===b.dataset.delrec) recEditId=null; state.recurring=state.recurring.filter(x=>x.id!==b.dataset.delrec); recomputeBlendedWage(); save(); renderRecurring(); if(typeof updateWageNote==='function') updateWageNote(); renderHome(); }));
+  box.querySelectorAll('button[data-delrec]').forEach(b=>b.addEventListener('click',()=>{ recDelId=b.dataset.delrec; renderRecurring(); }));
+  box.querySelectorAll('button[data-delrecno]').forEach(b=>b.addEventListener('click',()=>{ recDelId=null; renderRecurring(); }));
+  box.querySelectorAll('button[data-delrecyes]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.delrecyes;
+    if(recEditId===id) recEditId=null;
+    recDelId=null;
+    state.recurring=state.recurring.filter(x=>x.id!==id);
+    recomputeBlendedWage(); save(); renderRecurring();
+    if(typeof updateWageNote==='function') updateWageNote(); renderHome();
+    if(typeof toast==='function') toast('Schedule stopped. Everything it already posted is still on Track.');
+  }));
 }
 /* ============================================================
    RECURRING SCHEDULES

@@ -347,6 +347,22 @@ figure must record no gap, since nothing came from outside and a gap there would
 be invented evidence. The double-count guard was confirmed by relaxing the date
 comparison and watching it fail.
 
+And **the quick log knowing its funding source**. It has to open on one line
+rather than three, ask for the account exactly once for the whole batch (never
+once per line), file every line of that batch - expense, income and put-away -
+against the chosen account, move that account's expected balance and leave the
+others alone, and raise the question after a photo is read rather than letting a
+whole batch land unasked. The two degenerate cases are checked too: one account
+is stated rather than asked about but still filed against, and with no accounts
+at all it says nothing and still logs.
+
+And **the confirms on things that took work to build**. A recurring schedule and
+an account both have to survive the first tap, say what stopping actually costs -
+including that the money already posted is untouched, which is the fear people
+actually hesitate over - be genuinely backable-out-of, and then do exactly what
+they promised and no more. The account one additionally has to name how many
+entries would be left pointing at nothing.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own

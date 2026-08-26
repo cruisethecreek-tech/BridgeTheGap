@@ -2147,7 +2147,13 @@ const put = await p.evaluate(async () => {
   o.guess=['Roth IRA','401k contribution','transfer to savings','emergency fund','index fund','Coffee']
     .map(x=>suggestCatFor(x));
   quickLogOpen=true; renderQuickLog();
+  /* The panel opens on ONE line now rather than three - a wall of empty rows was
+     the complaint. Extra lines come from the button, so the test presses it the
+     way a person does, and records that one is where it starts. */
+  o.rowsAtStart=document.querySelectorAll('.ql-row').length;
+  document.getElementById('qlAdd').click(); document.getElementById('qlAdd').click();
   const rows=[...document.querySelectorAll('.ql-row')];
+  o.rowsAfterAdd=rows.length;
   o.options=[...rows[0].querySelectorAll('.ql-cat option')].map(x=>x.value);
   const set=(row,what,amt,cat)=>{ row.querySelector('.ql-what').value=what;
     row.querySelector('.ql-amt').value=amt; row.querySelector('.ql-cat').value=cat; };
@@ -2157,6 +2163,7 @@ const put = await p.evaluate(async () => {
   document.getElementById('qlSave').click();
   await new Promise(x=>setTimeout(x,120));
   o.written=state.transactions.map(t=>t.type+':'+t.amount+':'+(t.source||t.note)).sort();
+  o.acctOnAll=state.transactions.every(t=>!state.accounts.length || !!t.acctId);
   /* money you still own has to reach net worth, or "put away" is just a label */
   o.asset=(state.assets||[]).map(a=>a.name+':'+a.value).join(',');
   o.toast=(document.getElementById('toastEl')||{}).textContent;
@@ -2183,6 +2190,8 @@ const put = await p.evaluate(async () => {
 });
 check('the quick log offers somewhere for money that did not leave',
       put.options.includes('__invest') && put.options.includes('__income'), put.options.join(','));
+check('the quick log opens on one line and grows on request, not a wall of empty rows',
+      put.rowsAtStart===1 && put.rowsAfterAdd===3, `${put.rowsAtStart} at start, ${put.rowsAfterAdd} after two presses`);
 check('...and a Roth is never guessed as shopping',
       put.guess.slice(0,5).every(g=>g==='__invest') && put.guess[5]==='c1', put.guess.join(','));
 check('a put-away line writes an investment, not an expense',
@@ -3959,6 +3968,155 @@ const bfNone = await p.evaluate(async () => {
   return document.getElementById('acctBackfill').innerText.trim();
 });
 check('...and is never offered when there is no account to file to', bfNone==='', bfNone.slice(0,50));
+
+/* ---- 60. the fast way in knows where the money came from ----
+   From a phone, on the quick log: "instead of making this group list so long
+   just have an add another feature to keep things tight - also it looks like
+   it's missing a funding source to say which bank balance you want to add or
+   withdraw from." Both right. It opened on three empty rows, which reads as a
+   form to fill rather than a line to jot, and it was the one path into the app
+   with no account on it at all - so the fastest way to log was also the only way
+   to create history the catch-up on Build then has to rescue.
+
+   The account is asked ONCE for the batch, not once per line: a notepad of
+   purchases came off a single card, and asking eleven times would be worse than
+   not asking. And after a photo is read - the one path where a whole batch
+   arrives without a single field being touched - the question is raised where
+   the person is already looking. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-20'},
+            {id:'amex',name:'Amex',kind:'checking',balance:500,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'},{id:'c',name:'Coffee'}]});
+await p.reload(); await p.waitForTimeout(700);
+const qlAcct = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); quickLogOpen=true; renderQuickLog(); await wait(250);
+  const out={ rows:document.querySelectorAll('.ql-row').length,
+              askedOnce:document.querySelectorAll('#qlAcct').length,
+              perRow:document.querySelectorAll('.ql-row select[id^=qlAcct]').length,
+              defaultsToLiquid:(document.getElementById('qlAcct')||{}).value };
+  document.getElementById('qlAdd').click(); document.getElementById('qlAdd').click(); await wait(150);
+  const rows=[...document.querySelectorAll('.ql-row')];
+  const fill=(r,what,amt,cat)=>{ r.querySelector('.ql-what').value=what; r.querySelector('.ql-amt').value=amt;
+    const c=r.querySelector('.ql-cat'); c.value=cat; c.dispatchEvent(new Event('change',{bubbles:true})); };
+  fill(rows[0],'Coffee','4.20','c'); fill(rows[1],'Lunch','12','f'); fill(rows[2],'Groceries','86.40','f');
+  document.getElementById('qlAcct').value='amex';
+  document.getElementById('qlDate').value='2026-08-26';
+  document.getElementById('qlSave').click(); await wait(400);
+  out.logged=state.transactions.length;
+  out.allOnChosen=state.transactions.every(t=>t.acctId==='amex');
+  out.expected={chk:acctExpected(state.accounts[0]), amex:acctExpected(state.accounts[1])};
+  /* the photo path raises it rather than letting a whole batch land unasked */
+  quickLogOpen=true; renderQuickLog(); await wait(200);
+  qlAskAccount(4);
+  out.afterPhoto={ highlighted:/asking/.test(document.querySelector('.ql-acct').className),
+                   says:document.querySelector('.ql-acct-n').innerText };
+  return out;
+});
+check('the quick log opens on one line, not a wall of empty rows',
+      qlAcct.rows===1, `${qlAcct.rows} rows`);
+check('it asks where the money came from once for the batch, never once per line',
+      qlAcct.askedOnce===1 && qlAcct.perRow===0,
+      `${qlAcct.askedOnce} picker, ${qlAcct.perRow} per-row`);
+check('...and every line of the batch lands on the account that was chosen',
+      qlAcct.logged===3 && qlAcct.allOnChosen===true);
+check('...moving that account and leaving the other one alone',
+      qlAcct.expected.amex===397.4 && qlAcct.expected.chk===2000,
+      JSON.stringify(qlAcct.expected));
+check('after a photo is read the question is raised, not left to be missed',
+      qlAcct.afterPhoto.highlighted===true && /which account/i.test(qlAcct.afterPhoto.says),
+      qlAcct.afterPhoto.says);
+/* With one account there is nothing to ask, so it states the answer instead. */
+const qlOne = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  state.accounts=[{id:'only',name:'Checking',kind:'checking',balance:100,updated:'2026-08-20'}];
+  /* logging closes the panel, so it has to be reopened before the next look */
+  state.transactions=[]; save(); quickLogOpen=true; renderQuickLog(); await wait(200);
+  const out={ noPicker:!document.getElementById('qlAcct'),
+              statesIt:/Coming out of/i.test(document.querySelector('.ql-acct').innerText) };
+  const r=document.querySelector('.ql-row');
+  r.querySelector('.ql-what').value='Coffee'; r.querySelector('.ql-amt').value='5';
+  const c=r.querySelector('.ql-cat'); c.value='c'; c.dispatchEvent(new Event('change',{bubbles:true}));
+  document.getElementById('qlSave').click(); await wait(300);
+  out.stillFiled=state.transactions.every(t=>t.acctId==='only');
+  /* and with no accounts at all it must not invent one or break */
+  state.accounts=[]; state.transactions=[]; save(); quickLogOpen=true; renderQuickLog(); await wait(150);
+  out.silentWithNone=!document.querySelector('.ql-acct');
+  const r2=document.querySelector('.ql-row');
+  r2.querySelector('.ql-what').value='Tea'; r2.querySelector('.ql-amt').value='3';
+  const c2=r2.querySelector('.ql-cat'); c2.value='c'; c2.dispatchEvent(new Event('change',{bubbles:true}));
+  document.getElementById('qlSave').click(); await wait(300);
+  out.noneLogsFine=state.transactions.length===1 && !state.transactions[0].acctId;
+  return out;
+});
+check('one account is stated rather than asked about',
+      qlOne.noPicker===true && qlOne.statesIt===true);
+check('...and the line is still filed against it',
+      qlOne.stillFiled===true);
+check('with no accounts at all it says nothing and still logs',
+      qlOne.silentWithNone===true && qlOne.noneLogsFine===true);
+
+/* ---- 61. nothing that took work to build dies on one tap ----
+   From a phone, on the recurring list: "the delete button is too destructive."
+   It was - one tap ended a schedule with nothing in between. A rule is not a row
+   of data; it is the thing standing between somebody and forgetting their rent,
+   and rebuilding it means recalling an amount, a cadence and an anchor date they
+   set weeks ago.
+
+   The confirm has a job beyond slowing the hand down: it answers the question
+   the hand hesitated over. Stopping a schedule does not touch the money it
+   already posted, and saying so is the difference between a pause and a fear of
+   losing history. Accounts get the same treatment, and one consequence more -
+   now that entries name an account, removing one leaves whatever pointed at it
+   with nowhere to be, so the count is stated before rather than discovered
+   after. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-20'}],
+  categories:[{id:'f',name:'Food'}],
+  recurring:[{id:'r1',type:'income',amount:2435.22,source:'Kristi',freq:'biweekly',anchor:'2026-08-14'}],
+  transactions:[{id:'p1',type:'income',amount:2435.22,source:'Kristi',date:'2026-08-14',recId:'r1',acctId:'chk'},
+                {id:'p2',type:'income',amount:2435.22,source:'Kristi',date:'2026-08-28',recId:'r1',acctId:'chk'}]});
+await p.reload(); await p.waitForTimeout(700);
+const destr = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); renderRecurring(); await wait(250);
+  const out={};
+  document.querySelector('[data-delrec="r1"]').click(); await wait(200);
+  out.asked=document.getElementById('recList').innerText;
+  out.survivedTheTap=state.recurring.length===1;
+  /* backing out has to actually back out */
+  document.querySelector('[data-delrecno]').click(); await wait(200);
+  out.keptOnNo=state.recurring.length===1 && !document.querySelector('[data-delrecyes]');
+  document.querySelector('[data-delrec="r1"]').click(); await wait(150);
+  document.querySelector('[data-delrecyes="r1"]').click(); await wait(300);
+  out.after={rules:state.recurring.length, postedKept:state.transactions.length};
+  /* accounts, same pattern, plus the entries that point at it */
+  activateTab('goals'); renderAccounts(); await wait(250);
+  document.querySelector('[data-acctdel="chk"]').click(); await wait(200);
+  out.acctAsked=document.getElementById('acctList').innerText;
+  out.acctSurvived=state.accounts.length===1;
+  document.querySelector('[data-acctdelno]').click(); await wait(200);
+  out.acctKeptOnNo=state.accounts.length===1;
+  return out;
+});
+check('the recurring cross asks before it ends a schedule',
+      destr.survivedTheTap===true && /Stop Kristi repeating/i.test(destr.asked),
+      destr.asked.replace(/\s+/g,' ').slice(0,70));
+/* The reassurance is the point, not decoration: people hesitate because they
+   think deleting the rule deletes the paychecks. */
+check('...and says the money already posted is not going anywhere',
+      /2/.test(destr.asked) && /stay on Track/i.test(destr.asked),
+      destr.asked.replace(/\s+/g,' ').slice(0,150));
+check('...backing out leaves it exactly where it was', destr.keptOnNo===true);
+check('...and going through stops the schedule without touching what it posted',
+      destr.after.rules===0 && destr.after.postedKept===2, JSON.stringify(destr.after));
+check('removing an account asks too, and names what it costs',
+      destr.acctSurvived===true && /Remove Checking/i.test(destr.acctAsked)
+      && /\$2,000/.test(destr.acctAsked), destr.acctAsked.replace(/\s+/g,' ').slice(0,80));
+check('...including the entries that would be left with nowhere to be',
+      /2 entries/i.test(destr.acctAsked) && /new home/i.test(destr.acctAsked),
+      destr.acctAsked.replace(/\s+/g,' ').slice(0,160));
+check('...and it too can be backed out of', destr.acctKeptOnNo===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
