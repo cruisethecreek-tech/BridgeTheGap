@@ -363,6 +363,20 @@ actually hesitate over - be genuinely backable-out-of, and then do exactly what
 they promised and no more. The account one additionally has to name how many
 entries would be left pointing at nothing.
 
+And **the income streams already named on Plan**, which the log form has to
+offer rather than ask you to retype: rules first and marked as repeating, past
+sources after, picking one carrying the account that stream lands in, and free
+text still reachable - a first paycheck has no history to choose from, so a list
+you cannot escape would be worse than no list. Recurring rules have to be asked
+which account they move money through, and editing one has to show the account it
+already had.
+
+Plus **the link between Track and Plan on screen**: opening an expense shows what
+its category has assigned, what is used with this entry included, what is left,
+and this entry's share of the category's spending. That relationship always
+existed in the data; the test is that it is now visible from the thing that
+caused it.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
