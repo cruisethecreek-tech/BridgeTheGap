@@ -1597,6 +1597,14 @@
   /* a guess should not look like a decision - it is marked until you confirm or
      change it, and the mark clears the moment you touch the dropdown */
   .ql-row .ql-cat.guessed{border-color:var(--accent);border-left-width:4px;background:rgba(var(--accent-rgb),.07)}
+  /* Where the whole batch came from, asked once above the lines. */
+  .ql-acct{background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin:10px 0 4px}
+  .ql-acct.asking{border-color:var(--accent);background:rgba(var(--accent-rgb),.09)}
+  .ql-acct label{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;flex-wrap:wrap}
+  .ql-acct select{flex:1;min-width:130px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 8px;font-size:14px}
+  .ql-acct.one{font-size:14px;font-weight:700}
+  .ql-acct-n{display:block;margin-top:5px;font-size:12px;line-height:1.5;color:var(--muted);font-weight:600}
+  .ql-acct-n b{color:var(--text)}
   /* The name field for a category being made on the spot. Same idea as the
      quick log's, in the two forms that never had one. */
   .cat-new{margin-top:6px;background:var(--panel);border:1px solid var(--accent);color:var(--text);
@@ -6614,6 +6622,38 @@ function suggestCatFor(text){
   Object.keys(score).forEach(id=>{ if(score[id]>top){ top=score[id]; best=id; } });
   return top>=4 ? best : '';
 }
+/* One account for the batch, not one per line. A notepad of purchases came off
+   a single card and asking eleven times would be worse than not asking - but
+   without it every line of the fastest way into this app lands with no account
+   on it, which is exactly the history the catch-up on Build exists to rescue.
+   Asked once, at the top, where it reads as a heading rather than a chore. */
+function qlAcctRowHTML(){
+  const accts=state.accounts||[];
+  if(!accts.length) return '';
+  if(accts.length===1) return `<div class="ql-acct one">Coming out of <b>${escapeHtml(accts[0].name)}</b><span class="ql-acct-n">the only account you have told me about</span></div>`;
+  return `<div class="ql-acct"><label>Coming out of <select id="qlAcct">${acctOptions(defaultAcctId())}</select></label>
+    <span class="ql-acct-n">All the lines below go against this one. Change any of them afterwards on Track.</span></div>`;
+}
+/* Not a modal. The panel is already open, the rows are already filled, and a
+   sheet over the top would hide the very lines being checked - the same reason
+   the "?" explanations are inline. It highlights the picker that is already
+   there and says why it is being asked. */
+function qlAskAccount(n){
+  const accts=state.accounts||[];
+  if(!accts.length) return;
+  const wrap=document.querySelector('.ql-acct'); if(!wrap) return;
+  wrap.classList.add('asking');
+  const note=wrap.querySelector('.ql-acct-n');
+  if(note) note.innerHTML = accts.length>1
+    ? `<b>Which account did these ${n} come out of?</b> Set it once here and every line goes against it.`
+    : `All ${n} will go against <b>${escapeHtml(accts[0].name)}</b>. Add another account on Build if that is wrong.`;
+  wrap.scrollIntoView({behavior:'smooth',block:'center'});
+  const sel=document.getElementById('qlAcct'); if(sel) setTimeout(()=>sel.focus(),400);
+}
+function qlAcctChoice(){
+  const sel=document.getElementById('qlAcct');
+  return (sel && sel.value) || defaultAcctId();
+}
 function qlRow(){ return `<div class="ql-row">
     <input class="ql-what" type="text" placeholder="What was it? (e.g. Coffee, Roth IRA)">
     <span class="ql-dol">$<input class="ql-amt" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></span>
@@ -6662,7 +6702,8 @@ function renderQuickLog(){
     <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Snap my notepad</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
-    <div class="ql-list" id="qlList">${[0,1,2].map(qlRow).join('')}</div>
+    ${qlAcctRowHTML()}
+    <div class="ql-list" id="qlList">${qlRow()}</div>
     <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn primary" id="qlSave">Log them all →</button></div>
   </div>`;
   document.getElementById('qlDate').value=qlDatePrefill||todayStr(); qlDatePrefill=null;   // consumed once - the next open is today again unless told otherwise
@@ -6707,6 +6748,11 @@ function renderQuickLog(){
           row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt; guessRow(row); filled++;
         });
         note.textContent='Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
+        /* A photo is the one path where somebody hands over a whole batch at
+           once without touching a single field, so the account is the question
+           most likely to go unanswered - and every line of it would land with
+           no account on it. Raised here, once, where they are already looking. */
+        qlAskAccount(filled);
       }
     }catch(e){ if(gen===qlGen) note.textContent="Couldn't fetch the reader (offline, maybe). The photo still works as your reference - type the lines in yourself."; }
     readBtn.disabled=false;
@@ -6735,6 +6781,7 @@ function renderQuickLog(){
   document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
   document.getElementById('qlSave').onclick=()=>{
     const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0, put=0, came=0;
+    const batchAcct=qlAcctChoice();   // read once: every line in this batch came from the same place
     box.querySelectorAll('.ql-row').forEach(el=>{
       const what=(el.querySelector('.ql-what').value||'').trim();
       const amt=parseFloat(el.querySelector('.ql-amt').value);
@@ -6743,17 +6790,23 @@ function renderQuickLog(){
       /* Money that did NOT leave. Same row, same two fields, different verb. */
       if(catId==='__invest'){
         const dest=what||'Savings';
-        state.transactions.push({id:uid(),type:'invest',amount:amt,source:dest,date,note:'',ikind:'holds'});
+        const ivT={id:uid(),type:'invest',amount:amt,source:dest,date,note:'',ikind:'holds'};
+        if(batchAcct) ivT.acctId=batchAcct;
+        state.transactions.push(ivT);
         investAssetAdd(amt);          // it is still yours, so net worth has to know
         added++; put+=amt; el.remove(); return;
       }
       if(catId==='__income'){
-        state.transactions.push({id:uid(),type:'income',amount:amt,source:what||'Income',date,note:''});
+        const inT={id:uid(),type:'income',amount:amt,source:what||'Income',date,note:''};
+        if(batchAcct) inT.acctId=batchAcct;
+        state.transactions.push(inT);
         added++; came+=amt; el.remove(); return;
       }
       if(catId==='__new'){ const nm=(el.querySelector('.ql-new').value||'').trim()||what||'Spending'; catId=findOrCreateCat(nm).id; }
       if(!catId) uncat++;   // honest: a row nothing could be guessed for lands as Uncategorized, and says so
-      state.transactions.push({id:uid(),type:'expense',amount:amt,catId,date,note:what}); added++;
+      const exT={id:uid(),type:'expense',amount:amt,catId,date,note:what};
+      if(batchAcct) exT.acctId=batchAcct;
+      state.transactions.push(exT); added++;
       el.remove();   // logged rows leave; flagged rows stay on screen for fixing
     });
     if(!added){ if(typeof toast==='function') toast(namedNoAmt?'Add an amount to the highlighted line'+(namedNoAmt>1?'s':'')+'.':'Nothing to log yet - name a purchase and give it an amount.'); return; }   // never a silent no-op
