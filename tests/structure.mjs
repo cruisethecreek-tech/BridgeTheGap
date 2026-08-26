@@ -3426,6 +3426,17 @@ const plan = await p.evaluate(() => {
     cols:!!box.querySelector('.plan-cols'),
     pills:box.querySelectorAll('.avail').length,
     tallest:Math.max(...heights),
+    oneLiners:heights.filter(h=>h<=64).length,
+    /* Reported twice from a real phone, both times as "text overflow": a name
+       sliced through the middle of a letter, and money ellipsised to "$4...".
+       Neither is truncation, both are the row lying about how much space it
+       needs. Measured, not eyeballed. */
+    clippedNames:rows.filter(r=>{ const t=r.querySelector('.rw-t');
+      return t && t.scrollHeight>t.clientHeight+1; }).length,
+    spilledNames:rows.filter(r=>{ const t=r.querySelector('.rw-t');
+      return t && t.getBoundingClientRect().bottom > r.getBoundingClientRect().bottom+1; }).length,
+    cutMoney:[...box.querySelectorAll('.avail, .subrow .sub-assign input')]
+      .filter(e=>e.scrollWidth>e.clientWidth+1).length,
     /* the controls that used to live on every row */
     barsInList:box.querySelectorAll('.bar').length,
     repeatsInList:box.querySelectorAll('[data-repeat]').length,
@@ -3438,8 +3449,16 @@ const plan = await p.evaluate(() => {
 });
 check('the plan is one line per category, with a column header over them',
       plan.rows===5 && plan.cols===true && plan.everyRowHasPill===true, JSON.stringify(plan));
-check('...and no row is taller than a line',
-      plan.tallest<=64, `tallest row ${plan.tallest}px`);
+/* A row may take a second line for a long name - that is the row admitting it
+   needs the space rather than cutting a word in half. What it may never do is
+   clip, spill, or shorten a dollar figure, and most rows must still be one
+   line or the list is not compact at all. */
+check('...no name is clipped or spilled, and no dollar figure is shortened',
+      plan.clippedNames===0 && plan.spilledNames===0 && plan.cutMoney===0,
+      JSON.stringify({clipped:plan.clippedNames, spilled:plan.spilledNames, cutMoney:plan.cutMoney}));
+check('...and the list is still a line per category, give or take a long name',
+      plan.oneLiners>=plan.rows-1 && plan.tallest<=96,
+      `${plan.oneLiners} of ${plan.rows} on one line, tallest ${plan.tallest}px`);
 check('...the amount is still typed straight into the list, where it is typed ninety times a month',
       plan.everyLeafTypeable===true);
 check('...and the eleven controls that used to ride along are gone from it',

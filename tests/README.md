@@ -400,6 +400,17 @@ Every fault this suite exists for was found by a person looking at their own
 phone, and none were found by the other nine layers - because the arithmetic was
 right and the **pixels** were wrong.
 
+It now also measures **the phone with the system font turned up**, which is where
+the same person found the next two: a category name sliced through the middle of
+a letter, and the Available column shortened to `$4...`. Neither is truncation;
+both are a row lying about how much space it needs, and the suite could not see
+either one because it only ever measured at the browser's default type size. The
+Plan is re-rendered at 320, 390 and 412px with the row text painted half again as
+large, and three rules hold at every one: no dollar figure is shortened (in a
+pill or inside an input), no name is clipped or spilled past its row, and the
+page still does not scroll sideways. Money first, deliberately - a plan whose
+Available column reads `$4...` is not a plan, so the name is what yields.
+
 The one that started it: a transaction row is four things on one line - date,
 what it was, how much, delete. `.tx-amt` was `white-space:nowrap` with no
 `flex-shrink:0`, so flex squeezed its **box** below its content and the amount

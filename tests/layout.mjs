@@ -272,6 +272,51 @@ check('an amount can never be squeezed below the number inside it',
       row.length>0 && row.every(r=>r.shrink==='0' && r.fits), JSON.stringify(row.slice(0,3)));
 check('...and the category chip is never shaved to fit beside it',
       row.every(r=>r.chipWhole), JSON.stringify(row.slice(0,3)));
+/* ---- the phone with the system font turned up ----
+   Reported twice from a real device, both times as "text overflow": a category
+   name sliced through the middle of a letter, and the Available column shortened
+   to "$4...". Neither is truncation - both are a row lying about how much space
+   it needs. The suite could not see either one, because it only ever measured at
+   the browser's default type size, and the fault only appears when the device
+   paints the text half again as large. So it measures that too now.
+
+   Two rules, in priority order. Money is never shortened: a plan whose Available
+   column reads "$4..." is not a plan. And a name is never cut mid-glyph: it
+   clamps with an ellipsis, or the row takes a second line and says so. */
+const BIG='#cats .subrow,#cats .cat-top,#cats .plan-cols{font-size:21px!important}';
+for(const w of [320,390,412]){
+  const bp=await b.newPage({viewport:{width:w,height:900}});
+  await bp.goto('file://'+process.cwd()+'/app.html');
+  await bp.evaluate(st=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(st)),HOUSE);
+  await bp.reload(); await bp.waitForTimeout(500);
+  await bp.addStyleTag({content:BIG});
+  await bp.evaluate(()=>{ activateTab('budget'); renderBudget(); });
+  await bp.waitForTimeout(200);
+  const big=await bp.evaluate(()=>{
+    const box=document.getElementById('cats');
+    const rows=[...box.querySelectorAll('[data-row]')];
+    const cut=e=>e.scrollWidth>e.clientWidth+1;
+    return {
+      rows:rows.length,
+      clipped:rows.filter(r=>{ const t=r.querySelector('.rw-t'); return t && t.scrollHeight>t.clientHeight+1; })
+        .map(r=>r.querySelector('.rw-t').textContent.slice(0,24)),
+      spilled:rows.filter(r=>{ const t=r.querySelector('.rw-t');
+        return t && t.getBoundingClientRect().bottom > r.getBoundingClientRect().bottom+1; })
+        .map(r=>r.querySelector('.rw-t').textContent.slice(0,24)),
+      money:[...box.querySelectorAll('.avail')].filter(cut).map(e=>e.textContent),
+      fields:[...box.querySelectorAll('.sub-assign input')].filter(cut).map(e=>e.value),
+      sideways:document.documentElement.scrollWidth>window.innerWidth+1
+    };
+  });
+  check(`no dollar figure is shortened when the device paints the text larger (${w}px)`,
+        big.money.length===0 && big.fields.length===0,
+        `pills ${JSON.stringify(big.money)} fields ${JSON.stringify(big.fields)}`);
+  check(`...and no name is cut through the middle of a letter (${w}px)`,
+        big.clipped.length===0 && big.spilled.length===0,
+        `clipped ${JSON.stringify(big.clipped)} spilled ${JSON.stringify(big.spilled)}`);
+  check(`...and the plan still does not scroll sideways (${w}px)`, big.sideways===false);
+  await bp.close();
+}
 await p.close();
 
 console.log('LAYOUT - ten tabs, four phone widths, no text on text\n');
