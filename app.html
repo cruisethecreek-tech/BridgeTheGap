@@ -992,6 +992,17 @@
      when the text inside them does, so the money was the first thing to be cut.
      Sized in em, the money columns scale with whatever font the device is
      actually painting and the name absorbs the difference. */
+  /* The toggle that says which question the number column is answering. */
+  .plan-switch{display:flex;gap:4px;margin:2px 0 10px;padding:4px;border-radius:12px;
+    background:var(--panel-2);border:1px solid var(--line)}
+  .plan-switch .pv{flex:1;padding:9px 6px;border:0;border-radius:9px;background:transparent;
+    color:var(--muted);font:inherit;font-size:13px;font-weight:800;cursor:pointer;
+    transition:background .14s ease,color .14s ease}
+  .plan-switch .pv:hover{color:var(--text)}
+  .plan-switch .pv.on{background:var(--accent);color:var(--on-accent)}
+  .plan-cols.two{grid-template-columns:minmax(0,1fr) 7em}
+  .sub-spent{font-weight:800;font-size:15px;text-align:right}
+  .sub-spent.over,.cat-assign.over{color:var(--bad)}
   .plan-cols{display:grid;grid-template-columns:minmax(0,1fr) 6.2em 5.6em;gap:8px;align-items:end;
     padding:0 10px 7px;font-size:14px;color:var(--muted)}
   .plan-cols span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
@@ -1067,6 +1078,7 @@
   .avail.none{background:var(--ink);color:var(--muted);border-color:var(--line)}
   @media(max-width:365px){
     .plan-cols{grid-template-columns:minmax(0,1fr) 5.6em 5em;gap:6px;padding:0 8px 7px}
+    .plan-cols.two{grid-template-columns:minmax(0,1fr) 6.4em}
     .cat.grp .cat-top{gap:6px;padding:9px 8px}
     .cat.grp .cat-name{flex:1 1 6em;min-width:6em}
     .cat.grp .cat-assign{flex:0 0 5.6em}
@@ -1397,6 +1409,24 @@
   .unit-work{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
   /* Category packs. The card has one job the list cannot do: say what skipping
      it costs, in words, before anything is added. */
+  /* Search the catalogue from wherever a category gets named. The list sits
+     under the field rather than over it - an overlay on a phone covers the
+     keyboard's own suggestion strip and the two fight. */
+  .cs-hits-host:empty{display:none}
+  .cs-hits{display:flex;flex-direction:column;gap:1px;margin-top:6px;
+    border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--line)}
+  .cs-hit{display:block;width:100%;text-align:left;padding:9px 11px;border:0;
+    background:var(--panel-2);color:var(--text);font:inherit;cursor:pointer}
+  .cs-hit:hover,.cs-hit:focus-visible{background:rgba(var(--accent-rgb),.13)}
+  .csh-n{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-weight:800;font-size:14px}
+  .csh-w{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:var(--muted)}
+  .csh-p{display:block;margin-top:3px;font-size:10.5px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+  .cs-none{padding:10px 11px;background:var(--panel-2);font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .cs-browse{display:block;width:100%;text-align:left;padding:9px 11px;border:0;
+    background:var(--panel-2);color:var(--accent);font:inherit;font-size:12.5px;
+    font-weight:800;cursor:pointer}
+  .cs-browse:hover,.cs-browse:focus-visible{background:rgba(var(--accent-rgb),.13)}
   .pk-lead{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 14px}
   .pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
   /* ---- pack textures -----------------------------------------------------
@@ -2382,7 +2412,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
         <div class="row" style="margin-bottom:6px">
           <label class="fld" style="flex:1">New category
-            <input type="text" id="catName" placeholder="e.g. Groceries, Rent, Fun Money">
+            <input type="text" id="catName" placeholder="Type to search the packs, or name your own" autocomplete="off">
+            <div class="cs-hits-host" id="catNameHits"></div>
           </label>
           <button class="btn primary" id="addCat">Add category</button>
           <button class="btn ghost" id="starterBtn" title="Packs of categories most people never budget for, with what each one costs to skip">Category packs</button>
@@ -2404,7 +2435,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </label>
           <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
           <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select>
-            <input class="cat-new hide" id="recCatNew" type="text" placeholder="Name the new one"></label>
+            <input class="cat-new hide" id="recCatNew" type="text" placeholder="Type to search the packs, or name your own" autocomplete="off">
+            <div class="cs-hits-host" id="recCatNewHits"></div></label>
           <label class="fld hide" id="recAcctWrap">Which account<select id="recAcct"></select></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec hide" id="recOwnerWrap">Whose money<select id="recOwner"><option value="a">Mine</option><option value="b">Partner</option><option value="joint">Both of us</option></select></label>
@@ -2462,7 +2494,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </label>
           <label class="fld expense-only" id="fldCat">Category
             <select id="txCat"></select>
-            <input class="cat-new hide" id="txCatNew" type="text" placeholder="Name the new one">
+            <input class="cat-new hide" id="txCatNew" type="text" placeholder="Type to search the packs, or name your own" autocomplete="off">
+            <div class="cs-hits-host" id="txCatNewHits"></div>
           </label>
           <label class="fld income-only hide" id="fldSrc">Source
             <select id="txSrcPick" class="hide"></select>
@@ -3674,6 +3707,14 @@ function normalizeState(s){
      one clamp is cheaper than a defensive read at every place stages are drawn. */
   s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
   s.rateDraft=null;
+  /* Checked against a literal, not against PLAN_VIEWS. normalizeState runs
+     inside load(), which runs at `let state = load()` - long before a const
+     declared further down the file exists. Referencing it here throws on the
+     TDZ, load() falls back to a default state, and every category the person
+     owns disappears on boot. That exact bug has been shipped once already in
+     this file (syncInvestAsset reaching for uid); it does not get shipped
+     twice. */
+  if(['planned','spent','left'].indexOf(s.planView)<0) s.planView='planned';
   /* Heal the app's own bug in the app's own data. "Pay Yourself First" is a
      name this app writes, never one a person types from scratch, and it was
      being created with no growth tag - so every dollar somebody paid themselves
@@ -5699,7 +5740,11 @@ document.getElementById('mNext').addEventListener('click',()=>{ state.activeMont
 /* ---------- categories ---------- */
 document.getElementById('addCat').addEventListener('click',()=>{
   const el=document.getElementById('catName'); const name=el.value.trim(); if(!name) return;
-  state.categories.push({id:uid(),name}); el.value=''; save(); renderBudget(); renderTxForm();
+  const row={id:uid(),name}; const g=pickedGrowth(el); if(g) row.growth=g;
+  state.categories.push(row); el.value='';
+  delete el.dataset.growth; delete el.dataset.picked;
+  const h=document.getElementById('catNameHits'); if(h) h.innerHTML='';
+  save(); renderBudget(); renderTxForm();
 });
 document.getElementById('catName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
 /* ---------- category packs ------------------------------------------------
@@ -5844,6 +5889,92 @@ function packCatExists(name){
            : state.categories.some(c=>c.name.toLowerCase()===lower);
 }
 function packById(k){ return CAT_PACKS.find(x=>x.k===k); }
+/* ---- naming a category from the catalogue instead of from memory ----------
+   Asked for from the log form, looking at "+ New category..." and a blank text
+   box: "can we incorporate a pick from the starter packs or a search function
+   to autopopulate different categories?"
+
+   Right, and the blank box was the whole problem. Sixty-odd named categories
+   already exist in the packs, each with a reason someone thought to write down,
+   and the moment a person actually needs one - mid-log, trying to file a
+   purchase - the app asks them to invent the name themselves. So typing three
+   letters now searches the catalogue, and picking a suggestion brings its
+   growth tag with it, which typing the same word never could. */
+function catCatalogue(){
+  const out=[];
+  CAT_PACKS.forEach(p=>p.cats.forEach(c=>out.push({n:c.n, w:c.w, g:c.g, pack:p.name, icon:p.icon})));
+  return out;
+}
+/* Ranked so a prefix beats a word-start beats a mention: typing "car" should
+   offer "Car wash" before "Childcare". */
+function catSuggest(q, limit){
+  const s=String(q||'').trim().toLowerCase();
+  if(s.length<2) return [];
+  const have=new Set(state.categories.map(c=>c.name.toLowerCase()));
+  const rank=n=>{ const l=n.toLowerCase();
+    if(l.startsWith(s)) return 0;
+    if(new RegExp('\\b'+s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(l)) return 1;
+    return l.includes(s) ? 2 : 9; };
+  return catCatalogue()
+    .filter(c=>!have.has(c.n.toLowerCase()) && rank(c.n)<9)
+    .map(c=>({...c, r:rank(c.n)}))
+    .sort((a,b)=>a.r-b.r || a.n.length-b.n.length)
+    .slice(0, limit||6);
+}
+/* Search only helps someone who already knows the word. The way in for someone
+   who does not is the packs themselves, offered from the same spot rather than
+   as a thing to go and find on another tab. */
+function catSuggestHTML(q){
+  const hits=catSuggest(q);
+  const browse=`<button type="button" class="cs-browse" data-browsepacks="1">Browse the packs instead &rsaquo;</button>`;
+  if(!hits.length) return String(q||'').trim().length>=2
+    ? `<div class="cs-hits"><div class="cs-none">Nothing in the packs by that name - which is fine, yours can be its own thing.</div>${browse}</div>`
+    : '';
+  return `<div class="cs-hits">${hits.map(h=>
+    `<button type="button" class="cs-hit" data-suggest="${escapeHtml(h.n)}" data-g="${h.g||''}">
+       <span class="csh-n">${escapeHtml(h.n)}${h.g?`<span class="growth-tag mini">${escapeHtml(GROWTH_TAG_SHORT[h.g]||'not spent')}</span>`:''}</span>
+       <span class="csh-w">${escapeHtml(h.w)}</span>
+       <span class="csh-p">${h.icon} ${escapeHtml(h.pack)}</span>
+     </button>`).join('')}${browse}</div>`;
+}
+/* One wiring for all three places a category gets named: the Plan tab's own
+   field, the log form's "new category", and the recurring form's. */
+function wireCatSuggest(inputId, hostId){
+  const inp=document.getElementById(inputId), host=document.getElementById(hostId);
+  if(!inp||!host||inp.dataset.suggestWired) return;
+  inp.dataset.suggestWired='1';
+  /* Once you have picked, the list closes and stays closed until you edit the
+     name. Without this, the focus() after a pick reopens it against the very
+     word it just filled in - offering you the thing you already chose. */
+  const draw=()=>{
+    if(inp.dataset.picked && inp.value.trim()===inp.dataset.picked){ host.innerHTML=''; return; }
+    host.innerHTML=catSuggestHTML(inp.value);
+  };
+  inp.addEventListener('input',draw);
+  inp.addEventListener('focus',draw);
+  host.addEventListener('click',e=>{
+    const b=e.target.closest('[data-suggest]'); if(!b) return;
+    inp.value=b.dataset.suggest;
+    /* remember the tag so the category is created with it - the point of
+       picking from the catalogue rather than typing the same letters */
+    /* `picked` records that you chose rather than typed, whether or not the
+       row carried a tag; `growth` is only the tag. */
+    inp.dataset.picked=b.dataset.suggest;
+    if(b.dataset.g) inp.dataset.growth=b.dataset.g; else delete inp.dataset.growth;
+    host.innerHTML='';
+    inp.dispatchEvent(new Event('change',{bubbles:true}));
+    inp.focus();
+  });
+  /* edit the name after picking and it stops being that pick, so the tag goes
+     with it - a category called "Edu fund" tagged from "Education fund" would
+     be the app deciding something on your behalf */
+  inp.addEventListener('input',()=>{
+    if(inp.dataset.picked && inp.value.trim()!==inp.dataset.picked){
+      delete inp.dataset.growth; delete inp.dataset.picked;
+    }
+  });
+}
+
 /* What adding this pack would actually do, worked out before anything is
    written, so the card can say it rather than the toast saying it afterwards. */
 function packPlan(k){
@@ -6506,6 +6637,28 @@ function catSpent(id,M){ return spentFor(id,M)+descendantsOf(id).reduce((s,k)=>s
 function investedFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='invest'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
 function catInvested(id,M){ return investedFor(id,M)+descendantsOf(id).reduce((s,k)=>s+investedFor(k.id,M),0); }
 function catUsed(id,M){ return catSpent(id,M)+catInvested(id,M); }
+/* ---- one number column, three questions -----------------------------------
+   Asked for as "a planned / spent / remaining toggle tab may help our plan
+   dashboard be more uniformed with categories", and it fixes something real:
+   SPENT was not on this list at all. You could see what you assigned and what
+   was left, and had to subtract in your head to find out what actually went. A
+   group row showed three figures and a leaf row showed two, which is the
+   non-uniformity the ask is pointing at.
+
+   So the list carries one money column now and the toggle says which question
+   it is answering. Planned is the editable one - zero-based budgeting is typing
+   in that column, so it stays a field there and becomes a figure in the other
+   two. Every row then has exactly the same shape whatever the mode. */
+const PLAN_VIEWS=[
+  {k:'planned', label:'Planned', col:'Planned', why:'what you assigned'},
+  {k:'spent',   label:'Spent',   col:'Spent',   why:'what has actually gone'},
+  {k:'left',    label:'Remaining', col:'Left',  why:'assigned minus spent'}
+];
+function planView(){ return PLAN_VIEWS.some(v=>v.k===state.planView) ? state.planView : 'planned'; }
+function setPlanView(k){
+  if(!PLAN_VIEWS.some(v=>v.k===k)) return;
+  state.planView=k; save(); renderBudget();
+}
 /* Budgeting works in BOTH directions, because people know their numbers at
    different levels. Top-down: assign $300 to Power & Wi-Fi and split it into
    Electric/Water/Internet. Bottom-up: you know water is $70 and electric is $120
@@ -6837,6 +6990,7 @@ function renderBudget(){
        So the list answers exactly that question and nothing else: name, what you
        assigned, what is left. Everything else moved into the category's own
        sheet, one tap away, where there is room to show it properly. */
+    const view=planView();
     const rowFor=(c,depth)=>{
       const a=catAssigned(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
@@ -6852,8 +7006,11 @@ function renderBudget(){
             ${reorderCtrlHTML(c.id)}
             <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
             <span class="cat-name">${nameHTML}</span>
-            <span class="rw-money"><span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}</span>
-            <span class="avail ${pillCls} gcol">${money(rem)}</span></span>
+            <span class="rw-money">${
+              view==='planned' ? `<span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}</span>`
+              : view==='spent' ? `<span class="cat-assign gcol${sp>a&&a>0?' over':''}">${money(sp)}</span>`
+              : `<span class="avail ${pillCls} gcol">${money(rem)}</span>`
+            }</span>
           </div>
         </div>`;
       }
@@ -6865,8 +7022,11 @@ function renderBudget(){
       return `<div class="subrow lvl${depth}${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
-        <span class="rw-money"><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>
-        <span class="avail ${pillCls}" title="What is left">${money(rem)}</span></span>
+        <span class="rw-money">${
+          view==='planned' ? `<span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>`
+          : view==='spent' ? `<span class="sub-spent${sp>a&&a>0?' over':''}" title="What has gone">${money(sp)}</span>`
+          : `<span class="avail ${pillCls}" title="What is left">${money(rem)}</span>`
+        }</span>
       </div>`;
     };
     const walk=(c,depth)=>{
@@ -6875,7 +7035,11 @@ function renderBudget(){
         h+=childrenOf(c.id).map(k=>walk(k,depth+1)).join('');
       return h;
     };
-    box.innerHTML=`<div class="plan-cols"><span>Category</span><span>Assigned</span><span>Available</span></div>`
+    const vm=PLAN_VIEWS.find(v=>v.k===view);
+    box.innerHTML=`<div class="plan-switch" role="tablist" aria-label="What the number column shows">${
+        PLAN_VIEWS.map(v=>`<button role="tab" aria-selected="${v.k===view}" class="pv${v.k===view?' on':''}" data-planview="${v.k}">${v.label}</button>`).join('')
+      }</div>`
+      + `<div class="plan-cols two"><span>Category</span><span title="${escapeHtml(vm.why)}">${vm.col}</span></div>`
       + tops.map(c=>walk(c,0)).join('');
   }
   wirePlan(box, true);
@@ -6895,6 +7059,7 @@ function wirePlan(box, isMain){
      write to the month the user is looking at now. */
   const M=state.activeMonth;
   wireDeepen(box);
+  box.querySelectorAll('[data-planview]').forEach(b=>b.addEventListener('click',()=>setPlanView(b.dataset.planview)));
   box.querySelectorAll('[data-assignnow]').forEach(b=>b.addEventListener('click',()=>{
     const id=b.dataset.assignnow, sum=kidsAssigned(id,M);
     budgetFor(M)[id]=sum; save(); planRefresh(); renderHome();
@@ -11910,6 +12075,7 @@ function refreshCatSelects(){
     if(acw) acw.classList.toggle('hide', (state.accounts||[]).length<2);
   });
   syncCatNew(); syncSrcOther();
+  if(typeof wireAllCatSuggest==='function') wireAllCatSuggest();
 }
 function syncSrcOther(){
   const sel=document.getElementById('txSrcType'), nw=document.getElementById('txSrcOther');
@@ -11992,6 +12158,15 @@ function syncOwnerNote(owner){
   }
 }
 /* The name field shows only while "New category" is the choice. */
+/* All three naming fields get the catalogue. Wired once, idempotent, and safe
+   to call again after any re-render. */
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-browsepacks]') && typeof openPacks==='function') openPacks(null);
+});
+function wireAllCatSuggest(){
+  [['catName','catNameHits'],['txCatNew','txCatNewHits'],['recCatNew','recCatNewHits']]
+    .forEach(([i,h])=>wireCatSuggest(i,h));
+}
 function syncCatNew(){
   [['txCat','txCatNew'],['recCat','recCatNew']].forEach(([sid,nid])=>{
     const sel=document.getElementById(sid), nw=document.getElementById(nid);
@@ -12002,14 +12177,21 @@ function syncCatNew(){
 /* Reads the picker, creating the category if that is what was asked for.
    Returns the id to file against, or null if they asked for a new one and did
    not name it - the caller must not silently file it somewhere else. */
+/* The tag a catalogue pick carried, if the name still matches the pick. */
+function pickedGrowth(el){
+  return (el && el.dataset.growth && el.dataset.picked
+    && el.value.trim()===el.dataset.picked) ? el.dataset.growth : '';
+}
 function resolveCatChoice(selId, newId){
   const sel=document.getElementById(selId); if(!sel) return null;
   if(sel.value!=='__new') return sel.value||null;
   const nw=document.getElementById(newId);
   const name=((nw&&nw.value)||'').trim();
   if(!name){ if(nw){ nw.focus(); nw.style.borderColor='var(--bad)'; } return null; }
-  const c=findOrCreateCat(name);
-  if(nw){ nw.value=''; nw.style.borderColor=''; }
+  const c=findOrCreateCat(name, pickedGrowth(nw));
+  if(nw){ nw.value=''; nw.style.borderColor='';
+    delete nw.dataset.growth; delete nw.dataset.picked;
+    const h=document.getElementById(nw.id+'Hits'); if(h) h.innerHTML=''; }
   save(); refreshCatSelects(); renderBudget();
   sel.value=c.id; syncCatNew();
   if(typeof toast==='function') toast(`Added "${c.name}" to your plan. Give it an amount on Plan when you know one.`);

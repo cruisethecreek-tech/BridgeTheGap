@@ -593,6 +593,28 @@ would have guessed: pulling the mask and leaving the alpha high measures 4.16:1,
 while raising the alpha with the mask in place still passes. The mask does the
 work; the alphas are margin.
 
+The category-catalogue section is where the **assert the invariant, not the
+example** lesson finally got learned the hard way. The ranking check named
+specific rows twice and was wrong about the catalogue both times: once on a
+category the *user* had created rather than one the packs ship, once on a word
+that turned out to have no mid-word match at all. The version that holds asserts
+that the returned ranks come back non-decreasing - which is the actual property,
+survives any edit to the pack copy, and cannot be wrong about what is in the
+list because it does not claim to know.
+
+Its other pair of properties is the one worth copying elsewhere: picking a
+catalogue row brings its growth tag along, **and** a name typed by hand is never
+silently tagged, **and** editing a pick drops the tag. Testing only the first
+would have shipped an app that quietly decides things on your behalf.
+
+Adding the Planned/Spent/Remaining toggle broke a drag test, and the break was
+worth more than the feature. The check reached for
+`#cats [data-row]:nth-of-type(2) .cat-grip` - and once a toggle div sat above
+the list, the second div of that type was the toggle, so the selector matched
+nothing and the suite died on a null. **A positional selector in a test is a
+claim about layout that the test does not mean to make.** It addresses the row
+by what it is now, and says so where the next person will read it.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
