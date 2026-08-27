@@ -4372,7 +4372,13 @@ const sweep = await p.evaluate(async () => {
   /* deleting a watched category through its sheet prunes the watch list */
   activateTab('budget'); renderBudget(); await wait(200);
   openCatSheet('coffee'); await wait(200);
-  document.querySelector('#catSheetBody [data-del="coffee"]').click(); await wait(300);
+  /* Two taps, like the account delete directly below and like the recurring
+     list: the first arms, the second confirms. Categories were the odd one out
+     until a phone report - "deleting a category is still too destructive" -
+     brought them into line, and this check drove it with one tap. */
+  document.querySelector('#catSheetBody [data-del="coffee"]').click(); await wait(250);
+  out.catArmedFirst=state.categories.some(c=>c.id==='coffee');
+  document.querySelector('#catSheetBody [data-delyes="coffee"]').click(); await wait(300);
   out.catDeletePrunes=state.dayToDay.length===0;
   /* deleting an account through its confirm frees entries and rules at once */
   state.transactions=[{id:'t2',type:'expense',amount:5,catId:'f',date:'2026-08-21',acctId:'live'}];
@@ -4393,7 +4399,9 @@ check('a loaded backup has every ghost reference healed at once',
       && sweep.loadHealed.ruleAcct===undefined, JSON.stringify(sweep.loadHealed));
 check('...and the freed entry becomes an orphan the catch-up offers a home',
       sweep.backfillOffers===true);
-check('deleting a watched category prunes the watch list, so it can never watch only ghosts',
+check('deleting a watched category needs the confirm, not one tap',
+      sweep.catArmedFirst===true);
+check('...and then prunes the watch list, so it can never watch only ghosts',
       sweep.catDeletePrunes===true);
 check('deleting an account frees its entries and rules in the same stroke',
       sweep.acctDeleteFrees.tx===true && sweep.acctDeleteFrees.rule===true);
@@ -5513,6 +5521,92 @@ check('...and switching from down there works without sending you back up',
 check('...with the strip owning its full width, so rows pass behind rather than beside it',
       stick.ownsItsWidth===true);
 await p.setViewportSize({width:390,height:1200});
+
+/* ---- 76. deleting a category is armed, not fired ----
+   "Deleting a category is still too destructive. We should be prompted before
+   an actual delete is able to take place for accidental touches."
+
+   Still - because the recurring list had this exact report and this exact fix
+   weeks ago, and the category sheet never got it. One tap on "Delete Roof"
+   removed the category, every subcategory under it, and every assignment they
+   held, with nothing in between.
+
+   Two taps now, and the first one turns the button into a question. Inline
+   rather than a browser confirm, for the reason already written beside the
+   recurring version: a dialog covers the thing you are being asked about.
+
+   The question carries counts, because "are you sure?" asks nobody anything.
+   "2 subcategories go with it. 2 entries become Uncategorized. $450 assigned
+   this month is freed up." is a question a person can actually answer - and
+   when the answer is "nothing", it says that instead of inventing a cost.
+
+   The armed id is cleared on open and on close, and the confirm refuses to fire
+   unless the armed id is the category the sheet is currently showing. A stale
+   arm surviving a navigation is how a second tap deletes the wrong thing. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'food',name:'Food'},{id:'wal',name:'Walmart',parentId:'food'},
+              {id:'aldi',name:'Aldi',parentId:'food'},{id:'rent',name:'Rent'},
+              {id:'empty',name:'Nothing here'}],
+  budgets:{'2026-08':{wal:250,aldi:200,rent:1200}},
+  transactions:[{id:'e1',type:'expense',amount:60,date:'2026-08-03',catId:'wal'},
+                {id:'e2',type:'expense',amount:22,date:'2026-08-04',catId:'aldi'}]});
+await p.reload(); await p.waitForTimeout(450);
+const del = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('budget'); openCatSheet('food'); await wait(320);
+  const n0=state.categories.length;
+  o.startsAsAButton=!!document.querySelector('[data-del="food"]') && !document.querySelector('.cs-arm');
+  document.querySelector('[data-del="food"]').click(); await wait(300);
+  o.armedNotFired=state.categories.length===n0 && !!document.querySelector('.cs-arm');
+  o.question=document.querySelector('.cs-arm').innerText;
+  /* keeping it keeps it */
+  document.querySelector('[data-delno]').click(); await wait(280);
+  o.keptIt=state.categories.length===n0 && !document.querySelector('.cs-arm');
+  /* a stale arm must not survive leaving the sheet, or landing on another one */
+  document.querySelector('[data-del="food"]').click(); await wait(220);
+  closeCatSheet(); openCatSheet('food'); await wait(280);
+  o.reopenNotArmed=!document.querySelector('.cs-arm');
+  document.querySelector('[data-del="food"]').click(); await wait(220);
+  openCatSheet('rent'); await wait(280);
+  o.otherNotArmed=!document.querySelector('.cs-arm') && catDelArm===null;
+  /* an empty category is honest rather than inventing a cost */
+  openCatSheet('empty'); await wait(280);
+  document.querySelector('[data-del="empty"]').click(); await wait(250);
+  o.emptyCopy=document.querySelector('.cs-arm').innerText;
+  document.querySelector('[data-delno]').click(); await wait(200);
+  /* and the real thing. Counted first: nothing about a delete may remove money. */
+  const txBefore=state.transactions.length;
+  openCatSheet('food'); await wait(280);
+  document.querySelector('[data-del="food"]').click(); await wait(240);
+  document.querySelector('[data-delyes="food"]').click(); await wait(380);
+  o.cats=state.categories.map(c=>c.name).sort().join(',');
+  o.txKept=state.transactions.length===txBefore;
+  o.orphaned=state.transactions.filter(t=>!state.categories.some(c=>c.id===t.catId)).length;
+  o.budgetLeft=Object.keys(state.budgets['2026-08']||{}).sort().join(',');
+  o.sheetClosed=!document.getElementById('catSheet').classList.contains('on');
+  return o;
+});
+check('the delete on a category sheet starts as a button, not a question',
+      del.startsAsAButton===true);
+check('...and one tap arms it rather than deleting anything',
+      del.armedNotFired===true);
+check('...with the question naming what it costs, in counts',
+      /2 subcategories/i.test(del.question) && /2 entries/i.test(del.question)
+      && /\$450/.test(del.question), del.question.replace(/\n/g,' | '));
+check('...and saying the money survives it either way',
+      /never deletes money/i.test(del.question));
+check('"Keep it" disarms and changes nothing', del.keptIt===true);
+check('an armed delete never survives leaving the sheet',
+      del.reopenNotArmed===true && del.otherNotArmed===true);
+check('...and a category with nothing against it says so, rather than inventing a cost',
+      /nothing is lost/i.test(del.emptyCopy), del.emptyCopy.replace(/\n/g,' | '));
+check('confirming takes the group and everything filed under it',
+      del.cats==='Nothing here,Rent', del.cats);
+check('...while removing no money at all - the entries survive, unfiled',
+      del.txKept===true && del.orphaned===2, `kept=${del.txKept} orphaned=${del.orphaned}`);
+check('...their assignments are cleared', del.budgetLeft==='rent', del.budgetLeft);
+check('...and the sheet it just emptied closes itself', del.sheetClosed===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

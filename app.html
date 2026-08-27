@@ -1132,6 +1132,16 @@
   .cs-k{font-weight:700;font-size:14px}
   .cs-in{display:flex;align-items:center;gap:6px;color:var(--muted)}
   .cs-in input{width:110px;padding:9px 10px;font-size:15px;font-weight:700}
+  /* The armed state. Deliberately louder than the button it replaces - it is a
+     question, and a question that looks like the thing it replaced gets tapped
+     through by the same thumb that armed it. */
+  .cs-arm{border:1px solid var(--bad);border-radius:12px;padding:13px 14px;
+    background:rgba(var(--bad-rgb),.09)}
+  .ca-q{font-weight:900;font-size:15.5px;margin-bottom:5px}
+  .ca-w{font-size:13.5px;line-height:1.55;color:var(--muted)}
+  .ca-w b{color:var(--text)}
+  .ca-a{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .ca-a .btn{flex:1;min-width:120px}
   .cs-note{font-size:13px;line-height:1.55;color:var(--muted);margin:9px 0 0}
   .cs-rename{margin-bottom:12px;display:flex;gap:8px}
   .cs-rep{display:flex;align-items:flex-start;gap:11px}
@@ -6506,6 +6516,18 @@ function wireReorder(box){
 }
 let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
 let catEditId=null;        // top category currently being renamed (rename keeps transactions attached, unlike delete)
+/* Armed, not fired. Reported twice now - "deleting a category is still too
+   destructive, we should be prompted before an actual delete is able to take
+   place for accidental touches" - and the recurring list already solved the
+   same problem the same way: the first tap turns the button into a question,
+   the second one answers it.
+
+   Inline rather than a browser confirm, for the reason written next to the
+   recurring version: a dialog covers the thing you are being asked about. And
+   the question carries the actual counts, because "are you sure?" asks nobody
+   anything - "this also removes 4 subcategories and unfiles 37 entries" is a
+   question a person can answer.
+let catDelArm=null;
 /* top-level categories that map to the same essential (leftover duplicates) */
 function duplicateGroups(){
   const groups={};
@@ -7114,14 +7136,34 @@ function wirePlan(box, isMain){
   const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); planRefresh(); renderTx(); };
   box.querySelectorAll('button[data-renamesave]').forEach(btn=>btn.addEventListener('click',()=>saveRename(btn.dataset.renamesave)));
   box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; planRefresh(); } }));
+  /* Arms. Does not delete. */
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
-    const id=btn.dataset.del;
+    catDelArm=btn.dataset.del;
+    if(typeof renderCatSheet==='function' && catSheetId) renderCatSheet();
+  }));
+  box.querySelectorAll('button[data-delno]').forEach(btn=>btn.addEventListener('click',()=>{
+    catDelArm=null;
+    if(typeof renderCatSheet==='function' && catSheetId) renderCatSheet();
+  }));
+  box.querySelectorAll('button[data-delyes]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.delyes;
+    /* Only the category the sheet is actually showing can be deleted from it -
+       a stale armed id belonging to a category you have since navigated away
+       from would delete the wrong thing on a second tap. */
+    if(catDelArm!==id) return;
+    const name=catName(id);
     const toRemove=new Set([id,...descendantsOf(id).map(k=>k.id)]);   // the whole subtree goes, all three levels
+    const orphaned=state.transactions.filter(t=>toRemove.has(t.catId)).length;
     state.categories=state.categories.filter(c=>!toRemove.has(c.id));
     state.dayToDay=(state.dayToDay||[]).filter(x=>!toRemove.has(x));   // a watch list of ghosts watches nothing
     Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
     // keep transactions for history; they become "Uncategorized"
+    catDelArm=null;
+    if(catSheetId===id && typeof closeCatSheet==='function') closeCatSheet();
     save(); planRefresh(); renderTx();
+    if(typeof toast==='function') toast(orphaned
+      ? `${name} deleted. The ${orphaned} entr${orphaned===1?'y it held is':'ies it held are'} still on Track, now Uncategorized.`
+      : `${name} deleted. Nothing was logged against it.`);
   }));
   wireReorder(box); wireRepeat(box);
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
@@ -7153,12 +7195,12 @@ function wirePlan(box, isMain){
 /* ---------- the category sheet ---------- */
 function openCatSheet(id){
   if(!state.categories.some(c=>c.id===id)) return;
-  catSheetId=id; catEditId=null;
+  catSheetId=id; catEditId=null; catDelArm=null;   // never open a sheet already armed to delete
   renderCatSheet();
   document.getElementById('catSheet').classList.add('on');
   pushOverlay();
 }
-function closeCatSheet(){ catSheetId=null; const el=document.getElementById('catSheet'); if(el) el.classList.remove('on'); }
+function closeCatSheet(){ catSheetId=null; catDelArm=null; const el=document.getElementById('catSheet'); if(el) el.classList.remove('on'); }
 function catMonthHistory(id,n){
   const out=[]; let m=state.activeMonth;
   for(let i=0;i<n;i++){ out.unshift({m, a:catAssigned(id,m), s:catUsed(id,m)}); m=shiftMonth(m,-1); }
@@ -7314,9 +7356,30 @@ function renderCatSheet(){
     <p class="cs-note">Moving it changes the filing and nothing else - the money assigned to it, everything logged against it, and any repeat it carries all come along. ${isGroup?`Its own subcategories move with it too.`:''}</p>
   </div>`;
 
+  /* What this actually costs, counted before it is offered. */
+  const doomed=[c.id, ...descendantsOf(c.id).map(k=>k.id)];
+  const delTx=state.transactions.filter(t=>doomed.includes(t.catId)).length;
+  const delRec=(state.recurring||[]).filter(r=>doomed.includes(r.catId)).length;
+  const delAssigned=doomed.reduce((n,id)=>n+(assignedFor(id,M)||0),0);
+  const armed=catDelArm===c.id;
+  const bits=[];
+  if(kids.length) bits.push(`<b>${kids.length}</b> subcategor${kids.length===1?'y':'ies'} go with it`);
+  if(delTx) bits.push(`<b>${delTx}</b> entr${delTx===1?'y becomes':'ies become'} Uncategorized`);
+  if(delRec) bits.push(`<b>${delRec}</b> repeat rule${delRec===1?'':'s'} stop${delRec===1?'s':''} posting`);
+  if(delAssigned>0) bits.push(`<b>${money(delAssigned)}</b> assigned this month is freed up`);
   const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
-    <p class="cs-note">Deleting a category keeps every transaction you logged against it - they become Uncategorized, so no history is lost${isGroup?`. Its ${kids.length} subcategor${kids.length>1?'ies go':'y goes'} with it`:''}.</p>
-    <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button></div>`;
+    ${armed
+      ? `<div class="cs-arm">
+           <div class="ca-q">Delete <b>${escapeHtml(c.name)}</b>?</div>
+           <div class="ca-w">${bits.length
+              ? bits.join('. ')+'.'
+              : 'Nothing is logged against it and nothing is assigned to it, so nothing is lost.'}
+             ${delTx?' Your history stays on Track either way - deleting a category never deletes money.':''}</div>
+           <div class="ca-a"><button class="btn sm danger" data-delyes="${c.id}">Delete it</button><button class="btn sm ghost" data-delno="1">Keep it</button></div>
+         </div>`
+      : `<p class="cs-note">Deleting a category keeps every transaction you logged against it - they become Uncategorized, so no history is lost${isGroup?`. Its ${kids.length} subcategor${kids.length===1?'y goes':'ies go'} with it`:''}.</p>
+         <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button>`}
+  </div>`;
 
   body.innerHTML=rename+balance+target+subs+whereLives+history+wallGuideHTML(c,M)+danger;
   if(!isGroup){
