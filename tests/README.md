@@ -727,6 +727,31 @@ day you set a balance is assumed to be inside the figure you copied, app-wide.
 The probe was passing on a fixture that never reached the code it claimed to
 test, which is the same fault this suite has caught in itself four times now.
 
+It also holds **the rate layer**, which is the section most about words and
+least about arithmetic. The engine reads every borrowing line the app knows
+about - credit account, liability, payoff planner - and says what a balance
+costs where it is against what it would cost somewhere cheaper. Three
+properties guard it, and each is a way a suggestion engine goes wrong:
+
+- **It never says do it.** A regex sweep over the whole rate family looks for
+  the phrasings that would actually constitute a recommendation, carries a
+  control string so a never-fires rule cannot pass by accident, and asserts the
+  swept span is a real length rather than an empty slice.
+- **It names why the cheap line is cheap.** The spread against a `secured` line
+  has to say, in the same card, that the rate is lower because there is
+  something they can take. A spread quoted without that is advice with the risk
+  edited out, so the check reads for both halves.
+- **It says when nothing matters.** Below a threshold the signal has to call the
+  gap "not much" and point elsewhere. Checked with a fixture built to land
+  under it.
+
+Then the situational edges: a cheap **mortgage** must not be offered as
+somewhere to put a card balance (it has no room and cannot take one), the
+idle-cash signal must **flip its whole answer** when the buffer is thin rather
+than quietly disappearing, three readings of what you owe is a direction while
+two is only a line, and the same debt typed into two places is one line with
+the priced copy kept.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

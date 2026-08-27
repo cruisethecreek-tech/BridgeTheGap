@@ -323,6 +323,12 @@
   .rp-src{font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
   .rp-frame{margin-top:14px;font-size:12.5px;line-height:1.55;color:var(--muted);font-style:italic}
   .rp-card.bad{border-left-color:var(--accent-2)}
+  .rp-card.standing{border-left-color:var(--muted)}
+  .rp-card.standing.bad{border-left-color:var(--accent-2)}
+  /* Deliberately NOT .rp-src. That class means "this figure came from outside
+     the app" and is read as exactly that, in copy and in the suite. A standing
+     signal is the person's own number; it is only the WINDOW that differs. */
+  .rp-when{font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
   .rp-t{font-weight:900;font-size:16.5px;letter-spacing:-.2px;margin-bottom:6px}
   .rp-b{font-size:14px;line-height:1.6;color:var(--muted)}
   .rp-b b{color:var(--text)}
@@ -2852,6 +2858,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px" aria-label="What is in it today"></span>
             <span class="sw-dol hide" id="acctLimWrap">Limit $<input type="number" id="acctLim" min="0" step="any" placeholder="13700" style="width:100px" aria-label="Credit limit"></span>
             <span class="sw-dol hide" id="acctAprWrap"><input type="number" id="acctApr" min="0" max="100" step="0.01" placeholder="Rate" style="width:80px" aria-label="Interest rate">%</span>
+            <select id="acctSecured" class="hide" style="min-width:160px" aria-label="What is backing this line">
+              <option value="">Backed by nothing (a card)</option>
+              <option value="1">Backed by something I own</option>
+            </select>
             <button class="btn sm primary" id="addAcct">＋ Add</button>
           </div>
           <div id="acctKindNote"></div>
@@ -5693,6 +5703,9 @@ function metricSnapshot(m){
               are recomputable from the ledger for any month, so storing them
               would just create a second version that could disagree. */
            bank:(typeof bankTotal==='function')?Math.round(bankTotal()):null,
+           /* Same reasoning as bank: retyping a card balance overwrites the old
+              one, so this is the only place what you owe can become a trend. */
+           owed:(typeof owedTotal==='function')?Math.round(owedTotal()):null,
            goalTarget: Math.round((state.goals||[]).reduce((s,g)=>s+(+g.target||0),0)),
            saved: Math.round((state.goals||[]).reduce((s,g)=>s+(g.saved||0),0)) };
 }
@@ -9990,6 +10003,55 @@ function assetAcctExpected(){ return (state.accounts||[]).filter(a=>!isOwedAcct(
    under Liabilities. Net worth would subtract it twice and nothing on screen
    would say why the number looked wrong. Matched on the name, which is how a
    person would have entered it both times. */
+/* ============================================================
+   EVERY LINE YOU PAY A RATE ON, IN ONE LIST
+
+   Asked for as: "I care more about it knowing about the interest rate - not so
+   it produces a budget number, but so it learns each person's situation and
+   says hey, you have a high rate on this card, moving it could be beneficial.
+   It should teach instead of regurgitate."
+
+   The blocker was never the arithmetic. It was that a rate could be typed into
+   three unrelated places - a credit account, a liability, the payoff planner -
+   and nothing in the app ever looked at all three at once. So the app could
+   know you pay 13% on one thing and 3.6% on another and still have nothing to
+   say about the two facts sitting side by side, which is exactly where the
+   only useful sentence lives.
+
+   One list. Normalized, deduplicated by name (the payoff planner imports from
+   liabilities, so the same debt genuinely does appear twice), and carrying the
+   four things a rate signal needs: what is owed, what it costs, whether the
+   line can absorb a balance, and whether anything of yours is backing it.
+   ============================================================ */
+function normName(x){ return String(x||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function pricedLines(){
+  const seen=new Map();
+  const add=l=>{
+    const k=normName(l.name); if(!k) return;
+    const had=seen.get(k);
+    /* The same debt typed in two places is one debt. Keep whichever copy knows
+       its rate, because a rate is the entire point of this list; between two
+       that both know it, keep the first, so the order below is the priority. */
+    if(!had || (!(had.apr>0) && l.apr>0)) seen.set(k,l);
+  };
+  /* Accounts first: a credit line is the only kind that knows its room. */
+  (typeof creditAccts==='function'?creditAccts():[]).forEach(a=>add({
+    id:a.id, name:a.name, owed:acctOwed(a), apr:+a.apr||0,
+    room:acctHeadroom(a), secured:!!a.secured, revolving:true, where:'account'}));
+  (state.liabilities||[]).forEach(l=>add({
+    id:l.id, name:l.name, owed:+l.value||0, apr:+l.apr||0,
+    room:null, secured:false, revolving:false, where:'liability'}));
+  (state.debts||[]).forEach(d=>add({
+    id:d.id, name:d.name, owed:+d.balance||0, apr:+d.apr||0,
+    room:null, secured:false, revolving:false, where:'debt'}));
+  return [...seen.values()];
+}
+function ratedLines(){ return pricedLines().filter(l=>l.apr>0); }
+function carriedLines(){ return ratedLines().filter(l=>l.owed>0); }
+/* What a balance costs to keep for a year, before any payment. Simple interest
+   on purpose: it is the figure a person can check by hand, and the compounding
+   difference over one year is smaller than the error in "roughly what I owe". */
+function yearlyInterest(owed, apr){ return (+owed||0)*(+apr||0)/100; }
 function creditDupes(){
   const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
   const owed=creditAccts().map(a=>norm(a.name)).filter(Boolean);
@@ -10501,7 +10563,8 @@ function renderAccounts(){
       ? `<div class="ac-credit">${room!=null
           ? `<b>${usd(room)}</b> of room left of ${usd(acctLimit(a))}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}`
           : `No limit set, so there is no room figure to give you. Add one and this becomes the number worth watching.`}${
-          a.apr>0?`<span class="ac-apr">${a.apr}% a year on anything left sitting</span>`:''}</div>`
+          a.apr>0?`<span class="ac-apr">${a.apr}% a year on anything left sitting${a.secured?' &middot; backed by something you own':''}</span>`
+          :(a.secured?`<span class="ac-apr">Backed by something you own</span>`:'')}</div>`
       : '';
     /* Same reasoning as the recurring rules, with one more consequence now that
        entries name an account: removing it leaves whatever pointed at it with
@@ -10661,8 +10724,10 @@ function syncAcctKindForm(){
   const bal=document.getElementById('acctBal');
   const lim=document.getElementById('acctLimWrap'), apr=document.getElementById('acctAprWrap');
   const pur=document.getElementById('acctPurpose'), note=document.getElementById('acctKindNote');
+  const sec=document.getElementById('acctSecured');
   if(lim) lim.classList.toggle('hide',!owed);
   if(apr) apr.classList.toggle('hide',!owed);
+  if(sec) sec.classList.toggle('hide',!owed);
   /* An earmark is a job you give money you HAVE. Money you owe has no job. */
   if(pur) pur.classList.toggle('hide',owed);
   if(bal){
@@ -10696,6 +10761,11 @@ function syncAcctKindForm(){
       if(L>0) rec.limit=L;
       const ap=parseFloat((document.getElementById('acctApr')||{}).value);
       if(ap>=0&&ap<=100) rec.apr=ap;
+      /* The one fact that decides whether a cheaper rate is worth having. Two
+         lines at 13% and 3.6% look like an easy choice until you notice the
+         cheap one is cheap BECAUSE somebody can take your house. The engine
+         cannot say that unless it is asked, so it is asked once, here. */
+      if((document.getElementById('acctSecured')||{}).value) rec.secured=true;
       /* A limit smaller than what is already on it is a typo, not a fact, and
          it would print a negative headroom as though the bank had allowed it. */
       if(L>0 && bal>L && typeof toast==='function')
@@ -13145,6 +13215,39 @@ const RP_TONE={
     middle:{clean:'Paying it down returns that rate, guaranteed.',
             blunt:'Paying that down is a guaranteed return at that rate. Very little else is guaranteed.',
             savage:'That rate is the surest return in your whole financial life, and it is pointed at somebody else.'}},
+  /* The rate layer speaks in the app's voice like every other signal. The tone
+     floor matters most here: someone in survival being told in savage what
+     their interest costs is the one place this app could genuinely make a bad
+     week worse, and voice() already enforces the floor - these just have to go
+     through it rather than around it. */
+  rateSpread:{
+    middle:{clean:'Two rates, one balance. That is the whole decision, and it is yours.',
+            blunt:'Nobody is going to hand you that gap. Knowing it exists is the only part this can do for you.',
+            savage:'You are paying the expensive one on purpose now, which is different from paying it by accident.'}},
+  rateOrder:{
+    middle:{clean:'Same money, different jobs.',
+            blunt:'One of these is quietly costing you more than the other, every month, whether you look or not.',
+            savage:'Paying the cheap one first feels productive and is the most expensive kind of busy.'}},
+  rateIdle:{
+    middle:{clean:'A certain return is rarer than it sounds.',
+            blunt:'Nothing you can buy pays that reliably. Nothing.',
+            savage:'You are lending yourself money at that rate and paying somebody else for the privilege.'}},
+  rateBuffer:{
+    middle:{clean:'The buffer first, then the rate.',
+            blunt:'Clear the card with your last dollar and the card is back next month. That is the whole trap.',
+            savage:'An empty account is how a balance becomes permanent. Ask anyone who has done it twice.'}},
+  rateClear:{
+    middle:{clean:'That is the arrangement working.',
+            blunt:'Most people who say they do this are carrying a balance. You are not.',
+            savage:'The rewards are only free because you are the customer they lose money on. Stay that way.'}},
+  owedUp:{
+    middle:{clean:'Three in a row is a direction, not a bad month.',
+            blunt:'Three in a row is a direction. Worth finding out which one.',
+            savage:'Three months pointing the same way stopped being bad luck two months ago.'}},
+  owedDown:{
+    middle:{clean:'Three in a row is the hardest direction to hold.',
+            blunt:'Three in a row down is genuinely hard. Most people manage one.',
+            savage:'Nobody is going to clap for this. It is still the most valuable thing on this page.'}},
   oCardBelow:{
     middle:{clean:'Below the going rate.', blunt:'Below the going rate - the planner already ordered it that way.',
             savage:'Cheaper than the going rate, which makes it the least urgent thing you owe. The order on Debt already knows.'}},
@@ -13602,6 +13705,159 @@ REPORT_SIGNALS.push(
         bad: move<0 && !flat };
     }}
 );
+/* ============================================================
+   THE RATE LAYER - what your own borrowing is telling you
+
+   Everything else in this report reads a MONTH. These read your SITUATION, and
+   they stay true tomorrow, which is why they carry `standing` and say so.
+
+   Three rules govern every line of copy below, and they are the difference
+   between teaching and touting:
+
+   1. NEVER SAY DO IT. Every signal prices both sides and hands the decision
+      back. The leverage tool already holds this line and carries a regex sweep
+      asserting nothing in it tells anyone to borrow; the same sweep now covers
+      these. A tool that says "move it" is selling something, and the moment
+      this app does that, every other number in it becomes a sales pitch.
+
+   2. NAME WHAT THE CHEAP RATE COSTS. A 3.6% line is not cheap because somebody
+      likes you. It is cheap because it is backed by something they can take.
+      Moving a card balance onto it makes the debt cheaper and makes losing your
+      house a way you could lose. Any signal that mentions the spread must
+      mention that in the same breath, or it is advice with the risk edited out.
+
+   3. SAY WHEN IT DOES NOT MATTER. The most dishonest thing a suggestion engine
+      does is dress up $12 a year as a finding. If the spread is worth less than
+      a takeaway, it says so and tells you to go and do something else.
+   ============================================================ */
+REPORT_SIGNALS.push(
+  /* ---- the dearest money you hold, priced against the cheapest room you have ---- */
+  { k:'rateSpread', run(){
+      const carried=carriedLines();
+      if(!carried.length) return null;
+      const hi=carried.slice().sort((a,b)=>b.apr-a.apr)[0];
+      /* Only a revolving line with room can actually absorb a balance. A cheap
+         mortgage is cheaper than a card and can do nothing about it. */
+      const room=ratedLines().filter(l=>l.revolving && l.apr<hi.apr-0.5
+                                       && (l.room||0)>0 && normName(l.name)!==normName(hi.name))
+                             .sort((a,b)=>a.apr-b.apr)[0];
+      if(!room) return null;
+      const movable=Math.min(hi.owed, room.room);
+      const saving=yearlyInterest(movable, hi.apr-room.apr);
+      const trivial=saving<25;
+      const H=effectiveHourly();
+      return { t:`${escapeHtml(hi.name)} is your dearest money`, standing:true,
+        body:`You are carrying <b>${money(hi.owed)}</b> at <b>${hi.apr}%</b>, which costs about <b>${money(yearlyInterest(hi.owed,hi.apr))} a year</b> to keep${rpLife(yearlyInterest(hi.owed,hi.apr))}. `
+          + `<b>${escapeHtml(room.name)}</b> runs <b>${room.apr}%</b> and has <b>${money(room.room)}</b> of room. `
+          + `The same <b>${money(movable)}</b> sitting there instead would cost <b>${money(yearlyInterest(movable,room.apr))} a year</b>.`,
+        work:`${money(movable)} × (${hi.apr}% − ${room.apr}%) = ${money(saving)} a year`,
+        nudge: trivial
+          ? `That is a difference of <b>${money(saving)} a year</b>. Which is to say: not much. Moving it would be paperwork in exchange for ${H>0?fmtHours(saving/H)+' of your life':'about the price of one takeaway'} a year, and there are bigger numbers on this page. Worth knowing the gap exists; not worth an afternoon. ${voice(RP_TONE.rateSpread,null)}`
+          : `That gap is worth <b>${money(saving)} a year</b>${rpLife(saving)}, every year it stays where it is.`
+            + (room.secured
+              ? ` <b>And here is the part the rate does not tell you.</b> ${escapeHtml(room.name)} is backed by something you own. That is WHY it is cheaper - not because it is a better deal, but because there is something they can take. Moving the balance there does not make the debt smaller. It makes it cheaper and it changes what happens if a year goes badly: an unsecured card can chase you and ruin your credit, a line against your house can take the house. That is the whole difference between ${hi.apr}% and ${room.apr}%, priced.`
+              : ` Nothing of yours is backing ${escapeHtml(room.name)}, so the trade here is rate against whatever fees and terms come with the move - read those before you believe the number above.`)
+            + ` This app is not going to tell you to do it. It has told you what it costs either way, which is the part you could not see from two separate screens.`
+            + ` ${voice(RP_TONE.rateSpread,null)}`,
+        bad:false };
+    }},
+
+  /* ---- which dollar works hardest, when more than one balance is carried ---- */
+  { k:'rateOrder', run(){
+      const carried=carriedLines();
+      if(carried.length<2) return null;
+      const sorted=carried.slice().sort((a,b)=>b.apr-a.apr);
+      const hi=sorted[0], lo=sorted[sorted.length-1];
+      if(hi.apr-lo.apr<0.5) return null;                    // same money, nothing to order
+      const ratio=Math.round(hi.apr/Math.max(0.01,lo.apr)*10)/10;
+      const total=carried.reduce((s,l)=>s+yearlyInterest(l.owed,l.apr),0);
+      return { t:'The same dollar is worth more against one of these', standing:true,
+        body:`You are carrying ${carried.length} balances at ${sorted.map(l=>`<b>${l.apr}%</b>`).join(', ')}. A spare dollar put against <b>${escapeHtml(hi.name)}</b> saves you <b>${(hi.apr/100).toFixed(2)}</b> a year. The same dollar against <b>${escapeHtml(lo.name)}</b> saves <b>${(lo.apr/100).toFixed(2)}</b>.`,
+        work:`${hi.apr}% ÷ ${lo.apr}% = ${ratio}× the work, per dollar`,
+        nudge:`All of it together costs about <b>${money(total)} a year</b>${rpLife(total)} just to keep existing. That is the number to argue with, not the balances.`
+          + ` The order is arithmetic; whether you can stick to it is not, and that part is yours. Some people clear the smallest one first because finishing something is what keeps them going, and a plan you finish beats a plan that is 3% better on paper and abandoned in March.`
+          + ` ${voice(RP_TONE.rateOrder,null)} ${trailBtn('debt','Put dates on it','ghost')}`,
+        bad:false };
+    }},
+
+  /* ---- a guaranteed return, sitting in plain sight ---- */
+  { k:'rateIdle', run(){
+      const carried=carriedLines();
+      if(!carried.length) return null;
+      const hi=carried.slice().sort((a,b)=>b.apr-a.apr)[0];
+      const cash=(typeof liquidTotal==='function')?liquidTotal():0;
+      if(!(cash>0)) return null;
+      const ess=(typeof essentialMonthly==='function')?essentialMonthly():0;
+      if(!(ess>0)) return {locked:'What your essentials cost - a "spare cash" read that does not know your floor would be telling you to spend your buffer.', do:'assign'};
+      const floor=ess*3;
+      const spare=Math.round((cash-floor)*100)/100;
+      const cost=yearlyInterest(hi.owed,hi.apr);
+      if(spare<=0){
+        return { t:'Your buffer comes before the interest', standing:true,
+          body:`<b>${escapeHtml(hi.name)}</b> costs you about <b>${money(cost)} a year</b> at <b>${hi.apr}%</b>. You are holding <b>${money(cash)}</b> you could spend today, and three months of your essentials is <b>${money(floor)}</b>.`,
+          work:`${money(cash)} − ${money(floor)} = ${money(spare)} spare`,
+          nudge:`So there is nothing spare to throw at it, and that is the right answer rather than a disappointing one. A cleared card and an empty account is the setup that puts the balance straight back on next time something breaks - which is how a balance becomes permanent. ${voice(RP_TONE.rateBuffer,null)}`,
+          bad:false };
+      }
+      const usable=Math.min(spare, hi.owed);
+      return { t:`${money(usable)} of yours could be earning ${hi.apr}%`, standing:true,
+        body:`Money sitting in an account earns you close to nothing. The same money against <b>${escapeHtml(hi.name)}</b> stops <b>${hi.apr}%</b> from being charged, which is a return you get with certainty - no market, no timing, no fee.`,
+        work:`${money(usable)} × ${hi.apr}% = ${money(yearlyInterest(usable,hi.apr))} a year not paid`,
+        nudge:`That is after leaving <b>${money(floor)}</b> untouched - three months of your essentials - because a buffer you spent is the reason the balance comes back.`
+          + ` The catch worth saying out loud: money on a card is gone, money in the account is available. If this month is at all uncertain, the flexibility may genuinely be worth ${money(yearlyInterest(usable,hi.apr))} to you, and nobody can decide that but you.`
+          + ` ${voice(RP_TONE.rateIdle,null)}`,
+        bad:false };
+    }},
+
+  /* ---- the play that is actually working ---- */
+  { k:'rateClear', run(){
+      const cards=(typeof creditAccts==='function')?creditAccts():[];
+      if(!cards.length) return null;
+      if(cards.some(a=>acctOwed(a)>0)) return null;             // something is carried; a different signal owns that
+      const ids=cards.map(a=>a.id);
+      const runThrough=state.transactions.filter(t=>t.type==='expense' && ids.includes(t.acctId));
+      if(runThrough.length<3) return null;
+      const total=runThrough.reduce((s,t)=>s+(+t.amount||0),0);
+      const months=new Set(runThrough.map(t=>monthOf(t.date))).size;
+      const rate=cards.filter(a=>+a.apr>0).sort((a,b)=>b.apr-a.apr)[0];
+      return { t:'You are using the card without paying for it', standing:true,
+        body:`<b>${money(total)}</b> has gone through ${cards.length===1?'your card':'your cards'} across ${months} month${months>1?'s':''}, and nothing is being carried on ${cards.length===1?'it':'any of them'}.`,
+        work:`${runThrough.length} purchases · ${money(total)} · ${money(0)} carried`,
+        nudge: rate
+          ? `That is the only arrangement where rewards are actually free. At <b>${rate.apr}%</b>, carrying even <b>${money(total/months/2)}</b> for a year would cost about <b>${money(yearlyInterest(total/months/2, rate.apr))}</b> - which is where most reward schemes make their money back, and yours are not. ${voice(RP_TONE.rateClear,null)}`
+          : `That is the only arrangement where rewards are actually free. Put the rate in and this line can tell you exactly what you are not paying. ${voice(RP_TONE.rateClear,null)}`,
+        bad:false };
+    }},
+
+  /* ---- what it does not know yet, and what one number would unlock ---- */
+  { k:'rateBlind', run(){
+      const blind=pricedLines().filter(l=>l.owed>0 && !(l.apr>0));
+      if(!blind.length) return null;
+      const names=blind.slice(0,3).map(l=>l.name).join(', ');
+      return {locked:`What ${escapeHtml(names)}${blind.length>3?` and ${blind.length-3} more`:''} cost${blind.length===1?'s':''} you - no rate means this can tell you nothing about ${blind.length===1?'it':'them'}, and the rate is the whole story.`,
+        do: blind[0].where==='account' ? 'account' : blind[0].where==='debt' ? 'debt' : 'liab'};
+    }},
+
+  /* ---- the trend, from the one figure the app cannot make up ---- */
+  { k:'owedTrend', run(){
+      const snaps=(state.snapshots||[]).filter(s=>s.owed!=null).slice().sort((a,b)=>a.month<b.month?-1:1);
+      if(snaps.length<3) return null;                            // two points is a line, not a habit
+      const last=snaps.slice(-3);
+      const rising=last[0].owed<last[1].owed && last[1].owed<last[2].owed;
+      const falling=last[0].owed>last[1].owed && last[1].owed>last[2].owed;
+      if(!rising && !falling) return null;
+      const move=last[2].owed-last[0].owed;
+      const hi=carriedLines().sort((a,b)=>b.apr-a.apr)[0];
+      return { t: rising ? 'What you owe has gone up three months running'
+                         : 'What you owe has come down three months running', standing:true,
+        body:`${last.map(s=>`${monShort(s.month)} <b>${money(s.owed)}</b>`).join(' → ')}.`,
+        work:`${money(last[2].owed)} − ${money(last[0].owed)} = ${move>=0?'+':'−'}${money(Math.abs(move))} over 2 months`,
+        nudge: rising
+          ? `${hi?`At <b>${hi.apr}%</b> the extra <b>${money(move)}</b> adds about <b>${money(yearlyInterest(move,hi.apr))} a year</b> to what the balance costs to keep. `:''}Worth finding out what changed - a one-off that has not been paid off yet reads exactly the same from here as a habit, and only one of those needs doing something about. ${voice(RP_TONE.owedUp,null)}`
+          : `${hi?`You have taken about <b>${money(yearlyInterest(Math.abs(move),hi.apr))} a year</b> of interest off the table doing it. `:''}${voice(RP_TONE.owedDown,null)}`,
+        bad: rising };
+    }}
+);
 REPORT_SIGNALS.push(
   { k:'oCpi', run(){
       if(!outsideFresh()) return null;
@@ -13668,16 +13924,27 @@ function buildReport(){
      a compliment about something else that happened to go well - that is the
      same rule iaTone() enforces on the intake, applied to the report. Stable
      within each group, so the declared order still reads as written. */
-  const bad=out.filter(g=>g.bad), rest=out.filter(g=>!g.bad);
-  return {signals:bad.concat(rest), locked};
+  /* Standing signals read your SITUATION rather than the month on screen, so
+     they sit behind the month's own reading - but a bad one still leads, because
+     "what you owe has gone up three months running" outranks a compliment about
+     August whichever kind of signal it is. */
+  const bad=out.filter(g=>g.bad);
+  const rest=out.filter(g=>!g.bad && !g.standing && !g.outside);
+  const standing=out.filter(g=>!g.bad && g.standing && !g.outside);
+  /* Outside context stays last, behind everything of the person's own - the
+     same rule it already had, extended past the standing signals rather than
+     broken by them. */
+  const outside=out.filter(g=>!g.bad && g.outside);
+  return {signals:bad.concat(rest, standing, outside), locked};
 }
 
 function renderReport(){
   const box=document.getElementById('rpBody'); if(!box) return;
   const {signals, locked}=buildReport();
   const cards=signals.map(g=>`
-    <div class="rp-card${g.bad?' bad':''}${g.outside?' outside':''}">
+    <div class="rp-card${g.bad?' bad':''}${g.outside?' outside':''}${g.standing?' standing':''}">
       ${g.outside?`<div class="rp-src">Outside number · as of ${escapeHtml(g.outside)} · baked into the app, never fetched</div>`:''}
+      ${g.standing?`<div class="rp-when">Your situation &middot; true right now, not just in ${escapeHtml(monShort(state.activeMonth))}</div>`:''}
       <div class="rp-t">${g.t}</div>
       <div class="rp-b">${g.body}</div>
       ${g.work?`<div class="rp-w" title="The arithmetic behind the line above">${escapeHtml(g.work)}</div>`:''}
@@ -13713,7 +13980,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
   const monthBar = `<div class="rf-period"><button class="rf-arrow" id="rfPrev" title="Previous month">‹</button><span class="rf-m">${escapeHtml(fmtMonth(M))}${M===thisMonth()?' <small>this month</small>':''}</span><button class="rf-arrow" id="rfNext" title="Next month">›</button></div>`;
 
   if(rfTab==='report'){
-    bar.innerHTML=monthBar+`<p class="sub rf-lead">What your own numbers say about ${escapeHtml(fmtMonth(M))}. Every line shows the arithmetic behind it, and nothing appears until there is enough to be sure of.</p>`;
+    bar.innerHTML=monthBar+`<p class="sub rf-lead">What your own numbers say about ${escapeHtml(fmtMonth(M))}, and what your situation says whatever month you are looking at. Every line shows the arithmetic behind it, nothing appears until there is enough to be sure of, and nothing here will tell you what to do - it prices both sides and hands it back.</p>`;
     body.innerHTML=`<div id="rpBody"></div>`;
     renderReport();
   } else if(rfTab==='breakdown'){
