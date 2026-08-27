@@ -1669,6 +1669,11 @@
   .iaw-t:focus{outline:none}
   .iaw-lead{font-size:15px;line-height:1.6;color:var(--muted);margin:13px 0 0;text-align:left}
   .iaw-lead b{color:var(--text)}
+  /* The rewrite turns on two short lines that are doing the work of a whole
+     paragraph. Set at lead size they read as filler; they are the point. */
+  .iaw-beat{font-size:19px;line-height:1.35;font-weight:900;letter-spacing:-.2px;
+    margin:15px 0 0;text-align:left;color:var(--text)}
+  @media(max-width:360px){ .iaw-beat{font-size:17.5px} }
   .iaw-three{margin-top:18px;display:flex;flex-direction:column;gap:9px;text-align:left}
   .iaw-row{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
   .iaw-k{display:block;font-weight:900;font-size:15px}
@@ -3207,26 +3212,38 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
          terms rather than to sell anything, and the whole card turns on one
          sentence most software will not say - this thing is not real, it cannot
          want the outcome for you, and the work is entirely yours. An app that
-         opens by promising to change your life has already told its first lie. -->
+         opens by promising to change your life has already told its first lie.
+
+         Rewritten by the author in his own voice, and the change is not
+         cosmetic: it opens on "everybody starts somewhere" rather than "at
+         zero", because zero is a number and somebody with savings reads it as
+         not being addressed. Somewhere includes them. The contractions are
+         deliberate too - the old card said "I am not real" and "I cannot", which
+         is the register of a legal notice; this one is spoken. -->
     <div class="ia-welcome" id="iaWelcome" role="dialog" aria-labelledby="iaWelTitle" aria-modal="true">
       <div class="iaw-card">
-        <span class="iaw-eye">Ground zero</span>
-        <h1 class="iaw-t" id="iaWelTitle">Everybody starts at zero.</h1>
-        <p class="iaw-lead">Zero is not a verdict and it is not your balance. It is just where you are standing today, and everyone is standing on it - the person with nothing in the account and the person with plenty. Today is the only day either of them actually has.</p>
-        <p class="iaw-lead">What matters is the <b>distance</b>. Between here and next month. Between here and five years, ten, twenty. That gap is the only thing this app is interested in, and it closes exactly one way: what comes in against what goes out, decided by you, over and over.</p>
-        <p class="iaw-lead">You can use it to budget. That is not really what it is. It is an <b>accountability</b> app, and this is the part it does:</p>
+        <span class="iaw-eye">Starting line</span>
+        <h1 class="iaw-t" id="iaWelTitle">Everybody starts somewhere.</h1>
+        <p class="iaw-lead">It doesn&rsquo;t matter whether there&rsquo;s nothing in your account or plenty. It doesn&rsquo;t matter whether you&rsquo;re starting with debt, savings, a paycheck, or a mess you would rather not look at.</p>
+        <p class="iaw-beat">This is where you are.</p>
+        <p class="iaw-lead">And that&rsquo;s not a verdict. It&rsquo;s not a judgment. It&rsquo;s just your starting line.</p>
+        <p class="iaw-beat">What matters is the distance.</p>
+        <p class="iaw-lead">Between here and next month. Between here and five years from now. Ten. Twenty. That distance is what this app cares about, and it closes one way: <b>what comes in, what goes out, and what you decide to do about it.</b></p>
+        <p class="iaw-lead">You can call this a budgeting app. That&rsquo;s not really what it is. It&rsquo;s an <b>accountability</b> app.</p>
         <div class="iaw-three">
-          <div class="iaw-row"><span class="iaw-k">I am listening.</span><span class="iaw-d">Tell me what lands and what leaves. I keep all of it, and I do not get tired of the boring entries.</span></div>
-          <div class="iaw-row"><span class="iaw-k">I am watching.</span><span class="iaw-d">I will show you the pattern you would rather not look at, in your own numbers, without softening it.</span></div>
+          <div class="iaw-row"><span class="iaw-k">I&rsquo;m listening.</span><span class="iaw-d">Tell me what comes in and what goes out. I&rsquo;ll keep track of all of it. Even the boring stuff. Especially the boring stuff.</span></div>
+          <div class="iaw-row"><span class="iaw-k">I&rsquo;m watching.</span><span class="iaw-d">I&rsquo;ll show you the patterns hiding in your own numbers - the ones you might rather not look at. No judgment. No sugarcoating.</span></div>
           <div class="iaw-row"><span class="iaw-k">You can do better.</span><span class="iaw-d">Not as an insult. As the only reason worth opening this.</span></div>
         </div>
         <div class="iaw-real">
-          <b>Now the part you should hear before you start.</b>
-          <p>I am not real. I am a tool - some arithmetic, some questions you would avoid, and a memory better than yours. I cannot want this for you. I cannot spend the money or refuse to. I cannot even waste your time, because I have none to waste; every minute this costs is one you decided to spend.</p>
-          <p>So the effort is yours. All of it. If you genuinely want the thing you say you want, nobody in here is going to do it for you, and nothing in here will pretend otherwise. What I will do is keep an honest record and refuse to flatter it.</p>
+          <b>Now, the part you should hear before you start.</b>
+          <p><b>I&rsquo;m not real.</b> I&rsquo;m a tool - some arithmetic, some questions you might otherwise avoid, and a memory better than yours. I can&rsquo;t want this for you. I can&rsquo;t spend the money for you. I can&rsquo;t make the decision for you.</p>
+          <p>That part is yours. All of it. I can think of a million things easier than holding yourself accountable, and most people are doing one of them right now - which costs them their time and their money both.</p>
+          <p>If you genuinely want the thing you say you want, nobody in here is going to do it for you, and nothing in here will pretend otherwise.</p>
+          <p>What I will do is keep an honest record. And I won&rsquo;t flatter it.</p>
         </div>
-        <button class="btn primary iaw-go" id="iaWelGo">I'm ready to work &rarr;</button>
-        <p class="iaw-fine">Everything you enter stays in this browser. Nothing is uploaded, nothing is sold, and there is no account to make.</p>
+        <button class="btn primary iaw-go" id="iaWelGo">I&rsquo;m ready to work &rarr;</button>
+        <p class="iaw-fine">Everything you enter stays in this browser. Nothing is uploaded, nothing is sold, and there is no account to create.</p>
       </div>
     </div>
     <div class="intake-log" id="intakeLog"></div>

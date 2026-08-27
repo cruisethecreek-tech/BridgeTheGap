@@ -3314,22 +3314,37 @@ check('...with nothing behind it competing for the screen',
       wel.logHidden===true && wel.barHidden===true);
 /* The four things the card has to say. Asserted as ideas, not sentences - the
    wording will change and none of these may quietly leave with it. */
+/* Written to survive a rewrite, and it just had to: the card was rewritten in
+   the author's own voice, "at zero" became "somewhere", and every "I cannot"
+   became "I can't". Any regex that had pinned a sentence would have failed on a
+   change that lost nothing - which is the failure mode this list exists to
+   avoid, so the contraction-tolerant forms are the fix rather than the
+   headline being edited back.
+
+   One entry did NOT survive, and it is recorded as a removal rather than
+   quietly relaxed into passing: the old card said "I cannot even waste your
+   time, because I have none to waste", which flipped the burden in a single
+   sentence. The rewrite drops it and makes an adjacent point instead - that
+   easier things exist and they cost time and money too. Both are good; they are
+   not the same, and pretending the test still covers the old one would be a
+   lie about coverage. */
 const GATE=[
-  ['everybody starts at zero', /start(s|ing)? at zero|everybody starts/i],
-  ['zero is today, not a verdict', /not a verdict|where you are standing/i],
+  ['everybody starts somewhere', /everybody starts|start(s|ing)? (at zero|somewhere)/i],
+  ['where you are is not a verdict', /not a verdict/i],
   ['the distance is the point', /distance/i],
-  ['in against out', /comes in against what goes out/i],
+  ['in and out is how it closes', /comes in[\s\S]{0,40}goes out/i],
   ['accountability, not budgeting', /accountability\b/i],
   ['I am listening', /listening/i],
   ['I am watching', /watching/i],
   ['you can do better', /do better/i],
   ['it is not real', /\bnot real\b/i],
-  ['it cannot want it for you', /cannot want this for you/i],
-  ['it cannot waste your time', /waste your time/i],
-  ['the effort is entirely yours', /effort is yours|all of it/i]
+  ['it cannot want it for you', /can(not|'|\u2019)?t want this for you/i],
+  ['easier things exist, and they cost you too', /easier[\s\S]{0,120}(time and .*money|money)/i],
+  ['the effort is entirely yours', /effort is yours|all of it/i],
+  ['and it will not flatter the record', /flatter/i]
 ];
 const missing=GATE.filter(([,rx])=>!rx.test(wel.text)).map(([n])=>n);
-check('the gate still says all twelve things it was built to say',
+check('the gate still says all thirteen things it was built to say',
       missing.length===0, missing.join(', '));
 check('...and the button asks for work rather than promising a result',
       /\bwork\b/i.test(wel.cta), wel.cta);
