@@ -5138,6 +5138,8 @@ const packs = await p.evaluate(async () => {
   o.rows=document.querySelectorAll('.pk-row').length;
   o.everyRowHasAWhy=[...document.querySelectorAll('.pk-rw')].every(x=>x.textContent.trim().length>10);
   const n0=state.categories.length;
+  /* everything is ticked by default, so the whole pack is still one tap */
+  o.allTickedByDefault=[...document.querySelectorAll('.pk-cb')].every(x=>x.checked);
   document.getElementById('pkAdd').click(); await wait(300);
   o.added=state.categories.length-n0;
   const g=state.categories.find(c=>c.name==='Special occasions');
@@ -5146,6 +5148,28 @@ const packs = await p.evaluate(async () => {
   const n1=state.categories.length;
   addPack('occasions');
   o.twiceAddsNothing=state.categories.length===n1;
+  /* a la carte: pick two of five and only those two land */
+  openPacks('travel'); await wait(250);
+  document.getElementById('pkNone').click(); await wait(120);
+  ['Stays','Travel insurance'].forEach(function(v){
+    var b=[...document.querySelectorAll('.pk-cb')].find(x=>x.value===v);
+    b.checked=true; b.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  await wait(150);
+  o.partialLabel=document.getElementById('pkAdd').textContent;
+  document.getElementById('pkAdd').click(); await wait(300);
+  const tg=state.categories.find(c=>c.name==='Trips & travel');
+  o.partialLanded=tg ? state.categories.filter(c=>c.parentId===tg.id).map(c=>c.name).sort().join(',') : '';
+  /* and the ones passed over are still on offer */
+  openPacks('travel'); await wait(200);
+  o.restStillOffered=document.querySelectorAll('.pk-cb').length;
+  /* a button that cannot act must not look like it can */
+  document.getElementById('pkNone').click(); await wait(150);
+  o.deadWhenEmpty=document.getElementById('pkAdd').disabled;
+  o.deadLabel=document.getElementById('pkAdd').textContent;
+  const nEmpty=state.categories.length;
+  addPack('travel',[]);
+  o.emptyAddsNothing=state.categories.length===nEmpty;
   /* the growth pack tags what it drops in */
   openPacks('invest'); await wait(200);
   document.getElementById('pkAdd').click(); await wait(300);
@@ -5184,6 +5208,17 @@ check('...and shows every category with a reason beside it',
       packs.rows===6 && packs.everyRowHasAWhy===true, `rows=${packs.rows}`);
 check('adding drops them under one group so the plan stays readable',
       packs.added===7 && packs.nested===true, `added=${packs.added}`);
+check('...with everything ticked to begin with, so the whole pack is still one tap',
+      packs.allTickedByDefault===true);
+check('a la carte: pick two of a pack and only those two land',
+      packs.partialLanded==='Stays,Travel insurance', packs.partialLanded);
+check('...with the button counting what it will actually do',
+      /Add 2 of 6/.test(packs.partialLabel), packs.partialLabel);
+check('...and the ones passed over still on offer next time',
+      packs.restStillOffered===4, String(packs.restStillOffered));
+check('...while a button that cannot act does not look like it can',
+      packs.deadWhenEmpty===true && /Nothing picked/i.test(packs.deadLabel)
+      && packs.emptyAddsNothing===true, packs.deadLabel);
 check('...and says so afterwards rather than offering the same pack again',
       packs.nowSaysNothingToAdd===true && packs.twiceAddsNothing===true);
 check('the money-that-works pack tags what it drops in, so none of it reads as spending',
