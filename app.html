@@ -992,6 +992,17 @@
      when the text inside them does, so the money was the first thing to be cut.
      Sized in em, the money columns scale with whatever font the device is
      actually painting and the name absorbs the difference. */
+  /* The toggle that says which question the number column is answering. */
+  .plan-switch{display:flex;gap:4px;margin:2px 0 10px;padding:4px;border-radius:12px;
+    background:var(--panel-2);border:1px solid var(--line)}
+  .plan-switch .pv{flex:1;padding:9px 6px;border:0;border-radius:9px;background:transparent;
+    color:var(--muted);font:inherit;font-size:13px;font-weight:800;cursor:pointer;
+    transition:background .14s ease,color .14s ease}
+  .plan-switch .pv:hover{color:var(--text)}
+  .plan-switch .pv.on{background:var(--accent);color:var(--on-accent)}
+  .plan-cols.two{grid-template-columns:minmax(0,1fr) 7em}
+  .sub-spent{font-weight:800;font-size:15px;text-align:right}
+  .sub-spent.over,.cat-assign.over{color:var(--bad)}
   .plan-cols{display:grid;grid-template-columns:minmax(0,1fr) 6.2em 5.6em;gap:8px;align-items:end;
     padding:0 10px 7px;font-size:14px;color:var(--muted)}
   .plan-cols span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
@@ -1067,6 +1078,7 @@
   .avail.none{background:var(--ink);color:var(--muted);border-color:var(--line)}
   @media(max-width:365px){
     .plan-cols{grid-template-columns:minmax(0,1fr) 5.6em 5em;gap:6px;padding:0 8px 7px}
+    .plan-cols.two{grid-template-columns:minmax(0,1fr) 6.4em}
     .cat.grp .cat-top{gap:6px;padding:9px 8px}
     .cat.grp .cat-name{flex:1 1 6em;min-width:6em}
     .cat.grp .cat-assign{flex:0 0 5.6em}
@@ -3695,6 +3707,14 @@ function normalizeState(s){
      one clamp is cheaper than a defensive read at every place stages are drawn. */
   s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
   s.rateDraft=null;
+  /* Checked against a literal, not against PLAN_VIEWS. normalizeState runs
+     inside load(), which runs at `let state = load()` - long before a const
+     declared further down the file exists. Referencing it here throws on the
+     TDZ, load() falls back to a default state, and every category the person
+     owns disappears on boot. That exact bug has been shipped once already in
+     this file (syncInvestAsset reaching for uid); it does not get shipped
+     twice. */
+  if(['planned','spent','left'].indexOf(s.planView)<0) s.planView='planned';
   /* Heal the app's own bug in the app's own data. "Pay Yourself First" is a
      name this app writes, never one a person types from scratch, and it was
      being created with no growth tag - so every dollar somebody paid themselves
@@ -6617,6 +6637,28 @@ function catSpent(id,M){ return spentFor(id,M)+descendantsOf(id).reduce((s,k)=>s
 function investedFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='invest'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
 function catInvested(id,M){ return investedFor(id,M)+descendantsOf(id).reduce((s,k)=>s+investedFor(k.id,M),0); }
 function catUsed(id,M){ return catSpent(id,M)+catInvested(id,M); }
+/* ---- one number column, three questions -----------------------------------
+   Asked for as "a planned / spent / remaining toggle tab may help our plan
+   dashboard be more uniformed with categories", and it fixes something real:
+   SPENT was not on this list at all. You could see what you assigned and what
+   was left, and had to subtract in your head to find out what actually went. A
+   group row showed three figures and a leaf row showed two, which is the
+   non-uniformity the ask is pointing at.
+
+   So the list carries one money column now and the toggle says which question
+   it is answering. Planned is the editable one - zero-based budgeting is typing
+   in that column, so it stays a field there and becomes a figure in the other
+   two. Every row then has exactly the same shape whatever the mode. */
+const PLAN_VIEWS=[
+  {k:'planned', label:'Planned', col:'Planned', why:'what you assigned'},
+  {k:'spent',   label:'Spent',   col:'Spent',   why:'what has actually gone'},
+  {k:'left',    label:'Remaining', col:'Left',  why:'assigned minus spent'}
+];
+function planView(){ return PLAN_VIEWS.some(v=>v.k===state.planView) ? state.planView : 'planned'; }
+function setPlanView(k){
+  if(!PLAN_VIEWS.some(v=>v.k===k)) return;
+  state.planView=k; save(); renderBudget();
+}
 /* Budgeting works in BOTH directions, because people know their numbers at
    different levels. Top-down: assign $300 to Power & Wi-Fi and split it into
    Electric/Water/Internet. Bottom-up: you know water is $70 and electric is $120
@@ -6948,6 +6990,7 @@ function renderBudget(){
        So the list answers exactly that question and nothing else: name, what you
        assigned, what is left. Everything else moved into the category's own
        sheet, one tap away, where there is room to show it properly. */
+    const view=planView();
     const rowFor=(c,depth)=>{
       const a=catAssigned(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
@@ -6963,8 +7006,11 @@ function renderBudget(){
             ${reorderCtrlHTML(c.id)}
             <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
             <span class="cat-name">${nameHTML}</span>
-            <span class="rw-money"><span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}</span>
-            <span class="avail ${pillCls} gcol">${money(rem)}</span></span>
+            <span class="rw-money">${
+              view==='planned' ? `<span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}</span>`
+              : view==='spent' ? `<span class="cat-assign gcol${sp>a&&a>0?' over':''}">${money(sp)}</span>`
+              : `<span class="avail ${pillCls} gcol">${money(rem)}</span>`
+            }</span>
           </div>
         </div>`;
       }
@@ -6976,8 +7022,11 @@ function renderBudget(){
       return `<div class="subrow lvl${depth}${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
-        <span class="rw-money"><span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>
-        <span class="avail ${pillCls}" title="What is left">${money(rem)}</span></span>
+        <span class="rw-money">${
+          view==='planned' ? `<span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>`
+          : view==='spent' ? `<span class="sub-spent${sp>a&&a>0?' over':''}" title="What has gone">${money(sp)}</span>`
+          : `<span class="avail ${pillCls}" title="What is left">${money(rem)}</span>`
+        }</span>
       </div>`;
     };
     const walk=(c,depth)=>{
@@ -6986,7 +7035,11 @@ function renderBudget(){
         h+=childrenOf(c.id).map(k=>walk(k,depth+1)).join('');
       return h;
     };
-    box.innerHTML=`<div class="plan-cols"><span>Category</span><span>Assigned</span><span>Available</span></div>`
+    const vm=PLAN_VIEWS.find(v=>v.k===view);
+    box.innerHTML=`<div class="plan-switch" role="tablist" aria-label="What the number column shows">${
+        PLAN_VIEWS.map(v=>`<button role="tab" aria-selected="${v.k===view}" class="pv${v.k===view?' on':''}" data-planview="${v.k}">${v.label}</button>`).join('')
+      }</div>`
+      + `<div class="plan-cols two"><span>Category</span><span title="${escapeHtml(vm.why)}">${vm.col}</span></div>`
       + tops.map(c=>walk(c,0)).join('');
   }
   wirePlan(box, true);
@@ -7006,6 +7059,7 @@ function wirePlan(box, isMain){
      write to the month the user is looking at now. */
   const M=state.activeMonth;
   wireDeepen(box);
+  box.querySelectorAll('[data-planview]').forEach(b=>b.addEventListener('click',()=>setPlanView(b.dataset.planview)));
   box.querySelectorAll('[data-assignnow]').forEach(b=>b.addEventListener('click',()=>{
     const id=b.dataset.assignnow, sum=kidsAssigned(id,M);
     budgetFor(M)[id]=sum; save(); planRefresh(); renderHome();

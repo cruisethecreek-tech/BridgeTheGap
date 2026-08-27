@@ -607,6 +607,14 @@ catalogue row brings its growth tag along, **and** a name typed by hand is never
 silently tagged, **and** editing a pick drops the tag. Testing only the first
 would have shipped an app that quietly decides things on your behalf.
 
+Adding the Planned/Spent/Remaining toggle broke a drag test, and the break was
+worth more than the feature. The check reached for
+`#cats [data-row]:nth-of-type(2) .cat-grip` - and once a toggle div sat above
+the list, the second div of that type was the toggle, so the selector matched
+nothing and the suite died on a null. **A positional selector in a test is a
+claim about layout that the test does not mean to make.** It addresses the row
+by what it is now, and says so where the next person will read it.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own

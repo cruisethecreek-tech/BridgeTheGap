@@ -352,10 +352,20 @@ check('...and cannot be dragged out into the top level',
       !escaped.tops.includes('Eating out') && escaped.subs[0]==='Eating out',
       `tops ${escaped.tops.join(',')} / subs ${escaped.subs.join(',')}`);
 
-/* picking a row up and putting it back must not renumber anything */
+/* picking a row up and putting it back must not renumber anything.
+   Addressed by what the row IS rather than where it sits: this was
+   ':nth-of-type(2)' until the plan list grew a Planned/Spent/Remaining toggle
+   above it, at which point the second div of that type was the toggle and the
+   selector matched nothing. A positional selector in a test is a claim about
+   layout that the test does not mean to make. */
 const settled = await p.evaluate(()=>topCats().map(c=>c.name));
-const backGrip = await centre('#cats [data-row]:nth-of-type(2) .cat-grip');
-await dragTo('#cats [data-row]:nth-of-type(2) .cat-grip', backGrip.y+3);
+const anyGrip = await p.evaluate(()=>{
+  const g=document.querySelector('#cats [data-row] [data-grip]');
+  return g ? '[data-grip="'+g.dataset.grip+'"]' : null;
+});
+check('there is a row to pick up and put back', !!anyGrip, String(anyGrip));
+const backGrip = await centre(anyGrip);
+await dragTo(anyGrip, backGrip.y+3);
 const unchanged = await p.evaluate(()=>topCats().map(c=>c.name));
 check('a drag that goes nowhere changes nothing', unchanged.join(',')===settled.join(','),
       `${settled.join(',')} -> ${unchanged.join(',')}`);
@@ -3444,14 +3454,30 @@ await seed({...FULL, activeMonth:'2026-08',
                 {id:'v1',type:'invest',amount:400,catId:'ret',date:'2026-08-02'}]});
 await p.setViewportSize({width:390,height:1200});
 await p.reload(); await p.waitForTimeout(700);
-const plan = await p.evaluate(() => {
-  activateTab('budget'); renderBudget();
+const plan = await p.evaluate(async () => {
+  activateTab('budget');
+  /* Read in the Remaining view: the plan list carries one money column now and
+     the availability pill only exists in the column that answers "what is
+     left". Every other property here - one line per category, nothing clipped,
+     no shortened money, no controls loose in the list - is about the row and
+     holds in all three modes. */
   const box=document.getElementById('cats');
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  /* Both modes are set EXPLICITLY rather than assumed. planView is stored, so
+     whatever an earlier section left behind would otherwise decide which
+     column this one is reading - a test that depends on the order it runs in. */
+  setPlanView('planned'); await wait(250);
+  /* Typing the amount straight into the list is a PLANNED-mode property, and
+     the point of that mode: budgeting is typed here, not buried in a sheet. */
+  const typeable=[...box.querySelectorAll('[data-row].subrow')]
+    .every(r=>!!r.querySelector('input[data-cat]'));
+  setPlanView('left'); await wait(250);
   const rows=[...box.querySelectorAll('[data-row]')];
   const heights=rows.map(r=>Math.round(r.getBoundingClientRect().height));
   return {
     rows:rows.length,
     cols:!!box.querySelector('.plan-cols'),
+    /* counted in the Remaining view, which is where a pill exists at all now */
     pills:box.querySelectorAll('.avail').length,
     tallest:Math.max(...heights),
     oneLiners:heights.filter(h=>h<=64).length,
@@ -3472,7 +3498,7 @@ const plan = await p.evaluate(() => {
     pencilsInList:box.querySelectorAll('.cat-edit').length,
     addSubInList:box.querySelectorAll('[data-addsub-input]').length,
     everyRowHasPill:rows.every(r=>!!r.querySelector('.avail')),
-    everyLeafTypeable:rows.filter(r=>r.classList.contains('subrow')).every(r=>!!r.querySelector('input[data-cat]'))
+    everyLeafTypeable:typeable
   };
 });
 check('the plan is one line per category, with a column header over them',
@@ -3531,7 +3557,12 @@ check('a pool opens too, lists what is inside it, and does not offer its own amo
       JSON.stringify({subs:sheet.groupSubs, ownField:sheet.groupHasAssign}));
 /* The bug the compact row exposed: a growth pool could never be used up, so the
    Plan claimed money was available that had already left. */
-const growthPool = await p.evaluate(() => {
+const growthPool = await p.evaluate(async () => {
+  /* What is left lives in the Remaining view now that the plan list carries a
+     Planned / Spent / Remaining toggle. The property is unchanged - a growth
+     category has to read as used up - but it has to be read from the column
+     that answers that question. */
+  setPlanView('left'); await new Promise(r=>setTimeout(r,240));
   const M=state.activeMonth;
   const row=document.querySelector('#cats [data-catsheet="ret"] .avail');
   return { pill:row?row.innerText:'', used:catUsed('ret',M), spent:catSpent('ret',M),
@@ -5358,6 +5389,87 @@ check('a search with no match still offers a way in, and does not scold you',
 check('...which opens the packs', cat.browseOpens===true);
 check('the same catalogue is on the log form, where it was asked for',
       cat.logFieldShown===true && cat.logOffers>0, `offers=${cat.logOffers}`);
+
+/* ---- 75. one number column, three questions ----
+   "I think a planned / spent / remaining toggle tab may help our plan dashboard
+   to help be more uniformed with categories."
+
+   It fixes something real rather than only tidying: SPENT was not on that list
+   at all. You could see what you assigned and what was left, and had to
+   subtract in your head to find out what had actually gone. And the shapes did
+   not match - a group row printed three figures (rolled-up, "direct", and
+   available) where a leaf printed two, which is the non-uniformity the ask
+   names.
+
+   Planned stays the editable one, because zero-based budgeting IS typing in
+   that column; it becomes a plain figure in the other two, since there is
+   nothing to type into "what you already spent". That is what makes every row
+   the same shape in every mode, which is the property below.
+
+   The choice is stored, because a mode you have to re-pick on every visit is a
+   button rather than a view. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'food',name:'Food'},{id:'wal',name:'Walmart',parentId:'food'},
+              {id:'aldi',name:'Aldi',parentId:'food'},{id:'rent',name:'Rent'}],
+  budgets:{'2026-08':{wal:250,aldi:200,rent:1200,food:5}},
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'},
+                {id:'e1',type:'expense',amount:225,date:'2026-08-04',catId:'wal'},
+                {id:'e2',type:'expense',amount:1300,date:'2026-08-02',catId:'rent'}]});
+await p.reload(); await p.waitForTimeout(450);
+const pv = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('budget'); await wait(300);
+  /* innerText does not include an input's value, and the planned column IS an
+     input - which is the design, so the reader has to know that */
+  const cell=i=>{ const r=document.querySelector(`[data-row="${i}"] .rw-money`); if(!r) return '';
+    const f=r.querySelector('input'); return f ? f.value : r.innerText.trim(); };
+  o.tabs=[...document.querySelectorAll('.plan-switch .pv')].map(x=>x.textContent);
+  o.defaultOn=(document.querySelector('.plan-switch .pv.on')||{}).dataset?.planview;
+  o.isTablist=document.querySelector('.plan-switch').getAttribute('role')==='tablist'
+    && document.querySelector('.plan-switch .pv.on').getAttribute('aria-selected')==='true';
+  o.cols=[...document.querySelectorAll('.plan-cols span')].map(x=>x.textContent);
+  o.plannedFields=document.querySelectorAll('#cats input[data-cat]').length;
+  o.plannedLeaf=cell('wal');
+  setPlanView('spent'); await wait(250);
+  o.spentLeaf=cell('wal'); o.spentOverspent=cell('rent'); o.spentGroup=cell('food');
+  o.spentFields=document.querySelectorAll('#cats input[data-cat]').length;
+  o.spentHeader=[...document.querySelectorAll('.plan-cols span')][1].textContent;
+  o.overMarked=document.querySelector('[data-row="rent"] .sub-spent').classList.contains('over');
+  setPlanView('left'); await wait(250);
+  o.leftLeaf=cell('wal'); o.leftOver=cell('rent');
+  /* the uniformity claim, checked rather than asserted in prose */
+  o.oneCellEverywhere=[...document.querySelectorAll('#cats .rw-money')].every(x=>x.children.length===1);
+  return o;
+});
+check('the plan list carries a Planned / Spent / Remaining toggle',
+      pv.tabs.join(',')==='Planned,Spent,Remaining', pv.tabs.join(','));
+check('...as a real tablist, opening on Planned',
+      pv.isTablist===true && pv.defaultOn==='planned', String(pv.defaultOn));
+check('...and one money column, labelled by whichever question is selected',
+      pv.cols.length===2 && pv.cols[0]==='Category', pv.cols.join(' | '));
+check('Planned is the editable one, because that is where budgeting happens',
+      pv.plannedFields===3 && pv.plannedLeaf==='250',
+      `fields=${pv.plannedFields} leaf=${pv.plannedLeaf}`);
+check('Spent shows what actually went - the figure the list never had',
+      /225/.test(pv.spentLeaf) && /1,300/.test(pv.spentOverspent), 
+      `${pv.spentLeaf} / ${pv.spentOverspent}`);
+check('...rolled up for a group', /225/.test(pv.spentGroup), pv.spentGroup);
+check('...with no field, because there is nothing to type into what you spent',
+      pv.spentFields===0, String(pv.spentFields));
+check('...and overspending marked rather than merely printed',
+      pv.overMarked===true && /spent/i.test(pv.spentHeader), pv.spentHeader);
+check('Remaining is assigned minus spent, negative when it should be',
+      /25/.test(pv.leftLeaf) && /-/.test(pv.leftOver), `${pv.leftLeaf} / ${pv.leftOver}`);
+check('every row is the same shape in every mode, which was the whole ask',
+      pv.oneCellEverywhere===true);
+/* stored, not just switched */
+await p.reload(); await p.waitForTimeout(450);
+const kept = await p.evaluate(async () => {
+  activateTab('budget'); await new Promise(r=>setTimeout(r,300));
+  return (document.querySelector('.plan-switch .pv.on')||{}).dataset?.planview;
+});
+check('...and the choice survives a reload', kept==='left', String(kept));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
