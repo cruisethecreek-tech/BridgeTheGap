@@ -6278,6 +6278,91 @@ check('a swipe that opened nothing leaves no trap for the next tap',
 check('nothing in the gesture threw', swipeErrs.length===0, swipeErrs.join(' | '));
 await swipeCtx.close();
 
+/* ---- 82. a card cannot be somewhere money lands until it exists ----
+   Sent as a screenshot of the Move form's destination list - seven accounts,
+   no card, no equity line - with "shouldn't the move feature have my credit
+   card and HELOC to land in?"
+
+   It should, and it does. Driving the real pickers proved the wiring was
+   already right: with credit accounts present they appear in both ends of a
+   move, and a card is preselected as the destination because that is what a
+   move usually is. They were missing because the two accounts had never been
+   created.
+
+   Which was not the user's mistake. The Accounts panel was headed "What's
+   actually in the bank" and opened with "what's really sitting in each account
+   today" - copy that tells you, correctly and clearly, that a credit card does
+   not belong there. The credit kind had been built into a panel whose own words
+   excluded it, and no amount of correct wiring survives that.
+
+   So the checks here are about the words, and about the one place somebody
+   hits the wall: the Move list itself, which now says where a card comes from
+   and hands over the way to add one. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c',name:'Food'}], budgets:{'2026-08':{c:400}},
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}],
+  accounts:[{id:'a1',name:'Joint Checking',kind:'checking',balance:3000,updated:'2026-08-01'},
+            {id:'a2',name:'Stash',kind:'invest',balance:18000,updated:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+const cardDoor = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); await w(300);
+  const d=[...document.querySelectorAll('#view-goals details')].find(x=>/Accounts/.test(x.innerText.slice(0,40)));
+  if(d) d.open=true; await w(160);
+  const o={head:d?d.querySelector('.acc-sub').textContent:'', body:d?d.innerText:''};
+  activateTab('tx'); await w(300);
+  document.querySelector('#typeToggle button[data-t="transfer"]').click(); await w(260);
+  o.move=document.getElementById('xferNote').innerText;
+  o.moveTrail=!!document.querySelector('#xferNote [data-trail="account"]');
+  return o;
+});
+check('the accounts panel no longer says it is only about the bank',
+      !/actually in the bank/i.test(cardDoor.head) && /what you owe/i.test(cardDoor.head),
+      cardDoor.head);
+check('...and its intro says cards and lines of credit belong there',
+      /cards and lines of credit belong here/i.test(cardDoor.body), cardDoor.body.slice(0,200));
+check('...naming the kind to pick, and that $0 is a real answer on an unused line',
+      /Credit card \/ line of credit/.test(cardDoor.body) && /\$0 is a real answer/.test(cardDoor.body));
+check('...and why it is worth doing, in the three things it unlocks',
+      /off your net worth/i.test(cardDoor.body) && /room figure/i.test(cardDoor.body)
+        && /costing you/i.test(cardDoor.body), cardDoor.body.slice(0,420));
+check('with no card anywhere, the Move form says where one comes from',
+      /has to exist here before it can be somewhere money lands/i.test(cardDoor.move),
+      cardDoor.move);
+check('...and hands over the way to add it rather than naming a tab',
+      cardDoor.moveTrail===true);
+
+/* And with the accounts present, the wiring the screenshot was asking about. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c',name:'Food'}], budgets:{'2026-08':{c:400}},
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}],
+  accounts:[{id:'a1',name:'Joint Checking',kind:'checking',balance:3000,updated:'2026-08-01'},
+            {id:'a3',name:'Rewards Card',kind:'credit',balance:-412,limit:13700,apr:13,updated:'2026-08-01'},
+            {id:'a4',name:'Equity Line',kind:'credit',balance:0,limit:25000,apr:3.6,secured:true,updated:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+const cardLists = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(300);
+  document.querySelector('#typeToggle button[data-t="transfer"]').click(); await w(260);
+  const opts=id=>[...document.querySelectorAll('#'+id+' option')].map(o=>o.textContent);
+  return {note:document.getElementById('xferNote').innerText,
+          landsIn:opts('txXferTo'), comesFrom:opts('txAcct'),
+          def:(document.getElementById('txXferTo')||{}).value, invest:opts('txInvPick')};
+});
+check('once a card exists the nudge stops, having done its job',
+      !/has to exist here/i.test(cardLists.note), cardLists.note.slice(0,120));
+check('a card and a line of credit are both places money can land',
+      cardLists.landsIn.includes('Rewards Card') && cardLists.landsIn.includes('Equity Line'),
+      cardLists.landsIn.join(', '));
+check('...and both are places money can come out of',
+      cardLists.comesFrom.includes('Rewards Card') && cardLists.comesFrom.includes('Equity Line'),
+      cardLists.comesFrom.join(', '));
+check('...with a card preselected, because that is what a move usually is',
+      cardLists.def==='a3', cardLists.def);
+check('but an investment still cannot land in a line of credit',
+      !cardLists.invest.includes('Rewards Card') && !cardLists.invest.includes('Equity Line'),
+      cardLists.invest.join(', '));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

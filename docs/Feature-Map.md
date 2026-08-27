@@ -467,6 +467,14 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**A card cannot be somewhere money lands until it exists.** Sent as a screenshot of the Move form's destination list - seven accounts, no card, no equity line - with *"shouldn't the move feature have my credit card and HELOC to land in?"*
+
+It should, and it did. Driving the real pickers proved the wiring was already correct: with credit accounts present they appear at both ends of a move, and a card is **preselected** as the destination because that is what a move usually is. They were missing because the two accounts had never been created.
+
+Which was not a user error. The Accounts panel was headed *"What's actually in the bank"* and opened with *"what's really sitting in each account today"* - copy that tells you, correctly and clearly, that a credit card does not belong there. **The credit kind had been built into a panel whose own words excluded it,** and no amount of correct wiring survives that.
+
+The heading is *"What you have and what you owe"* now, the intro says cards and lines of credit belong there, names the kind to pick, says $0 is a real answer on a line you keep at zero, and gives the three things it unlocks (net worth, the room figure, and what a balance is costing you). And the Move form itself closes the loop for anyone who hits the wall there: with no credit account anywhere it says one *"has to exist here before it can be somewhere money lands"* and hands over the trail to add it, rather than naming a tab and leaving. The nudge disappears the moment a card exists.
+
 **Swipe up for the drawer.** Asked for as *"I intuitively want to slide up from the bottom while on mobile to reveal the other options."* The right instinct - every drawer on a phone works that way, and this one only opened by hitting one 64px target in the corner of the bar.
 
 The whole nav bar is the handle now: swipe up anywhere on it to open the More tray, swipe down to close. A **grip** sits above the tabs so the gesture is advertised rather than hidden - a drawer without a handle is a secret. The grip is `aria-hidden` on purpose: the More button beside it is the same control, already labelled and already in the tab order, and a second stop announcing the same thing is noise. Tapping the grip toggles it too, the way a real drawer handle does.
