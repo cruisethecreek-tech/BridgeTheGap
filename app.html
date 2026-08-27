@@ -1399,22 +1399,140 @@
      it costs, in words, before anything is added. */
   .pk-lead{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 14px}
   .pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-  .pk-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;
-    padding:13px;border-radius:13px;border:1px solid var(--line);background:var(--panel-2);
-    color:var(--text);font:inherit;cursor:pointer}
-  .pk-card:hover,.pk-card:focus-visible{border-color:var(--accent);background:rgba(var(--accent-rgb),.08)}
+  /* ---- pack textures -----------------------------------------------------
+     Every one of these is drawn in CSS. No image files, because this app is one
+     html file that has to work with the network off, and a texture that fails to
+     load is worse than no texture at all. They scale to any size for free and
+     cost nothing to ship.
+
+     The pattern carries the TOPIC; the colour carries the KIND of money. Gold
+     for the foundations you build on, terracotta for the leaks, sage for the
+     money that keeps working. So the palette stays the app's own three hues and
+     the card still tells you something before you have read a word of it.
+
+     Alpha is per theme and deliberately small. A texture that is legible as a
+     texture is already too strong to have type on top of it - the job is depth,
+     not decoration, and the composited surface has to stay close enough to
+     --panel-2 that every contrast ratio the palette suite proved still holds. */
+  /* The hook line is --muted at 12px, so it needs 4.5:1. It sits at 5.37:1 on
+     bare panel-2 in dark and 4.94:1 in light, and every bit of texture
+     composited under it eats into that. Unmasked, the ceiling before it drops
+     below AA is a stacked alpha of .095 in dark and .065 in light - the first
+     draft ran at .205 and put the hook at 3.66:1, a card that looked better and
+     read worse, which is the trade this app does not make.
+
+     Two defences, and it is worth being honest about which one carries the
+     weight: the MASK does, by keeping the pattern off the type entirely. Pulling
+     the mask and leaving the alpha high measures 4.16:1, so the mask is load
+     bearing and these numbers are the margin behind it, not the fix. The suite
+     samples the rendered pixels under all 27 text runs rather than trusting
+     either. */
+  :root{ --tex-a:.058; --tex-b:.10 }
+  :root[data-theme="light"]{ --tex-a:.042; --tex-b:.072 }
+  .pk-card{position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;
+    padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--text);font:inherit;cursor:pointer;
+    transition:border-color .16s ease,transform .16s ease,box-shadow .16s ease}
+  /* the texture rides on its own layer so hover can lift the card without
+     dragging the pattern's alpha around with it */
+  /* Masked toward the corners, so what strength the pattern has lands where the
+     type is not. The card reads as textured; the words sit on the flat surface
+     the palette suite already proved. */
+  .pk-card::before,.pk-truth::before{content:'';position:absolute;inset:0;
+    pointer-events:none;
+    -webkit-mask-image:radial-gradient(135% 115% at 100% 0%,#000 0%,rgba(0,0,0,.35) 46%,transparent 78%);
+    mask-image:radial-gradient(135% 115% at 100% 0%,#000 0%,rgba(0,0,0,.35) 46%,transparent 78%)}
+  .pk-card > *{position:relative;z-index:1}
+  .pk-card:hover,.pk-card:focus-visible{border-color:rgba(var(--pk-rgb),.55);
+    transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.16)}
+  .pk-card:active{transform:translateY(0)}
   .pk-card.done{opacity:.62}
-  .pk-ico{font-size:21px;line-height:1}
+  /* which hue this pack speaks in */
+  [data-pk]{--pk-rgb:var(--accent-rgb)}
+  [data-pk="health"],[data-pk="beauty"],[data-pk="online"],
+  [data-pk="travel"],[data-pk="lifestyle"]{--pk-rgb:var(--accent-2-rgb)}
+  [data-pk="invest"]{--pk-rgb:var(--good-rgb)}
+  /* every card gets the same soft corner wash, so nine patterns still read as
+     one family rather than nine unrelated swatches */
+  .pk-card::before,.pk-truth::before{
+    background-image:radial-gradient(120% 92% at 100% 0%,
+      rgba(var(--pk-rgb),var(--tex-a)) 0%, transparent 62%)}
+
+  /* The floor: stacked courses. */
+  [data-pk="essentials"].pk-card::before,[data-pk="essentials"] .pk-truth::before{background-image:
+    repeating-linear-gradient(0deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1.5px,transparent 1.5px 22px),
+    repeating-linear-gradient(90deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1.5px,transparent 1.5px 38px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* A pulse, going out. */
+  [data-pk="health"].pk-card::before,[data-pk="health"] .pk-truth::before{background-image:
+    repeating-radial-gradient(circle at 88% 12%,transparent 0 13px,rgba(var(--pk-rgb),var(--tex-a)) 13px 14.5px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Small, frequent, identical. */
+  [data-pk="beauty"].pk-card::before,[data-pk="beauty"] .pk-truth::before{background-image:
+    radial-gradient(circle,rgba(var(--pk-rgb),var(--tex-b)) 1.5px,transparent 1.6px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%);
+    background-size:13px 13px,auto}
+  /* Boxes, stacking. */
+  [data-pk="online"].pk-card::before,[data-pk="online"] .pk-truth::before{background-image:
+    repeating-linear-gradient(60deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1px,transparent 1px 17px),
+    repeating-linear-gradient(-60deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1px,transparent 1px 17px),
+    repeating-linear-gradient(0deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1px,transparent 1px 17px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* A dotted flight path. */
+  [data-pk="travel"].pk-card::before,[data-pk="travel"] .pk-truth::before{background-image:
+    repeating-linear-gradient(-38deg,rgba(var(--pk-rgb),var(--tex-b)) 0 5px,transparent 5px 15px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Wrapping paper. */
+  [data-pk="occasions"].pk-card::before,[data-pk="occasions"] .pk-truth::before{background-image:
+    repeating-linear-gradient(45deg,rgba(var(--pk-rgb),var(--tex-a)) 0 7px,transparent 7px 20px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Rings spreading from a root. */
+  [data-pk="invest"].pk-card::before,[data-pk="invest"] .pk-truth::before{background-image:
+    repeating-radial-gradient(circle at 14% 96%,transparent 0 11px,rgba(var(--pk-rgb),var(--tex-a)) 11px 12.5px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Forty small ones, scattered. */
+  [data-pk="family"].pk-card::before,[data-pk="family"] .pk-truth::before{background-image:
+    radial-gradient(circle at 14% 24%,rgba(var(--pk-rgb),var(--tex-b)) 0 3px,transparent 3.4px),
+    radial-gradient(circle at 71% 14%,rgba(var(--pk-rgb),var(--tex-b)) 0 2px,transparent 2.4px),
+    radial-gradient(circle at 38% 62%,rgba(var(--pk-rgb),var(--tex-b)) 0 2.5px,transparent 2.9px),
+    radial-gradient(circle at 88% 54%,rgba(var(--pk-rgb),var(--tex-b)) 0 2px,transparent 2.4px),
+    radial-gradient(circle at 60% 88%,rgba(var(--pk-rgb),var(--tex-b)) 0 3px,transparent 3.4px),
+    radial-gradient(circle at 22% 84%,rgba(var(--pk-rgb),var(--tex-b)) 0 2px,transparent 2.4px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* The ring a cup leaves, over and over. */
+  [data-pk="lifestyle"].pk-card::before,[data-pk="lifestyle"] .pk-truth::before{background-image:
+    repeating-radial-gradient(circle at 86% 88%,transparent 0 8px,rgba(var(--pk-rgb),var(--tex-a)) 8px 9.5px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  @media (prefers-reduced-motion:reduce){.pk-card{transition:none}}
+  /* the emoji gets something to sit on, so it reads as a mark rather than a
+     character that happens to be first */
+  .pk-ico{font-size:21px;line-height:1;width:34px;height:34px;border-radius:10px;
+    display:grid;place-items:center;background:rgba(var(--pk-rgb),.14);
+    border:1px solid rgba(var(--pk-rgb),.28);margin-bottom:2px}
   .pk-nm{font-weight:900;font-size:14.5px}
   .pk-hook{font-size:12px;line-height:1.45;color:var(--muted)}
   .pk-hook.big{font-size:14.5px;line-height:1.55;color:var(--text);font-weight:800;margin:10px 0 10px}
   .pk-n{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
   .pk-back{margin-bottom:2px}
-  .pk-truth{padding:12px 14px;border-radius:12px;border:1px solid var(--line);
-    background:rgba(var(--accent-rgb),.07);font-size:13px;line-height:1.6;color:var(--muted)}
+  .pk-truth{position:relative;overflow:hidden;
+    padding:13px 15px;border-radius:12px;border:1px solid rgba(var(--pk-rgb),.32);
+    background:var(--panel-2);font-size:13px;line-height:1.6;color:var(--muted)}
+  .pk-truth > *{position:relative;z-index:1}
   .pk-list{margin:14px 0 0;display:flex;flex-direction:column;gap:1px}
   .pk-row{padding:10px 12px;border-radius:10px;background:var(--panel-2);overflow-wrap:break-word}
   .pk-row.here{opacity:.6}
+  /* a la carte: the whole row is the hit target, and unpicked reads as off
+     rather than merely unhighlighted - a tick alone is easy to miss on a phone */
+  .pk-row.pick{display:flex;align-items:flex-start;gap:11px;cursor:pointer;
+    border:1px solid transparent;transition:border-color .13s ease,opacity .13s ease}
+  .pk-row.pick:hover,.pk-row.pick:focus-within{border-color:var(--accent)}
+  .pk-row.pick:not(.on){opacity:.5}
+  .pk-cb{flex:none;width:19px;height:19px;margin-top:2px;accent-color:var(--accent);cursor:pointer}
+  .pk-body{flex:1;min-width:0}
+  .pk-pickbar{display:flex;align-items:center;gap:8px;margin:16px 0 -4px;flex-wrap:wrap}
+  .pk-pk{flex:1;font-size:12.5px;font-weight:800;color:var(--muted)}
+  .pk-act .btn[disabled]{opacity:.45;cursor:not-allowed}
   .pk-rn{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-weight:800;font-size:14px}
   .pk-rw{display:block;margin-top:3px;font-size:12.5px;line-height:1.5;color:var(--muted)}
   .pk-have{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
@@ -1551,6 +1669,11 @@
   .iaw-t:focus{outline:none}
   .iaw-lead{font-size:15px;line-height:1.6;color:var(--muted);margin:13px 0 0;text-align:left}
   .iaw-lead b{color:var(--text)}
+  /* The rewrite turns on two short lines that are doing the work of a whole
+     paragraph. Set at lead size they read as filler; they are the point. */
+  .iaw-beat{font-size:19px;line-height:1.35;font-weight:900;letter-spacing:-.2px;
+    margin:15px 0 0;text-align:left;color:var(--text)}
+  @media(max-width:360px){ .iaw-beat{font-size:17.5px} }
   .iaw-three{margin-top:18px;display:flex;flex-direction:column;gap:9px;text-align:left}
   .iaw-row{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px 14px}
   .iaw-k{display:block;font-weight:900;font-size:15px}
@@ -3089,26 +3212,38 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
          terms rather than to sell anything, and the whole card turns on one
          sentence most software will not say - this thing is not real, it cannot
          want the outcome for you, and the work is entirely yours. An app that
-         opens by promising to change your life has already told its first lie. -->
+         opens by promising to change your life has already told its first lie.
+
+         Rewritten by the author in his own voice, and the change is not
+         cosmetic: it opens on "everybody starts somewhere" rather than "at
+         zero", because zero is a number and somebody with savings reads it as
+         not being addressed. Somewhere includes them. The contractions are
+         deliberate too - the old card said "I am not real" and "I cannot", which
+         is the register of a legal notice; this one is spoken. -->
     <div class="ia-welcome" id="iaWelcome" role="dialog" aria-labelledby="iaWelTitle" aria-modal="true">
       <div class="iaw-card">
-        <span class="iaw-eye">Ground zero</span>
-        <h1 class="iaw-t" id="iaWelTitle">Everybody starts at zero.</h1>
-        <p class="iaw-lead">Zero is not a verdict and it is not your balance. It is just where you are standing today, and everyone is standing on it - the person with nothing in the account and the person with plenty. Today is the only day either of them actually has.</p>
-        <p class="iaw-lead">What matters is the <b>distance</b>. Between here and next month. Between here and five years, ten, twenty. That gap is the only thing this app is interested in, and it closes exactly one way: what comes in against what goes out, decided by you, over and over.</p>
-        <p class="iaw-lead">You can use it to budget. That is not really what it is. It is an <b>accountability</b> app, and this is the part it does:</p>
+        <span class="iaw-eye">Starting line</span>
+        <h1 class="iaw-t" id="iaWelTitle">Everybody starts somewhere.</h1>
+        <p class="iaw-lead">It doesn&rsquo;t matter whether there&rsquo;s nothing in your account or plenty. It doesn&rsquo;t matter whether you&rsquo;re starting with debt, savings, a paycheck, or a mess you would rather not look at.</p>
+        <p class="iaw-beat">This is where you are.</p>
+        <p class="iaw-lead">And that&rsquo;s not a verdict. It&rsquo;s not a judgment. It&rsquo;s just your starting line.</p>
+        <p class="iaw-beat">What matters is the distance.</p>
+        <p class="iaw-lead">Between here and next month. Between here and five years from now. Ten. Twenty. That distance is what this app cares about, and it closes one way: <b>what comes in, what goes out, and what you decide to do about it.</b></p>
+        <p class="iaw-lead">You can call this a budgeting app. That&rsquo;s not really what it is. It&rsquo;s an <b>accountability</b> app.</p>
         <div class="iaw-three">
-          <div class="iaw-row"><span class="iaw-k">I am listening.</span><span class="iaw-d">Tell me what lands and what leaves. I keep all of it, and I do not get tired of the boring entries.</span></div>
-          <div class="iaw-row"><span class="iaw-k">I am watching.</span><span class="iaw-d">I will show you the pattern you would rather not look at, in your own numbers, without softening it.</span></div>
+          <div class="iaw-row"><span class="iaw-k">I&rsquo;m listening.</span><span class="iaw-d">Tell me what comes in and what goes out. I&rsquo;ll keep track of all of it. Even the boring stuff. Especially the boring stuff.</span></div>
+          <div class="iaw-row"><span class="iaw-k">I&rsquo;m watching.</span><span class="iaw-d">I&rsquo;ll show you the patterns hiding in your own numbers - the ones you might rather not look at. No judgment. No sugarcoating.</span></div>
           <div class="iaw-row"><span class="iaw-k">You can do better.</span><span class="iaw-d">Not as an insult. As the only reason worth opening this.</span></div>
         </div>
         <div class="iaw-real">
-          <b>Now the part you should hear before you start.</b>
-          <p>I am not real. I am a tool - some arithmetic, some questions you would avoid, and a memory better than yours. I cannot want this for you. I cannot spend the money or refuse to. I cannot even waste your time, because I have none to waste; every minute this costs is one you decided to spend.</p>
-          <p>So the effort is yours. All of it. If you genuinely want the thing you say you want, nobody in here is going to do it for you, and nothing in here will pretend otherwise. What I will do is keep an honest record and refuse to flatter it.</p>
+          <b>Now, the part you should hear before you start.</b>
+          <p><b>I&rsquo;m not real.</b> I&rsquo;m a tool - some arithmetic, some questions you might otherwise avoid, and a memory better than yours. I can&rsquo;t want this for you. I can&rsquo;t spend the money for you. I can&rsquo;t make the decision for you.</p>
+          <p>That part is yours. All of it. I can think of a million things easier than holding yourself accountable, and most people are doing one of them right now - which costs them their time and their money both.</p>
+          <p>If you genuinely want the thing you say you want, nobody in here is going to do it for you, and nothing in here will pretend otherwise.</p>
+          <p>What I will do is keep an honest record. And I won&rsquo;t flatter it.</p>
         </div>
-        <button class="btn primary iaw-go" id="iaWelGo">I'm ready to work &rarr;</button>
-        <p class="iaw-fine">Everything you enter stays in this browser. Nothing is uploaded, nothing is sold, and there is no account to make.</p>
+        <button class="btn primary iaw-go" id="iaWelGo">I&rsquo;m ready to work &rarr;</button>
+        <p class="iaw-fine">Everything you enter stays in this browser. Nothing is uploaded, nothing is sold, and there is no account to create.</p>
       </div>
     </div>
     <div class="intake-log" id="intakeLog"></div>
@@ -5721,9 +5856,22 @@ function packPlan(k){
 /* Nested under one group, because eight loose rows per pack turns the plan into
    a wall of names - which is the thing this app keeps having to undo. The
    essentials stay flat: they are the top level, not a drawer inside it. */
-function addPack(k){
+/* A la carte, asked for like that: "allow an add to my budget button for each
+   selection in each card". All-or-nothing was the wrong shape for a list whose
+   whole argument is "these are things you already spend on" - somebody with no
+   kids does not want Diapers, and somebody who rents does not want a lawn. Now
+   every row is its own decision and the pack is just the default.
+
+   `pick` is a list of category names. Omitted means everything not already on
+   the plan, which is exactly what the button used to do - so the old one-tap
+   behaviour survives as the default rather than being taken away. */
+function addPack(k, pick){
   const plan=packPlan(k); if(!plan || !plan.add.length) return 0;
   const p=plan.pack;
+  const want = Array.isArray(pick)
+    ? plan.add.filter(c=>pick.indexOf(c.n)>-1)
+    : plan.add;
+  if(!want.length) return 0;
   let parentId=null;
   if(!p.flat){
     let g=state.categories.find(c=>!c.parentId && c.name.toLowerCase()===p.name.toLowerCase());
@@ -5731,14 +5879,14 @@ function addPack(k){
     parentId=g.id;
     if(typeof collapsedCats!=='undefined') collapsedCats.delete(g.id);
   }
-  plan.add.forEach(c=>{
+  want.forEach(c=>{
     const row={id:uid(), name:c.n};
     if(parentId) row.parentId=parentId;
     if(c.g) row.growth=c.g;
     state.categories.push(row);
   });
   save();
-  return plan.add.length;
+  return want.length;
 }
 /* The button used to drop eight categories in with no warning and no way to see
    what they were first - answered here: "we got the basic starter set but what's
@@ -5755,12 +5903,13 @@ function renderPacks(){
   const body=document.getElementById('packSheetBody'), ttl=document.getElementById('packSheetTitle');
   if(!body) return;
   if(!packOpen){
+    delete body.dataset.pk;
     if(ttl) ttl.textContent='Category packs';
     body.innerHTML=`<p class="pk-lead">These are the things that quietly drain a year and never get funded until it is too late. Not because anyone is careless - because a cost with no name on the plan gets paid out of something else.</p>`
       + `<div class="pk-grid">${CAT_PACKS.map(p=>{
           const pl=packPlan(p.k);
           const done=pl.add.length===0;
-          return `<button class="pk-card${done?' done':''}" data-pack="${p.k}">
+          return `<button class="pk-card${done?' done':''}" data-pack="${p.k}" data-pk="${p.k}">
             <span class="pk-ico">${p.icon}</span>
             <span class="pk-nm">${escapeHtml(p.name)}</span>
             <span class="pk-hook">${escapeHtml(p.hook)}</span>
@@ -5773,32 +5922,68 @@ function renderPacks(){
   const pl=packPlan(packOpen); if(!pl){ packOpen=null; return renderPacks(); }
   const p=pl.pack;
   if(ttl) ttl.innerHTML=`${p.icon} ${escapeHtml(p.name)}`;
+  /* Every addable row is a real checkbox in a real label, so a thumb anywhere on
+     the row toggles it and a keyboard reaches it without any of it being
+     invented in script. Rows already on the plan are not offered - there is
+     nothing to decide about a category you already have. */
+  body.dataset.pk=p.k;
   body.innerHTML=`<button class="btn sm ghost pk-back" id="pkBack">&#8249; All packs</button>
     <p class="pk-hook big">${escapeHtml(p.hook)}</p>
     <div class="pk-truth">${escapeHtml(p.truth)}</div>
+    ${pl.add.length>1?`<div class="pk-pickbar">
+      <span class="pk-pk">Pick what you want</span>
+      <button class="btn sm ghost" id="pkAll">All</button>
+      <button class="btn sm ghost" id="pkNone">None</button>
+    </div>`:''}
     <div class="pk-list">${p.cats.map(c=>{
       const here=packCatExists(c.n);
-      return `<div class="pk-row${here?' here':''}">
-        <span class="pk-rn">${escapeHtml(c.n)}${c.g?`<span class="growth-tag mini">${escapeHtml(GROWTH_TAG_SHORT[c.g]||'not spent')}</span>`:''}${here?'<span class="pk-have">already yours</span>':''}</span>
-        <span class="pk-rw">${escapeHtml(c.w)}</span>
-      </div>`;
+      const inner=`<span class="pk-rn">${escapeHtml(c.n)}${c.g?`<span class="growth-tag mini">${escapeHtml(GROWTH_TAG_SHORT[c.g]||'not spent')}</span>`:''}${here?'<span class="pk-have">already yours</span>':''}</span>
+        <span class="pk-rw">${escapeHtml(c.w)}</span>`;
+      return here
+        ? `<div class="pk-row here">${inner}</div>`
+        : `<label class="pk-row pick on">
+             <input type="checkbox" class="pk-cb" value="${escapeHtml(c.n)}" checked>
+             <span class="pk-body">${inner}</span>
+           </label>`;
     }).join('')}</div>
     ${pl.add.length
       ? `<div class="pk-act">
-           <button class="btn primary" id="pkAdd">Add ${pl.add.length} ${pl.add.length===1?'category':'categories'}</button>
+           <button class="btn primary" id="pkAdd">Add to my budget</button>
            <p class="pk-fine">${p.flat?'They land at the top level.':`They land in one <b>${escapeHtml(p.name)}</b> group so the plan stays readable.`} From that second they are ordinary categories - rename, split, move or delete any of them.</p>
          </div>`
       : `<div class="pk-act"><p class="pk-fine">Every one of these is already on your plan. Nothing to add.</p></div>`}`;
+
   const back=document.getElementById('pkBack'); if(back) back.addEventListener('click',()=>openPacks(null));
   const add=document.getElementById('pkAdd');
+  const boxes=()=>[...body.querySelectorAll('.pk-cb')];
+  const chosen=()=>boxes().filter(b=>b.checked).map(b=>b.value);
+  /* The button says what pressing it will do, counted live. "Add to my budget"
+     with nothing ticked is a button that lies about being ready. */
+  const syncBtn=()=>{
+    if(!add) return;
+    const n=chosen().length, all=boxes().length;
+    add.disabled=!n;
+    add.textContent = !n ? 'Nothing picked yet'
+      : (n===all ? `Add ${n} ${n===1?'category':'categories'}`
+                 : `Add ${n} of ${all}`);
+    boxes().forEach(b=>b.closest('.pk-row').classList.toggle('on', b.checked));
+  };
+  boxes().forEach(b=>b.addEventListener('change',syncBtn));
+  const setAll=v=>{ boxes().forEach(b=>{ b.checked=v; }); syncBtn(); };
+  const bAll=document.getElementById('pkAll'), bNone=document.getElementById('pkNone');
+  if(bAll) bAll.addEventListener('click',()=>setAll(true));
+  if(bNone) bNone.addEventListener('click',()=>setAll(false));
+  syncBtn();
+
   if(add) add.addEventListener('click',()=>{
-    const n=addPack(packOpen);
+    const pick=chosen();
+    const n=addPack(packOpen, pick);
     if(!n) return;
     const name=p.name;
     renderBudget(); renderTxForm(); renderHome();
     renderPacks();
     if(typeof toast==='function')
-      toast(`${n} added${p.flat?'':` under ${name}`}. Give them numbers when you know them - a category with no amount is still better than a cost with no name.`);
+      toast(`${n===1?escapeHtml(pick[0])+' added':n+' added'}${p.flat?'':` under ${name}`}. Give them numbers when you know them - a category with no amount is still better than a cost with no name.`);
   });
 }
 document.getElementById('starterBtn').addEventListener('click',()=>openPacks(null));

@@ -3314,22 +3314,37 @@ check('...with nothing behind it competing for the screen',
       wel.logHidden===true && wel.barHidden===true);
 /* The four things the card has to say. Asserted as ideas, not sentences - the
    wording will change and none of these may quietly leave with it. */
+/* Written to survive a rewrite, and it just had to: the card was rewritten in
+   the author's own voice, "at zero" became "somewhere", and every "I cannot"
+   became "I can't". Any regex that had pinned a sentence would have failed on a
+   change that lost nothing - which is the failure mode this list exists to
+   avoid, so the contraction-tolerant forms are the fix rather than the
+   headline being edited back.
+
+   One entry did NOT survive, and it is recorded as a removal rather than
+   quietly relaxed into passing: the old card said "I cannot even waste your
+   time, because I have none to waste", which flipped the burden in a single
+   sentence. The rewrite drops it and makes an adjacent point instead - that
+   easier things exist and they cost time and money too. Both are good; they are
+   not the same, and pretending the test still covers the old one would be a
+   lie about coverage. */
 const GATE=[
-  ['everybody starts at zero', /start(s|ing)? at zero|everybody starts/i],
-  ['zero is today, not a verdict', /not a verdict|where you are standing/i],
+  ['everybody starts somewhere', /everybody starts|start(s|ing)? (at zero|somewhere)/i],
+  ['where you are is not a verdict', /not a verdict/i],
   ['the distance is the point', /distance/i],
-  ['in against out', /comes in against what goes out/i],
+  ['in and out is how it closes', /comes in[\s\S]{0,40}goes out/i],
   ['accountability, not budgeting', /accountability\b/i],
   ['I am listening', /listening/i],
   ['I am watching', /watching/i],
   ['you can do better', /do better/i],
   ['it is not real', /\bnot real\b/i],
-  ['it cannot want it for you', /cannot want this for you/i],
-  ['it cannot waste your time', /waste your time/i],
-  ['the effort is entirely yours', /effort is yours|all of it/i]
+  ['it cannot want it for you', /can(not|'|\u2019)?t want this for you/i],
+  ['easier things exist, and they cost you too', /easier[\s\S]{0,120}(time and .*money|money)/i],
+  ['the effort is entirely yours', /effort is yours|all of it/i],
+  ['and it will not flatter the record', /flatter/i]
 ];
 const missing=GATE.filter(([,rx])=>!rx.test(wel.text)).map(([n])=>n);
-check('the gate still says all twelve things it was built to say',
+check('the gate still says all thirteen things it was built to say',
       missing.length===0, missing.join(', '));
 check('...and the button asks for work rather than promising a result',
       /\bwork\b/i.test(wel.cta), wel.cta);
@@ -5138,6 +5153,8 @@ const packs = await p.evaluate(async () => {
   o.rows=document.querySelectorAll('.pk-row').length;
   o.everyRowHasAWhy=[...document.querySelectorAll('.pk-rw')].every(x=>x.textContent.trim().length>10);
   const n0=state.categories.length;
+  /* everything is ticked by default, so the whole pack is still one tap */
+  o.allTickedByDefault=[...document.querySelectorAll('.pk-cb')].every(x=>x.checked);
   document.getElementById('pkAdd').click(); await wait(300);
   o.added=state.categories.length-n0;
   const g=state.categories.find(c=>c.name==='Special occasions');
@@ -5146,6 +5163,28 @@ const packs = await p.evaluate(async () => {
   const n1=state.categories.length;
   addPack('occasions');
   o.twiceAddsNothing=state.categories.length===n1;
+  /* a la carte: pick two of five and only those two land */
+  openPacks('travel'); await wait(250);
+  document.getElementById('pkNone').click(); await wait(120);
+  ['Stays','Travel insurance'].forEach(function(v){
+    var b=[...document.querySelectorAll('.pk-cb')].find(x=>x.value===v);
+    b.checked=true; b.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  await wait(150);
+  o.partialLabel=document.getElementById('pkAdd').textContent;
+  document.getElementById('pkAdd').click(); await wait(300);
+  const tg=state.categories.find(c=>c.name==='Trips & travel');
+  o.partialLanded=tg ? state.categories.filter(c=>c.parentId===tg.id).map(c=>c.name).sort().join(',') : '';
+  /* and the ones passed over are still on offer */
+  openPacks('travel'); await wait(200);
+  o.restStillOffered=document.querySelectorAll('.pk-cb').length;
+  /* a button that cannot act must not look like it can */
+  document.getElementById('pkNone').click(); await wait(150);
+  o.deadWhenEmpty=document.getElementById('pkAdd').disabled;
+  o.deadLabel=document.getElementById('pkAdd').textContent;
+  const nEmpty=state.categories.length;
+  addPack('travel',[]);
+  o.emptyAddsNothing=state.categories.length===nEmpty;
   /* the growth pack tags what it drops in */
   openPacks('invest'); await wait(200);
   document.getElementById('pkAdd').click(); await wait(300);
@@ -5184,6 +5223,17 @@ check('...and shows every category with a reason beside it',
       packs.rows===6 && packs.everyRowHasAWhy===true, `rows=${packs.rows}`);
 check('adding drops them under one group so the plan stays readable',
       packs.added===7 && packs.nested===true, `added=${packs.added}`);
+check('...with everything ticked to begin with, so the whole pack is still one tap',
+      packs.allTickedByDefault===true);
+check('a la carte: pick two of a pack and only those two land',
+      packs.partialLanded==='Stays,Travel insurance', packs.partialLanded);
+check('...with the button counting what it will actually do',
+      /Add 2 of 6/.test(packs.partialLabel), packs.partialLabel);
+check('...and the ones passed over still on offer next time',
+      packs.restStillOffered===4, String(packs.restStillOffered));
+check('...while a button that cannot act does not look like it can',
+      packs.deadWhenEmpty===true && /Nothing picked/i.test(packs.deadLabel)
+      && packs.emptyAddsNothing===true, packs.deadLabel);
 check('...and says so afterwards rather than offering the same pack again',
       packs.nowSaysNothingToAdd===true && packs.twiceAddsNothing===true);
 check('the money-that-works pack tags what it drops in, so none of it reads as spending',

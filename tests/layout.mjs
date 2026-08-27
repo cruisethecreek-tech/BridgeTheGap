@@ -319,6 +319,87 @@ for(const w of [320,390,412]){
 }
 await p.close();
 
+/* ---- type over decoration, measured in pixels ----
+   The pack cards grew a themed CSS texture, and a texture is the one kind of
+   decoration that can quietly break reading: it composites UNDER the words, so
+   nothing overlaps, nothing overflows, and every other check in this folder
+   stays green while the hook line drops below AA.
+
+   The palette suite cannot see this - it reads the stylesheet, and the
+   stylesheet says --muted on --panel-2, which passes. What actually sits behind
+   the type is panel-2 plus however much texture landed there. So this reads the
+   real pixels: hide the type, screenshot the surface, and for every text run
+   find the WORST pixel behind it.
+
+   It is worth knowing which defence is load bearing. The mask that keeps the
+   pattern off the type is; pulling it and leaving the alpha high measures
+   4.16:1 here. The alphas are the margin behind the mask, not the fix. */
+for(const theme of ['light','dark']){
+  const tp=await b.newPage({viewport:{width:430,height:1800},colorScheme:theme});
+  tp.on('pageerror',e=>errs.push('texture '+theme+': '+e.message));
+  await tp.goto('file://'+process.cwd()+'/app.html'); await tp.waitForTimeout(400);
+  await tp.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
+    {onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
+     categories:[{id:'f',name:'Food'}],budgets:{},transactions:[],goals:[],impulse:[],
+     recurring:[],accounts:[],assets:[],liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[]});
+  await tp.reload(); await tp.waitForTimeout(500);
+  await tp.evaluate(()=>{ activateTab('budget'); openPacks(null);
+    document.getElementById('packSheetBody').scrollTop=0; });
+  await tp.waitForTimeout(400);
+
+  const boxes=await tp.evaluate(()=>{
+    const out=[];
+    document.querySelectorAll('.pk-card').forEach(card=>{
+      ['.pk-nm','.pk-hook','.pk-n'].forEach(sel=>{
+        const el=card.querySelector(sel); if(!el) return;
+        const r=el.getBoundingClientRect();
+        out.push({k:card.dataset.pk, sel, col:getComputedStyle(el).color,
+          x:Math.round(r.x), y:Math.round(r.y), w:Math.round(r.width), h:Math.round(r.height)});
+      });
+    });
+    return out;
+  });
+  await tp.evaluate(()=>document.querySelectorAll('.pk-nm,.pk-hook,.pk-n,.pk-ico')
+    .forEach(e=>e.style.visibility='hidden'));
+  await tp.waitForTimeout(200);
+  const png=(await tp.screenshot()).toString('base64');
+  await tp.evaluate(()=>document.querySelectorAll('.pk-nm,.pk-hook,.pk-n,.pk-ico')
+    .forEach(e=>e.style.visibility=''));
+
+  const res=await tp.evaluate(async ([b64,bxs])=>{
+    const img=new Image();
+    await new Promise(r=>{ img.onload=r; img.src='data:image/png;base64,'+b64; });
+    const cv=document.createElement('canvas'); cv.width=img.width; cv.height=img.height;
+    const cx=cv.getContext('2d'); cx.drawImage(img,0,0);
+    const lum=c=>{const f=v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};
+      return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2])};
+    const cr=(a,b)=>{const [x,y]=[lum(a),lum(b)].sort((p,q)=>q-p);return (x+0.05)/(y+0.05)};
+    const parse=t=>t.match(/\d+(\.\d+)?/g).slice(0,3).map(Number);
+    let bad=null, sampled=0;
+    for(const bx of bxs){
+      if(bx.w<=0||bx.h<=0||bx.x<0||bx.y<0||bx.x+bx.w>cv.width||bx.y+bx.h>cv.height) continue;
+      const d=cx.getImageData(bx.x,bx.y,bx.w,bx.h).data;
+      const fg=parse(bx.col); let lo=99, opaque=0;
+      for(let i=0;i<d.length;i+=4){
+        if(d[i+3]<250) continue;
+        opaque++; const r=cr(fg,[d[i],d[i+1],d[i+2]]); if(r<lo) lo=r;
+      }
+      if(!opaque) continue;
+      sampled++;
+      if(!bad||lo<bad.ratio) bad={...bx, ratio:Math.round(lo*100)/100};
+    }
+    return {bad, sampled};
+  }, [png, boxes]);
+
+  /* a contrast check that silently sampled nothing would pass forever */
+  check(`every text run on a textured pack card was actually sampled (${theme})`,
+        res.sampled===27, `sampled ${res.sampled} of 27`);
+  check(`...and every one still clears AA over its texture (${theme})`,
+        res.bad && res.bad.ratio>=4.5,
+        res.bad ? `worst ${res.bad.ratio}:1 on ${res.bad.k} ${res.bad.sel}` : 'nothing sampled');
+  await tp.close();
+}
+
 console.log('LAYOUT - ten tabs, four phone widths, no text on text\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,240):''}`); }

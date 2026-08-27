@@ -572,6 +572,27 @@ and each was mine, not the app's. That is the tax on writing fixtures from memor
 instead of from the code, and it is the same disease `hostile.mjs` exists to
 treat: the inputs you think to supply are the ones you already know work.
 
+`layout.mjs` also holds **type over decoration**, which is a different failure
+from everything else in that suite. A texture composites *under* the words, so
+nothing overlaps, nothing overflows, and every other check stays green while the
+hook line drops below AA. The palette suite cannot catch it either - it reads the
+stylesheet, and the stylesheet says `--muted` on `--panel-2`, which passes. What
+is actually behind the type is `--panel-2` plus however much texture landed
+there.
+
+So it reads pixels: hide the type, screenshot the surface, take the worst pixel
+behind each of the 27 text runs. And it asserts the sample **count** alongside
+the ratio, because a contrast check that silently measured nothing is the purest
+form of a test that passes forever. Building it, the first ratio reported was
+`1:1` - the sheet scrolls, the last cards were outside the screenshot, and the
+check was reading unpainted pixels. That is the same class of bug as every
+vacuous assertion in this folder, caught only because the number was absurd.
+
+The section also records which defence is load bearing, which is not the one I
+would have guessed: pulling the mask and leaving the alpha high measures 4.16:1,
+while raising the alpha with the mask in place still passes. The mask does the
+work; the alphas are margin.
+
 And **sheet height**: every modal is opened at 700, 780 and 844px and has to fit,
 keep its ✕ on screen and hit-testing to itself, and put the overflow on its body
 rather than on the sheet. Uncapped, the app map wanted 938px and pushed its own
