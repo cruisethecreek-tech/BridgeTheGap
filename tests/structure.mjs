@@ -5810,6 +5810,208 @@ check('a move cannot be edited into having one end', cc.cannotCollapse===true);
 check('a card tracked here and typed in again as a liability is caught by name',
       /subtracting that money twice/i.test(cc.dupCaught), cc.dupCaught.slice(-200));
 
+/* ---- 79. the rate layer: it learns your situation instead of reciting it back ----
+   Asked for as: "I care more about it knowing about the interest rate - not so
+   it produces a budget number, but so it learns each person's situation and
+   says hey, you have a high rate on this card, moving it could be beneficial.
+   It should teach instead of regurgitate."
+
+   The blocker was never arithmetic. A borrowing rate could be typed into three
+   unrelated places - a credit account, a liability, the payoff planner - and
+   nothing in the app ever looked at all three at once, so it could know you pay
+   13% on one thing and 3.6% on another and have nothing to say about the two
+   facts sitting side by side. `pricedLines()` is that one list; the signals
+   read it.
+
+   Everything here is a property of the SENTENCES, because that is where a
+   suggestion engine goes wrong. Three rules, each with its own check:
+
+   1. It never says do it. Priced both ways, decision handed back.
+   2. It names why the cheap line is cheap. A 3.6% line is cheap because there
+      is something they can take, and a spread quoted without that is advice
+      with the risk edited out.
+   3. It says when the answer is "this does not matter". A $12-a-year finding
+      dressed up as a finding is the most dishonest thing this could do.
+
+   The fixtures are the numbers the request arrived with: a $13,700 card at 13%
+   and a $25,000 equity line at 3.6%. */
+const RATE_BASE={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  categories:[{id:'food',name:'Food'},{id:'rent',name:'Rent'}],
+  budgets:{'2026-08':{food:400,rent:1200}},
+  transactions:[{id:'i1',type:'income',amount:4000,date:'2026-08-01'},
+                {id:'e1',type:'expense',amount:1200,date:'2026-08-02',catId:'rent'},
+                {id:'e2',type:'expense',amount:300,date:'2026-08-05',catId:'food'}]};
+const readReport = () => p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); rfTab='report'; renderReflectTab(); await wait(220);
+  const {signals,locked}=buildReport();
+  return { txt:document.getElementById('rpBody').innerText,
+           ks:signals.map(x=>x.k), locked:locked.map(l=>l.t),
+           order:signals.map(x=>({k:x.k,bad:!!x.bad,standing:!!x.standing,outside:!!x.outside})) };
+});
+
+await seed({...RATE_BASE, accounts:[
+  {id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-01-01'},
+  {id:'card',name:'Rewards Card',kind:'credit',balance:-4000,limit:13700,apr:13,updated:'2026-01-01'},
+  {id:'heloc',name:'Equity Line',kind:'credit',balance:0,limit:25000,apr:3.6,secured:true,updated:'2026-01-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+let rr=await readReport();
+check('it finds the dearest money without being asked',
+      rr.ks.includes('rateSpread'), rr.ks.join(','));
+check('...and prices a year of keeping it, and a year of keeping it elsewhere',
+      /\$520/.test(rr.txt) && /\$144/.test(rr.txt), rr.txt.slice(0,240));
+check('...showing the arithmetic rather than asserting the number',
+      /×\s*\(13%\s*−\s*3\.6%\)/.test(rr.txt), rr.txt.slice(0,240));
+check('it names the reason the cheap line is cheap',
+      /backed by something you own/i.test(rr.txt) && /take the house/i.test(rr.txt),
+      rr.txt.slice(0,240));
+check('...and refuses to tell you to do it',
+      /not going to tell you to do it/i.test(rr.txt));
+check('a situation reading is labelled as one, not passed off as the month',
+      /true right now, not just in/i.test(rr.txt));
+{ const firstStanding=rr.order.findIndex(o=>o.standing&&!o.bad);
+  /* Three bands, not two: the month's own reading, then your standing
+     situation, then outside context - which was already last and has to
+     stay last, so it is excluded here rather than counted as the month. */
+  const lastMonth=rr.order.map((o,i)=>(!o.standing&&!o.bad&&!o.outside)?i:-1).filter(i=>i>=0).pop();
+  check('...and sits behind the month it is not about',
+        firstStanding<0 || lastMonth==null || firstStanding>lastMonth,
+        JSON.stringify(rr.order).slice(0,180)); }
+
+/* The rule that separates this from a comparison site. Same shape as the
+   leverage sweep above, over the engine and everything it prints. */
+const rateNeverBlesses = await p.evaluate(() => {
+  const src=document.documentElement.outerHTML;
+  /* The engine AND the voice banks it closes with. The banks are declared well
+     before the signals, so a sweep over the signals alone would leave the
+     sentences most likely to overreach - the savage tier - entirely unchecked.
+     The leverage sweep above learned this the same way. */
+  const i=src.indexOf("k:'rateSpread'"), j=src.indexOf("k:'oCpi'");
+  const t0=src.indexOf('rateSpread:{'), t1=src.indexOf('oCardBelow:{');
+  const seg=src.slice(i,j)+src.slice(t0,t1);
+  const bless=/\b(you should|we recommend|recommended|move it there|switch to the|smart move|no[- ]brainer|obviously worth it|best option)\b/i;
+  const control='Honestly this is a smart move and you should switch to the cheaper line.';
+  return {hit:(seg.match(bless)||[])[0]||null, canFire:bless.test(control),
+          refuses:/not going to tell you to do it/.test(seg), len:seg.length};
+});
+check('...the never-blesses sweep can actually fire, over a real span of source',
+      rateNeverBlesses.canFire===true && rateNeverBlesses.len>2000,
+      `len ${rateNeverBlesses.len}`);
+check('nothing in it tells anyone what to do with their money',
+      rateNeverBlesses.hit===null, rateNeverBlesses.hit);
+check('...and it says out loud that it will not',
+      rateNeverBlesses.refuses===true);
+
+/* A spread worth almost nothing has to be called almost nothing. */
+await seed({...RATE_BASE, accounts:[
+  {id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-01-01'},
+  {id:'card',name:'Rewards Card',kind:'credit',balance:-200,limit:13700,apr:13,updated:'2026-01-01'},
+  {id:'heloc',name:'Equity Line',kind:'credit',balance:0,limit:25000,apr:8,updated:'2026-01-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('a gap worth almost nothing is called almost nothing',
+      /not much/i.test(rr.txt) && /not worth an afternoon/i.test(rr.txt), rr.txt.slice(0,240));
+
+/* A cheap line that cannot absorb a balance must not be offered as if it could. */
+await seed({...RATE_BASE,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-01-01'},
+            {id:'card',name:'Card',kind:'credit',balance:-4000,limit:13700,apr:19,updated:'2026-01-01'}],
+  liabilities:[{id:'m',name:'Mortgage',value:210000,apr:4.1}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('a cheap mortgage is not offered as somewhere to put a card balance',
+      !rr.ks.includes('rateSpread'), rr.ks.join(','));
+check('...but two balances at two prices are still ordered by what a dollar does',
+      rr.ks.includes('rateOrder') && /same dollar/i.test(rr.txt), rr.ks.join(','));
+check('...and the order is called arithmetic while sticking to it is called yours',
+      /whether you can stick to it is not/i.test(rr.txt) && /abandoned in March/i.test(rr.txt));
+
+/* Idle cash beside a carried balance, with the buffer defended both ways. */
+await seed({...RATE_BASE, accounts:[
+  {id:'chk',name:'Checking',kind:'checking',balance:9000,updated:'2026-01-01'},
+  {id:'card',name:'Card',kind:'credit',balance:-1000,limit:13700,apr:13,updated:'2026-01-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('idle cash beside a carried balance is noticed',
+      rr.ks.includes('rateIdle'), rr.ks.join(','));
+check('...with three months of essentials ring-fenced first',
+      /three months of your essentials/i.test(rr.txt), rr.txt.slice(0,240));
+check('...and the cost of losing the flexibility stated on the other side',
+      /money on a card is gone/i.test(rr.txt));
+
+await seed({...RATE_BASE, accounts:[
+  {id:'chk',name:'Checking',kind:'checking',balance:600,updated:'2026-01-01'},
+  {id:'card',name:'Card',kind:'credit',balance:-1000,limit:13700,apr:13,updated:'2026-01-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('with no buffer the answer flips to the buffer',
+      /buffer comes before the interest/i.test(rr.txt), rr.txt.slice(0,240));
+check('...and that is called the right answer, not a disappointing one',
+      /right answer rather than a disappointing one/i.test(rr.txt));
+
+/* The play that is working, priced so it is a fact rather than a compliment. */
+await seed({...RATE_BASE,
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-01-01'},
+            {id:'card',name:'Rewards Card',kind:'credit',balance:0,limit:13700,apr:13,updated:'2026-01-01'}],
+  transactions:[...RATE_BASE.transactions,
+    {id:'c1',type:'expense',amount:300,date:'2026-07-04',catId:'food',acctId:'card'},
+    {id:'c2',type:'expense',amount:250,date:'2026-08-04',catId:'food',acctId:'card'},
+    {id:'c3',type:'expense',amount:400,date:'2026-08-14',catId:'food',acctId:'card'}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('clearing the card every month is recognised as the play working',
+      rr.ks.includes('rateClear'), rr.ks.join(','));
+check('...and priced, so it is a fact rather than a compliment',
+      /only arrangement where rewards are actually free/i.test(rr.txt));
+
+/* What it cannot read, named, with the way to fix it. */
+await seed({...RATE_BASE, accounts:[
+  {id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-01-01'},
+  {id:'card',name:'Store Card',kind:'credit',balance:-800,limit:2000,updated:'2026-01-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('a balance with no price on it is named as the thing it cannot read',
+      rr.locked.some(l=>/Store Card/.test(l) && /the whole story/.test(l)),
+      JSON.stringify(rr.locked).slice(0,200));
+
+/* Three readings is a direction. Two is a line. */
+await seed({...RATE_BASE,
+  accounts:[{id:'card',name:'Card',kind:'credit',balance:-3000,limit:13700,apr:13,updated:'2026-01-01'}],
+  snapshots:[{month:'2026-06',bank:0,owed:1000},{month:'2026-07',bank:0,owed:2000},{month:'2026-08',bank:0,owed:3000}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('three rising readings of what you owe is reported as a direction',
+      rr.ks.includes('owedTrend'), rr.ks.join(','));
+{ const i=rr.order.findIndex(o=>o.k==='owedTrend');
+  const firstGood=rr.order.findIndex(o=>!o.bad);
+  check('...and leads with the bad news, ahead of everything that is not bad',
+        i>=0 && rr.order[i].bad===true && (firstGood<0 || i<firstGood),
+        JSON.stringify(rr.order).slice(0,180)); }
+check('...while refusing to call a one-off a habit',
+      /reads exactly the same from here/i.test(rr.txt));
+
+await seed({...RATE_BASE,
+  accounts:[{id:'card',name:'Card',kind:'credit',balance:-3000,limit:13700,apr:13,updated:'2026-01-01'}],
+  snapshots:[{month:'2026-07',bank:0,owed:2000},{month:'2026-08',bank:0,owed:3000}]});
+await p.reload(); await p.waitForTimeout(600);
+rr=await readReport();
+check('two readings is not yet a direction',
+      !rr.ks.includes('owedTrend'), rr.ks.join(','));
+
+/* One debt typed into two places is one debt. */
+const dedupe = await p.evaluate(() => {
+  state.accounts=[]; state.liabilities=[{id:'l',name:'Visa Card',value:2000,apr:22}];
+  state.debts=[{id:'d',name:'Visa card',balance:2000,minPayment:60,apr:22}];
+  const n=pricedLines().length;
+  state.liabilities=[{id:'l2',name:'Visa Card',value:2000}];
+  state.debts=[{id:'d2',name:'Visa card',balance:2000,minPayment:60,apr:22}];
+  return {count:n, keptApr:pricedLines()[0].apr};
+});
+check('the same debt named in two places is one line, not two',
+      dedupe.count===1, String(dedupe.count));
+check('...and the copy that knows what it costs is the one kept',
+      dedupe.keptApr===22, String(dedupe.keptApr));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

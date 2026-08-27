@@ -467,6 +467,31 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**The rate layer: it learns your situation instead of reciting it back.** Asked for as *"I care more about it knowing about the interest rate - not so it produces a budget number, but so it learns each person's situation and says hey, you have a high rate on this card, moving it could be beneficial. It should teach instead of regurgitate."*
+
+The blocker was never the arithmetic. A borrowing rate could be typed into **three unrelated places** - a credit account, a liability, the payoff planner - and nothing in the app ever looked at all three at once. So it could know you pay 13% on one thing and 3.6% on another and still have nothing to say about the two facts sitting side by side, which is exactly where the only useful sentence lives.
+
+`pricedLines()` is that one list: normalized, deduplicated by name (the payoff planner imports from liabilities, so the same debt genuinely does appear twice - the copy that knows its rate wins), carrying what is owed, what it costs, whether the line can absorb a balance, and whether anything of yours is backing it. Six signals read it, and they carry `standing:true` because they read your **situation** rather than the month on screen, so they say so and sit behind the month's own reading:
+
+| signal | what it notices |
+|---|---|
+| `rateSpread` | the dearest balance, priced against the cheapest **revolving** room that could actually take it |
+| `rateOrder` | with two balances, what the same dollar is worth against each |
+| `rateIdle` | idle cash beside a carried balance, with three months of essentials ring-fenced |
+| `rateClear` | cards run through and never carried - the rewards play actually working |
+| `rateBlind` | a balance with no rate on it, named as the thing it cannot read |
+| `owedTrend` | three readings of what you owe moving the same way |
+
+**Three rules govern every sentence, and they are the difference between teaching and touting.**
+
+1. **It never says do it.** Every signal prices both sides and hands the decision back. The leverage tool already held this line with a regex sweep asserting nothing in it tells anyone to borrow; the rate layer carries its own, with its own control string so a never-fires rule cannot pass by accident.
+2. **It names what the cheap rate costs.** A 3.6% line is not cheap because somebody likes you - it is cheap because it is backed by something they can take. That is why credit accounts carry a `secured` flag, asked once at the form: moving a card balance onto a secured line makes the debt cheaper and *changes what happens if a year goes badly*, and a spread quoted without that is advice with the risk edited out.
+3. **It says when the answer is "this does not matter".** Below $25 a year the spread signal calls it *"not much... worth knowing the gap exists; not worth an afternoon"* and points at the bigger numbers on the page. Dressing up a $12 finding as a finding is the most dishonest thing a suggestion engine does.
+
+Two smaller honesties fall out of the same discipline. A cheap **mortgage** is never offered as somewhere to put a card balance, because it has no room and cannot take one - only a revolving line with headroom qualifies. And `rateIdle` flips its whole answer when the buffer is thin: *"there is nothing spare to throw at it, and that is the right answer rather than a disappointing one - a cleared card and an empty account is the setup that puts the balance straight back on."*
+
+The snapshot now carries `owed` alongside `bank`, for the same reason `bank` was there: retyping a balance overwrites the old one, so the monthly snapshot is the only place what you owe can ever become a trend. Three readings, not two - two points is a line, three is a habit.
+
 **Name a category from the catalogue, not from memory.** Sent as a screenshot of the log form's category dropdown, scrolled to the bottom, `+ New category...` selected, and a blank text box waiting: *"can we incorporate a pick from the starter packs or a search function to autopopulate different categories?"*
 
 The blank box was the whole problem. Sixty-odd named categories already exist in the packs, each with a reason somebody thought to write down, and at the exact moment a person needs one - mid-log, filing a purchase they have already made - the app asked them to invent the name themselves. Typing two letters now searches every category the packs ship (`catCatalogue`, `catSuggest`), in **all three** places a category gets named: the Plan tab's own field, the log form's new-category input, and the recurring form's. Each suggestion shows the name, the reason beside it, and the pack it came from.
@@ -575,6 +600,9 @@ further negative, a payment landing on it pulls the balance back toward zero.
   `destAcctOptions()` (you do not invest into a line of credit).
 - `apr` is optional. With two priced lines the accounts summary names which one is
   expensive, in cents per dollar per year.
+- `secured` marks a line backed by something you own. It is the one fact that
+  decides whether a cheaper rate is worth having, and the rate layer refuses to
+  quote a spread without it.
 
 **Recurring rules deliberately have no `transfer` type.** A card payment is usually
 "whatever is spare this week", and a fixed monthly rule would be an invented number.
