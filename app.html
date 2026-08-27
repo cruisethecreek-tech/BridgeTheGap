@@ -1399,19 +1399,126 @@
      it costs, in words, before anything is added. */
   .pk-lead{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 14px}
   .pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-  .pk-card{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;
-    padding:13px;border-radius:13px;border:1px solid var(--line);background:var(--panel-2);
-    color:var(--text);font:inherit;cursor:pointer}
-  .pk-card:hover,.pk-card:focus-visible{border-color:var(--accent);background:rgba(var(--accent-rgb),.08)}
+  /* ---- pack textures -----------------------------------------------------
+     Every one of these is drawn in CSS. No image files, because this app is one
+     html file that has to work with the network off, and a texture that fails to
+     load is worse than no texture at all. They scale to any size for free and
+     cost nothing to ship.
+
+     The pattern carries the TOPIC; the colour carries the KIND of money. Gold
+     for the foundations you build on, terracotta for the leaks, sage for the
+     money that keeps working. So the palette stays the app's own three hues and
+     the card still tells you something before you have read a word of it.
+
+     Alpha is per theme and deliberately small. A texture that is legible as a
+     texture is already too strong to have type on top of it - the job is depth,
+     not decoration, and the composited surface has to stay close enough to
+     --panel-2 that every contrast ratio the palette suite proved still holds. */
+  /* The hook line is --muted at 12px, so it needs 4.5:1. It sits at 5.37:1 on
+     bare panel-2 in dark and 4.94:1 in light, and every bit of texture
+     composited under it eats into that. Unmasked, the ceiling before it drops
+     below AA is a stacked alpha of .095 in dark and .065 in light - the first
+     draft ran at .205 and put the hook at 3.66:1, a card that looked better and
+     read worse, which is the trade this app does not make.
+
+     Two defences, and it is worth being honest about which one carries the
+     weight: the MASK does, by keeping the pattern off the type entirely. Pulling
+     the mask and leaving the alpha high measures 4.16:1, so the mask is load
+     bearing and these numbers are the margin behind it, not the fix. The suite
+     samples the rendered pixels under all 27 text runs rather than trusting
+     either. */
+  :root{ --tex-a:.058; --tex-b:.10 }
+  :root[data-theme="light"]{ --tex-a:.042; --tex-b:.072 }
+  .pk-card{position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;
+    padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--text);font:inherit;cursor:pointer;
+    transition:border-color .16s ease,transform .16s ease,box-shadow .16s ease}
+  /* the texture rides on its own layer so hover can lift the card without
+     dragging the pattern's alpha around with it */
+  /* Masked toward the corners, so what strength the pattern has lands where the
+     type is not. The card reads as textured; the words sit on the flat surface
+     the palette suite already proved. */
+  .pk-card::before,.pk-truth::before{content:'';position:absolute;inset:0;
+    pointer-events:none;
+    -webkit-mask-image:radial-gradient(135% 115% at 100% 0%,#000 0%,rgba(0,0,0,.35) 46%,transparent 78%);
+    mask-image:radial-gradient(135% 115% at 100% 0%,#000 0%,rgba(0,0,0,.35) 46%,transparent 78%)}
+  .pk-card > *{position:relative;z-index:1}
+  .pk-card:hover,.pk-card:focus-visible{border-color:rgba(var(--pk-rgb),.55);
+    transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.16)}
+  .pk-card:active{transform:translateY(0)}
   .pk-card.done{opacity:.62}
-  .pk-ico{font-size:21px;line-height:1}
+  /* which hue this pack speaks in */
+  [data-pk]{--pk-rgb:var(--accent-rgb)}
+  [data-pk="health"],[data-pk="beauty"],[data-pk="online"],
+  [data-pk="travel"],[data-pk="lifestyle"]{--pk-rgb:var(--accent-2-rgb)}
+  [data-pk="invest"]{--pk-rgb:var(--good-rgb)}
+  /* every card gets the same soft corner wash, so nine patterns still read as
+     one family rather than nine unrelated swatches */
+  .pk-card::before,.pk-truth::before{
+    background-image:radial-gradient(120% 92% at 100% 0%,
+      rgba(var(--pk-rgb),var(--tex-a)) 0%, transparent 62%)}
+
+  /* The floor: stacked courses. */
+  [data-pk="essentials"].pk-card::before,[data-pk="essentials"] .pk-truth::before{background-image:
+    repeating-linear-gradient(0deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1.5px,transparent 1.5px 22px),
+    repeating-linear-gradient(90deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1.5px,transparent 1.5px 38px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* A pulse, going out. */
+  [data-pk="health"].pk-card::before,[data-pk="health"] .pk-truth::before{background-image:
+    repeating-radial-gradient(circle at 88% 12%,transparent 0 13px,rgba(var(--pk-rgb),var(--tex-a)) 13px 14.5px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Small, frequent, identical. */
+  [data-pk="beauty"].pk-card::before,[data-pk="beauty"] .pk-truth::before{background-image:
+    radial-gradient(circle,rgba(var(--pk-rgb),var(--tex-b)) 1.5px,transparent 1.6px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%);
+    background-size:13px 13px,auto}
+  /* Boxes, stacking. */
+  [data-pk="online"].pk-card::before,[data-pk="online"] .pk-truth::before{background-image:
+    repeating-linear-gradient(60deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1px,transparent 1px 17px),
+    repeating-linear-gradient(-60deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1px,transparent 1px 17px),
+    repeating-linear-gradient(0deg,rgba(var(--pk-rgb),var(--tex-a)) 0 1px,transparent 1px 17px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* A dotted flight path. */
+  [data-pk="travel"].pk-card::before,[data-pk="travel"] .pk-truth::before{background-image:
+    repeating-linear-gradient(-38deg,rgba(var(--pk-rgb),var(--tex-b)) 0 5px,transparent 5px 15px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Wrapping paper. */
+  [data-pk="occasions"].pk-card::before,[data-pk="occasions"] .pk-truth::before{background-image:
+    repeating-linear-gradient(45deg,rgba(var(--pk-rgb),var(--tex-a)) 0 7px,transparent 7px 20px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Rings spreading from a root. */
+  [data-pk="invest"].pk-card::before,[data-pk="invest"] .pk-truth::before{background-image:
+    repeating-radial-gradient(circle at 14% 96%,transparent 0 11px,rgba(var(--pk-rgb),var(--tex-a)) 11px 12.5px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* Forty small ones, scattered. */
+  [data-pk="family"].pk-card::before,[data-pk="family"] .pk-truth::before{background-image:
+    radial-gradient(circle at 14% 24%,rgba(var(--pk-rgb),var(--tex-b)) 0 3px,transparent 3.4px),
+    radial-gradient(circle at 71% 14%,rgba(var(--pk-rgb),var(--tex-b)) 0 2px,transparent 2.4px),
+    radial-gradient(circle at 38% 62%,rgba(var(--pk-rgb),var(--tex-b)) 0 2.5px,transparent 2.9px),
+    radial-gradient(circle at 88% 54%,rgba(var(--pk-rgb),var(--tex-b)) 0 2px,transparent 2.4px),
+    radial-gradient(circle at 60% 88%,rgba(var(--pk-rgb),var(--tex-b)) 0 3px,transparent 3.4px),
+    radial-gradient(circle at 22% 84%,rgba(var(--pk-rgb),var(--tex-b)) 0 2px,transparent 2.4px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  /* The ring a cup leaves, over and over. */
+  [data-pk="lifestyle"].pk-card::before,[data-pk="lifestyle"] .pk-truth::before{background-image:
+    repeating-radial-gradient(circle at 86% 88%,transparent 0 8px,rgba(var(--pk-rgb),var(--tex-a)) 8px 9.5px),
+    radial-gradient(120% 92% at 100% 0%,rgba(var(--pk-rgb),var(--tex-a)) 0%,transparent 62%)}
+  @media (prefers-reduced-motion:reduce){.pk-card{transition:none}}
+  /* the emoji gets something to sit on, so it reads as a mark rather than a
+     character that happens to be first */
+  .pk-ico{font-size:21px;line-height:1;width:34px;height:34px;border-radius:10px;
+    display:grid;place-items:center;background:rgba(var(--pk-rgb),.14);
+    border:1px solid rgba(var(--pk-rgb),.28);margin-bottom:2px}
   .pk-nm{font-weight:900;font-size:14.5px}
   .pk-hook{font-size:12px;line-height:1.45;color:var(--muted)}
   .pk-hook.big{font-size:14.5px;line-height:1.55;color:var(--text);font-weight:800;margin:10px 0 10px}
   .pk-n{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
   .pk-back{margin-bottom:2px}
-  .pk-truth{padding:12px 14px;border-radius:12px;border:1px solid var(--line);
-    background:rgba(var(--accent-rgb),.07);font-size:13px;line-height:1.6;color:var(--muted)}
+  .pk-truth{position:relative;overflow:hidden;
+    padding:13px 15px;border-radius:12px;border:1px solid rgba(var(--pk-rgb),.32);
+    background:var(--panel-2);font-size:13px;line-height:1.6;color:var(--muted)}
+  .pk-truth > *{position:relative;z-index:1}
   .pk-list{margin:14px 0 0;display:flex;flex-direction:column;gap:1px}
   .pk-row{padding:10px 12px;border-radius:10px;background:var(--panel-2);overflow-wrap:break-word}
   .pk-row.here{opacity:.6}
@@ -5779,12 +5886,13 @@ function renderPacks(){
   const body=document.getElementById('packSheetBody'), ttl=document.getElementById('packSheetTitle');
   if(!body) return;
   if(!packOpen){
+    delete body.dataset.pk;
     if(ttl) ttl.textContent='Category packs';
     body.innerHTML=`<p class="pk-lead">These are the things that quietly drain a year and never get funded until it is too late. Not because anyone is careless - because a cost with no name on the plan gets paid out of something else.</p>`
       + `<div class="pk-grid">${CAT_PACKS.map(p=>{
           const pl=packPlan(p.k);
           const done=pl.add.length===0;
-          return `<button class="pk-card${done?' done':''}" data-pack="${p.k}">
+          return `<button class="pk-card${done?' done':''}" data-pack="${p.k}" data-pk="${p.k}">
             <span class="pk-ico">${p.icon}</span>
             <span class="pk-nm">${escapeHtml(p.name)}</span>
             <span class="pk-hook">${escapeHtml(p.hook)}</span>
@@ -5801,6 +5909,7 @@ function renderPacks(){
      the row toggles it and a keyboard reaches it without any of it being
      invented in script. Rows already on the plan are not offered - there is
      nothing to decide about a category you already have. */
+  body.dataset.pk=p.k;
   body.innerHTML=`<button class="btn sm ghost pk-back" id="pkBack">&#8249; All packs</button>
     <p class="pk-hook big">${escapeHtml(p.hook)}</p>
     <div class="pk-truth">${escapeHtml(p.truth)}</div>
