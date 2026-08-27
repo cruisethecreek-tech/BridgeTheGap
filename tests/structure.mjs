@@ -4916,6 +4916,291 @@ check('...and stops asking for hours it would throw away', rec.hoursGone===true)
 check('...which come back the moment the rule is yours again', rec.hoursBack===true);
 check('...and the note does not strand itself on an expense rule', rec.noteNotStranded===true);
 
+/* ---- 71. the recurring list is read in the order you think in ----
+   "There should be a reorder tab to organize the reoccurring."
+
+   The categories got this months ago and the reasoning was already written down
+   next to catOrder: array order is creation order, and creation order is an
+   accident - the sequence you happened to remember your bills in, not the one
+   you think about them in. The recurring list, which is where the paycheck and
+   the rent live, never got it.
+
+   The interesting decision was not the feature, it was refusing to build it
+   twice. A second copy of a hundred and twenty lines of pointer handling is how
+   the two lists quietly stop behaving the same - one gets the escape-to-cancel,
+   the other does not; one auto-scrolls at the edge of the glass, the other
+   strands you. What actually differs between them is four things: where the rows
+   are, what a row is called, how an order is written, what to redraw. So that is
+   what DRAG_SCOPES holds, and the grip carries data-scope. These properties
+   exist to catch the drift if anyone ever un-shares it: the categories are
+   checked through the same engine right after the recurring list is.
+
+   The arrangements are here because dragging twelve rows on a phone is a chore.
+   They write real sort values rather than becoming a view mode, so what you see
+   is what is stored and the result is still yours to adjust by hand. "Biggest
+   first" prices the cadence, not the cheque - $1,600 every two weeks outranks
+   $1,850 a month, and the fixture that got this wrong the first time was mine. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'rent',name:'Rent'},{id:'phone',name:'Phone'},{id:'fun',name:'Fun'}],
+  budgets:{'2026-08':{rent:1850,phone:45,fun:200}},
+  recurring:[{id:'p1',type:'expense',amount:45,catId:'phone',freq:'monthly',anchor:'2026-08-20'},
+             {id:'p2',type:'income',amount:1600,source:'Hollywood',freq:'biweekly',anchor:'2026-08-14'},
+             {id:'p3',type:'expense',amount:1850,catId:'rent',freq:'monthly',anchor:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(450);
+const ord = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const rows=()=>[...document.querySelectorAll('#recList [data-row]')].map(e=>e.dataset.row);
+  const o={};
+  activateTab('budget'); await wait(250);
+  o.quietByDefault = document.querySelectorAll('#recList [data-grip]').length===0
+                  && document.getElementById('recArrange').classList.contains('hide');
+  document.getElementById('recReorderBtn').click(); await wait(250);
+  o.gripPerRow=document.querySelectorAll('#recList [data-grip]').length;
+  o.offersArrangements=!document.getElementById('recArrange').classList.contains('hide');
+  /* destructive buttons must not be live under a thumb that is trying to drag */
+  o.delInert=getComputedStyle(document.querySelector('#recList .rec .del')).pointerEvents==='none';
+  /* the keyboard path, which is the one no drag test covers */
+  document.querySelector('#recList [data-grip="p3"]').focus();
+  document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true}));
+  await wait(200);
+  o.afterArrowUp=rows();
+  o.writtenToState=state.recurring.find(r=>r.id==='p3').sort;
+  o.focusFollowed=document.activeElement&&document.activeElement.dataset.grip;
+  /* arrangements write an order, they are not a view */
+  document.querySelector('[data-arrange="size"]').click(); await wait(200);
+  o.bySize=rows();
+  o.sizes=rows().map(id=>Math.round(recMonthly(state.recurring.find(r=>r.id===id))));
+  document.querySelector('[data-arrange="due"]').click(); await wait(200);
+  o.byDue=rows().map(id=>recNextDue(state.recurring.find(r=>r.id===id)));
+  document.querySelector('[data-arrange="kind"]').click(); await wait(200);
+  o.byKind=rows().map(id=>state.recurring.find(r=>r.id===id).type);
+  /* the arrangement has to have WRITTEN the order: dense sort values, in the
+     sequence on screen. A view-mode implementation would render the same list
+     and leave the data untouched, and nothing else here would notice. */
+  o.storedSorts=rows().map(id=>state.recurring.find(r=>r.id===id).sort);
+  /* the same engine still drives the categories - the drift check */
+  setRecReorder(false); setReorder(true); await wait(250);
+  const c0=[...document.querySelectorAll('#cats [data-row]')].map(e=>e.dataset.row);
+  const g=document.querySelector('#cats [data-grip]');
+  o.catGripHasNoRecScope=!g.dataset.scope;
+  g.focus();
+  g.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+  await wait(200);
+  const c1=[...document.querySelectorAll('#cats [data-row]')].map(e=>e.dataset.row);
+  o.catsStillMove = c0[0]===c1[1] && c0[1]===c1[0];
+  /* one floating Done, however many lists are open */
+  setRecReorder(true); await wait(200);
+  o.bothAtOnce = !!document.querySelector('#cats [data-grip]') && !!document.querySelector('#recList [data-grip]');
+  document.getElementById('reorderDone').click(); await wait(250);
+  o.doneEndsBoth = !document.querySelector('#cats [data-grip]') && !document.querySelector('#recList [data-grip]');
+  o.bodyClean = !document.body.classList.contains('reordering');
+  return o;
+});
+check('the recurring list says nothing about reordering until you ask',
+      ord.quietByDefault===true);
+check('...then every row gets a grip, and the arrangements appear with it',
+      ord.gripPerRow===3 && ord.offersArrangements===true, `grips=${ord.gripPerRow}`);
+check('...and the buttons that end a schedule go inert under a dragging thumb',
+      ord.delInert===true);
+check('a row moves by arrow key, not only by drag',
+      JSON.stringify(ord.afterArrowUp)==='["p1","p3","p2"]', JSON.stringify(ord.afterArrowUp));
+check('...writing an order into the data rather than shuffling the screen',
+      ord.writtenToState===1, String(ord.writtenToState));
+check('...with focus following the row that moved, so the next press repeats it',
+      ord.focusFollowed==='p3', String(ord.focusFollowed));
+check('"biggest first" prices the cadence, not the cheque',
+      JSON.stringify(ord.bySize)==='["p2","p3","p1"]'
+      && ord.sizes[0]>ord.sizes[1] && ord.sizes[1]>ord.sizes[2],
+      JSON.stringify(ord.bySize)+' '+JSON.stringify(ord.sizes));
+check('"by what is due next" is in date order',
+      ord.byDue.every((d,i)=>i===0||ord.byDue[i-1]<=d), JSON.stringify(ord.byDue));
+check('"money in, then out" leads with what arrives',
+      ord.byKind[0]==='income', JSON.stringify(ord.byKind));
+check('...and an arrangement WRITES that order, so it stays yours to adjust',
+      JSON.stringify(ord.storedSorts)==='[0,1,2]', JSON.stringify(ord.storedSorts));
+check('the categories still reorder through the very same engine',
+      ord.catsStillMove===true && ord.catGripHasNoRecScope===true);
+check('...both lists can be open at once, and one Done ends both',
+      ord.bothAtOnce===true && ord.doneEndsBoth===true && ord.bodyClean===true,
+      JSON.stringify({both:ord.bothAtOnce,done:ord.doneEndsBoth,body:ord.bodyClean}));
+
+/* ---- 72. is paying yourself an expense or an investment ----
+   Asked exactly like that: "I'm having an issue with the pay yourself first
+   concept. Is it an expense? Or is it an investment?"
+
+   Neither on its own, and the app had been quietly answering "expense", which is
+   the wrong half. It has to be a PLAN LINE, because zero-based means every
+   dollar gets a job and this one has to compete for the dollar against the fun
+   money - a thing that is not a budget line is "whatever is left", which is
+   precisely the failure the lesson describes. And the money that moves has to be
+   an INVESTMENT, because an expense is money that is gone and this money is
+   still yours.
+
+   runDeepen created it with findOrCreateCat('Pay Yourself First') and no growth
+   tag, so it was neither: the plan counted it, and every dollar somebody paid
+   themselves was filed as spent. The property below is not "net worth is
+   unchanged" - this app deliberately keeps net worth on the TYPED bank balance
+   and treats the ledger as an expectation. The property is what the money
+   BECOMES: paid to yourself it becomes something you still hold, spent it
+   becomes nothing. That is the whole answer.
+
+   It is healed on load as well as fixed at the source, because a form check
+   cannot reach the people it already happened to. "Pay Yourself First" is a name
+   this app writes and no interface can un-tag a category, so an untagged one can
+   only be a row this app made wrong. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'pyf',name:'Pay Yourself First'},{id:'f',name:'Food'}],
+  budgets:{'2026-08':{pyf:400}},
+  accounts:[{id:'ac',name:'Checking',balance:2000,updated:'2026-08-01'}],
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(450);
+const pyf = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  o.healed=state.categories.find(c=>c.id==='pyf').growth;
+  o.nothingElseTagged=!state.categories.find(c=>c.id==='f').growth;
+  o.assigned=assignedFor('pyf','2026-08');          // it is a plan line like any other
+  const a0=sumAssets(), e0=bankExpected();
+  state.transactions.push({id:'x',type:'invest',amount:400,date:'2026-08-05',
+    catId:'pyf',source:'Savings',ikind:'holds',acctId:'ac'});
+  syncInvestAsset(); save();
+  o.becameAnAsset=sumAssets()-a0;
+  o.countsAsUsed=catUsed('pyf','2026-08');
+  openCatSheet('pyf'); await wait(150);
+  o.sheet=document.getElementById('catSheetBody').innerText; closeCatSheet();
+  const aMid=sumAssets();
+  state.transactions.push({id:'y',type:'expense',amount:400,date:'2026-08-06',catId:'f',acctId:'ac'});
+  syncInvestAsset(); save();
+  o.spendingBecameNothing=sumAssets()===aMid;
+  o.bothLeftTheAccount=(e0-bankExpected());
+  /* and the log form refuses to file it as spending in the first place */
+  activateTab('tx'); await wait(200);
+  document.querySelector('#typeToggle button[data-t="expense"]').click(); await wait(150);
+  const sel=document.getElementById('txCat'); sel.value='pyf';
+  sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(250);
+  o.formSwitched=document.querySelector('#typeToggle button.on').dataset.t;
+  return o;
+});
+check('an untagged Pay Yourself First is healed on load, where the people it already happened to are',
+      pyf.healed==='save', String(pyf.healed));
+check('...without tagging anything else behind your back', pyf.nothingElseTagged===true);
+check('it is a plan line, so it competes for the dollar instead of living on what is left',
+      pyf.assigned===400, String(pyf.assigned));
+check('...and the money paid to yourself becomes something you still hold',
+      pyf.becameAnAsset===400, String(pyf.becameAnAsset));
+check('...while the same money spent becomes nothing', pyf.spendingBecameNothing===true);
+check('...though both leave the account, so the bank expects the same either way',
+      Math.abs(pyf.bothLeftTheAccount-800)<0.005, String(pyf.bothLeftTheAccount));
+check('...counted as used by the plan, so the month can still reach zero',
+      pyf.countsAsUsed===400, String(pyf.countsAsUsed));
+check('...and read as put away rather than spent',
+      /Put away/i.test(pyf.sheet) && /still yours/i.test(pyf.sheet));
+check('the log form will not let it be filed as an expense at all',
+      pyf.formSwitched==='invest', String(pyf.formSwitched));
+
+/* ---- 73. the costs nobody budgets for, named before they arrive ----
+   "These are the things that slowly drive away savings and never get funded
+   until it's too late." That sentence is the pack.
+
+   Every category in these packs is money people already spend and almost nobody
+   plans for, and the reason is always the same shape: the cost is real,
+   predictable and often annual, but it arrives as a surprise, so it gets paid
+   out of the emergency fund, the fun money or a card. Naming it does not make
+   the money appear. It stops the money being a shock.
+
+   The old button dumped eight categories in with no warning and no way to see
+   what they were - which is what prompted "we got the basic starter set but
+   what's all included?". Nothing is added now until the card has been read, and
+   the essentials are in the same list so their contents are finally visible too.
+   Every row carries a reason, because a list of names teaches nobody anything. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'f',name:'Food'}]});
+await p.reload(); await p.waitForTimeout(450);
+const packs = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('budget'); await wait(200);
+  const before=state.categories.length;
+  document.getElementById('starterBtn').click(); await wait(250);
+  o.addedNothingYet=state.categories.length===before;
+  o.opened=document.getElementById('packSheet').classList.contains('on');
+  o.packs=[...document.querySelectorAll('.pk-card .pk-nm')].map(x=>x.textContent);
+  o.everyPackHasAHook=[...document.querySelectorAll('.pk-card .pk-hook')].every(x=>x.textContent.trim().length>20);
+  /* Every pack must earn its place by saying what leaving it off costs. A pack
+     with a name and a list is a folder, and this app does not ship folders. */
+  o.everyPackHasATruth=CAT_PACKS.every(x=>String(x.truth||'').length>140);
+  o.everyRowEverywhereHasAWhy=CAT_PACKS.every(x=>x.cats.every(c=>String(c.w||'').length>10));
+  /* Dollars on the tin, so the copy speaks the same language as the currency.
+     Three UK spellings had already reached user-facing pack copy. */
+  o.copy=CAT_PACKS.map(x=>[x.hook,x.truth,...x.cats.map(c=>c.w)].join(' ')).join(' ');
+  document.querySelector('[data-pack="occasions"]').click(); await wait(250);
+  o.card=document.getElementById('packSheetBody').innerText;
+  o.rows=document.querySelectorAll('.pk-row').length;
+  o.everyRowHasAWhy=[...document.querySelectorAll('.pk-rw')].every(x=>x.textContent.trim().length>10);
+  const n0=state.categories.length;
+  document.getElementById('pkAdd').click(); await wait(300);
+  o.added=state.categories.length-n0;
+  const g=state.categories.find(c=>c.name==='Special occasions');
+  o.nested=!!g && state.categories.filter(c=>c.parentId===g.id).length===6;
+  o.nowSaysNothingToAdd=/Nothing to add/i.test(document.getElementById('packSheetBody').innerText);
+  const n1=state.categories.length;
+  addPack('occasions');
+  o.twiceAddsNothing=state.categories.length===n1;
+  /* the growth pack tags what it drops in */
+  openPacks('invest'); await wait(200);
+  document.getElementById('pkAdd').click(); await wait(300);
+  o.pyfTagged=(state.categories.find(c=>c.name==='Pay Yourself First')||{}).growth;
+  o.retirementTagged=(state.categories.find(c=>c.name==='Retirement')||{}).growth;
+  /* the family pack, and the one thing it has to get right */
+  openPacks('family'); await wait(200);
+  o.family=document.getElementById('packSheetBody').innerText;
+  o.familyTags=document.querySelectorAll('.pk-row .growth-tag').length;
+  document.getElementById('pkAdd').click(); await wait(300);
+  const fg=state.categories.find(c=>c.name==='Kids & family');
+  o.familyNested=!!fg && state.categories.filter(c=>c.parentId===fg.id).length===10;
+  o.eduTagged=(state.categories.find(c=>c.name==='Education fund')||{}).growth;
+  /* and a pack category is an ordinary category from that second */
+  const bd=state.categories.find(c=>c.name==='Birthdays');
+  state.categories=state.categories.filter(c=>c.id!==bd.id); save();
+  o.deletable=!state.categories.some(c=>c.name==='Birthdays');
+  closePacks();
+  return o;
+});
+check('the packs button opens a browser rather than dumping categories in',
+      packs.addedNothingYet===true && packs.opened===true);
+check('...listing every pack, the essentials among them so their contents are visible at last',
+      packs.packs.length===9 && packs.packs.some(x=>/essentials/i.test(x)), packs.packs.join(' / '));
+check('...each one saying what it is for, not just what it is called',
+      packs.everyPackHasAHook===true);
+check('...and every pack, not just the ones spot-checked, names what skipping it costs',
+      packs.everyPackHasATruth===true && packs.everyRowEverywhereHasAWhy===true);
+check('...in the same language as the currency on the tin',
+      !/\b(colour|tyre|fortnight|whilst|amongst|cheque|nappies|organis|recognis|realis|apologis|prioritis|minimis|maximis|favourite|behaviour|labour|neighbour|licence|defence|kerb|maths|aeroplane)\b/i.test(packs.copy),
+      (packs.copy.match(/\b(colour|tyre|fortnight|whilst|amongst|cheque|nappies|organis|recognis|realis|apologis|prioritis|minimis|maximis|favourite|behaviour|labour|neighbour|licence|defence|kerb|maths|aeroplane)\b/ig)||[]).join(', '));
+check('a pack card says what leaving it off costs',
+      /same day every year/i.test(packs.card) && packs.card.length>400,
+      packs.card.split('\n').filter(Boolean)[1]||'');
+check('...and shows every category with a reason beside it',
+      packs.rows===6 && packs.everyRowHasAWhy===true, `rows=${packs.rows}`);
+check('adding drops them under one group so the plan stays readable',
+      packs.added===7 && packs.nested===true, `added=${packs.added}`);
+check('...and says so afterwards rather than offering the same pack again',
+      packs.nowSaysNothingToAdd===true && packs.twiceAddsNothing===true);
+check('the money-that-works pack tags what it drops in, so none of it reads as spending',
+      packs.pyfTagged==='save' && packs.retirementTagged==='invest',
+      `pyf=${packs.pyfTagged} retirement=${packs.retirementTagged}`);
+check('the family pack disarms the guilt instead of pretending it is not there',
+      /price on your kid/i.test(packs.family) && /not resenting it/i.test(packs.family),
+      packs.family.split('\n').filter(Boolean)[2]||'');
+check('...and names the line the money actually comes out of when nobody measures it',
+      /\byours\b/i.test(packs.family) && /retirement/i.test(packs.family));
+check('...with its one keepable line tagged on the card and in the data',
+      packs.familyTags===1 && packs.eduTagged==='save',
+      `tags=${packs.familyTags} edu=${packs.eduTagged}`);
+check('...landing nested like every other pack', packs.familyNested===true);
+check('...and a pack category is an ordinary category from that second',
+      packs.deletable===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
