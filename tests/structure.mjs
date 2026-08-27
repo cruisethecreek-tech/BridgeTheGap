@@ -5470,6 +5470,49 @@ const kept = await p.evaluate(async () => {
   return (document.querySelector('.plan-switch .pv.on')||{}).dataset?.planview;
 });
 check('...and the choice survives a reload', kept==='left', String(kept));
+/* Asked for after living with it: "this should be floating so it's easy to
+   switch between the three instead of scrolling all the way back up to the
+   top." Sticky rather than a floating pill - it stays where it already is, so
+   there is no second place to look for the same control, and the selected tab
+   IS the column label, which means one strip does the job of a control and a
+   header. The property is not "it is visible on load" (on a short phone with a
+   month nav and a summary above it, it legitimately starts below the fold) but
+   that it is in normal flow AND pins once you reach it AND still works from
+   down there without throwing you back to the top. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:Array.from({length:22},(_,i)=>({id:'c'+i,name:'Category '+(i+1)})),
+  budgets:{'2026-08':Object.fromEntries(Array.from({length:22},(_,i)=>['c'+i,100+i]))},
+  transactions:[{id:'i',type:'income',amount:9000,date:'2026-08-01'}]});
+await p.setViewportSize({width:390,height:760});
+await p.reload(); await p.waitForTimeout(450);
+await p.evaluate(()=>activateTab('budget')); await p.waitForTimeout(350);
+const stick = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const el=()=>document.querySelector('.plan-switch');
+  const o={ flow:getComputedStyle(el()).position };
+  window.scrollTo(0,1400); await wait(300);
+  const r=el().getBoundingClientRect();
+  o.stillOnScreen = r.bottom>0 && r.top<innerHeight;
+  o.pinnedTop = Math.round(r.top);
+  /* rows must pass BEHIND it, not through the gutters a padded panel leaves */
+  const mid=r.top+r.height/2;
+  o.ownsItsWidth=[r.left+3,(r.left+r.right)/2,r.right-3]
+    .every(x=>{ const e=document.elementFromPoint(x,mid); return !!(e&&e.closest('.plan-switch')); });
+  const y=window.scrollY;
+  document.querySelector('[data-planview="spent"]').click(); await wait(320);
+  o.switchedFromDownThere = state.planView==='spent';
+  o.stayedPut = Math.abs(window.scrollY-y)<120;
+  return o;
+});
+check('the toggle sticks instead of scrolling away', stick.flow==='sticky', stick.flow);
+check('...still on screen four screens into a long plan, pinned to the top',
+      stick.stillOnScreen===true && stick.pinnedTop>=-1 && stick.pinnedTop<=40,
+      `top ${stick.pinnedTop}`);
+check('...and switching from down there works without sending you back up',
+      stick.switchedFromDownThere===true && stick.stayedPut===true);
+check('...with the strip owning its full width, so rows pass behind rather than beside it',
+      stick.ownsItsWidth===true);
+await p.setViewportSize({width:390,height:1200});
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
