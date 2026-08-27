@@ -8252,14 +8252,112 @@ function loadTesseract(){
   });
   return tessLoading;
 }
+/* ---------- reading a bank screen, not just a notepad ----------
+   This started life reading a handwritten shopping list, where one line is one
+   purchase and the number at the end is the price. A screenshot of a bank's
+   account history broke every one of those assumptions at once, and it broke
+   them SILENTLY - nine rows appeared, all of them wrong, all of them plausible
+   enough to log:
+
+     Preauthorization / AI=867560,RR=623952602847,PK=356239682557559
+     PMT*OH BUREAU MOTOR VEHIC Held:2026-08-27 14:57:35 EDT
+     Exp:2026-08-30 14:57:35 EDT                              -$59.25
+
+   One record. The old parser saw four lines, kept the reference numbers as the
+   description, and took $23,952 as the price - out of the middle of RR=. One
+   row even came back as "Aug 27" for $2,026, which is a date wearing a price.
+
+   Two changes, and the first one is the important one.
+
+   1. RECORDS ARE FOUND BY THE MONEY, NOT BY THE LINE BREAK. A bank record wraps
+      across as many lines as it likes and ends with an amount. So the text is
+      scanned for real money tokens and everything since the last one is that
+      record's description. A line break means nothing.
+
+   2. THE DESCRIPTION IS THE PART A PERSON WOULD READ. Everything from "Held:"
+      onward is the bank talking to itself, and so are AI=/RR=/PK=, the long
+      bare reference runs, and the timestamps. What is left is the merchant.
+
+   The handwriting path it was built for is untouched: with no $ anywhere, it
+   falls back to the original line-at-a-time reading, which is still right for
+   "coffee 4.50". */
+const QL_LEADINS=/^(?:preauthorization|pre-authorization|pos\s+debit|pos\s+purchase|debit\s+card\s+purchase|check\s+card\s+purchase|card\s+purchase|point\s+of\s+sale|recurring\s+payment|ach\s+(?:debit|credit|payment)|electronic\s+(?:withdrawal|deposit)|withdrawal|purchase|payment)\b[\s\/:,-]*/i;
+function qlCleanDesc(raw){
+  let t=String(raw||'').replace(/\s+/g,' ').trim();
+  /* Everything from Held:/Exp:/Posted: onward is the bank talking to itself. */
+  t=t.split(/\b(?:held|exp|expires|posted|effective|trace)\s*:/i)[0];
+  /* A description that still contains a transaction-type lead-in is carrying
+     the tail of the record before it plus the screen's own headings - "Pending",
+     a date, the last record's leftovers. Everything up to and including the LAST
+     lead-in is noise by definition: the transaction starts there. */
+  /* Guarded on a KEY= reference being present, because that is the one
+     unmistakable signature of bank plumbing. Without the guard this would cut
+     into real names - "SQ *PURCHASE COFFEE" would lose the purchase, and
+     "PAYPAL *PAYMENT" would be left with nothing at all. A statement record
+     always carries a reference; a merchant name never does. */
+  if(/\b[A-Z]{2,5}\s*=\s*[\w-]/i.test(t)){
+    const lead=[...t.matchAll(new RegExp(QL_LEADINS.source.replace(/^\^/,''),'gi'))].pop();
+    if(lead) t=t.slice(lead.index+lead[0].length);
+  }
+  /* AI=867560, RR=623952 602847, PK=356239682557559.
+     The trailing (\s+\d...)* is the whole point: a phone wraps a reference
+     number mid-digit, and without it "RR=623952 602847," loses the RR= half and
+     leaves "602847," stranded in the merchant name. That is exactly how
+     "Kindle Unltd" came back as "7855866, Kindle Unltd". */
+  t=t.replace(/\b[A-Z]{2,5}\s*=\s*[\w-]+(?:\s+\d[\d-]*)*\s*,?/gi,' ');
+  /* Anything left that is a bare run of six or more digits is a reference, not
+     a name. Six rather than eight, because a wrapped one arrives in pieces. */
+  t=t.replace(/\b\d{6,}\b/g,' ');
+  /* Column headings the screen puts above the rows. */
+  t=t.replace(/\b(?:pending|processing|posted|completed|cleared)\b/gi,' ');
+  /* Timestamps and dates left stranded in the middle of a name. */
+  t=t.replace(/\b\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?\s*(?:[A-Z]{2,4})?\b/gi,' ');
+  t=t.replace(/\b\d{4}-\d{2}-\d{2}\b/g,' ');
+  t=t.replace(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:\s*,\s*\d{4})?\b/gi,' ');
+  t=t.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ');
+  /* Trimmed first: the heading strip above leaves a space in front, and an
+     anchored pattern cannot see past it. */
+  t=t.replace(/\s+/g,' ').trim().replace(QL_LEADINS,'');
+  t=t.replace(/\s+/g,' ').trim();
+  /* A processor tag on the front - PMT*, SQ*, TST*, SP* - is not the merchant.
+     The merchant is what follows it. */
+  t=t.replace(/^[A-Z]{2,4}\s*\*\s*/,'');
+  /* A booking or order code on the end is not either: AIRBNB * HMREJET25N.
+     Only stripped when what follows really looks like a code - letters AND
+     digits, no spaces - so "Bed * Bath" survives. */
+  t=t.replace(/\s*\*\s*(?=[A-Z0-9-]{6,}$)(?=[A-Z-]*\d)[A-Z0-9-]+$/i,'');
+  t=t.replace(/^[\s*\/:,.·•-]+|[\s*\/:,.·•-]+$/g,'').replace(/\s+/g,' ').trim();
+  return t;
+}
+/* A real money token: a $ amount, or a signed one. Reference digits never carry
+   a currency mark, which is what makes this safe. */
+const QL_MONEY=/([+-]?)\s*\$\s*(\d[\d,]*(?:\.\d{1,2})?)/g;
 function qlParseOcr(text){
+  const raw=String(text||'');
   const out=[];
-  (text||'').split(/\n+/).forEach(line=>{
+  QL_MONEY.lastIndex=0;
+  let m, cursor=0, hits=0;
+  while((m=QL_MONEY.exec(raw))!==null){
+    hits++;
+    const desc=qlCleanDesc(raw.slice(cursor, m.index));
+    cursor=QL_MONEY.lastIndex;
+    const amt=parseFloat(m[2].replace(/,/g,''));
+    if(!(amt>0) || amt>=1000000) continue;
+    if(desc.length<2) continue;                       // a price with nothing to call it
+    /* A statement writes every debit as negative, so a minus is the norm and
+       says nothing. An explicit plus is the one that means money arriving. */
+    const row={what:desc.slice(0,80), amt};
+    if(m[1]==='+') row.kind='income';
+    out.push(row);
+  }
+  if(hits) return out;
+  /* No currency marks anywhere: this is the notepad it was built for. */
+  raw.split(/\n+/).forEach(line=>{
     const l=line.trim(); if(!l) return;
-    const m=l.match(/^(.*?)[\s.·•:\-]*\$?\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*$/);
-    if(!m) return;
-    const what=m[1].replace(/[^\w\s'&\/+-]/g,' ').replace(/\s+/g,' ').trim();
-    const amt=parseFloat(m[2].replace(',','.'));
+    const mm=l.match(/^(.*?)[\s.·•:\-]*(\d{1,5}(?:[.,]\d{1,2})?)\s*$/);
+    if(!mm) return;
+    const what=mm[1].replace(/[^\w\s'&\/+-]/g,' ').replace(/\s+/g,' ').trim();
+    const amt=parseFloat(mm[2].replace(',','.'));
     if(what.length>1 && amt>0 && amt<100000) out.push({what,amt});
   });
   return out;
@@ -8275,7 +8373,7 @@ function renderQuickLog(){
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
     ${qlAcctRowHTML()}
     <div class="ql-list" id="qlList">${qlRow()}</div>
-    <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn primary" id="qlSave">Log them all →</button></div>
+    <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn ghost" id="qlClear">Clear</button><button class="btn primary" id="qlSave">Log them all →</button></div>
   </div>`;
   document.getElementById('qlDate').value=qlDatePrefill||todayStr(); qlDatePrefill=null;   // consumed once - the next open is today again unless told otherwise
   // --- photo capture + on-device read ---
@@ -8316,7 +8414,16 @@ function renderQuickLog(){
         items.forEach(it=>{
           let row=[...box.querySelectorAll('.ql-row')].find(el=>!el.querySelector('.ql-what').value && !el.querySelector('.ql-amt').value);
           if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; listEl.appendChild(row); wireRow(row); }
-          row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt; guessRow(row); filled++;
+          row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt;
+          /* A statement writes debits as negative, so only an explicit plus
+             means money arriving. Set as a guess, not a decision: the dropdown
+             is still yours and a correction still sticks. */
+          if(it.kind==='income'){ const c=row.querySelector('.ql-cat');
+            if(c && [...c.options].some(o=>o.value==='__income') && c.dataset.touched!=='1'){
+              c.value='__income'; c.classList.add('guessed');
+              c.title='Read as money in, from the + on the statement - change it if it is wrong'; } }
+          else guessRow(row);
+          filled++;
         });
         note.textContent='Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
         /* A photo is the one path where somebody hands over a whole batch at
@@ -8350,6 +8457,39 @@ function renderQuickLog(){
   };
   box.querySelectorAll('.ql-row').forEach(wireRow);
   document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
+  /* Asked for after a read came back nine rows of wrong: there was no way to
+     throw a bad batch away short of closing the panel, which also loses the
+     photo you were reading from. Armed rather than instant, same as deleting a
+     category - clearing nine rows somebody has been correcting is the sort of
+     thing a thumb should not be able to do on its own. Empty rows are not worth
+     arming over, so with nothing typed it just clears. */
+  (function(){
+    const cb=document.getElementById('qlClear'); if(!cb) return;
+    let armed=false;
+    const filled=()=>[...box.querySelectorAll('.ql-row')].filter(el=>
+      (el.querySelector('.ql-what').value||'').trim() || (el.querySelector('.ql-amt').value||'').trim()).length;
+    const disarm=()=>{ armed=false; cb.textContent='Clear'; cb.classList.remove('danger'); };
+    const wipe=()=>{
+      const list=document.getElementById('qlList'); if(list) list.innerHTML=qlRow();
+      box.querySelectorAll('.ql-row').forEach(wireRow);
+      if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; }
+      qlPhotoFile=null;
+      const pv=document.getElementById('qlPhotoPrev'); if(pv) pv.innerHTML='';
+      const rb=document.getElementById('qlRead'); if(rb) rb.classList.add('hide');
+      const nt=document.getElementById('qlOcrNote'); if(nt) nt.textContent='';
+      disarm();
+      const f=box.querySelector('.ql-what'); if(f) f.focus();
+    };
+    cb.onclick=()=>{
+      const n=filled();
+      if(!n){ wipe(); return; }
+      if(!armed){ armed=true; cb.textContent='Clear '+n+' line'+(n>1?'s':'')+'?'; cb.classList.add('danger');
+        setTimeout(()=>{ if(armed) disarm(); },4000); return; }
+      wipe();
+    };
+    /* Typing again means you changed your mind about clearing. */
+    box.addEventListener('input',()=>{ if(armed) disarm(); },true);
+  })();
   document.getElementById('qlSave').onclick=()=>{
     const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0, put=0, came=0;
     const batchAcct=qlAcctChoice();   // read once: every line in this batch came from the same place
