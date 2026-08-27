@@ -6012,6 +6012,140 @@ check('the same debt named in two places is one line, not two',
 check('...and the copy that knows what it costs is the one kept',
       dedupe.keptApr===22, String(dedupe.keptApr));
 
+/* ---- 80. the expected balance shows its work, and the readings are kept ----
+   Sent as two phone screenshots of the Build tab: "Expected now $6,637.64,
+   +$2,794.36 logged since" with a button, and the questions - "this figure
+   needs to show its work", "a way to say it's already been added and can be
+   dismissed", "are all these figures actually being tracked when changed?"
+
+   The third one had an uncomfortable answer: no. The monthly snapshot stored a
+   single aggregate `bank` figure, so Joint Checking up $2,794 and Stash down
+   $2,000 in the same month showed as $794 of nothing-in-particular. No
+   individual account had a history at all - retyping a balance overwrote the
+   number and the old one was gone. "Tendencies" is about spending categories
+   and never touched accounts.
+
+   Three things, and each answers one of the questions:
+
+   1. The projection shows its arithmetic. It was the only figure in the app
+      asking to be trusted while showing nothing, and it is the one that asks
+      you to overwrite a real bank balance.
+   2. A second action - "Bank still says $X" - which is the honest version of
+      dismiss. Nothing about the money changes; what changes is that it has been
+      CHECKED, and the gap between what the ledger expected and what the bank
+      says gets recorded rather than waved away. That gap is the finding.
+   3. Every reading is kept, dated, with how it was arrived at. One per day per
+      account, because a balance corrected twice in an afternoon is one reading
+      with a typo in it. The aggregate trend can finally name which account
+      moved. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  categories:[{id:'food',name:'Food'}], budgets:{'2026-08':{food:400}},
+  accounts:[{id:'chk',name:'Joint Checking',kind:'checking',purpose:'sinking',balance:3843.28,updated:'2026-08-25'}],
+  transactions:[{id:'t1',type:'income',amount:3000,date:'2026-08-26',source:'Paycheck',acctId:'chk'},
+                {id:'t2',type:'expense',amount:150,date:'2026-08-26',catId:'food',acctId:'chk'},
+                {id:'t3',type:'expense',amount:55.64,date:'2026-08-27',catId:'food',acctId:'chk'}]});
+await p.reload(); await p.waitForTimeout(600);
+const acw = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); renderAccounts(); await wait(300);
+  const o={};
+  o.stillProjects=/Expected now/.test(document.querySelector('.acct-row').innerText);
+  o.hasWork=!!document.querySelector('.ac-work');
+  if(o.hasWork){
+    document.querySelector('.ac-work').open=true; await wait(120);
+    o.sum=document.querySelector('.acw-sum').innerText.trim();
+    o.row=document.querySelector('.acct-row').innerText;
+    o.parts=[...document.querySelectorAll('.acw-p')].map(x=>x.innerText.replace(/\n/g,' '));
+    o.entries=[...document.querySelectorAll('.acw-r')].length;
+  }
+  o.keepBtn=(document.querySelector('[data-acctkeep="chk"]')||{}).textContent||'';
+  /* confirming: no money moves, the date does, the gap is kept */
+  document.querySelector('[data-acctkeep="chk"]').click(); await wait(320);
+  const a=state.accounts[0];
+  o.balanceUnmoved=a.balance===3843.28;
+  o.dateMoved=a.updated===todayStr();
+  o.gap=a.lastGap;
+  o.promptGone=!/Expected now/.test(document.querySelector('.acct-row').innerText);
+  o.recorded=(a.hist||[]).length;
+  o.how=(a.hist||[]).slice(-1)[0].how;
+  return o;
+});
+check('the expected balance still projects, and now offers its arithmetic',
+      acw.stillProjects===true && acw.hasWork===true);
+check('...adding up start to finish, in one line',
+      /^\$3,843\.28 \+ \$3,000 − \$205\.64 = \$6,637\.64$/.test(acw.sum||''), acw.sum);
+check('...broken down by kind, with how many entries are behind each',
+      (acw.parts||[]).some(x=>/money in/.test(x)&&/\+\$3,000/.test(x))
+        && (acw.parts||[]).some(x=>/money out/.test(x)), (acw.parts||[]).join(' | '));
+check('...and the entries themselves, so it can be checked against a statement',
+      acw.entries===3, String(acw.entries));
+check('...and it says the bank wins whenever the two disagree',
+      /the bank is right/i.test(acw.row||''), (acw.row||'').slice(0,120));
+check('there is a way to say the bank still says this, labelled with the figure',
+      /Bank still says \$3,843\.28/.test(acw.keepBtn), acw.keepBtn);
+check('...confirming moves no money at all', acw.balanceUnmoved===true);
+check('...but does count as checking it', acw.dateMoved===true);
+check('...and records the gap rather than dismissing it',
+      Math.abs((acw.gap||0)-(-2794.36))<0.01, String(acw.gap));
+check('...after which there is nothing logged since, so the prompt is gone',
+      acw.promptGone===true);
+check('the reading is kept, with how it was arrived at',
+      acw.recorded>=1 && acw.how==='confirmed', `${acw.recorded} / ${acw.how}`);
+
+/* Every route to a balance records one, and two on one day is one reading. */
+const acHist = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  const a=state.accounts[0];
+  a.hist=[{d:'2026-06-30',b:2000,how:'first'},{d:'2026-07-31',b:2500,how:'bank'}];
+  a.balance=2500; a.updated='2026-07-31'; save(); renderAccounts(); await wait(220);
+  const inp=document.querySelector('input[data-acctbal="chk"]');
+  inp.value='6637.64'; inp.dispatchEvent(new Event('change',{bubbles:true})); await wait(320);
+  o.afterTyped=state.accounts[0].hist.length;
+  o.typedHow=state.accounts[0].hist.slice(-1)[0].how;
+  const inp2=document.querySelector('input[data-acctbal="chk"]');
+  inp2.value='6700'; inp2.dispatchEvent(new Event('change',{bubbles:true})); await wait(320);
+  o.afterCorrection=state.accounts[0].hist.length;
+  o.lastValue=state.accounts[0].hist.slice(-1)[0].b;
+  renderAccounts(); await wait(200);
+  const det=document.querySelector('.ac-hist');
+  o.saysSo=det?det.querySelector('summary').innerText:'';
+  if(det){ det.open=true; await wait(120); o.body=det.innerText; }
+  return o;
+});
+check('typing a balance records a reading', acHist.afterTyped===3 && acHist.typedHow==='bank',
+      `${acHist.afterTyped} / ${acHist.typedHow}`);
+check('...and correcting it the same day is one reading, not two',
+      acHist.afterCorrection===3 && acHist.lastValue===6700,
+      `${acHist.afterCorrection} / ${acHist.lastValue}`);
+check('the row says how many readings it holds and what they add up to',
+      /3 readings since 2026-06-30/.test(acHist.saysSo||'') && /up \$4,700/.test(acHist.saysSo||''),
+      acHist.saysSo);
+check('...and refuses to imply it knows anything from before it was added',
+      /cannot be recovered/i.test(acHist.body||''), (acHist.body||'').slice(-120));
+
+/* The aggregate could never say which account did it. Now it can. */
+const acTrend = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  state.accounts=[
+    {id:'chk',name:'Joint Checking',kind:'checking',balance:6637.64,updated:'2026-08-27',
+     hist:[{d:'2026-07-31',b:3843.28,how:'bank'},{d:'2026-08-27',b:6637.64,how:'bank'}]},
+    {id:'st',name:'Stash',kind:'invest',balance:16671.22,updated:'2026-08-26',
+     hist:[{d:'2026-07-31',b:18671.22,how:'bank'},{d:'2026-08-26',b:16671.22,how:'bank'}]}];
+  state.snapshots=[{month:'2026-07',bank:22514,owed:0},{month:'2026-08',bank:23308,owed:0}];
+  save();
+  activateTab('reflect'); rfTab='trends'; renderReflectTab(); await wait(250);
+  trendPick='bank'; renderTrendSeries(); await wait(250);
+  const pts=trendMonths(6).map(m=>({m, v:(state.snapshots.find(s=>s.month===m)||{}).bank ?? null}));
+  const i=pts.findIndex(x=>x.m==='2026-08');
+  return trendRead(TREND_SERIES.find(x=>x.k==='bank'), pts, i).replace(/<[^>]*>/g,' ');
+});
+check('the aggregate is still the headline it always was',
+      /\$23,308/.test(acTrend), acTrend.slice(0,120));
+check('...but no longer hides which account moved, or by how much',
+      /Joint Checking up/.test(acTrend) && /Stash down/.test(acTrend)
+        && /2,794/.test(acTrend) && /2,000/.test(acTrend), acTrend.slice(0,220));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
