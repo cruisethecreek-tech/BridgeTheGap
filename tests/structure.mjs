@@ -5251,6 +5251,114 @@ check('...landing nested like every other pack', packs.familyNested===true);
 check('...and a pack category is an ordinary category from that second',
       packs.deletable===true);
 
+/* ---- 74. naming a category from the catalogue instead of from memory ----
+   Sent as a screenshot of the log form's category dropdown, scrolled to the
+   bottom, "+ New category..." selected, and a blank text box waiting: "can we
+   incorporate a pick from the starter packs or a search function to
+   autopopulate different categories?"
+
+   The blank box was the whole problem. Sixty-odd named categories already exist
+   in the packs, each with a reason somebody thought to write down, and at the
+   exact moment a person needs one - mid-log, trying to file a purchase they
+   have already made - the app asked them to invent the name themselves.
+
+   Two properties carry this. The first is that picking beats typing: a
+   catalogue row brings its growth tag with it, which typing the same letters
+   never could, so "Education fund" arrives already knowing it is money you
+   keep. The second is the other half of that - a name typed by hand is NOT
+   silently tagged, and editing a pick drops the tag it came with, because a
+   category called "Edu fund" inheriting a tag from "Education fund" would be
+   the app deciding something on your behalf.
+
+   The ranking is asserted as an invariant rather than a hand-guessed order.
+   Two earlier versions of that check named specific rows and were wrong about
+   the catalogue both times - once on a category the user had created rather
+   than one the packs ship, once on a word that turned out to have no mid-word
+   match at all. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'f',name:'Food'},{id:'sk',name:'Skincare'}]});
+await p.reload(); await p.waitForTimeout(450);
+const cat = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('budget'); await wait(250);
+  o.oneLetter=catSuggest('c').length;
+  const ranked=catSuggest('fun',9);
+  o.ranked=ranked.map(h=>h.n);
+  o.rankOrdered=ranked.every((h,i)=>i===0||ranked[i-1].r<=h.r);
+  o.prefixFirst=ranked[0] && ranked[0].r===0;
+  o.skipsWhatYouHave=!catSuggest('skin',9).some(h=>h.n==='Skincare');
+  /* the plan field */
+  const el=document.getElementById('catName');
+  el.value='christ'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
+  const host=document.getElementById('catNameHits');
+  o.offers=[...host.querySelectorAll('.cs-hit .csh-n')].map(x=>x.textContent.trim());
+  o.everyRowNamesItsPack=[...host.querySelectorAll('.csh-p')].every(x=>x.textContent.trim().length>3);
+  o.everyRowCarriesAWhy=[...host.querySelectorAll('.csh-w')].every(x=>x.textContent.trim().length>10);
+  host.querySelector('.cs-hit').click(); await wait(180);
+  o.filled=el.value;
+  o.listClosed=host.innerHTML.trim()==='';
+  document.getElementById('addCat').click(); await wait(250);
+  o.added=state.categories.some(c=>/Christmas/i.test(c.name));
+  /* picking beats typing: the tag rides along */
+  el.value='educat'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
+  host.querySelector('.cs-hit').click(); await wait(150);
+  document.getElementById('addCat').click(); await wait(250);
+  o.pickedTag=(state.categories.find(c=>c.name==='Education fund')||{}).growth;
+  /* and typing the same idea by hand does not get tagged */
+  el.value='Education fund 2'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
+  document.getElementById('addCat').click(); await wait(200);
+  o.typedTag=(state.categories.find(c=>c.name==='Education fund 2')||{}).growth;
+  /* editing a pick drops the tag with it */
+  el.value='sinking'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
+  host.querySelector('.cs-hit').click(); await wait(150);
+  el.value='Sinking fund for the roof'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
+  document.getElementById('addCat').click(); await wait(200);
+  o.editedTag=(state.categories.find(c=>c.name==='Sinking fund for the roof')||{}).growth;
+  /* search only helps if you know the word - browsing is the way in if you do not */
+  el.value='zzzq'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
+  o.noMatchOffersBrowse=!!host.querySelector('[data-browsepacks]');
+  o.noMatchCopy=(host.querySelector('.cs-none')||{}).textContent||'';
+  host.querySelector('[data-browsepacks]').click(); await wait(300);
+  o.browseOpens=document.getElementById('packSheet').classList.contains('on');
+  closePacks(); await wait(150);
+  /* and the same field on the log form, which is where it was asked for */
+  activateTab('tx'); await wait(250);
+  const sel=document.getElementById('txCat'); sel.value='__new';
+  sel.dispatchEvent(new Event('change',{bubbles:true})); await wait(250);
+  const tn=document.getElementById('txCatNew');
+  o.logFieldShown=!tn.classList.contains('hide');
+  tn.value='prescr'; tn.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
+  o.logOffers=document.querySelectorAll('#txCatNewHits .cs-hit').length;
+  return o;
+});
+check('one letter is not a search, so the list does not fire on every keystroke',
+      cat.oneLetter===0, String(cat.oneLetter));
+check('two letters search every category the packs ship',
+      cat.ranked.length>3, cat.ranked.join(', '));
+check('...returned in rank order, prefix matches first',
+      cat.rankOrdered===true && cat.prefixFirst===true, cat.ranked.join(', '));
+check('...and never offering a category you already have',
+      cat.skipsWhatYouHave===true);
+check('a suggestion carries the pack it came from and the reason it exists',
+      cat.everyRowNamesItsPack===true && cat.everyRowCarriesAWhy===true,
+      cat.offers.join(' | '));
+check('...picking one fills the field and closes the list',
+      /Christmas/i.test(cat.filled) && cat.listClosed===true, cat.filled);
+check('...and adds it like any other category', cat.added===true);
+check('picking beats typing: the growth tag rides along',
+      cat.pickedTag==='save', String(cat.pickedTag));
+check('...while a name typed by hand is never silently tagged',
+      !cat.typedTag, String(cat.typedTag));
+check('...and editing a pick drops the tag it came with',
+      !cat.editedTag, String(cat.editedTag));
+check('a search with no match still offers a way in, and does not scold you',
+      cat.noMatchOffersBrowse===true && /fine|own thing/i.test(cat.noMatchCopy),
+      cat.noMatchCopy);
+check('...which opens the packs', cat.browseOpens===true);
+check('the same catalogue is on the log form, where it was asked for',
+      cat.logFieldShown===true && cat.logOffers>0, `offers=${cat.logOffers}`);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

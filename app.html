@@ -1397,6 +1397,24 @@
   .unit-work{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
   /* Category packs. The card has one job the list cannot do: say what skipping
      it costs, in words, before anything is added. */
+  /* Search the catalogue from wherever a category gets named. The list sits
+     under the field rather than over it - an overlay on a phone covers the
+     keyboard's own suggestion strip and the two fight. */
+  .cs-hits-host:empty{display:none}
+  .cs-hits{display:flex;flex-direction:column;gap:1px;margin-top:6px;
+    border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--line)}
+  .cs-hit{display:block;width:100%;text-align:left;padding:9px 11px;border:0;
+    background:var(--panel-2);color:var(--text);font:inherit;cursor:pointer}
+  .cs-hit:hover,.cs-hit:focus-visible{background:rgba(var(--accent-rgb),.13)}
+  .csh-n{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-weight:800;font-size:14px}
+  .csh-w{display:block;margin-top:2px;font-size:12px;line-height:1.45;color:var(--muted)}
+  .csh-p{display:block;margin-top:3px;font-size:10.5px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+  .cs-none{padding:10px 11px;background:var(--panel-2);font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .cs-browse{display:block;width:100%;text-align:left;padding:9px 11px;border:0;
+    background:var(--panel-2);color:var(--accent);font:inherit;font-size:12.5px;
+    font-weight:800;cursor:pointer}
+  .cs-browse:hover,.cs-browse:focus-visible{background:rgba(var(--accent-rgb),.13)}
   .pk-lead{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 14px}
   .pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
   /* ---- pack textures -----------------------------------------------------
@@ -2382,7 +2400,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
         <div class="row" style="margin-bottom:6px">
           <label class="fld" style="flex:1">New category
-            <input type="text" id="catName" placeholder="e.g. Groceries, Rent, Fun Money">
+            <input type="text" id="catName" placeholder="Type to search the packs, or name your own" autocomplete="off">
+            <div class="cs-hits-host" id="catNameHits"></div>
           </label>
           <button class="btn primary" id="addCat">Add category</button>
           <button class="btn ghost" id="starterBtn" title="Packs of categories most people never budget for, with what each one costs to skip">Category packs</button>
@@ -2404,7 +2423,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </label>
           <label class="fld">Amount<input type="number" id="recAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
           <label class="fld expense-only-rec" id="recCatWrap">Category<select id="recCat"></select>
-            <input class="cat-new hide" id="recCatNew" type="text" placeholder="Name the new one"></label>
+            <input class="cat-new hide" id="recCatNew" type="text" placeholder="Type to search the packs, or name your own" autocomplete="off">
+            <div class="cs-hits-host" id="recCatNewHits"></div></label>
           <label class="fld hide" id="recAcctWrap">Which account<select id="recAcct"></select></label>
           <label class="fld income-only-rec hide" id="recSrcWrap">Source<input type="text" id="recSrc" placeholder="Paycheck…"></label>
           <label class="fld income-only-rec hide" id="recOwnerWrap">Whose money<select id="recOwner"><option value="a">Mine</option><option value="b">Partner</option><option value="joint">Both of us</option></select></label>
@@ -2462,7 +2482,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </label>
           <label class="fld expense-only" id="fldCat">Category
             <select id="txCat"></select>
-            <input class="cat-new hide" id="txCatNew" type="text" placeholder="Name the new one">
+            <input class="cat-new hide" id="txCatNew" type="text" placeholder="Type to search the packs, or name your own" autocomplete="off">
+            <div class="cs-hits-host" id="txCatNewHits"></div>
           </label>
           <label class="fld income-only hide" id="fldSrc">Source
             <select id="txSrcPick" class="hide"></select>
@@ -5699,7 +5720,11 @@ document.getElementById('mNext').addEventListener('click',()=>{ state.activeMont
 /* ---------- categories ---------- */
 document.getElementById('addCat').addEventListener('click',()=>{
   const el=document.getElementById('catName'); const name=el.value.trim(); if(!name) return;
-  state.categories.push({id:uid(),name}); el.value=''; save(); renderBudget(); renderTxForm();
+  const row={id:uid(),name}; const g=pickedGrowth(el); if(g) row.growth=g;
+  state.categories.push(row); el.value='';
+  delete el.dataset.growth; delete el.dataset.picked;
+  const h=document.getElementById('catNameHits'); if(h) h.innerHTML='';
+  save(); renderBudget(); renderTxForm();
 });
 document.getElementById('catName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
 /* ---------- category packs ------------------------------------------------
@@ -5844,6 +5869,92 @@ function packCatExists(name){
            : state.categories.some(c=>c.name.toLowerCase()===lower);
 }
 function packById(k){ return CAT_PACKS.find(x=>x.k===k); }
+/* ---- naming a category from the catalogue instead of from memory ----------
+   Asked for from the log form, looking at "+ New category..." and a blank text
+   box: "can we incorporate a pick from the starter packs or a search function
+   to autopopulate different categories?"
+
+   Right, and the blank box was the whole problem. Sixty-odd named categories
+   already exist in the packs, each with a reason someone thought to write down,
+   and the moment a person actually needs one - mid-log, trying to file a
+   purchase - the app asks them to invent the name themselves. So typing three
+   letters now searches the catalogue, and picking a suggestion brings its
+   growth tag with it, which typing the same word never could. */
+function catCatalogue(){
+  const out=[];
+  CAT_PACKS.forEach(p=>p.cats.forEach(c=>out.push({n:c.n, w:c.w, g:c.g, pack:p.name, icon:p.icon})));
+  return out;
+}
+/* Ranked so a prefix beats a word-start beats a mention: typing "car" should
+   offer "Car wash" before "Childcare". */
+function catSuggest(q, limit){
+  const s=String(q||'').trim().toLowerCase();
+  if(s.length<2) return [];
+  const have=new Set(state.categories.map(c=>c.name.toLowerCase()));
+  const rank=n=>{ const l=n.toLowerCase();
+    if(l.startsWith(s)) return 0;
+    if(new RegExp('\\b'+s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(l)) return 1;
+    return l.includes(s) ? 2 : 9; };
+  return catCatalogue()
+    .filter(c=>!have.has(c.n.toLowerCase()) && rank(c.n)<9)
+    .map(c=>({...c, r:rank(c.n)}))
+    .sort((a,b)=>a.r-b.r || a.n.length-b.n.length)
+    .slice(0, limit||6);
+}
+/* Search only helps someone who already knows the word. The way in for someone
+   who does not is the packs themselves, offered from the same spot rather than
+   as a thing to go and find on another tab. */
+function catSuggestHTML(q){
+  const hits=catSuggest(q);
+  const browse=`<button type="button" class="cs-browse" data-browsepacks="1">Browse the packs instead &rsaquo;</button>`;
+  if(!hits.length) return String(q||'').trim().length>=2
+    ? `<div class="cs-hits"><div class="cs-none">Nothing in the packs by that name - which is fine, yours can be its own thing.</div>${browse}</div>`
+    : '';
+  return `<div class="cs-hits">${hits.map(h=>
+    `<button type="button" class="cs-hit" data-suggest="${escapeHtml(h.n)}" data-g="${h.g||''}">
+       <span class="csh-n">${escapeHtml(h.n)}${h.g?`<span class="growth-tag mini">${escapeHtml(GROWTH_TAG_SHORT[h.g]||'not spent')}</span>`:''}</span>
+       <span class="csh-w">${escapeHtml(h.w)}</span>
+       <span class="csh-p">${h.icon} ${escapeHtml(h.pack)}</span>
+     </button>`).join('')}${browse}</div>`;
+}
+/* One wiring for all three places a category gets named: the Plan tab's own
+   field, the log form's "new category", and the recurring form's. */
+function wireCatSuggest(inputId, hostId){
+  const inp=document.getElementById(inputId), host=document.getElementById(hostId);
+  if(!inp||!host||inp.dataset.suggestWired) return;
+  inp.dataset.suggestWired='1';
+  /* Once you have picked, the list closes and stays closed until you edit the
+     name. Without this, the focus() after a pick reopens it against the very
+     word it just filled in - offering you the thing you already chose. */
+  const draw=()=>{
+    if(inp.dataset.picked && inp.value.trim()===inp.dataset.picked){ host.innerHTML=''; return; }
+    host.innerHTML=catSuggestHTML(inp.value);
+  };
+  inp.addEventListener('input',draw);
+  inp.addEventListener('focus',draw);
+  host.addEventListener('click',e=>{
+    const b=e.target.closest('[data-suggest]'); if(!b) return;
+    inp.value=b.dataset.suggest;
+    /* remember the tag so the category is created with it - the point of
+       picking from the catalogue rather than typing the same letters */
+    /* `picked` records that you chose rather than typed, whether or not the
+       row carried a tag; `growth` is only the tag. */
+    inp.dataset.picked=b.dataset.suggest;
+    if(b.dataset.g) inp.dataset.growth=b.dataset.g; else delete inp.dataset.growth;
+    host.innerHTML='';
+    inp.dispatchEvent(new Event('change',{bubbles:true}));
+    inp.focus();
+  });
+  /* edit the name after picking and it stops being that pick, so the tag goes
+     with it - a category called "Edu fund" tagged from "Education fund" would
+     be the app deciding something on your behalf */
+  inp.addEventListener('input',()=>{
+    if(inp.dataset.picked && inp.value.trim()!==inp.dataset.picked){
+      delete inp.dataset.growth; delete inp.dataset.picked;
+    }
+  });
+}
+
 /* What adding this pack would actually do, worked out before anything is
    written, so the card can say it rather than the toast saying it afterwards. */
 function packPlan(k){
@@ -11910,6 +12021,7 @@ function refreshCatSelects(){
     if(acw) acw.classList.toggle('hide', (state.accounts||[]).length<2);
   });
   syncCatNew(); syncSrcOther();
+  if(typeof wireAllCatSuggest==='function') wireAllCatSuggest();
 }
 function syncSrcOther(){
   const sel=document.getElementById('txSrcType'), nw=document.getElementById('txSrcOther');
@@ -11992,6 +12104,15 @@ function syncOwnerNote(owner){
   }
 }
 /* The name field shows only while "New category" is the choice. */
+/* All three naming fields get the catalogue. Wired once, idempotent, and safe
+   to call again after any re-render. */
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-browsepacks]') && typeof openPacks==='function') openPacks(null);
+});
+function wireAllCatSuggest(){
+  [['catName','catNameHits'],['txCatNew','txCatNewHits'],['recCatNew','recCatNewHits']]
+    .forEach(([i,h])=>wireCatSuggest(i,h));
+}
 function syncCatNew(){
   [['txCat','txCatNew'],['recCat','recCatNew']].forEach(([sid,nid])=>{
     const sel=document.getElementById(sid), nw=document.getElementById(nid);
@@ -12002,14 +12123,21 @@ function syncCatNew(){
 /* Reads the picker, creating the category if that is what was asked for.
    Returns the id to file against, or null if they asked for a new one and did
    not name it - the caller must not silently file it somewhere else. */
+/* The tag a catalogue pick carried, if the name still matches the pick. */
+function pickedGrowth(el){
+  return (el && el.dataset.growth && el.dataset.picked
+    && el.value.trim()===el.dataset.picked) ? el.dataset.growth : '';
+}
 function resolveCatChoice(selId, newId){
   const sel=document.getElementById(selId); if(!sel) return null;
   if(sel.value!=='__new') return sel.value||null;
   const nw=document.getElementById(newId);
   const name=((nw&&nw.value)||'').trim();
   if(!name){ if(nw){ nw.focus(); nw.style.borderColor='var(--bad)'; } return null; }
-  const c=findOrCreateCat(name);
-  if(nw){ nw.value=''; nw.style.borderColor=''; }
+  const c=findOrCreateCat(name, pickedGrowth(nw));
+  if(nw){ nw.value=''; nw.style.borderColor='';
+    delete nw.dataset.growth; delete nw.dataset.picked;
+    const h=document.getElementById(nw.id+'Hits'); if(h) h.innerHTML=''; }
   save(); refreshCatSelects(); renderBudget();
   sel.value=c.id; syncCatNew();
   if(typeof toast==='function') toast(`Added "${c.name}" to your plan. Give it an amount on Plan when you know one.`);
