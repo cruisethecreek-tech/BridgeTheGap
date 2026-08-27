@@ -699,6 +699,34 @@ with their own take-home already in the field, compute to the cent what the
 Settings panel computes, name what the commute and overhead were costing per
 hour, and then leave for good once it has been used or waved off.
 
+It also holds **Planned mode's remainder** and **the credit card**. The plan
+toggle gave the list one money column and the property that guards it is
+mechanical - every row has exactly **one** child of `.rw-money`, in every mode -
+so putting the "what is left" figure back into Planned had to happen inside that
+cell rather than beside it. The section checks it appears only when something is
+assigned, goes red when negative, follows what you type without a reload, and
+that Spent and Remaining stay clean, because in those modes the figure on the
+row already **is** the answer.
+
+The credit card section is the one where the arithmetic is checked before any of
+the words. What is owed is its own figure rather than a smaller bank balance,
+the two halves still add back to the signed total net worth uses, borrowing room
+is never counted as spendable cash, a line kept at zero still reports its room,
+and a card comes off net worth the moment it exists. Then the fault the feature
+exists to prevent, driven through the real form: buying on the card is spending
+and lands on the card, paying it off is **not a second grocery bill**, the
+ledger treats the move as worth exactly zero while both real balances move in
+opposite directions, and net worth does not budge because nothing was earned or
+spent. Plus the two ways it could still lie: a move edited into having one end,
+and a card typed in again under Liabilities.
+
+One assumption in the first draft of the probe was wrong in a way worth keeping:
+it added the card and immediately logged a purchase against it, then asserted
+the card had moved. It had not - and that is by design. Anything dated **on** the
+day you set a balance is assumed to be inside the figure you copied, app-wide.
+The probe was passing on a fixture that never reached the code it claimed to
+test, which is the same fault this suite has caught in itself four times now.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

@@ -78,12 +78,21 @@ const snapshot = () => p.evaluate(() => JSON.parse(JSON.stringify(state)));
 async function inspect(before, label, typed){
   const after = await snapshot();
   const faults=[];
+  /* The one legitimate negative in the whole state. A credit account stores
+     what is OWED as a negative balance - that is the mechanism, not a slip: it
+     is what lets every signed sum in the app subtract borrowed money without
+     learning that credit exists. Narrowed to exactly those rows rather than
+     exempting `balance` wholesale, because a checking account that went
+     negative is still the fault this rule was written to catch. */
+  const owedBalance=new Set((after.accounts||[])
+    .map((a,i)=>(a&&a.kind==='credit')?`state.accounts[${i}].balance`:null).filter(Boolean));
   const walk=(node,path)=>{
     if(node===null||node===undefined) return;
     if(typeof node==='number'){
       if(!Number.isFinite(node)) faults.push(`${path} = ${node}`);
       if(/amount|balance|value|cost|target|saved|apr|min|limit|wage|hours|price/i.test(path)
-         && node<0 && !/net|delta|diff|change/i.test(path)) faults.push(`${path} = ${node} (negative)`);
+         && node<0 && !/net|delta|diff|change/i.test(path) && !owedBalance.has(path))
+        faults.push(`${path} = ${node} (negative)`);
       return;
     }
     if(typeof node==='string'){ if(node==='NaN'||node==='undefined'||node==='Infinity') faults.push(`${path} = "${node}"`); return; }

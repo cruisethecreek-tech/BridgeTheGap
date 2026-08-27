@@ -4372,7 +4372,13 @@ const sweep = await p.evaluate(async () => {
   /* deleting a watched category through its sheet prunes the watch list */
   activateTab('budget'); renderBudget(); await wait(200);
   openCatSheet('coffee'); await wait(200);
-  document.querySelector('#catSheetBody [data-del="coffee"]').click(); await wait(300);
+  /* Two taps, like the account delete directly below and like the recurring
+     list: the first arms, the second confirms. Categories were the odd one out
+     until a phone report - "deleting a category is still too destructive" -
+     brought them into line, and this check drove it with one tap. */
+  document.querySelector('#catSheetBody [data-del="coffee"]').click(); await wait(250);
+  out.catArmedFirst=state.categories.some(c=>c.id==='coffee');
+  document.querySelector('#catSheetBody [data-delyes="coffee"]').click(); await wait(300);
   out.catDeletePrunes=state.dayToDay.length===0;
   /* deleting an account through its confirm frees entries and rules at once */
   state.transactions=[{id:'t2',type:'expense',amount:5,catId:'f',date:'2026-08-21',acctId:'live'}];
@@ -4393,7 +4399,9 @@ check('a loaded backup has every ghost reference healed at once',
       && sweep.loadHealed.ruleAcct===undefined, JSON.stringify(sweep.loadHealed));
 check('...and the freed entry becomes an orphan the catch-up offers a home',
       sweep.backfillOffers===true);
-check('deleting a watched category prunes the watch list, so it can never watch only ghosts',
+check('deleting a watched category needs the confirm, not one tap',
+      sweep.catArmedFirst===true);
+check('...and then prunes the watch list, so it can never watch only ghosts',
       sweep.catDeletePrunes===true);
 check('deleting an account frees its entries and rules in the same stroke',
       sweep.acctDeleteFrees.tx===true && sweep.acctDeleteFrees.rule===true);
@@ -5513,6 +5521,294 @@ check('...and switching from down there works without sending you back up',
 check('...with the strip owning its full width, so rows pass behind rather than beside it',
       stick.ownsItsWidth===true);
 await p.setViewportSize({width:390,height:1200});
+
+/* ---- 76. deleting a category is armed, not fired ----
+   "Deleting a category is still too destructive. We should be prompted before
+   an actual delete is able to take place for accidental touches."
+
+   Still - because the recurring list had this exact report and this exact fix
+   weeks ago, and the category sheet never got it. One tap on "Delete Roof"
+   removed the category, every subcategory under it, and every assignment they
+   held, with nothing in between.
+
+   Two taps now, and the first one turns the button into a question. Inline
+   rather than a browser confirm, for the reason already written beside the
+   recurring version: a dialog covers the thing you are being asked about.
+
+   The question carries counts, because "are you sure?" asks nobody anything.
+   "2 subcategories go with it. 2 entries become Uncategorized. $450 assigned
+   this month is freed up." is a question a person can actually answer - and
+   when the answer is "nothing", it says that instead of inventing a cost.
+
+   The armed id is cleared on open and on close, and the confirm refuses to fire
+   unless the armed id is the category the sheet is currently showing. A stale
+   arm surviving a navigation is how a second tap deletes the wrong thing. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'food',name:'Food'},{id:'wal',name:'Walmart',parentId:'food'},
+              {id:'aldi',name:'Aldi',parentId:'food'},{id:'rent',name:'Rent'},
+              {id:'empty',name:'Nothing here'}],
+  budgets:{'2026-08':{wal:250,aldi:200,rent:1200}},
+  transactions:[{id:'e1',type:'expense',amount:60,date:'2026-08-03',catId:'wal'},
+                {id:'e2',type:'expense',amount:22,date:'2026-08-04',catId:'aldi'}]});
+await p.reload(); await p.waitForTimeout(450);
+const del = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('budget'); openCatSheet('food'); await wait(320);
+  const n0=state.categories.length;
+  o.startsAsAButton=!!document.querySelector('[data-del="food"]') && !document.querySelector('.cs-arm');
+  document.querySelector('[data-del="food"]').click(); await wait(300);
+  o.armedNotFired=state.categories.length===n0 && !!document.querySelector('.cs-arm');
+  o.question=document.querySelector('.cs-arm').innerText;
+  /* keeping it keeps it */
+  document.querySelector('[data-delno]').click(); await wait(280);
+  o.keptIt=state.categories.length===n0 && !document.querySelector('.cs-arm');
+  /* a stale arm must not survive leaving the sheet, or landing on another one */
+  document.querySelector('[data-del="food"]').click(); await wait(220);
+  closeCatSheet(); openCatSheet('food'); await wait(280);
+  o.reopenNotArmed=!document.querySelector('.cs-arm');
+  document.querySelector('[data-del="food"]').click(); await wait(220);
+  openCatSheet('rent'); await wait(280);
+  o.otherNotArmed=!document.querySelector('.cs-arm') && catDelArm===null;
+  /* an empty category is honest rather than inventing a cost */
+  openCatSheet('empty'); await wait(280);
+  document.querySelector('[data-del="empty"]').click(); await wait(250);
+  o.emptyCopy=document.querySelector('.cs-arm').innerText;
+  document.querySelector('[data-delno]').click(); await wait(200);
+  /* and the real thing. Counted first: nothing about a delete may remove money. */
+  const txBefore=state.transactions.length;
+  openCatSheet('food'); await wait(280);
+  document.querySelector('[data-del="food"]').click(); await wait(240);
+  document.querySelector('[data-delyes="food"]').click(); await wait(380);
+  o.cats=state.categories.map(c=>c.name).sort().join(',');
+  o.txKept=state.transactions.length===txBefore;
+  o.orphaned=state.transactions.filter(t=>!state.categories.some(c=>c.id===t.catId)).length;
+  o.budgetLeft=Object.keys(state.budgets['2026-08']||{}).sort().join(',');
+  o.sheetClosed=!document.getElementById('catSheet').classList.contains('on');
+  return o;
+});
+check('the delete on a category sheet starts as a button, not a question',
+      del.startsAsAButton===true);
+check('...and one tap arms it rather than deleting anything',
+      del.armedNotFired===true);
+check('...with the question naming what it costs, in counts',
+      /2 subcategories/i.test(del.question) && /2 entries/i.test(del.question)
+      && /\$450/.test(del.question), del.question.replace(/\n/g,' | '));
+check('...and saying the money survives it either way',
+      /never deletes money/i.test(del.question));
+check('"Keep it" disarms and changes nothing', del.keptIt===true);
+check('an armed delete never survives leaving the sheet',
+      del.reopenNotArmed===true && del.otherNotArmed===true);
+check('...and a category with nothing against it says so, rather than inventing a cost',
+      /nothing is lost/i.test(del.emptyCopy), del.emptyCopy.replace(/\n/g,' | '));
+check('confirming takes the group and everything filed under it',
+      del.cats==='Nothing here,Rent', del.cats);
+check('...while removing no money at all - the entries survive, unfiled',
+      del.txKept===true && del.orphaned===2, `kept=${del.txKept} orphaned=${del.orphaned}`);
+check('...their assignments are cleared', del.budgetLeft==='rent', del.budgetLeft);
+check('...and the sheet it just emptied closes itself', del.sheetClosed===true);
+
+/* ---- 77. Planned mode carries the one-glance answer again ----
+   The three-way toggle made every row show one number, which is what the
+   toggle was for. But the number Planned shows is the one you TYPE, and the
+   list existed to answer a different question: is there anything left in this
+   category. Answering it meant leaving the mode you were working in.
+
+   So Planned carries a second, quieter figure inside the same money cell - not
+   a second column, or the uniformity the toggle bought would be spent again.
+   It only appears when there is something to say: a category with nothing
+   assigned has no remainder worth printing.
+
+   Asserted as a property, not a layout: whatever the mode, a row has exactly
+   ONE money cell. That is the thing the toggle promised and the thing a second
+   figure could quietly break. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true, planView:'planned',
+  categories:[{id:'g',name:'Home'},{id:'k1',name:'Rent',parentId:'g'},{id:'k2',name:'Power',parentId:'g'},
+              {id:'solo',name:'Fun'},{id:'zero',name:'Untouched'}],
+  budgets:{'2026-08':{k1:1200,k2:150,solo:200}},
+  transactions:[{id:'x1',type:'expense',amount:1200,date:'2026-08-02',catId:'k1'},
+                {id:'x2',type:'expense',amount:90,date:'2026-08-05',catId:'k2'},
+                {id:'x3',type:'expense',amount:260,date:'2026-08-09',catId:'solo'}]});
+await p.reload(); await p.waitForTimeout(450);
+const pmv = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('budget'); setPlanView('planned'); await wait(320);
+  const cells=()=>[...document.querySelectorAll('#cats .rw-money')];
+  o.oneCellEach=cells().every(c=>c.children.length===1);
+  const hint=r=>{ const h=r.querySelector('.rw-left'); return h?h.innerText.trim():null; };
+  const row=id=>document.querySelector('#cats [data-row="'+id+'"]');
+  o.leafLeft=hint(row('k2'));
+  o.groupLeft=hint(row('g'));
+  /* nothing assigned means nothing to say - silence, not "$0 left" */
+  o.zeroSilent=hint(row('zero'))===null;
+  /* over is over, and it says so in the colour the rest of the app uses */
+  o.overText=hint(row('solo'));
+  o.overFlagged=!!row('solo').querySelector('.rw-left.over');
+  o.underNotFlagged=!row('k2').querySelector('.rw-left.over');
+  /* the dollar sign still sits beside the field, not stacked above it */
+  const inp=row('k2').querySelector('.sub-assign input');
+  const dol=row('k2').querySelector('.sa-row');
+  o.dollarBeside=!!dol && Math.abs(dol.getBoundingClientRect().top-inp.getBoundingClientRect().top)<6;
+  /* It follows what you type, without waiting for a reload. Both events, in the
+     order a real keyboard fires them: `input` is what commits the number (and
+     deliberately does NOT redraw the rows, because re-rendering on every
+     keystroke would take the field out from under the thumb), and `change` on
+     blur is what redraws. Dispatching only `change` writes nothing and then
+     redraws the old value, which is a test failing at its own fixture. */
+  inp.value='300';
+  inp.dispatchEvent(new Event('input',{bubbles:true}));
+  inp.dispatchEvent(new Event('change',{bubbles:true})); await wait(320);
+  o.afterTyping=hint(document.querySelector('#cats [data-row="k2"]'));
+  /* and the other two modes are untouched - they ARE the answer, so a hint
+     under them would be the same number printed twice */
+  setPlanView('spent'); await wait(280);
+  o.spentNoHint=!document.querySelector('#cats .rw-left');
+  o.spentOneCell=cells().every(c=>c.children.length===1);
+  setPlanView('left'); await wait(280);
+  o.leftNoHint=!document.querySelector('#cats .rw-left');
+  o.leftOneCell=cells().every(c=>c.children.length===1);
+  return o;
+});
+check('in Planned, a row still has exactly one money cell', pmv.oneCellEach===true);
+check('...and that cell carries what is left as well as what you typed',
+      /\$60\b/.test(pmv.leafLeft||''), pmv.leafLeft);
+check('...on a group too, totalled across everything under it',
+      /\$60\b/.test(pmv.groupLeft||''), pmv.groupLeft);
+check('a category with nothing assigned says nothing, rather than "$0 left"',
+      pmv.zeroSilent===true);
+check('going over is stated and coloured, not just quietly negative',
+      /\$60\b/.test(pmv.overText||'') && pmv.overFlagged===true && pmv.underNotFlagged===true,
+      `${pmv.overText} over=${pmv.overFlagged} under=${pmv.underNotFlagged}`);
+check('the dollar sign still sits beside the field, not above it', pmv.dollarBeside===true);
+check('the hint follows what you type, the moment the field is done',
+      /\$210\b/.test(pmv.afterTyping||''), pmv.afterTyping);
+check('Spent carries no remainder hint - it is not the question that mode asks',
+      pmv.spentNoHint===true && pmv.spentOneCell===true);
+check('Remaining carries none either - it IS the column',
+      pmv.leftNoHint===true && pmv.leftOneCell===true);
+
+/* ---- 78. a credit card is a balance AND a move, and they are different facts ----
+   Asked directly: "I have a card with a $13,700 limit and an equity line at
+   $25,000. I never keep a large balance - I use the card for the rewards and
+   pay it straight off. Should it be created as a debt repayment alone or
+   should it be in a balance?"
+
+   The reason the question has no clean answer is that two facts are hiding
+   inside one object. What you OWE is a balance and belongs in accounts, so net
+   worth counts it the moment it exists. What you PAY is not spending: the
+   purchase was the spending, on the day it happened. Logging the payment as an
+   expense charges you twice for the same groceries, and nothing on screen ever
+   says so - both entries look completely normal.
+
+   So: a credit account kind that stores what is owed as a NEGATIVE balance and
+   takes it as a positive number, which means every signed sum already in the
+   app comes out right without learning that credit exists. And a transfer type
+   worth exactly zero in the ledger, so paying the card moves money instead of
+   spending it a second time.
+
+   The limit is not decoration. Someone who keeps a $25,000 line at zero does
+   not own an empty account - they own room, and room is why they keep it. */
+await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+  categories:[{id:'food',name:'Food'}],
+  budgets:{'2026-08':{food:400}},
+  accounts:[{id:'chk',name:'Checking',kind:'checking',balance:2000,updated:'2026-01-01'},
+            {id:'card',name:'Rewards Card',kind:'credit',balance:-412,limit:13700,apr:13,updated:'2026-01-01'},
+            {id:'heloc',name:'Equity Line',kind:'credit',balance:0,limit:25000,apr:3.6,updated:'2026-01-01'}],
+  transactions:[{id:'g1',type:'expense',amount:300,date:'2026-08-04',catId:'food',acctId:'card'}]});
+await p.reload(); await p.waitForTimeout(500);
+const cc = await p.evaluate(async () => {
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  /* the arithmetic, before any of the words */
+  o.owed=owedTotal();
+  o.inBank=assetAcctTotal();
+  o.reconciles=Math.abs((assetAcctTotal()-owedTotal())-bankTotal())<0.005;
+  o.netWorth=netWorth();
+  o.liquid=liquidTotal();
+  o.cardExpected=-acctExpected(state.accounts.find(a=>a.id==='card'));
+  o.groceriesCounted=monthExpense('2026-08');
+  o.room=acctHeadroom(state.accounts.find(a=>a.id==='heloc'));
+  o.util=acctUtil(state.accounts.find(a=>a.id==='card'));
+  o.zeroLineStillHasRoom=acctHeadroom(state.accounts.find(a=>a.id==='heloc'))===25000;
+
+  activateTab('goals'); renderAccounts(); await wait(320);
+  const rows=[...document.querySelectorAll('.acct-row')];
+  o.typedPositive=[...document.querySelectorAll('.acct-row.owed input[data-acctbal]')].map(i=>+i.value);
+  o.rowText=rows.map(r=>r.innerText).join(' | ');
+  o.summary=document.getElementById('acctSummary').innerText;
+
+  /* paying it: a move, not a second grocery bill */
+  activateTab('tx'); await wait(250);
+  document.querySelector('#typeToggle button[data-t="transfer"]').click(); await wait(200);
+  o.bothEnds=!document.getElementById('fldAcct').classList.contains('hide')
+          && !document.getElementById('fldXfer').classList.contains('hide');
+  o.noCategoryAsked=document.getElementById('fldCat').classList.contains('hide');
+  o.xferNote=document.getElementById('xferNote').innerText;
+  document.getElementById('txAmt').value='300';
+  document.getElementById('txDate').value='2026-08-20';
+  document.getElementById('txAcct').value='chk';
+  document.getElementById('txXferTo').value='card';
+  document.getElementById('addTx').click(); await wait(400);
+
+  o.stillOneGroceryBill=monthExpense('2026-08');
+  o.ledgerIgnoresTheMove=allTimeBalance();
+  o.checkingDown=acctExpected(state.accounts.find(a=>a.id==='chk'));
+  o.cardBackDown=-acctExpected(state.accounts.find(a=>a.id==='card'));
+  o.netWorthAfter=netWorth();
+
+  /* both ends survive as a pair, or the entry quietly stops moving anything */
+  const t=state.transactions.find(x=>x.type==='transfer');
+  editTx(t.id,{destAcctId:t.acctId}); await wait(220);
+  const t2=state.transactions.find(x=>x.type==='transfer');
+  o.cannotCollapse=t2.acctId!==t2.destAcctId;
+
+  /* typed in twice is the one way this double counts, and it is named */
+  state.liabilities.push({id:'dup',name:'Rewards card',value:412}); save();
+  activateTab('goals'); renderAccounts(); await wait(300);
+  o.dupCaught=document.getElementById('acctSummary').innerText;
+  return o;
+});
+check('what is owed on a card is its own figure, not a smaller bank balance',
+      cc.owed===412 && cc.inBank===2000, `owed=${cc.owed} bank=${cc.inBank}`);
+check('...and the two still add back to the signed total net worth uses',
+      cc.reconciles===true);
+check('a card comes off net worth the moment it exists',
+      Math.abs(cc.netWorth-1588)<0.005, String(cc.netWorth));
+check('borrowing room is never counted as cash you could spend',
+      cc.liquid===2000, String(cc.liquid));
+check('a line kept at zero still reports its room - that is why it is kept',
+      cc.zeroLineStillHasRoom===true && cc.room===25000, String(cc.room));
+check('...and a card reports how much of the line is used', cc.util===3, String(cc.util));
+check('buying on the card is spending, and lands on the card',
+      cc.groceriesCounted===300 && cc.cardExpected===712,
+      `spent=${cc.groceriesCounted} card=${cc.cardExpected}`);
+check('what is owed is typed as a positive number, never as a minus sign',
+      cc.typedPositive.every(v=>v>=0), JSON.stringify(cc.typedPositive));
+check('...and the row says how much room is left, not the debt alone',
+      /room left/i.test(cc.rowText), cc.rowText.slice(0,160));
+check('the accounts summary answers the question that was asked',
+      /it is both/i.test(cc.summary) && /not an expense/i.test(cc.summary),
+      cc.summary.slice(0,220));
+check('...and with two lines at two rates, names which one is expensive',
+      /13%/.test(cc.summary) && /3\.6%/.test(cc.summary), cc.summary.slice(0,260));
+check('a move asks for both ends and for no category at all',
+      cc.bothEnds===true && cc.noCategoryAsked===true);
+check('...and says out loud that moving your own money is not spending',
+      /not spending/i.test(cc.xferNote), cc.xferNote.slice(0,140));
+check('paying the card does not bill you for the groceries twice',
+      cc.stillOneGroceryBill===300, String(cc.stillOneGroceryBill));
+check('...the ledger treats the move as worth exactly zero',
+      Math.abs(cc.ledgerIgnoresTheMove-(-300))<0.005, String(cc.ledgerIgnoresTheMove));
+check('...while both real balances move, in opposite directions',
+      Math.abs(cc.checkingDown-1700)<0.005 && Math.abs(cc.cardBackDown-412)<0.005,
+      `chk=${cc.checkingDown} card=${cc.cardBackDown}`);
+check('...and net worth is unchanged by it, because nothing was earned or spent',
+      Math.abs(cc.netWorthAfter-cc.netWorth)<0.005,
+      `${cc.netWorth} -> ${cc.netWorthAfter}`);
+check('a move cannot be edited into having one end', cc.cannotCollapse===true);
+check('a card tracked here and typed in again as a liability is caught by name',
+      /subtracting that money twice/i.test(cc.dupCaught), cc.dupCaught.slice(-200));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

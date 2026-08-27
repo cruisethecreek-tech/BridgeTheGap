@@ -1023,6 +1023,14 @@
   .plan-switch .pv.on{background:var(--accent);color:var(--on-accent)}
   .plan-cols.two{grid-template-columns:minmax(0,1fr) 7em}
   .sub-spent{font-weight:800;font-size:15px;text-align:right}
+  /* The one-glance answer, back in Planned - secondary to the number you are
+     typing, never competing with it. */
+  .rw-left{display:block;font-style:normal;font-size:11px;font-weight:800;
+    letter-spacing:.02em;color:var(--muted);text-align:right;margin-top:2px;white-space:nowrap}
+  .rw-left.over{color:var(--bad)}
+  .subrow .sub-assign{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .subrow .sub-assign .sa-row{display:flex;align-items:center;gap:4px}
+  .subrow .sub-assign .sa-row input{flex:1;min-width:0}
   .sub-spent.over,.cat-assign.over{color:var(--bad)}
   .plan-cols{display:grid;grid-template-columns:minmax(0,1fr) 6.2em 5.6em;gap:8px;align-items:end;
     padding:0 10px 7px;font-size:14px;color:var(--muted)}
@@ -1132,6 +1140,16 @@
   .cs-k{font-weight:700;font-size:14px}
   .cs-in{display:flex;align-items:center;gap:6px;color:var(--muted)}
   .cs-in input{width:110px;padding:9px 10px;font-size:15px;font-weight:700}
+  /* The armed state. Deliberately louder than the button it replaces - it is a
+     question, and a question that looks like the thing it replaced gets tapped
+     through by the same thumb that armed it. */
+  .cs-arm{border:1px solid var(--bad);border-radius:12px;padding:13px 14px;
+    background:rgba(var(--bad-rgb),.09)}
+  .ca-q{font-weight:900;font-size:15.5px;margin-bottom:5px}
+  .ca-w{font-size:13.5px;line-height:1.55;color:var(--muted)}
+  .ca-w b{color:var(--text)}
+  .ca-a{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .ca-a .btn{flex:1;min-width:120px}
   .cs-note{font-size:13px;line-height:1.55;color:var(--muted);margin:9px 0 0}
   .cs-rename{margin-bottom:12px;display:flex;gap:8px}
   .cs-rep{display:flex;align-items:flex-start;gap:11px}
@@ -1204,8 +1222,21 @@
   .empty{color:var(--muted);font-size:14px;text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:14px}
 
   /* ---------- Transactions ---------- */
-  .typetoggle{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
-  .typetoggle button{background:transparent;border:none;color:var(--muted);font-weight:800;font-size:14px;padding:9px 18px;border-radius:8px}
+  /* A fourth option arrived with Move, and four fixed-width tabs are 389px on a
+     320px phone - the toggle simply hung off the edge of the glass and took the
+     page's sideways scroll with it. It fills the width and shares it out now,
+     so adding an option shrinks the row rather than breaking the screen. */
+  .typetoggle{display:flex;width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px;gap:2px}
+  .typetoggle button{flex:1 1 0;min-width:0;background:transparent;border:none;color:var(--muted);font-weight:800;font-size:14px;padding:9px 8px;border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .typetoggle button i{font-style:normal;margin-right:5px}
+  /* At 320px four words plus four glyphs do not fit, and an ellipsed "Expen..."
+     is worse than no glyph. The sign is decoration - the selected tab is
+     already painted its own colour - so it is the part that goes. */
+  @media (max-width:400px){
+    .typetoggle button{font-size:12.5px;padding:9px 3px;letter-spacing:-.2px}
+    .typetoggle button i{display:none}
+  }
+  @media (max-width:360px){ .typetoggle{gap:0;padding:3px} .typetoggle button{font-size:11.5px;padding:9px 2px} }
   .typetoggle button.on[data-t=expense]{background:var(--accent);color:var(--on-accent)}
   .typetoggle button.on[data-t=income]{background:var(--income);color:#08120d}
   /* Invest had the .on class applied like the other two and no rule to paint it,
@@ -1214,6 +1245,12 @@
      means Expense here, and telling growth apart from spending at a glance is
      the entire point of the third option. */
   .typetoggle button.on[data-t=invest]{background:var(--accent-2);color:var(--on-accent)}
+  /* Exactly the fault written about directly above, which the fourth option
+     would have repeated: .on applied with no rule to paint it, so picking Move
+     would switch the form underneath while the toggle still looked like
+     Expense. Muted rather than a fourth colour, because a move is the one
+     entry that is neither money in nor money out. */
+  .typetoggle button.on[data-t=transfer]{background:var(--muted);color:var(--panel)}
 
   .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
   .pill{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:50px;padding:7px 14px;font-weight:700;font-size:13px}
@@ -1249,7 +1286,7 @@
   /* ---- the transaction sheet ---- */
   #txSheetTitle{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding-right:34px}
   .txs-amt{font-size:26px;font-weight:900;letter-spacing:-.5px}
-  .txs-amt.income{color:var(--income)} .txs-amt.invest{color:var(--accent)}
+  .txs-amt.income{color:var(--income)} .txs-amt.invest{color:var(--accent)} .txs-amt.transfer{color:var(--muted)}
   .txs-kind{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
   .txs-f{display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:9px 12px;margin-bottom:6px}
@@ -1317,6 +1354,10 @@
   .tx.income .tx-amt{color:var(--income)}
   .tx.expense .tx-amt{color:var(--text)}
   .tx.invest .tx-amt{color:var(--accent)}
+  /* Deliberately the quietest row in the ledger. A move is the one entry that
+     changed nothing about how much you have, and colouring it like income or
+     spending would be the app telling a small lie every time it scrolled past. */
+  .tx.transfer .tx-amt{color:var(--muted)}
   /* ---------- time ledger (hours invested vs leaked) ---------- */
   /* four items on one line again, and on a 320px phone the label was left with
      56px - "moved, cooked, slept right" cut to "moved, cooke". The hint is the
@@ -1764,6 +1805,24 @@
   .ac-total .ac-sub{font-size:12.5px;color:var(--muted);font-weight:600}
   .ac-line{font-size:13px;line-height:1.55;margin-top:7px}
   .ac-line.sub{color:var(--muted);font-size:12.5px}
+  /* ---- the borrowing side ---- */
+  .acct-row.owed{border-color:rgba(var(--accent-2-rgb),.35)}
+  .ac-credit{margin-top:5px;font-size:12.5px;line-height:1.5;color:var(--muted);font-weight:600}
+  .ac-credit b{color:var(--text)}
+  .ac-util{display:inline-block;font-size:10.5px;font-weight:800;border-radius:20px;padding:1px 8px;margin-left:4px;
+    border:1px solid var(--line);color:var(--muted)}
+  .ac-util.cool{color:var(--good);border-color:rgba(var(--good-rgb),.35);background:rgba(var(--good-rgb),.1)}
+  .ac-util.warm{color:var(--accent);border-color:rgba(var(--accent-rgb),.35);background:rgba(var(--accent-rgb),.1)}
+  .ac-util.hot{color:var(--bad);border-color:rgba(var(--bad-rgb),.35);background:rgba(var(--bad-rgb),.1)}
+  .ac-apr{display:block;margin-top:2px;font-size:11.5px}
+  .ac-kindnote,.ac-credit-note{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:11px;padding:11px 13px;font-size:12.5px;line-height:1.6}
+  .ac-kindnote span,.ac-credit-note span{display:block;margin-top:8px;color:var(--muted)}
+  .ac-kindnote b,.ac-credit-note b{color:var(--text)}
+  .xfer-note{margin:10px 0 0;background:var(--panel-2);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:11px;padding:10px 13px;font-size:12.5px;
+    line-height:1.6;color:var(--muted)}
+  .xfer-note b{color:var(--text)}
   .traplegend{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
   .traplegend>summary{cursor:pointer;font-weight:800;font-size:13.5px;padding:12px 0;color:var(--accent);list-style:none}
   .traplegend>summary::-webkit-details-marker{display:none}
@@ -2500,18 +2559,23 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="quickLog"></div>
 
         <div class="typetoggle" id="typeToggle">
-          <button data-t="expense" class="on">− Expense</button>
-          <button data-t="income">+ Income</button>
+          <button data-t="expense" class="on"><i aria-hidden="true">−</i>Expense</button>
+          <button data-t="income"><i aria-hidden="true">+</i>Income</button>
           <button data-t="invest">Invest</button>
+          <button data-t="transfer"><i aria-hidden="true">⇄</i>Move</button>
         </div>
+        <div id="xferNote"></div>
 
         <div class="row">
           <label class="fld">Amount
             <input type="number" id="txAmt" placeholder="0.00" min="0" step="0.01" style="width:130px">
             <div class="unit-work" id="txAmtNote"></div>
           </label>
-          <label class="fld hide" id="fldAcct">Which account
+          <label class="fld hide" id="fldAcct"><span id="fldAcctLbl">Which account</span>
             <select id="txAcct"></select>
+          </label>
+          <label class="fld transfer-only hide" id="fldXfer">Lands in
+            <select id="txXferTo"></select>
           </label>
           <label class="fld expense-only" id="fldCat">Category
             <select id="txCat"></select>
@@ -2589,6 +2653,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="pill" data-f="income">Income</button>
           <button class="pill" data-f="expense">Expenses</button>
           <button class="pill" data-f="invest">Invested</button>
+          <button class="pill" data-f="transfer">Moved</button>
           <input type="text" id="txSearch" placeholder="Search notes, sources, categories…">
           <button class="btn sm ghost" id="allMonthsBtn">Showing: this month</button>
         </div>
@@ -2784,9 +2849,12 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
             <select id="acctKind" style="min-width:120px"></select>
             <select id="acctPurpose" style="min-width:140px"></select>
-            <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px"></span>
+            <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px" aria-label="What is in it today"></span>
+            <span class="sw-dol hide" id="acctLimWrap">Limit $<input type="number" id="acctLim" min="0" step="any" placeholder="13700" style="width:100px" aria-label="Credit limit"></span>
+            <span class="sw-dol hide" id="acctAprWrap"><input type="number" id="acctApr" min="0" max="100" step="0.01" placeholder="Rate" style="width:80px" aria-label="Interest rate">%</span>
             <button class="btn sm primary" id="addAcct">＋ Add</button>
           </div>
+          <div id="acctKindNote"></div>
           <div id="acctList"></div>
           <div id="acctBackfill"></div>
           <div id="acctSummary"></div>
@@ -5178,7 +5246,28 @@ function txnsInMonth(month){ return state.transactions.filter(t=>monthOf(t.date)
 function spentFor(catId,month){ return txnsInMonth(month).filter(t=>t.type==='expense'&&t.catId===catId).reduce((s,t)=>s+t.amount,0); }
 function monthIncome(month){ return txnsInMonth(month).filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
 function monthExpense(month){ return txnsInMonth(month).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
-function allTimeBalance(){ return state.transactions.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0); }   // invest txs subtract too: the cash left the account - it lives in the Invested-capital asset now
+/* ---------- one signed rule for the ledger ----------
+   Income adds. Spending and investing subtract - the cash left the account
+   either way, and an invest lives on in the Invested-capital asset instead.
+   A transfer is worth exactly ZERO, and that is the whole reason this function
+   exists. Paying off a credit card moves money from checking to the card; it is
+   not a dollar earned and it is not a dollar spent. The groceries you put on
+   that card were already logged as spending when you bought them, so counting
+   the payment too would charge you twice for one trip to the shop.
+   This expression used to be copied six times. Every copy would have made that
+   mistake, in a different figure, and no two of them would have disagreed
+   loudly enough to notice. */
+function txDelta(t){
+  if(!t) return 0;
+  if(t.type==='income') return +t.amount||0;
+  if(t.type==='transfer') return 0;
+  return -(+t.amount||0);
+}
+/* From the point of view of ONE account the same transfer is a real movement:
+   the money genuinely left checking. The zero above is a statement about the
+   ledger as a whole, never about either end of the move. */
+function txAcctDelta(t){ return (t && t.type==='income') ? (+t.amount||0) : -(+t.amount||0); }
+function allTimeBalance(){ return state.transactions.reduce((s,t)=>s+txDelta(t),0); }
 /* The growth lane: an invest transaction is neither income nor an expense. Cash
    goes down, but the money is still YOURS - it lands in one auto-managed "Invested
    capital" asset (kind real), so net worth holds steady at the deposit and the
@@ -6506,6 +6595,18 @@ function wireReorder(box){
 }
 let splitting=new Set();   // categories the user tapped "Split into subcategories" on (show inline input, no prompt)
 let catEditId=null;        // top category currently being renamed (rename keeps transactions attached, unlike delete)
+/* Armed, not fired. Reported twice now - "deleting a category is still too
+   destructive, we should be prompted before an actual delete is able to take
+   place for accidental touches" - and the recurring list already solved the
+   same problem the same way: the first tap turns the button into a question,
+   the second one answers it.
+
+   Inline rather than a browser confirm, for the reason written next to the
+   recurring version: a dialog covers the thing you are being asked about. And
+   the question carries the actual counts, because "are you sure?" asks nobody
+   anything - "this also removes 4 subcategories and unfiles 37 entries" is a
+   question a person can answer.
+let catDelArm=null;
 /* top-level categories that map to the same essential (leftover duplicates) */
 function duplicateGroups(){
   const groups={};
@@ -7028,7 +7129,8 @@ function renderBudget(){
             <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
             <span class="cat-name">${nameHTML}</span>
             <span class="rw-money">${
-              view==='planned' ? `<span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}</span>`
+              view==='planned' ? `<span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}${
+                  a>0?`<i class="rw-left ${rem<0?'over':''}">${money(rem)} left</i>`:''}</span>`
               : view==='spent' ? `<span class="cat-assign gcol${sp>a&&a>0?' over':''}">${money(sp)}</span>`
               : `<span class="avail ${pillCls} gcol">${money(rem)}</span>`
             }</span>
@@ -7044,7 +7146,15 @@ function renderBudget(){
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
         <span class="rw-money">${
-          view==='planned' ? `<span class="sub-assign">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>`
+          /* Asked for after living with the toggle: Planned lost the one-glance
+             answer the list existed to give. It comes back as a hint under the
+             field rather than a second column - small, muted, and INSIDE the
+             money cell, so every row still has exactly one cell and the
+             uniformity the toggle was built for survives. It only appears when
+             there is something to say: a category with nothing assigned has no
+             remainder worth printing. */
+          view==='planned' ? `<span class="sub-assign"><span class="sa-row">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${
+              a>0 ? `<i class="rw-left ${rem<0?'over':''}">${money(rem)} left</i>` : ''}</span>`
           : view==='spent' ? `<span class="sub-spent${sp>a&&a>0?' over':''}" title="What has gone">${money(sp)}</span>`
           : `<span class="avail ${pillCls}" title="What is left">${money(rem)}</span>`
         }</span>
@@ -7114,14 +7224,34 @@ function wirePlan(box, isMain){
   const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); planRefresh(); renderTx(); };
   box.querySelectorAll('button[data-renamesave]').forEach(btn=>btn.addEventListener('click',()=>saveRename(btn.dataset.renamesave)));
   box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; planRefresh(); } }));
+  /* Arms. Does not delete. */
   box.querySelectorAll('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
-    const id=btn.dataset.del;
+    catDelArm=btn.dataset.del;
+    if(typeof renderCatSheet==='function' && catSheetId) renderCatSheet();
+  }));
+  box.querySelectorAll('button[data-delno]').forEach(btn=>btn.addEventListener('click',()=>{
+    catDelArm=null;
+    if(typeof renderCatSheet==='function' && catSheetId) renderCatSheet();
+  }));
+  box.querySelectorAll('button[data-delyes]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.delyes;
+    /* Only the category the sheet is actually showing can be deleted from it -
+       a stale armed id belonging to a category you have since navigated away
+       from would delete the wrong thing on a second tap. */
+    if(catDelArm!==id) return;
+    const name=catName(id);
     const toRemove=new Set([id,...descendantsOf(id).map(k=>k.id)]);   // the whole subtree goes, all three levels
+    const orphaned=state.transactions.filter(t=>toRemove.has(t.catId)).length;
     state.categories=state.categories.filter(c=>!toRemove.has(c.id));
     state.dayToDay=(state.dayToDay||[]).filter(x=>!toRemove.has(x));   // a watch list of ghosts watches nothing
     Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
     // keep transactions for history; they become "Uncategorized"
+    catDelArm=null;
+    if(catSheetId===id && typeof closeCatSheet==='function') closeCatSheet();
     save(); planRefresh(); renderTx();
+    if(typeof toast==='function') toast(orphaned
+      ? `${name} deleted. The ${orphaned} entr${orphaned===1?'y it held is':'ies it held are'} still on Track, now Uncategorized.`
+      : `${name} deleted. Nothing was logged against it.`);
   }));
   wireReorder(box); wireRepeat(box);
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
@@ -7153,12 +7283,12 @@ function wirePlan(box, isMain){
 /* ---------- the category sheet ---------- */
 function openCatSheet(id){
   if(!state.categories.some(c=>c.id===id)) return;
-  catSheetId=id; catEditId=null;
+  catSheetId=id; catEditId=null; catDelArm=null;   // never open a sheet already armed to delete
   renderCatSheet();
   document.getElementById('catSheet').classList.add('on');
   pushOverlay();
 }
-function closeCatSheet(){ catSheetId=null; const el=document.getElementById('catSheet'); if(el) el.classList.remove('on'); }
+function closeCatSheet(){ catSheetId=null; catDelArm=null; const el=document.getElementById('catSheet'); if(el) el.classList.remove('on'); }
 function catMonthHistory(id,n){
   const out=[]; let m=state.activeMonth;
   for(let i=0;i<n;i++){ out.unshift({m, a:catAssigned(id,m), s:catUsed(id,m)}); m=shiftMonth(m,-1); }
@@ -7314,9 +7444,30 @@ function renderCatSheet(){
     <p class="cs-note">Moving it changes the filing and nothing else - the money assigned to it, everything logged against it, and any repeat it carries all come along. ${isGroup?`Its own subcategories move with it too.`:''}</p>
   </div>`;
 
+  /* What this actually costs, counted before it is offered. */
+  const doomed=[c.id, ...descendantsOf(c.id).map(k=>k.id)];
+  const delTx=state.transactions.filter(t=>doomed.includes(t.catId)).length;
+  const delRec=(state.recurring||[]).filter(r=>doomed.includes(r.catId)).length;
+  const delAssigned=doomed.reduce((n,id)=>n+(assignedFor(id,M)||0),0);
+  const armed=catDelArm===c.id;
+  const bits=[];
+  if(kids.length) bits.push(`<b>${kids.length}</b> subcategor${kids.length===1?'y':'ies'} go with it`);
+  if(delTx) bits.push(`<b>${delTx}</b> entr${delTx===1?'y becomes':'ies become'} Uncategorized`);
+  if(delRec) bits.push(`<b>${delRec}</b> repeat rule${delRec===1?'':'s'} stop${delRec===1?'s':''} posting`);
+  if(delAssigned>0) bits.push(`<b>${money(delAssigned)}</b> assigned this month is freed up`);
   const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
-    <p class="cs-note">Deleting a category keeps every transaction you logged against it - they become Uncategorized, so no history is lost${isGroup?`. Its ${kids.length} subcategor${kids.length>1?'ies go':'y goes'} with it`:''}.</p>
-    <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button></div>`;
+    ${armed
+      ? `<div class="cs-arm">
+           <div class="ca-q">Delete <b>${escapeHtml(c.name)}</b>?</div>
+           <div class="ca-w">${bits.length
+              ? bits.join('. ')+'.'
+              : 'Nothing is logged against it and nothing is assigned to it, so nothing is lost.'}
+             ${delTx?' Your history stays on Track either way - deleting a category never deletes money.':''}</div>
+           <div class="ca-a"><button class="btn sm danger" data-delyes="${c.id}">Delete it</button><button class="btn sm ghost" data-delno="1">Keep it</button></div>
+         </div>`
+      : `<p class="cs-note">Deleting a category keeps every transaction you logged against it - they become Uncategorized, so no history is lost${isGroup?`. Its ${kids.length} subcategor${kids.length===1?'y goes':'ies go'} with it`:''}.</p>
+         <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button>`}
+  </div>`;
 
   body.innerHTML=rename+balance+target+subs+whereLives+history+wallGuideHTML(c,M)+danger;
   if(!isGroup){
@@ -7448,8 +7599,31 @@ document.getElementById('typeToggle').addEventListener('click',e=>{
   document.querySelectorAll('.expense-only').forEach(x=>x.classList.toggle('hide',txType!=='expense'));
   document.querySelectorAll('.income-only').forEach(x=>x.classList.toggle('hide',txType!=='income'));
   document.querySelectorAll('.invest-only').forEach(x=>x.classList.toggle('hide',txType!=='invest'));
+  document.querySelectorAll('.transfer-only').forEach(x=>x.classList.toggle('hide',txType!=='transfer'));
+  /* A move needs BOTH ends named, so the account picker stops being optional
+     here - it is normally hidden for anyone with a single account, and a move
+     with one end missing is not a move. */
+  const fa=document.getElementById('fldAcct'), fl=document.getElementById('fldAcctLbl');
+  if(fa){
+    if(txType==='transfer') fa.classList.remove('hide');
+    else fa.classList.toggle('hide',(state.accounts||[]).length<2);
+  }
+  if(fl) fl.textContent = txType==='transfer' ? 'Comes out of' : 'Which account';
   if(typeof drawOwnerNote==='function') drawOwnerNote();
+  if(typeof xferNote==='function') xferNote();
 });
+/* Said where the decision is made, not in a help panel nobody opens. The whole
+   fault this type exists to prevent is invisible: a card payment logged as an
+   expense looks completely normal and quietly doubles a month of groceries. */
+function xferNote(){
+  const box=document.getElementById('xferNote'); if(!box) return;
+  if(txType!=='transfer'){ box.innerHTML=''; return; }
+  const n=(state.accounts||[]).length;
+  if(n<2){ box.innerHTML=`<div class="xfer-note">A move needs two accounts and you have ${n===1?'one':'none'}. Add the other on <b>Build</b> and this becomes usable - until then there is nowhere for the money to land.</div>`; return; }
+  const to=(state.accounts||[]).find(x=>x.id===((document.getElementById('txXferTo')||{}).value||''));
+  box.innerHTML=`<div class="xfer-note"><b>Moving your own money is not spending.</b> This changes where the money is and nothing else - it never touches a category, never lands on your plan, and never moves your net worth.${
+    to&&isOwedAcct(to)?` Paying <b>${escapeHtml(to.name)}</b> is exactly this: the purchase was the spending, on the day you made it, and this is just the money catching up.`:''}</div>`;
+}
 let txEnergy='';
 document.getElementById('energySel').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
@@ -7476,6 +7650,18 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const tx={id:uid(),type:'expense',amount:amt,catId,date,note}; if(txEnergy) tx.energy=txEnergy;
     const aid=txAcctChoice(); if(aid) tx.acctId=aid;
     state.transactions.push(tx);
+  } else if(txType==='transfer'){
+    /* The entry that stops a card payment being counted twice. It carries both
+       ends and no category, because moving your own money between your own
+       accounts is not spending and has no business on the plan. */
+    const from=txAcctChoice();
+    const to=((document.getElementById('txXferTo')||{}).value)||'';
+    if(!from||!to){ if(typeof toast==='function') toast('A move needs both ends - where it comes out of and where it lands.'); return; }
+    if(from===to){ if(typeof toast==='function') toast('Those are the same account. A move needs two.'); return; }
+    state.transactions.push({id:uid(),type:'transfer',amount:amt,date,note,acctId:from,destAcctId:to,source:acctName(to)});
+    const dest=(state.accounts||[]).find(x=>x.id===to);
+    if(dest && isOwedAcct(dest) && typeof toast==='function')
+      toast(`${usd(amt)} off ${dest.name}. It counts as spending nowhere - whatever you bought on it was already logged the day you bought it.`);
   } else if(txType==='invest'){
     const dest=document.getElementById('txInv').value.trim()||'Investment';
     const ikind=(document.getElementById('txInvKind')||{}).value||'holds';
@@ -7733,6 +7919,9 @@ function renderTxForm(){
   const sel=document.getElementById('txCat');
   sel.innerHTML = state.categories.length ? categoryOptions() : `<option value="">Add a category first</option>`;
   if(!document.getElementById('txDate').value) document.getElementById('txDate').value=todayStr();
+  /* The move note names the destination account, so it has to be redrawn when
+     the accounts behind it change - not only when the toggle is pressed. */
+  if(typeof xferNote==='function') xferNote();
 }
 /* Fast batch log - the notebook workflow: jot on paper, then punch a whole day
    in at once. One line each (what + $ + category), a shared date, create a new
@@ -8158,7 +8347,7 @@ function renderTx(){
     ${dupBalance?'':`<div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${bal<0?'bad':'pos'}">${money(bal)}</div></div>`}`;
   const bn=document.getElementById('bankNote');
   if(bn){
-    const n=(state.accounts||[]).length, exp=bankExpected(), said=bankTotal(), drift=Math.round((exp-said)*100)/100;
+    const n=(state.accounts||[]).filter(a=>!isOwedAcct(a)).length, exp=assetAcctExpected(), said=assetAcctTotal(), drift=Math.round((exp-said)*100)/100;
     /* The answer to "how do I change my bank balance to reflect the income I
        received": you do not have to any more - the app carries the expectation
        forward and asks you to check it. Both numbers, and the distance between
@@ -8177,7 +8366,8 @@ function renderTxList(){
   let list=(txAllMonths?state.transactions.slice():txnsInMonth(M));
   if(txFilter!=='all') list=list.filter(t=>t.type===txFilter);
   if(q) list=list.filter(t=>{
-    const hay=[t.note,t.source,t.type==='expense'?catName(t.catId):''].join(' ').toLowerCase();
+    const hay=[t.note,t.source,t.type==='expense'?catName(t.catId):'',
+      t.type==='transfer'?`${acctName(t.acctId)} ${acctName(t.destAcctId)}`:''].join(' ').toLowerCase();
     return hay.includes(q);
   });
   list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
@@ -8198,12 +8388,14 @@ function renderTxList(){
     const mon=isNaN(d)?'':d.toLocaleString(undefined,{month:'short'});
     const what = t.type==='income' ? (t.source||'Income')
                : t.type==='invest' ? (t.source||'Investment')
+               : t.type==='transfer' ? `${acctName(t.acctId)||'somewhere'} → ${acctName(t.destAcctId)||'somewhere'}`
                : (t.note || catName(t.catId) || 'Expense');
     /* The category still earns its place on the row - a ledger you cannot scan
        by category is a list of prices. It is dimmed and truncates on its own so
        a long one cannot eat the note. */
     const tail = t.type==='expense' && t.note ? catName(t.catId)
                : t.type==='invest' ? ((t.ikind||'holds')==='self'?'into you':'still yours')
+               : t.type==='transfer' ? 'moved, not spent'
                : '';
     const owner=t.owner||'a';
     /* The accessible name says what pressing it DOES. In Life mode the visible
@@ -8213,7 +8405,7 @@ function renderTxList(){
     return `<button class="tx ${t.type}" data-txsheet="${t.id}" aria-label="Open the ${escapeHtml(what)} entry from ${mon} ${day}">
       <span class="tx-date">${mon}<b>${day}</b></span>
       <span class="tx-main"><span class="tx-what">${escapeHtml(what)}</span>${tail?`<span class="tx-tail">${escapeHtml(tail)}</span>`:''}${t.recId?'<span class="tx-rep" title="Posted by a repeat">&#8635;</span>':''}</span>
-      <span class="tx-amt">${t.type==='income'?'+':t.type==='invest'?'→':'−'}${moneyOwner(t.amount,owner)}</span>
+      <span class="tx-amt">${t.type==='income'?'+':t.type==='invest'?'→':t.type==='transfer'?'⇄':'−'}${moneyOwner(t.amount,owner)}</span>
     </button>`;
   }).join('');
 }
@@ -8258,6 +8450,17 @@ function editTx(id, patch){
     (state.giving||[]).forEach(g=>{ if(g.txId===t.id) g.amount=t.amount; });
     (state.impulse||[]).forEach(i=>{ if(i.type==='buy'&&i.txId===t.id) i.amount=t.amount; });
   }
+  /* A move with one end missing, or with both ends the same, is not a move -
+     it is an entry that silently stops doing anything to either balance. The
+     edit is refused rather than half-applied. */
+  if(t.type==='transfer'){
+    const nextFrom='acctId' in patch ? patch.acctId : t.acctId;
+    const nextTo='destAcctId' in patch ? patch.destAcctId : t.destAcctId;
+    if(!nextFrom||!nextTo||nextFrom===nextTo){
+      if(typeof toast==='function') toast('A move needs two different accounts. Left as it was.');
+      renderTxSheet(); return;
+    }
+  }
   ['date','note','source','catId','srcType','srcLabel','energy','ikind','acctId','destAcctId'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
   if('destAcctId' in patch && !patch.destAcctId) delete t.destAcctId;
   if('destAcctId' in patch && t.destAcctId) t.source=acctName(t.destAcctId)||t.source;
@@ -8276,9 +8479,9 @@ function renderTxSheet(){
   const t=state.transactions.find(x=>x.id===txSheetId);
   if(!t){ closeTxSheet(); return; }
   const owner=t.owner||'a', H=hourlyFor(owner);
-  const kind=t.type==='income'?'Money in':t.type==='invest'?'Money put away':'Money out';
+  const kind=t.type==='income'?'Money in':t.type==='invest'?'Money put away':t.type==='transfer'?'Money moved':'Money out';
   const ttl=document.getElementById('txSheetTitle');
-  if(ttl) ttl.innerHTML=`<span class="txs-amt ${t.type}">${t.type==='income'?'+':t.type==='invest'?'→':'−'}${moneyOwner(t.amount,owner)}</span><span class="txs-kind">${kind}</span>`;
+  if(ttl) ttl.innerHTML=`<span class="txs-amt ${t.type}">${t.type==='income'?'+':t.type==='invest'?'→':t.type==='transfer'?'⇄':'−'}${moneyOwner(t.amount,owner)}</span><span class="txs-kind">${kind}</span>`;
 
   /* The same list every other picker shows, plus the same way out of it. This
      one used to offer leaf categories only and no way to make one, so an entry
@@ -8295,11 +8498,12 @@ function renderTxSheet(){
     ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>
       ${t.srcType==='other'?`<div class="txs-f"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" value="${escapeHtml(t.srcLabel||'')}" placeholder="Call it what it is" data-txedit="srcLabel"></span></div>`:''}`:''}
+    ${t.type==='transfer'?`<div class="txs-f"><span class="txs-k">Lands in</span><span class="txs-v"><select data-txedit="destAcctId">${acctOptions(t.destAcctId)}</select></span></div>`:''}
     ${t.type==='invest'?`<div class="txs-f"><span class="txs-k">Lands in</span><span class="txs-v"><select data-txedit="destAcctId">${destAcctOptions(t.destAcctId)}</select></span></div>
       ${!t.destAcctId?`<div class="txs-f"><span class="txs-k">Into what</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Index fund" data-txedit="source"></span></div>`:''}
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="ikind"><option value="holds"${(t.ikind||'holds')==='holds'?' selected':''}>Still yours - it holds value</option><option value="self"${t.ikind==='self'?' selected':''}>Into you - spent on purpose</option></select></span></div>`:''}
     <div class="txs-f"><span class="txs-k">Note</span><span class="txs-v"><input type="text" value="${escapeHtml(t.note||'')}" placeholder="What was it?" data-txedit="note"></span></div>
-    ${(state.accounts||[]).length?`<div class="txs-f"><span class="txs-k">Account</span><span class="txs-v"><select data-txedit="acctId"><option value="">Not said</option>${acctOptions(t.acctId)}</select></span></div>`:''}
+    ${(state.accounts||[]).length?`<div class="txs-f"><span class="txs-k">${t.type==='transfer'?'Comes out of':'Account'}</span><span class="txs-v"><select data-txedit="acctId"><option value="">Not said</option>${acctOptions(t.acctId)}</select></span></div>`:''}
   </div>`;
 
   /* The energy tag drives the Circulation chart and it was write-once, set in
@@ -8349,6 +8553,11 @@ function renderTxSheet(){
       facts.push([t.amount<expAmt?'Short of usual':'Above usual',
         `${usd(Math.abs(t.amount-expAmt))} ${t.amount<expAmt?'under':'over'} the ${usd(expAmt)} this stream is set to pay`]);
   }
+  if(t.type==='transfer'){
+    const to=(state.accounts||[]).find(x=>x.id===t.destAcctId);
+    facts.push(['Counts as spending','nowhere - it moved, it did not go']);
+    if(to&&isOwedAcct(to)) facts.push(['What it did',`lowered what you owe on ${to.name} by ${usd(t.amount)}`]);
+  }
   if(t.recId) facts.push(['Posted by','a repeat you set up']);
   const link=(state.impulse||[]).find(i=>i.txId===t.id);
   if(link) facts.push(['Came from','a gut-check you ran']);
@@ -8359,7 +8568,7 @@ function renderTxSheet(){
     ${t.recId?`<p class="cs-note">Changing it here changes this one entry, not the rule behind it. The rule lives in <b>Recurring</b>, further down this tab.</p>`:''}</div>` : '';
 
   const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
-    <p class="cs-note">This deletes the entry itself${gift?', its record in Giving':''}${link?', and the gut-check it came from':''}${t.type==='invest'&&(t.ikind||'holds')!=='self'?', and takes the money back out of Invested capital':''}. Nothing else moves.</p>
+    <p class="cs-note">This deletes the entry itself${gift?', its record in Giving':''}${link?', and the gut-check it came from':''}${t.type==='invest'&&(t.ikind||'holds')!=='self'?', and takes the money back out of Invested capital':''}${t.type==='transfer'?', and both accounts go back to what they expected before the move':''}. Nothing else moves.</p>
     <button class="btn sm danger ghost" data-txdel="${t.id}">Delete this entry</button></div>`;
 
   body.innerHTML=fields+planLine+energy+context+danger;
@@ -9734,6 +9943,18 @@ const ACCT_KINDS=[
   {k:'savings',  ic:'', label:'Savings',  liquid:true},
   {k:'cash',     ic:'', label:'Cash',     liquid:true},
   {k:'invest',   ic:'', label:'Investment/retirement', liquid:false},
+  /* A credit card is not an account with money in it and it is not a plain debt
+     either, which is why the question "should it be a balance or a repayment?"
+     has no good answer until you separate the two facts hiding inside it.
+     What you OWE today is a balance, and it belongs here so net worth counts it.
+     What you PAY is not spending - the purchase was the spending, and the
+     payment just moves the money. That is a transfer, and logging it as an
+     expense charges you twice for the same groceries.
+     It is stored as a NEGATIVE balance and typed as a positive amount owed, so
+     every existing signed sum - net worth, the assets/owed split, an expense
+     charged to the card, a payment landing on it - comes out right without a
+     single one of them learning that credit exists. */
+  {k:'credit',   ic:'', label:'Credit card / line of credit', liquid:false, owed:true},
   {k:'other',    ic:'', label:'Other',    liquid:false}
 ];
 const ACCT_PURPOSES=[
@@ -9747,6 +9968,33 @@ const ACCT_PURPOSES=[
 function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
 let backfillAcct=null, recDelId=null, acctDelId=null;
 function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
+/* ---------- the borrowing side ----------
+   bankTotal() stays the signed net of every account, because the net worth
+   identity is built on it. But "in the bank" is a different sentence from
+   "what you owe on the cards", and netting them into one figure would hide the
+   only two numbers that matter about a line of credit. */
+function isOwedAcct(a){ return !!acctKind(a&&a.kind).owed; }
+function acctOwed(a){ return Math.max(0, -(+a.balance||0)); }
+function acctLimit(a){ const L=+((a||{}).limit); return (isFinite(L)&&L>0)?L:0; }
+/* Headroom is the point of a line you keep at zero. The user who has never drawn
+   on a $25,000 equity line does not have "no account" - they have $25,000 of
+   room, and that is the whole reason they keep it. Null when no limit was given,
+   because inventing one would be worse than saying nothing. */
+function acctHeadroom(a){ const L=acctLimit(a); return L>0 ? Math.round((L-acctOwed(a))*100)/100 : null; }
+function acctUtil(a){ const L=acctLimit(a); return L>0 ? Math.round(acctOwed(a)/L*1000)/10 : null; }
+function creditAccts(){ return (state.accounts||[]).filter(isOwedAcct); }
+function assetAcctTotal(){ return (state.accounts||[]).filter(a=>!isOwedAcct(a)).reduce((s,a)=>s+(+a.balance||0),0); }
+function owedTotal(){ return creditAccts().reduce((s,a)=>s+acctOwed(a),0); }
+function assetAcctExpected(){ return (state.accounts||[]).filter(a=>!isOwedAcct(a)).reduce((s,a)=>s+acctExpected(a),0); }
+/* The one way this can double count: a card tracked here AND typed in again
+   under Liabilities. Net worth would subtract it twice and nothing on screen
+   would say why the number looked wrong. Matched on the name, which is how a
+   person would have entered it both times. */
+function creditDupes(){
+  const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const owed=creditAccts().map(a=>norm(a.name)).filter(Boolean);
+  return (state.liabilities||[]).filter(l=>owed.includes(norm(l.name)));
+}
 /* ---------- the ledger and the bank, finally introduced ----------
    Asked directly: "how do I change my bank balance to reflect the income I
    received?" You could not. The two halves of this app were separate universes -
@@ -9777,8 +10025,8 @@ function acctLoggedSince(a){
      transaction can touch both accounts - Joint Checking down, Roth IRA up -
      which is exactly what a transfer is. */
   let sum=state.transactions.filter(t=>t.acctId===a.id && (t.date||'')>a.updated)
-    .reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
-  sum+=state.transactions.filter(t=>t.type==='invest' && t.destAcctId===a.id && (t.date||'')>a.updated)
+    .reduce((s,t)=>s+txAcctDelta(t),0);
+  sum+=state.transactions.filter(t=>(t.type==='invest'||t.type==='transfer') && t.destAcctId===a.id && (t.date||'')>a.updated)
     .reduce((s,t)=>s+t.amount,0);
   return sum;
 }
@@ -9806,7 +10054,9 @@ function acctName(id){ const a=(state.accounts||[]).find(x=>x.id===id); return a
    never been told about, a course, equipment), and those keep living in the
    auto Invested-capital asset exactly as before. */
 function destAcctOptions(sel){
-  const list=(state.accounts||[]).slice()
+  /* Cards are left out on purpose: money does not land IN a line of credit as
+     an investment. Paying one down is a move, and it has its own type. */
+  const list=(state.accounts||[]).filter(a=>!isOwedAcct(a)).slice()
     .sort((a,b)=>(acctKind(a.kind).liquid?1:0)-(acctKind(b.kind).liquid?1:0));
   return list.map(a=>`<option value="${a.id}"${a.id===sel?' selected':''}>${escapeHtml(a.name)}</option>`).join('')
     +`<option value=""${!sel?' selected':''}>Somewhere I don't track here - just name it</option>`;
@@ -9819,7 +10069,7 @@ function earmarked(purpose){ return (state.accounts||[]).filter(a=>a.purpose===p
 /* net logged movement since the user last told us a balance - the honest drift */
 function loggedSince(dateStr){
   if(!dateStr) return 0;
-  return state.transactions.filter(t=>t.date>dateStr).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+  return state.transactions.filter(t=>t.date>dateStr).reduce((s,t)=>s+txDelta(t),0);
 }
 function oldestAcctUpdate(){ const d=(state.accounts||[]).map(a=>a.updated).filter(Boolean).sort(); return d[0]||''; }
 /* The whole scoreboard depends on this being retyped from time to time, so how
@@ -9873,7 +10123,11 @@ function freedomRunway(){
   // once real balances exist they ARE the truth; the transaction-derived figure
   // is only a stand-in for users who haven't entered an account yet
   const cash=(state.accounts||[]).length ? liquidTotal() : Math.max(0,allTimeBalance());
-  const liquid=Math.max(0, sumAssetsKind('real') + cash - sumLiab());
+  /* A balance carried on a card is a claim on the same money this figure is
+     counting. liquidTotal() already leaves credit accounts out - room is not
+     cash - but leaving what is OWED out too would quietly say you could survive
+     longer than you can. */
+  const liquid=Math.max(0, sumAssetsKind('real') + cash - sumLiab() - owedTotal());
   const ess=essentialMonthly();
   if(ess<=0 || liquid<=0) return null;
   return liquid/ess;
@@ -9993,7 +10247,13 @@ function renderNetWorth(){
      the one screen that prices it. The wording deliberately stops at "worth
      pricing": whether it is worth DOING is not something this can know, and the
      tool it points at refuses to say so too. */
-  const cheap=(state.liabilities||[]).filter(l=>(+l.apr||0)>0 && (+l.apr||0)<=10);
+  /* The comment above names a HELOC as the case this exists for, and a HELOC's
+     correct home became an account rather than a liability the day credit
+     accounts arrived. Left as it was, the trail would have gone missing for
+     exactly the person it was written for. A cheap line is a cheap line
+     wherever it is kept. */
+  const cheap=[...(state.liabilities||[]).filter(l=>(+l.apr||0)>0 && (+l.apr||0)<=10),
+               ...creditAccts().filter(a=>(+a.apr||0)>0 && (+a.apr||0)<=10)];
   const offerLev = cheap.length && !(typeof areaOff==='function' && areaOff('debt'));
   document.getElementById('liabList').innerHTML=(state.liabilities.length?state.liabilities.map(l=>lineItem(l,'liab')).join(''):'<div class="empty" style="margin-top:8px">No liabilities. Keep it that way.</div>')
     + (offerPlan?`<div class="nw-plan">That is <b>${money(liabTotal)}</b> owed. The payoff planner turns it into a date - which one to kill first, what the interest is costing you, and how much sooner an extra $50 gets you out.${trailBtn('debt','Plan the way out','solid')}</div>`:'')
@@ -10208,20 +10468,40 @@ function renderAccounts(){
   const kSel=document.getElementById('acctKind'), pSel=document.getElementById('acctPurpose');
   if(kSel && !kSel.options.length) kSel.innerHTML=ACCT_KINDS.map(k=>`<option value="${k.k}">${k.ic} ${k.label}</option>`).join('');
   if(pSel && !pSel.options.length) pSel.innerHTML=ACCT_PURPOSES.map(p=>`<option value="${p.k}">${escapeHtml(p.label)}</option>`).join('');
+  if(typeof syncAcctKindForm==='function') syncAcctKindForm();
   const box=document.getElementById('acctList'); if(!box) return;
   const accts=state.accounts||[];
   box.innerHTML = accts.length ? accts.map(a=>{
     const k=acctKind(a.kind), pur=ACCT_PURPOSES.find(p=>p.k===a.purpose);
     const tag=(a.purpose&&pur)?`<span class="ac-tag">${escapeHtml(pur.label)}</span>`:'';
     const moved=acctLoggedSince(a), exp=acctExpected(a);
+    const owed=isOwedAcct(a);
     /* Two numbers, never merged: what the bank said, and what the app expects
-       given what has been logged since. The gap between them is the point. */
+       given what has been logged since. The gap between them is the point.
+       On a card the same two numbers point the other way, so the words do too -
+       "expected now" on a stored-negative balance would print a minus sign at a
+       person who is thinking in what they owe. */
     const expLine = moved!==0
-      ? `<div class="ac-exp">Expected now <b>${usd(exp)}</b> <span class="ac-mv">${moved>=0?'+':'&minus;'}${usd(Math.abs(moved))} logged since</span>
-           <button class="ac-use" data-acctuse="${a.id}">Set it to this</button></div>`
+      ? (owed
+          ? `<div class="ac-exp">Should be <b>${usd(Math.max(0,-exp))}</b> on it <span class="ac-mv">${moved>=0?'&minus;':'+'}${usd(Math.abs(moved))} logged since</span>
+               <button class="ac-use" data-acctuse="${a.id}">Set it to this</button></div>`
+          : `<div class="ac-exp">Expected now <b>${usd(exp)}</b> <span class="ac-mv">${moved>=0?'+':'&minus;'}${usd(Math.abs(moved))} logged since</span>
+               <button class="ac-use" data-acctuse="${a.id}">Set it to this</button></div>`)
       : '';
     const gapLine = (a.lastGap!==undefined && Math.abs(+a.lastGap)>0.005)
-      ? `<div class="ac-gap ${+a.lastGap<0?'short':'over'}"><b>${usd(Math.abs(+a.lastGap))}</b> ${+a.lastGap<0?'left without being logged':'arrived without being logged'} last time you checked${a.lastRecon?' ('+a.lastRecon+')':''}. That is the number this app exists to find.</div>`
+      ? `<div class="ac-gap ${+a.lastGap<0?'short':'over'}"><b>${usd(Math.abs(+a.lastGap))}</b> ${owed
+          ? (+a.lastGap<0?'more on it than anything logged explains':'less on it than anything logged explains')
+          : (+a.lastGap<0?'left without being logged':'arrived without being logged')} last time you checked${a.lastRecon?' ('+a.lastRecon+')':''}. That is the number this app exists to find.</div>`
+      : '';
+    /* The line that makes a card worth tracking at all. Someone who keeps a
+       $25,000 equity line at zero does not own "an empty account" - they own
+       room, and room is the reason they keep it. */
+    const room=acctHeadroom(a), util=acctUtil(a);
+    const creditLine = owed
+      ? `<div class="ac-credit">${room!=null
+          ? `<b>${usd(room)}</b> of room left of ${usd(acctLimit(a))}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}`
+          : `No limit set, so there is no room figure to give you. Add one and this becomes the number worth watching.`}${
+          a.apr>0?`<span class="ac-apr">${a.apr}% a year on anything left sitting</span>`:''}</div>`
       : '';
     /* Same reasoning as the recurring rules, with one more consequence now that
        entries name an account: removing it leaves whatever pointed at it with
@@ -10231,11 +10511,11 @@ function renderAccounts(){
       const pointing=state.transactions.filter(t=>t.acctId===a.id).length;
       return `<div class="acct-row confirming"><div class="rec-conf">
         <div class="rc-q">Remove <b>${escapeHtml(a.name)}</b>?</div>
-        <div class="rc-w">Its <b>${usd(+a.balance||0)}</b> leaves your net worth and your runway. ${pointing?`The <b>${pointing}</b> entr${pointing===1?'y':'ies'} logged against it stay on Track, but stop counting toward any balance until you give ${pointing===1?'it':'them'} a new home.`:'Nothing is logged against it.'}</div>
+        <div class="rc-w">${isOwedAcct(a)?`The <b>${usd(acctOwed(a))}</b> on it stops counting against your net worth, which will make that number look better than it is.`:`Its <b>${usd(+a.balance||0)}</b> leaves your net worth and your runway.`} ${pointing?`The <b>${pointing}</b> entr${pointing===1?'y':'ies'} logged against it stay on Track, but stop counting toward any balance until you give ${pointing===1?'it':'them'} a new home.`:'Nothing is logged against it.'}</div>
         <div class="rc-a"><button class="btn sm danger" data-acctdelyes="${a.id}">Remove it</button><button class="btn sm ghost" data-acctdelno="1">Keep it</button></div>
       </div></div>`;
     }
-    return `<div class="acct-row"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">Bank said this${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${+a.balance||0}" data-acctbal="${a.id}"></span><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
+    return `<div class="acct-row${owed?' owed':''}"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${creditLine}${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
   }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
@@ -10244,14 +10524,19 @@ function renderAccounts(){
        that moved without being logged - the one thing self-reporting cannot
        otherwise see. Captured before the balance moves, or there is nothing
        left to compare against. */
-    const expected=acctExpected(a), typed=parseFloat(i.value)||0;
+    const expected=acctExpected(a);
+    /* Typed as what is owed, stored as what it does to your wealth. The user
+       never sees a minus sign and every sum downstream still gets one. */
+    const typed=isOwedAcct(a) ? -Math.abs(parseFloat(i.value)||0) : (parseFloat(i.value)||0);
     const hadHistory=!!a.updated && acctLoggedSince(a)!==0;
     a.balance=typed; a.updated=todayStr();
     if(hadHistory){
       a.lastGap=Math.round((typed-expected)*100)/100;
       a.lastRecon=todayStr();
       if(Math.abs(a.lastGap)>0.005 && typeof toast==='function')
-        toast(`${usd(Math.abs(a.lastGap))} ${a.lastGap<0?'left':'arrived'} without being logged. Worth finding out what.`);
+        toast(isOwedAcct(a)
+          ? `${usd(Math.abs(a.lastGap))} ${a.lastGap<0?'more':'less'} on the card than anything logged explains. Worth finding out what.`
+          : `${usd(Math.abs(a.lastGap))} ${a.lastGap<0?'left':'arrived'} without being logged. Worth finding out what.`);
     }
     save();
     /* "As those bank balances change it should be logged to form a trend." The
@@ -10270,7 +10555,7 @@ function renderAccounts(){
     save();
     if(typeof captureSnapshot==='function') captureSnapshot();
     renderAccounts(); renderNetWorth(); renderHome();
-    if(typeof toast==='function') toast(`${escapeHtml(a.name)} set to ${usd(a.balance)} from what you logged. Check it against the bank when you can - that is the half this cannot do.`);
+    if(typeof toast==='function') toast(`${escapeHtml(a.name)} set to ${usd(isOwedAcct(a)?acctOwed(a):a.balance)}${isOwedAcct(a)?' owed':''} from what you logged. Check it against the bank when you can - that is the half this cannot do.`);
   }));
   box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=b.dataset.acctdel; renderAccounts(); }));
   box.querySelectorAll('button[data-acctdelno]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=null; renderAccounts(); }));
@@ -10278,6 +10563,7 @@ function renderAccounts(){
     acctDelId=null;
     const gone=b.dataset.acctdelyes;
     state.accounts=(state.accounts||[]).filter(x=>x.id!==gone);
+    if(typeof refreshCatSelects==='function') refreshCatSelects();
     /* The confirm promised these entries could be given a new home. A dangling
        acctId is worse than none - it counts toward nothing AND the backfill
        skips it, so the promise would be false. Freed, they become orphans and
@@ -10305,7 +10591,7 @@ function renderAccounts(){
     else {
       const target=(state.accounts||[]).find(a=>a.id===(backfillAcct||defaultAcctId()))||accts[0];
       const willMove=orphans.filter(t=>(t.date||'')>(target.updated||''))
-        .reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+        .reduce((s,t)=>s+txAcctDelta(t),0);
       const picker = accts.length>1
         ? `<select id="backfillPick">${acctOptions(target.id)}</select>` : `<b>${escapeHtml(target.name)}</b>`;
       back.innerHTML=`<div class="ac-backfill">
@@ -10334,7 +10620,29 @@ function renderAccounts(){
   const em=earmarked('emergency'), col=earmarked('college'), ess=essentialMonthly();
   const drift=loggedSince(oldestAcctUpdate());
   const bits=[];
-  bits.push(`<div class="ac-total">In the bank: <b>${usd(bankTotal())}</b> <span class="ac-sub">· ${usd(liquidTotal())} of it you could spend today</span></div>`);
+  const cards=creditAccts(), owe=owedTotal();
+  bits.push(`<div class="ac-total">In the bank: <b>${usd(assetAcctTotal())}</b> <span class="ac-sub">· ${usd(liquidTotal())} of it you could spend today</span></div>`);
+  if(cards.length){
+    /* Borrowed money is not a smaller bank balance and it is not cash you have.
+       It gets its own line, and the net is stated rather than left to be worked
+       out, because the net is the number net worth actually uses. */
+    const room=cards.reduce((s,a)=>s+(acctHeadroom(a)||0),0);
+    const priced=cards.filter(a=>+a.apr>0).slice().sort((x,y)=>(+y.apr)-(+x.apr));
+    bits.push(`<div class="ac-line">On the cards: <b>${usd(owe)}</b>${owe>0?` <span class="ac-sub">· net of the bank, <b>${usd(assetAcctTotal()-owe)}</b></span>`:` <span class="ac-sub">· nothing owed</span>`}</div>`);
+    if(room>0) bits.push(`<div class="ac-line">Room you have not spent: <b>${usd(room)}</b>. That is borrowing power, not money - it costs you nothing while it sits there and it is not part of your net worth.</div>`);
+    /* Two lines at two rates is the whole reason the question gets asked. The
+       app can just say which one is expensive rather than leaving it to be
+       felt. */
+    if(priced.length>1){
+      const hi=priced[0], lo=priced[priced.length-1];
+      bits.push(`<div class="ac-line sub">${escapeHtml(hi.name)} costs <b>${hi.apr}%</b> and ${escapeHtml(lo.name)} costs <b>${lo.apr}%</b> - a balance left on ${escapeHtml(hi.name)} costs about <b>${Math.round((hi.apr-lo.apr)*10)/10} cents more per dollar per year</b> than the same balance on ${escapeHtml(lo.name)}. Which one carries a balance matters more than how much you pay off in a month.</div>`);
+    }
+    bits.push(`<div class="ac-credit-note"><b>Your question, answered: it is both, and they are not the same fact.</b>
+      <span>What you <b>owe</b> is a balance and it lives here, so net worth counts it the moment it exists. What you <b>pay</b> is not an expense - the purchase already was one, on the day you made it. Log the payment as <b>Move</b> on Track and it comes off what you owe without charging you twice.</span>
+      <span>The only version that is a repayment category on your plan is a balance you are actually carrying and chipping at. If you clear the card every month, budget the <b>purchases</b> in the categories they belong to and let the payment just move money. Putting both on your plan would double your grocery bill on paper.</span></div>`);
+    const dupes=creditDupes();
+    if(dupes.length) bits.push(`<div class="ac-stale"><b>${dupes.map(d=>escapeHtml(d.name)).join(', ')}</b> ${dupes.length===1?'is':'are'} tracked here as a card <b>and</b> typed in again under Liabilities. Net worth is subtracting that money twice. Delete the liability - the card already does the job, and it updates itself.</div>`);
+  }
   if(em>0) bits.push(`<div class="ac-line">Emergency fund: <b>${usd(em)}</b>${ess>0?` - that's <b>${(Math.round(em/ess*10)/10)} month${(Math.round(em/ess*10)/10)===1?'':'s'}</b> of your essentials`:''}.</div>`);
   if(col>0) bits.push(`<div class="ac-line">College / kids: <b>${usd(col)}</b>.</div>`);
   if(Math.abs(drift)>0.005) bits.push(`<div class="ac-line sub">Since you last updated a balance you've logged <b>${usd(drift)}</b> of movement. If reality has drifted, retype the real number - the app will never quietly change it for you.</div>`);
@@ -10343,19 +10651,66 @@ function renderAccounts(){
   if(age!=null && age>=10) bits.push(`<div class="ac-stale">Last checked <b>${age} days ago</b>. This is the one number in the whole app that does not come from your own typing - you read it off your bank, with nothing to gain by being generous, which is exactly why it is the honest measure of whether any of this is working. Two minutes to retype it is the whole cost.</div>`);
   sum.innerHTML=bits.join('');
 }
+/* The form asks a different question depending on what kind of thing this is.
+   "What is in it" and "what is on it" are opposite directions, and a card that
+   takes the same box as a savings account is how a $412 balance ends up adding
+   $412 to somebody's net worth. */
+function syncAcctKindForm(){
+  const sel=document.getElementById('acctKind'); if(!sel) return;
+  const owed=!!acctKind(sel.value).owed;
+  const bal=document.getElementById('acctBal');
+  const lim=document.getElementById('acctLimWrap'), apr=document.getElementById('acctAprWrap');
+  const pur=document.getElementById('acctPurpose'), note=document.getElementById('acctKindNote');
+  if(lim) lim.classList.toggle('hide',!owed);
+  if(apr) apr.classList.toggle('hide',!owed);
+  /* An earmark is a job you give money you HAVE. Money you owe has no job. */
+  if(pur) pur.classList.toggle('hide',owed);
+  if(bal){
+    bal.placeholder = owed ? '0' : '0';
+    bal.setAttribute('aria-label', owed ? 'What is on it right now' : 'What is in it today');
+  }
+  if(note) note.innerHTML = owed
+    ? `<div class="ac-kindnote"><b>Put in what is on it right now, not the limit.</b> Zero is a real answer and usually the best one - a line you keep at zero is not an empty account, it is room you have not spent, and the limit below is what turns that into a number worth looking at.
+       <span>Two things live inside a card and only one of them is a balance. What you <b>owe</b> is a balance, and it comes straight off your net worth here. What you <b>pay</b> is not spending - the purchase already was. Log a payment as <b>Move</b> on Track and it lowers what you owe without charging you twice for the same groceries.</span></div>`
+    : '';
+}
 (function(){
   const btn=document.getElementById('addAcct'); if(!btn) return;
+  const kindSel=document.getElementById('acctKind');
+  if(kindSel) kindSel.addEventListener('change',syncAcctKindForm);
   btn.addEventListener('click',()=>{
     const n=document.getElementById('acctName').value.trim();
     const bal=parseFloat(document.getElementById('acctBal').value);
+    const kind=document.getElementById('acctKind').value||'checking';
+    const owed=!!acctKind(kind).owed;
     if(!n){ if(typeof toast==='function') toast('Give the account a name.'); return; }
-    if(!(bal>=0)){ if(typeof toast==='function') toast("Put in what's actually in it - $0 is a real answer."); return; }
+    if(!(bal>=0)){ if(typeof toast==='function') toast(owed
+      ? 'Put in what is on the card right now - $0 is a real answer, and on a card it is the good one.'
+      : "Put in what's actually in it - $0 is a real answer."); return; }
     state.accounts=state.accounts||[];
-    state.accounts.push({id:uid(),name:n,kind:document.getElementById('acctKind').value||'checking',
-      purpose:document.getElementById('acctPurpose').value||'',balance:bal,updated:todayStr()});
+    /* Stored negative. Everything downstream already knows how to subtract. */
+    const rec={id:uid(),name:n,kind,purpose:owed?'':(document.getElementById('acctPurpose').value||''),
+      balance:owed?-bal:bal,updated:todayStr()};
+    if(owed){
+      const L=parseFloat((document.getElementById('acctLim')||{}).value);
+      if(L>0) rec.limit=L;
+      const ap=parseFloat((document.getElementById('acctApr')||{}).value);
+      if(ap>=0&&ap<=100) rec.apr=ap;
+      /* A limit smaller than what is already on it is a typo, not a fact, and
+         it would print a negative headroom as though the bank had allowed it. */
+      if(L>0 && bal>L && typeof toast==='function')
+        toast(`You have ${usd(bal)} on it and a limit of ${usd(L)}. One of those two numbers is wrong - fix it and the room left will mean something.`);
+    }
+    state.accounts.push(rec);
     document.getElementById('acctName').value=''; document.getElementById('acctBal').value='';
+    ['acctLim','acctApr'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     save();
     if(typeof captureSnapshot==='function') captureSnapshot();
+    /* The account pickers on Track and on a recurring rule are built from this
+       list and are hidden entirely while there is only one account. Adding the
+       second one has to rebuild them, or every entry logged afterwards goes
+       silently to the default and the person never sees they had a choice. */
+    if(typeof refreshCatSelects==='function') refreshCatSelects();
     renderAccounts(); renderNetWorth(); renderHome();
   });
 })();
@@ -11074,7 +11429,7 @@ const FIELD_WHY={
         : `Whatever you set is divided by the days in the month to make a daily allowance. Beat it and the day goes green.`; } },
   enough:{ t:'What "Enough" is for', b:()=>`The monthly spend where more money stops buying you a better life. It is not a budget and nothing enforces it - it is the line that tells you when a raise should turn into freedom instead of quietly turning into a bigger normal.<br><br>The app compares it against what you actually spend and says so when the two drift apart.` },
   loggedNet:{ t:'Why this is not your net worth', b:()=>{
-      const led=state.transactions.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+      const led=state.transactions.reduce((s,t)=>s+txDelta(t),0);
       const nw=netWorth(), bank=bankTotal();
       return `Three different numbers live on this screen and they are supposed to differ.<br><br>`
         + `<b>${money(led)}</b> is this line: every dollar you have <b>logged as coming in</b>, minus everything you logged going out, since the first entry. It is a record of your typing, not of your wealth - it knows nothing that happened before you started, and nothing you never logged.<br><br>`
@@ -12084,6 +12439,15 @@ function refreshCatSelects(){
     sel.classList.remove('hide');
     if(freeId){ const fi=document.getElementById(freeId); if(fi) fi.classList.toggle('hide', sel.value!==''); }
   });
+  /* Both ends of a move come from the same list, and the destination is the one
+     place a credit card is the likely answer rather than an odd one, so it is
+     not sorted away from the top. */
+  { const xf=document.getElementById('txXferTo');
+    if(xf){ const keep=xf.value; xf.innerHTML=acctOptions();
+      if(keep && [...xf.options].some(o=>o.value===keep)) xf.value=keep;
+      else { const notDefault=(state.accounts||[]).filter(a=>a.id!==defaultAcctId());
+             const card=notDefault.find(isOwedAcct);
+             xf.value=(card||notDefault[0]||{}).id||''; } } }
   [['txAcct','fldAcct'],['recAcct','recAcctWrap']].forEach(([sid,wid])=>{
     const ac=document.getElementById(sid), acw=document.getElementById(wid);
     if(!ac) return;
@@ -12093,7 +12457,8 @@ function refreshCatSelects(){
     /* A rule that does not know where its money lands posts entries that count
        toward no balance - which is the same hole the log form had, one step
        further upstream where it repeats every month. */
-    if(acw) acw.classList.toggle('hide', (state.accounts||[]).length<2);
+    if(acw) acw.classList.toggle('hide', (state.accounts||[]).length<2
+      && !(sid==='txAcct' && typeof txType!=='undefined' && txType==='transfer'));
   });
   syncCatNew(); syncSrcOther();
   if(typeof wireAllCatSuggest==='function') wireAllCatSuggest();
@@ -12112,6 +12477,7 @@ function syncSrcOther(){
     }
   });
   document.addEventListener('change',e=>{
+    if(e.target && e.target.id==='txXferTo') xferNote();
     if(e.target && e.target.id==='txInvPick'){
       const fi=document.getElementById('txInv');
       if(fi){ fi.classList.toggle('hide', e.target.value!==''); if(e.target.value==='') fi.focus(); }
@@ -13360,7 +13726,11 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
     renderTrendSeries();
     renderCharts();
   } else if(rfTab==='worth'){
-    const nw=netWorth(), a=sumAssets()+bankTotal(), l=sumLiab();   // the same three the netWorth() identity uses, so the split always adds up to the headline
+    /* Split so a card lands on the side it belongs to. assetAcctTotal minus
+       owedTotal is bankTotal by construction, so the two halves still add up to
+       the headline exactly as before - a card is just no longer counted as a
+       negative asset. */
+    const nw=netWorth(), a=sumAssets()+assetAcctTotal(), l=sumLiab()+owedTotal();
     bar.innerHTML=`<p class="sub rf-lead">What you own minus what you owe, and the running balance of everything you have tracked.</p>`;
     body.innerHTML=`<div class="rf-nw"><div class="rf-nwv ${nw<0?'bad':'good'}">${money(nw)}</div><div class="rf-nwk">Net worth today</div>
         <div class="rf-nwsplit"><span>Assets <b>${money(a)}</b></span><span>Owed <b>${money(l)}</b></span></div>
@@ -13554,7 +13924,7 @@ function renderCharts(){
     if(mr) mr.innerHTML=chartRead(inOutRead(data[mSel].m));
   }
   // cumulative balance trend
-  const pts=months.map(m=>({m,bal:state.transactions.filter(t=>monthOf(t.date)<=m).reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0)}));
+  const pts=months.map(m=>({m,bal:state.transactions.filter(t=>monthOf(t.date)<=m).reduce((s,t)=>s+txDelta(t),0)}));
   const w=600,h=150,pad=12, vals=pts.map(p=>p.bal), mn=Math.min(0,...vals), mx=Math.max(1,...vals);
   const X=i=>pad+(i/(pts.length-1||1))*(w-2*pad), Y=v=>h-pad-((v-mn)/((mx-mn)||1))*(h-2*pad);
   const line=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.bal).toFixed(1)}`).join(' ');
@@ -15280,7 +15650,8 @@ function renderHome(){
   snap.innerHTML=
     flipStat('Left to budget', ltb, ltbCls)+
     flipStat('Spent this month', spent, '')+
-    (hasAccts?flipStat('In the bank', bankTotal(), bankTotal()<0?'bad':'good'):'')+
+    (hasAccts?flipStat('In the bank', assetAcctTotal(), assetAcctTotal()<0?'bad':'good'):'')+
+    (owedTotal()>0?flipStat('On the cards', owedTotal(), 'bad'):'')+
     (everInv>0?flipStat('Invested this month', invM, 'pos'):'')+
     plainStat('Skip streak', skipStreak()+' ', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');

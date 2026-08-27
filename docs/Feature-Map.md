@@ -453,7 +453,19 @@ The list carries **one money column** now, and the toggle says which question it
 
 **And it sticks.** Asked for after living with it: *"this should be floating so it's easy to switch between the three instead of scrolling all the way back up to the top"* - exactly right on a plan with twenty categories, where the answer you want is four screens below the control that changes it. **Sticky rather than a floating pill**, for two reasons: it stays where it already is, so nothing new appears over the list and there is no second place to look for the same control; and the selected tab **is** the column label - "Spent" stays lit while a column of spent figures scrolls past it - so one strip does the job of a control and a header instead of two. It bleeds to the panel's edges (`-22px`, matching `.panel` padding) so rows pass **behind** it rather than through the gutters either side, which is what a sticky element inside a padded box does if you let it.
 
+**One thing the toggle cost, and how it came back.** Planned shows the number you *type*, but the reason to open that list at all is usually a different question: *is there anything left in this category.* Before the toggle, both figures sat on the row. After it, finding the second one meant leaving the mode you were working in. So Planned carries a quiet remainder (`.rw-left`) **inside the same money cell** - not a second column, or the uniformity the toggle bought would have been spent again on the day it arrived. It appears only when something is assigned, because a category with nothing in it has no remainder worth printing, goes red when it is negative, and follows what you type rather than waiting for a reload. Spent and Remaining carry no hint at all: in those modes the figure on the row already **is** the answer, and printing it twice under two labels is exactly the thing this list was cleaned up to stop.
+
 One bug worth recording: the first draft validated `state.planView` in `normalizeState` against the `PLAN_VIEWS` const. `normalizeState` runs inside `load()`, which runs at `let state = load()` - long before a `const` declared further down the file exists - so it threw on the temporal dead zone, `load()` fell back to a default state, and **every category disappeared on boot**. That exact bug has shipped once before in this file (`syncInvestAsset` reaching for `uid`). It validates against a literal now.
+
+**A credit card is a balance and a move, and they are different facts.** Asked directly: *"I have a card with a $13,700 limit and a home equity line at $25,000. I never keep a large balance - I keep the card for the rewards on larger purchases and pay it straight off. Should it be created as a debt repayment alone or should it be in a balance?"*
+
+The question has no clean answer because **two facts are hiding inside one object.** What you **owe** is a balance: it belongs in Accounts, and net worth should subtract it the moment it exists. What you **pay** is not spending - the purchase was the spending, on the day it happened. Log the payment as an expense and you are charged twice for the same groceries, and nothing on screen ever says so, because both entries look completely normal.
+
+So both, built as two separate things. A `credit` account kind takes **what is on it** as a positive number and stores it as a **negative balance**, which means every signed sum already in the file comes out right without learning that credit exists. And a `transfer` transaction type worth **exactly zero** in the ledger, carrying both ends, so paying the card moves money instead of spending it a second time. The move is the quietest row in the ledger on purpose - no minus sign, muted colour - because it is the one entry that changed nothing about how much you have.
+
+**The limit is not decoration.** Someone who keeps a $25,000 equity line at zero does not own an empty account; they own **room**, and room is the reason they keep it. So a credit row reports headroom and utilisation, the summary calls that room *borrowing power, not money*, and it stays out of `liquidTotal()` so runway never counts it as cash. With two priced lines the summary names which one is expensive - a balance on a 13% card costs about 9.4 cents more per dollar per year than the same balance on a 3.6% line, and **which line carries the balance matters more than how much gets paid off in a month.**
+
+The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
 **Name a category from the catalogue, not from memory.** Sent as a screenshot of the log form's category dropdown, scrolled to the bottom, `+ New category...` selected, and a blank text box waiting: *"can we incorporate a pick from the starter packs or a search function to autopopulate different categories?"*
 
@@ -498,7 +510,7 @@ intensity, register, freedomMode          // voice + display mode
 activeMonth                               // "YYYY-MM"
 categories: [{id, name, parentId?}]       // parentId = subcategory; nests 3 levels deep (catDepth caps it)
 budgets: { "YYYY-MM": { catId: amount } } // per-month assignments
-transactions: [{id, type, amount, date, catId|source, note, recId?}]
+transactions: [{id, type, amount, date, catId|source, note, recId?, acctId?, destAcctId?}]
 recurring: [{id, type, amount, day, catId|source}]
 goals: [{id, name, target, saved, date}]
 assets: [{id, name, value, kind, cost}]   // kind: real|stuff, cost = monthly drain
@@ -529,10 +541,44 @@ diary                                     // money diary [{id, date, ts, kind, p
 autoBackup                                // backup reminder cadence: off | launch | weekly (default) | monthly
 backupNagDay                              // YYYY-MM-DD the reminder was answered or dismissed (day-scoped, not session)
 ```
-Transaction `type` is `income | expense | invest`. Invest reduces the cash balance but
-credits the auto-managed `Invested capital` asset (`asset.auto==='invest'`); deleting the
-transaction unwinds the asset. Spend streaks, budgets, and the reward calendar all filter
-on `type==='expense'`, so investing is never counted as spending.
+Transaction `type` is `income | expense | invest | transfer`. Invest reduces the cash
+balance but credits the auto-managed `Invested capital` asset (`asset.auto==='invest'`);
+deleting the transaction unwinds the asset. Spend streaks, budgets, and the reward
+calendar all filter on `type==='expense'`, so investing is never counted as spending.
+
+**Two signed rules, and the difference between them matters.** `txDelta(t)` is the
+ledger's rule: income adds, expense and invest subtract, and a **transfer is worth
+exactly zero** - moving your own money between your own accounts is not a dollar earned
+or a dollar spent. `txAcctDelta(t)` is one account's rule: from that account's point of
+view a transfer out is a real subtraction, because the money genuinely left. Every
+running-total figure in the app now goes through `txDelta`; `acctLoggedSince` and the
+orphan-backfill preview go through `txAcctDelta`. Before transfers existed this
+expression was copied six times, and every copy would have made the same mistake in a
+different figure.
+
+### Credit cards and lines of credit
+`ACCT_KINDS` carries `{k:'credit', liquid:false, owed:true}`. The user types **what is
+on it** (a positive number); it is **stored as a negative balance**. That single choice
+means every signed sum already in the app comes out right without learning that credit
+exists - net worth subtracts it, an expense charged to the card pushes the balance
+further negative, a payment landing on it pulls the balance back toward zero.
+
+- `isOwedAcct(a)` / `acctOwed(a)` (owed as a positive) / `acctLimit(a)` /
+  `acctHeadroom(a)` (null when no limit was given) / `acctUtil(a)` (percent).
+- `assetAcctTotal()` and `owedTotal()` split what `bankTotal()` nets. The identity
+  `assetAcctTotal() - owedTotal() === bankTotal()` holds by construction, so the
+  assets/owed split on Reflect still adds up to the headline exactly as before - a card
+  is simply no longer counted as a negative asset.
+- `creditDupes()` catches the one way this double counts: a card tracked as an account
+  **and** typed in again under Liabilities. Matched on the normalized name.
+- Credit accounts are excluded from `liquidTotal()` (room is not cash) and from
+  `destAcctOptions()` (you do not invest into a line of credit).
+- `apr` is optional. With two priced lines the accounts summary names which one is
+  expensive, in cents per dollar per year.
+
+**Recurring rules deliberately have no `transfer` type.** A card payment is usually
+"whatever is spare this week", and a fixed monthly rule would be an invented number.
+The move is logged by hand.
 
 Backward compatibility: `defaultState()` supplies every key, so older saves upgrade
 cleanly (`Object.assign(defaultState(), parsed)`), and `normalizeState()` runs on
