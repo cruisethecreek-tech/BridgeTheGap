@@ -992,10 +992,31 @@
      when the text inside them does, so the money was the first thing to be cut.
      Sized in em, the money columns scale with whatever font the device is
      actually painting and the name absorbs the difference. */
-  /* The toggle that says which question the number column is answering. */
-  .plan-switch{display:flex;gap:4px;margin:2px 0 10px;padding:4px;border-radius:12px;
-    background:var(--panel-2);border:1px solid var(--line)}
+  /* The toggle that says which question the number column is answering, and it
+     sticks. Asked for after living with it: "this should be floating so it's
+     easy to switch between the three instead of scrolling all the way back up
+     to the top" - which is exactly right on a plan with twenty categories,
+     where the answer you want is four screens below the control that changes
+     it.
+
+     Sticky rather than a floating pill, for two reasons. It stays where it
+     already is, so nothing new appears over the list and there is no second
+     place to look for the same control. And the selected tab IS the column
+     label - "Spent" is lit while a column of spent figures scrolls past it - so
+     one sticky strip does the job of a control and a header, instead of two.
+
+     It bleeds to the panel's edges (-22px, matching .panel padding) so rows
+     pass BEHIND it rather than through the gutters either side, which is what a
+     sticky element inside a padded box does if you let it. */
+  .plan-switch{position:sticky;top:0;z-index:14;
+    display:flex;gap:4px;padding:8px 22px;border-radius:0;
+    margin:-4px -22px 10px;
+    background:var(--panel);border-bottom:1px solid var(--line)}
+  .plan-switch::before{content:'';position:absolute;inset:8px 22px;border-radius:12px;
+    background:var(--panel-2);border:1px solid var(--line);pointer-events:none}
+  .plan-switch .pv{position:relative;z-index:1}
   .plan-switch .pv{flex:1;padding:9px 6px;border:0;border-radius:9px;background:transparent;
+    margin:4px 0;
     color:var(--muted);font:inherit;font-size:13px;font-weight:800;cursor:pointer;
     transition:background .14s ease,color .14s ease}
   .plan-switch .pv:hover{color:var(--text)}
