@@ -467,6 +467,20 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**The expected balance shows its work, and the readings are kept.** Sent as two phone screenshots of a Joint Checking row - *"Expected now $6,637.64, +$2,794.36 logged since"* with a button - and three questions: *"this figure needs to show its work"*, *"a way to say it's already been added and can be dismissed"*, and *"are all these figures actually being tracked when changed?"*
+
+The third one had an uncomfortable answer: **no.** The monthly snapshot stored a single aggregate `bank` figure, so Joint Checking up $2,794 and Stash down $2,000 in the same month showed as $794 of nothing-in-particular. No individual account had a history at all - retyping a balance overwrote the number and the old one was gone. And "Tendencies" is about spending categories; it never touched accounts.
+
+Three things, one per question.
+
+**The projection shows its arithmetic** (`acctSince`, `acctWorkHTML`). It was the only figure in the app asking to be trusted while showing nothing - and it is the one that asks you to overwrite a real bank balance with a number the app made up. It opens to `$3,843.28 + $3,000 - $205.64 = $6,637.64`, then the same movement broken down by kind with counts, then the entries themselves so it can be checked against a statement. It ends by saying the bank wins whenever the two disagree.
+
+**A second action: "Bank still says $3,843.28."** This is the honest version of dismiss. Nothing about the money changes; what changes is that it has been *checked*, so the date moves and the prompt clears. And the gap between what the ledger expected and what the bank actually says is **recorded rather than waved away** - that gap is the whole reason this app exists, and a dismiss button that swallowed it would be deleting the finding.
+
+**Every reading is kept** (`acctNote`, `acctAt`, `acctMoveIn`): `a.hist = [{d, b, how}]`, where `how` is `first | bank | ledger | confirmed`. One reading per day per account, because a balance corrected twice in an afternoon is one reading with a typo in it, not two facts. Capped at 120 entries. The row says *"3 readings since 2026-06-30, up $4,700"* so the answer to "is this being recorded" is visible rather than needing to be trusted, and it states plainly that history starts the day the account was added and anything before that cannot be recovered.
+
+Derived, never stored twice: `acctAt(a, month)` reads the last reading on or before month end, so the per-account monthly figure comes out of the same readings the row shows. That is why the **In the bank** trend readout can finally name which account moved - *"Joint Checking up $2,794.36 · Stash down $2,000.00"* under an aggregate that used to say `up $794` and nothing else.
+
 **The rate layer: it learns your situation instead of reciting it back.** Asked for as *"I care more about it knowing about the interest rate - not so it produces a budget number, but so it learns each person's situation and says hey, you have a high rate on this card, moving it could be beneficial. It should teach instead of regurgitate."*
 
 The blocker was never the arithmetic. A borrowing rate could be typed into **three unrelated places** - a credit account, a liability, the payoff planner - and nothing in the app ever looked at all three at once. So it could know you pay 13% on one thing and 3.6% on another and still have nothing to say about the two facts sitting side by side, which is exactly where the only useful sentence lives.
@@ -553,6 +567,9 @@ lesson, onboarded, intake                 // misc (intake.reflections: situation
 debts, debtBudget, debtStrategy           // debt payoff planner
 investReturn, investYears                 // invest-vs-payoff comparison assumptions
 snapshots, retroView                      // monthly metric snapshots + retro view prefs
+accounts: [{id, name, kind, purpose, balance, updated, limit?, apr?, secured?,
+            lastGap?, lastRecon?, hist?}]  // hist: [{d, b, how}] - every balance reading,
+                                          //   one a day, how = first|bank|ledger|confirmed
 trackChallenge                            // 30-day money map {start, days}
 sweptDays                                 // reward-calendar sweeps {YYYY-MM-DD: {amount, goalId}}
 wageAuto                                  // hourlyWage is auto-derived (re-blends on income change)

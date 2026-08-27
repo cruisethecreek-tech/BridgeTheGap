@@ -752,6 +752,23 @@ than quietly disappearing, three readings of what you owe is a direction while
 two is only a line, and the same debt typed into two places is one line with
 the priced copy kept.
 
+It also holds **the expected balance and its history**, which came from a phone
+screenshot and three questions, one of which had an uncomfortable answer. The
+projection asking you to overwrite a real bank balance showed none of its
+arithmetic, and no individual account had a history at all - only a single
+aggregate figure per month, so two accounts moving in opposite directions
+cancelled out into nothing-in-particular.
+
+The checks are behavioural, not cosmetic. The work has to add up start to
+finish in one line, break down by kind with the entry counts, and list the
+entries themselves so it can be checked against a statement. "Bank still says
+$X" has to move **no money at all** while still counting as having checked it,
+and it has to **record the gap** rather than swallowing it - a dismiss button
+that quietly deleted the finding would be worse than no button. Every route to
+a balance has to record a reading, two corrections on one day have to collapse
+into one, and the aggregate trend has to name which account moved and by how
+much rather than printing the net.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

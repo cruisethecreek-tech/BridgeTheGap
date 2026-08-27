@@ -1821,6 +1821,35 @@
   .ac-util.warm{color:var(--accent);border-color:rgba(var(--accent-rgb),.35);background:rgba(var(--accent-rgb),.1)}
   .ac-util.hot{color:var(--bad);border-color:rgba(var(--bad-rgb),.35);background:rgba(var(--bad-rgb),.1)}
   .ac-apr{display:block;margin-top:2px;font-size:11.5px}
+  .ac-acts{display:flex;gap:6px;flex-wrap:wrap}
+  .ac-keep{background:transparent;border:1px solid var(--line);color:var(--muted);
+    border-radius:20px;padding:4px 11px;font-size:11.5px;font-weight:800}
+  .ac-work,.ac-hist{margin-top:7px}
+  .ac-work>summary,.ac-hist>summary{cursor:pointer;font-size:11.5px;font-weight:800;
+    color:var(--accent);list-style:none}
+  .ac-work>summary::-webkit-details-marker,.ac-hist>summary::-webkit-details-marker{display:none}
+  .ac-work>summary::before,.ac-hist>summary::before{content:'▸ ';font-size:9px}
+  .ac-work[open]>summary::before,.ac-hist[open]>summary::before{content:'▾ '}
+  .acw-sum{margin-top:7px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.6;word-break:break-word}
+  .acw-sum b{color:var(--text)}
+  .acw-parts{margin-top:7px}
+  .acw-p{display:flex;align-items:baseline;gap:7px;font-size:12px;padding:3px 0;border-top:1px solid var(--line)}
+  .acw-p span{flex:1;min-width:0;color:var(--muted)}
+  .acw-p i{font-style:normal;font-size:10.5px;color:var(--muted);flex:none}
+  .acw-p b,.acw-r b,.ach-r i{flex:none;font-weight:800}
+  .acw-p b.up,.acw-r b.up,.ach-r i.up{color:var(--good)}
+  .acw-p b.down,.acw-r b.down,.ach-r i.down{color:var(--accent-2)}
+  .acw-rows{margin-top:8px}
+  .acw-r{display:flex;align-items:baseline;gap:7px;font-size:11.5px;padding:2px 0}
+  .acw-d,.ach-d{color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+  .acw-w{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acw-more{font-size:11px;color:var(--muted);margin-top:4px}
+  .acw-note{font-size:11px;color:var(--muted);line-height:1.5;margin:8px 0 0}
+  .ach-rows{margin-top:6px}
+  .ach-r{display:flex;align-items:baseline;gap:7px;font-size:11.5px;padding:3px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+  .ach-r b{flex:none}
+  .ach-r i{font-style:normal;font-size:11px}
+  .ach-h{flex:1 0 100%;font-size:10.5px;color:var(--muted)}
   .ac-kindnote,.ac-credit-note{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);
     border-left:3px solid var(--accent);border-radius:11px;padding:11px 13px;font-size:12.5px;line-height:1.6}
   .ac-kindnote span,.ac-credit-note span{display:block;margin-top:8px;color:var(--muted)}
@@ -10093,6 +10122,110 @@ function acctLoggedSince(a){
   return sum;
 }
 function acctExpected(a){ return Math.round(((+a.balance||0)+acctLoggedSince(a))*100)/100; }
+/* ---------- showing the work on "expected now" ----------
+   Sent as a screenshot of a Joint Checking row: "Expected now $6,637.64,
+   +$2,794.36 logged since" and a button. The figure was asking to be trusted.
+   Every other number in this app shows its arithmetic - the report cards carry a
+   working line, the category sheet shows the multiplication - and the one place
+   the app asks you to overwrite a real bank balance with a number it made up was
+   the one place it showed nothing.
+   So: what the movement is made of, by kind, with counts, and the entries
+   themselves if you want them. */
+function acctSince(a){
+  if(!a||!a.updated) return null;
+  const after=t=>(t.date||'')>a.updated;
+  const out=state.transactions.filter(t=>t.acctId===a.id && after(t));
+  const into=state.transactions.filter(t=>(t.type==='invest'||t.type==='transfer') && t.destAcctId===a.id && after(t));
+  const sum=(list,f)=>list.filter(f).reduce((s,t)=>s+(+t.amount||0),0);
+  const owed=isOwedAcct(a);
+  const parts=[
+    {k:'in',    n:out.filter(t=>t.type==='income').length,   v:sum(out,t=>t.type==='income'),   sign:1,
+     label:owed?'refunds and credits':'money in'},
+    {k:'spent', n:out.filter(t=>t.type==='expense').length,  v:sum(out,t=>t.type==='expense'),  sign:-1,
+     label:owed?'charged to it':'money out'},
+    {k:'inv',   n:out.filter(t=>t.type==='invest').length,   v:sum(out,t=>t.type==='invest'),   sign:-1,
+     label:'put away out of it'},
+    {k:'moveout',n:out.filter(t=>t.type==='transfer').length,v:sum(out,t=>t.type==='transfer'),sign:-1,
+     label:'moved out'},
+    {k:'movein',n:into.length,                               v:into.reduce((s,t)=>s+(+t.amount||0),0), sign:1,
+     label:owed?'payments onto it':'moved in'}
+  ].filter(x=>x.n>0);
+  return {parts, rows:out.concat(into), n:out.length+into.length};
+}
+function acctWorkHTML(a){
+  const d=acctSince(a); if(!d||!d.n) return '';
+  const owed=isOwedAcct(a);
+  const start=owed ? -(+a.balance||0) : (+a.balance||0);
+  const end=owed ? -acctExpected(a) : acctExpected(a);
+  /* On a card everything points the other way, so the arithmetic is written the
+     way the person is thinking: what is ON it goes up when it is charged. */
+  const line=d.parts.map(x=>`${(owed? -x.sign : x.sign)>0?'+':'&minus;'} ${usd(x.v)}`).join(' ');
+  const rows=d.rows.slice().sort((x,y)=>(x.date<y.date?1:-1)).slice(0,8);
+  return `<details class="ac-work"><summary>Show the work &middot; ${d.n} entr${d.n===1?'y':'ies'} since ${escapeHtml(a.updated)}</summary>
+    <div class="acw-sum">${usd(start)} ${line} = <b>${usd(end)}</b></div>
+    <div class="acw-parts">${d.parts.map(x=>`<div class="acw-p"><span>${escapeHtml(x.label)}</span><i>${x.n}</i><b class="${(owed?-x.sign:x.sign)>0?'up':'down'}">${(owed?-x.sign:x.sign)>0?'+':'&minus;'}${usd(x.v)}</b></div>`).join('')}</div>
+    <div class="acw-rows">${rows.map(t=>{
+      const inbound = t.type==='income' || (t.destAcctId===a.id && t.acctId!==a.id);
+      const what = t.type==='income' ? (t.source||'Income')
+                 : t.type==='transfer' ? `${acctName(t.acctId)||'somewhere'} &rarr; ${acctName(t.destAcctId)||'somewhere'}`
+                 : t.type==='invest' ? (t.source||'Investment')
+                 : (catName(t.catId)||t.note||'Expense');
+      return `<div class="acw-r"><span class="acw-d">${escapeHtml(t.date||'')}</span><span class="acw-w">${what}</span><b class="${inbound?'up':'down'}">${inbound?'+':'&minus;'}${usd(+t.amount||0)}</b></div>`;
+    }).join('')}${d.n>rows.length?`<div class="acw-more">and ${d.n-rows.length} more, all of them on Track</div>`:''}</div>
+    <p class="acw-note">This is a projection from what you logged, nothing more. If the bank disagrees, the bank is right and the difference is the thing worth finding.</p>
+  </details>`;
+}
+/* ---------- what the account actually said, over time ----------
+   Asked directly: "are all these figures actually being tracked when changed?"
+   They were not. The monthly snapshot stored ONE aggregate `bank` figure, so
+   Joint Checking going up $2,794 and Stash going down $2,000 in the same month
+   showed as $794 of nothing-in-particular, and no individual account had a
+   history at all - retyping a balance overwrote it and the old number was gone.
+   Every reading is kept now, dated, with how it was arrived at. One per day per
+   account, because a balance corrected twice in an afternoon is one reading with
+   a typo in it, not two facts. */
+function acctNote(a, bal, how){
+  if(!a) return;
+  a.hist=a.hist||[];
+  const d=todayStr(), b=Math.round((+bal||0)*100)/100;
+  const last=a.hist[a.hist.length-1];
+  if(last && last.d===d){ last.b=b; last.how=how; }
+  else a.hist.push({d, b, how});
+  if(a.hist.length>120) a.hist=a.hist.slice(-120);   // ten years of monthly readings
+}
+/* What this account said at the end of a given month, or null if it had not been
+   read yet. Derived from the readings rather than stored a second time - two
+   copies of one fact is how a trend and a balance start disagreeing. */
+function acctAt(a, month){
+  const h=(a.hist||[]).filter(x=>x.d<=month+'-31');
+  return h.length ? h[h.length-1].b : null;
+}
+/* The answer to "is this really being recorded", said on the row rather than
+   left to be trusted. Silent until there are two readings, because one reading
+   is a balance, not a history. */
+function acctHistHTML(a){
+  const h=(a.hist||[]); if(h.length<2) return '';
+  const owed=isOwedAcct(a);
+  const show=h.slice(-8).slice().reverse();
+  const first=h[0], last=h[h.length-1];
+  const move=Math.round(((owed?-last.b:last.b)-(owed?-first.b:first.b))*100)/100;
+  const HOW={first:'when you added it', bank:'you read it off the bank',
+             ledger:'accepted from what you logged', confirmed:'checked, unchanged'};
+  return `<details class="ac-hist"><summary>${h.length} readings since ${escapeHtml(first.d)} &middot; ${move>=0?'up':'down'} ${usd(Math.abs(move))}</summary>
+    <div class="ach-rows">${show.map((x,i)=>{
+      const prev=show[i+1];
+      const d=prev?Math.round(((owed?-x.b:x.b)-(owed?-prev.b:prev.b))*100)/100:null;
+      return `<div class="ach-r"><span class="ach-d">${escapeHtml(x.d)}</span><b>${usd(owed?Math.max(0,-x.b):x.b)}</b>${
+        d==null?'<i>first reading</i>':`<i class="${d>=0?'up':'down'}">${d>=0?'+':'&minus;'}${usd(Math.abs(d))}</i>`}<span class="ach-h">${escapeHtml(HOW[x.how]||'')}</span></div>`;
+    }).join('')}</div>
+    <p class="acw-note">Kept on this device, one reading a day. It starts the day the account was added - anything before that was never recorded and cannot be recovered.</p>
+  </details>`;
+}
+function acctMoveIn(a, month){
+  const now=acctAt(a,month); if(now==null) return null;
+  const prev=acctAt(a, shiftMonth(month,-1));
+  return prev==null ? null : Math.round((now-prev)*100)/100;
+}
 function bankExpected(){ return (state.accounts||[]).reduce((s,a)=>s+acctExpected(a),0); }
 /* The account a new entry belongs to when nobody was asked: the only one, or the
    first liquid one. With no accounts at all it stays null and nothing changes. */
@@ -10543,12 +10676,19 @@ function renderAccounts(){
        On a card the same two numbers point the other way, so the words do too -
        "expected now" on a stored-negative balance would print a minus sign at a
        person who is thinking in what they owe. */
+    /* Two answers, because there are two truths and the app cannot tell them
+       apart. "Set it to this" says the ledger is right and the balance is stale.
+       "The bank still says X" is the one that was missing - the way to say I
+       have already dealt with this, without retyping a number you have not
+       changed. It is also the more valuable of the two, because confirming the
+       bank against a ledger that expected something else is exactly how money
+       that moved without being logged gets found. */
     const expLine = moved!==0
-      ? (owed
-          ? `<div class="ac-exp">Should be <b>${usd(Math.max(0,-exp))}</b> on it <span class="ac-mv">${moved>=0?'&minus;':'+'}${usd(Math.abs(moved))} logged since</span>
-               <button class="ac-use" data-acctuse="${a.id}">Set it to this</button></div>`
-          : `<div class="ac-exp">Expected now <b>${usd(exp)}</b> <span class="ac-mv">${moved>=0?'+':'&minus;'}${usd(Math.abs(moved))} logged since</span>
-               <button class="ac-use" data-acctuse="${a.id}">Set it to this</button></div>`)
+      ? `<div class="ac-exp">${owed
+            ? `Should be <b>${usd(Math.max(0,-exp))}</b> on it <span class="ac-mv">${moved>=0?'&minus;':'+'}${usd(Math.abs(moved))} logged since</span>`
+            : `Expected now <b>${usd(exp)}</b> <span class="ac-mv">${moved>=0?'+':'&minus;'}${usd(Math.abs(moved))} logged since</span>`}
+           <span class="ac-acts"><button class="ac-use" data-acctuse="${a.id}">Set it to this</button><button class="ac-keep" data-acctkeep="${a.id}">Bank still says ${usd(owed?acctOwed(a):(+a.balance||0))}</button></span>
+           ${acctWorkHTML(a)}</div>`
       : '';
     const gapLine = (a.lastGap!==undefined && Math.abs(+a.lastGap)>0.005)
       ? `<div class="ac-gap ${+a.lastGap<0?'short':'over'}"><b>${usd(Math.abs(+a.lastGap))}</b> ${owed
@@ -10578,7 +10718,7 @@ function renderAccounts(){
         <div class="rc-a"><button class="btn sm danger" data-acctdelyes="${a.id}">Remove it</button><button class="btn sm ghost" data-acctdelno="1">Keep it</button></div>
       </div></div>`;
     }
-    return `<div class="acct-row${owed?' owed':''}"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${creditLine}${expLine}${gapLine}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
+    return `<div class="acct-row${owed?' owed':''}"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
   }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
@@ -10593,6 +10733,7 @@ function renderAccounts(){
     const typed=isOwedAcct(a) ? -Math.abs(parseFloat(i.value)||0) : (parseFloat(i.value)||0);
     const hadHistory=!!a.updated && acctLoggedSince(a)!==0;
     a.balance=typed; a.updated=todayStr();
+    acctNote(a, typed, 'bank');
     if(hadHistory){
       a.lastGap=Math.round((typed-expected)*100)/100;
       a.lastRecon=todayStr();
@@ -10615,10 +10756,29 @@ function renderAccounts(){
     /* Accepting the expectation is not a reconcile - nothing came from outside,
        so there is no gap to record and claiming one would be inventing evidence. */
     a.balance=acctExpected(a); a.updated=todayStr(); delete a.lastGap; delete a.lastRecon;
+    acctNote(a, a.balance, 'ledger');
     save();
     if(typeof captureSnapshot==='function') captureSnapshot();
     renderAccounts(); renderNetWorth(); renderHome();
     if(typeof toast==='function') toast(`${escapeHtml(a.name)} set to ${usd(isOwedAcct(a)?acctOwed(a):a.balance)}${isOwedAcct(a)?' owed':''} from what you logged. Check it against the bank when you can - that is the half this cannot do.`);
+  }));
+  box.querySelectorAll('button[data-acctkeep]').forEach(b=>b.addEventListener('click',()=>{
+    const a=(state.accounts||[]).find(x=>x.id===b.dataset.acctkeep); if(!a) return;
+    /* Nothing about the balance changes. What changes is that it has been
+       CHECKED today, which is the whole point of the figure - and the gap
+       between what the ledger expected and what the bank actually says is
+       recorded rather than dismissed, because that gap is the finding. */
+    const expected=acctExpected(a), held=+a.balance||0;
+    a.updated=todayStr();
+    a.lastGap=Math.round((held-expected)*100)/100;
+    a.lastRecon=todayStr();
+    acctNote(a, held, 'confirmed');
+    save();
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    renderAccounts(); renderNetWorth(); renderHome();
+    if(typeof toast==='function') toast(Math.abs(a.lastGap)>0.005
+      ? `Checked, and kept at ${usd(isOwedAcct(a)?acctOwed(a):held)}. The ${usd(Math.abs(a.lastGap))} the ledger expected ${a.lastGap<0?'and never arrived':'that is not there'} is now on the record - that is the number worth chasing.`
+      : `Checked and unchanged. The date moved, the money did not.`);
   }));
   box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=b.dataset.acctdel; renderAccounts(); }));
   box.querySelectorAll('button[data-acctdelno]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=null; renderAccounts(); }));
@@ -10771,6 +10931,7 @@ function syncAcctKindForm(){
       if(L>0 && bal>L && typeof toast==='function')
         toast(`You have ${usd(bal)} on it and a limit of ${usd(L)}. One of those two numbers is wrong - fix it and the room left will mean something.`);
     }
+    acctNote(rec, rec.balance, 'first');
     state.accounts.push(rec);
     document.getElementById('acctName').value=''; document.getElementById('acctBal').value='';
     ['acctLim','acctApr'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
@@ -14129,6 +14290,15 @@ function trendRead(S,pts,i){
     const bits=[`${rows.length} entr${rows.length===1?'y':'ies'} behind it`];
     if(big) bits.push(`biggest: ${escapeHtml(kind==='expense'?(catName(big.catId)||big.note||'Uncategorized'):(big.source||big.note||'Entry'))} ${money(big.amount)}`);
     out+=`<span class="cr-bits">${bits.join(' &middot; ')}</span>`;
+  }
+  /* "Up $794 since July" was true and useless: it could be one account up
+     $2,794 and another down $2,000, and the aggregate said nothing about
+     either. Per-account readings exist now, so the line can name them. */
+  if(S.from==='snap' && S.k==='bank'){
+    const moves=(state.accounts||[]).map(a=>({a, d:acctMoveIn(a,p.m)}))
+      .filter(x=>x.d!=null && Math.abs(x.d)>0.005)
+      .sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
+    if(moves.length) out+=`<span class="cr-bits">${moves.slice(0,4).map(x=>`${escapeHtml(x.a.name)} ${x.d>0?'up':'down'} <b>${money(Math.abs(x.d))}</b>`).join(' &middot; ')}${moves.length>4?` &middot; and ${moves.length-4} more`:''}</span>`;
   }
   if(S.from==='snap') out+=`<span class="cr-note">Read from that month's snapshot. Editing an account today overwrites today's number, never an old one.${trailBtn('account','Update my balances','ghost')}</span>`;
   return out;
