@@ -1876,6 +1876,7 @@
     border-left:3px solid var(--accent);border-radius:11px;padding:10px 13px;font-size:12.5px;
     line-height:1.6;color:var(--muted)}
   .xfer-note b{color:var(--text)}
+  .xfer-note .xn-add{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
   .traplegend{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
   .traplegend>summary{cursor:pointer;font-weight:800;font-size:13.5px;padding:12px 0;color:var(--accent);list-style:none}
   .traplegend>summary::-webkit-details-marker{display:none}
@@ -2895,9 +2896,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <p class="build-intro">Your wealth layer. Net worth is open below; tap any section to expand it.</p>
 
       <details class="panel acc" open>
-        <summary><span class="acc-hd">Accounts<span class="acc-sub">What's actually in the bank, in your words</span></span></summary>
+        <summary><span class="acc-hd">Accounts<span class="acc-sub">What you have and what you owe, in your words</span></span></summary>
         <div class="acc-body">
-          <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what's really sitting in each account today. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
+          <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what is really in each account today, and <b>what is really on each card</b>. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
+          <p class="sub"><b>Cards and lines of credit belong here too.</b> Pick <b>Credit card / line of credit</b> as the kind and put in what is on it - $0 is a real answer, and on a line you keep at zero it is the whole point. What you owe comes straight off your net worth, the limit turns an unused line into a room figure, and the rate lets this app tell you what a balance is costing you. It also puts them in the <b>Move</b> list on Track, which is how a card payment gets logged without charging you twice for what you bought.</p>
           <p class="sub"><b>And it is the scoreboard.</b> This app never connects to your bank, which means every other figure in it is built from what you chose to type - log less and it looks calmer. This number is the exception, because it comes from outside and you have nothing to gain by inflating it. What it does over months is the honest answer to whether any of this is working. Keep it current and the app can tell you the truth; let it go stale and it can only tell you about your typing.</p>
           <div class="row" style="gap:8px;margin-top:12px">
             <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
@@ -7769,8 +7771,12 @@ function xferNote(){
   const n=(state.accounts||[]).length;
   if(n<2){ box.innerHTML=`<div class="xfer-note">A move needs two accounts and you have ${n===1?'one':'none'}. Add the other on <b>Build</b> and this becomes usable - until then there is nowhere for the money to land.</div>`; return; }
   const to=(state.accounts||[]).find(x=>x.id===((document.getElementById('txXferTo')||{}).value||''));
+  /* The gap this closes: somebody looking for their card in the list, not
+     finding it, and having no idea the app can hold one at all. */
+  const noCards=!(state.accounts||[]).some(isOwedAcct);
   box.innerHTML=`<div class="xfer-note"><b>Moving your own money is not spending.</b> This changes where the money is and nothing else - it never touches a category, never lands on your plan, and never moves your net worth.${
-    to&&isOwedAcct(to)?` Paying <b>${escapeHtml(to.name)}</b> is exactly this: the purchase was the spending, on the day you made it, and this is just the money catching up.`:''}</div>`;
+    to&&isOwedAcct(to)?` Paying <b>${escapeHtml(to.name)}</b> is exactly this: the purchase was the spending, on the day you made it, and this is just the money catching up.`:''}${
+    noCards?`<span class="xn-add">Paying off a card or a line of credit? It has to exist here before it can be somewhere money lands. Add it on <b>Build</b> as a <b>Credit card / line of credit</b> and it appears in both lists. ${trailBtn('account','Add my card','ghost')}</span>`:''}</div>`;
 }
 let txEnergy='';
 document.getElementById('energySel').addEventListener('click',e=>{

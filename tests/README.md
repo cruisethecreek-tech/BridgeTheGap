@@ -785,6 +785,22 @@ next, minutes later if that is when it came. The check waits half a second - far
 longer than any browser's compat click, far shorter than a human swipe-then-tap
 - and presses More.
 
+It also holds **the door to a credit account**, which is a section about copy
+rather than wiring - because the wiring was already right. A screenshot asked
+why a card and a HELOC were not in the Move form's destination list; driving the
+real pickers showed they appear the moment they exist, with a card preselected.
+They were missing because the accounts had never been created, and the Accounts
+panel's own heading said *"What's actually in the bank"* - correctly telling
+anyone reading it that a credit card does not go there. A feature built into a
+panel whose words exclude it is a feature nobody finds, and no test of the
+wiring would ever have caught it.
+
+So the checks read the panel's framing, and the one place somebody hits the
+wall: with no credit account anywhere the Move form has to say where one comes
+from and hand over the trail, and that nudge has to stop once a card exists.
+Both ends of a move must offer cards; an investment still must not be able to
+land in a line of credit.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.
