@@ -524,8 +524,26 @@
   .tab.on::after{content:'';position:absolute;left:50%;transform:translateX(-50%);top:0;width:26px;height:3px;background:var(--accent);border-radius:0 0 3px 3px}
   .tab-more-btn .t-ic{letter-spacing:1px}
   /* Secondary tabs expand UPWARD out of More, above the bar */
+  /* The grab handle. Asked for as "I intuitively want to slide up from the
+     bottom" - and the reason the gesture did not exist was never that it was
+     hard, it was that nothing on screen said it was there. A drawer without a
+     handle is a secret. It is decorative to a screen reader on purpose: the
+     More button beside it is the same control, already labelled and already in
+     the tab order, and a second stop announcing the same thing is noise. */
+  .tab-grip{display:block;width:38px;height:4px;border-radius:4px;margin:6px auto 2px;
+    background:var(--line);transition:background .15s ease,width .15s ease}
+  .tabs.more-open .tab-grip{background:var(--accent);width:52px}
+  .tabs.dragging .tab-grip{background:var(--accent)}
   .tab-more{display:none;max-width:560px;margin:0 auto;border-bottom:1px solid var(--line);padding:4px 0}
-  .tabs.more-open .tab-more{display:flex}
+  .tabs.more-open .tab-more{display:flex;animation:moreRise .2s cubic-bezier(.22,1,.36,1)}
+  /* The bar itself grows instantly - it has to, the row is either there or it is
+     not - so the CONTENT is what carries the movement. It reads as a drawer
+     coming up rather than a row appearing out of nowhere. */
+  @keyframes moreRise{ from{ transform:translateY(16px); opacity:0 } to{ transform:none; opacity:1 } }
+  @media(prefers-reduced-motion:reduce){
+    .tabs.more-open .tab-more{animation:none}
+    .tab-grip{transition:none}
+  }
   .tabs.more-open .tab-more-btn{color:var(--accent)}
   .tabs.more-open .tab-more-btn .t-ic{filter:none}
   /* keep content clear of the fixed bar + notch */
@@ -2461,6 +2479,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
   <div class="wrap">
     <nav class="tabs" id="tabs" aria-label="Main">
+      <span class="tab-grip" id="tabGrip" aria-hidden="true"></span>
       <span class="tab-more" id="tabMore">
         <button class="tab" data-view="impulse"><span class="t-ic">🛡️</span><span class="t-l">Shield</span></button>
         <button class="tab" data-view="tx"><span class="t-ic">🧾</span><span class="t-l">Track</span></button>
@@ -5495,7 +5514,94 @@ function activateTab(name,fromHistory){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
-(function(){ const mb=document.getElementById('moreBtn'); if(mb) mb.addEventListener('click',()=>{ const t=document.getElementById('tabs'); const open=t.classList.toggle('more-open'); mb.setAttribute('aria-expanded',open?'true':'false'); document.body.classList.toggle('more-open',open); }); })();
+/* One place that opens and closes the drawer, so the button, the gesture and the
+   handle cannot drift apart. */
+function setMoreOpen(on){
+  const t=document.getElementById('tabs'), mb=document.getElementById('moreBtn');
+  if(!t) return false;
+  t.classList.toggle('more-open',!!on);
+  if(mb) mb.setAttribute('aria-expanded',on?'true':'false');
+  document.body.classList.toggle('more-open',!!on);
+  return !!on;
+}
+function moreIsOpen(){ const t=document.getElementById('tabs'); return !!(t&&t.classList.contains('more-open')); }
+(function(){ const mb=document.getElementById('moreBtn'); if(mb) mb.addEventListener('click',()=>setMoreOpen(!moreIsOpen())); })();
+/* ============================================================
+   SWIPE UP FOR THE DRAWER
+
+   Asked for as: "I intuitively want to slide up from the bottom while on mobile
+   to reveal the other options." Which is the right instinct - every drawer on a
+   phone works that way, and this one only opened by hitting one 64px target in
+   the corner.
+
+   The whole bar is the handle now. Swipe up anywhere on it to open, swipe down
+   to close, and the grip above the tabs says so before you try.
+
+   The part that takes the care is not the gesture, it is not breaking the seven
+   buttons underneath it. So: nothing happens until the finger has moved 10px
+   and is moving more vertically than horizontally, and the tap that would
+   normally follow is swallowed once - and ONLY once - if that happened. A bar
+   where a decisive tap sometimes navigates and sometimes does not is worse than
+   no gesture at all.
+
+   preventDefault is called only after the swipe is committed, so a plain tap
+   keeps every bit of its native behaviour, including the tap highlight.
+   ============================================================ */
+(function(){
+  const tabs=document.getElementById('tabs'); if(!tabs) return;
+  let y0=null, x0=null, live=false, swiped=false, swallowUntil=0;
+  const THRESH=10;        // finger travel before this counts as a swipe at all
+  const COMMIT=26;        // travel before it actually opens or closes
+
+  tabs.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1){ y0=null; return; }
+    y0=e.touches[0].clientY; x0=e.touches[0].clientX; live=false; swiped=false;
+  },{passive:true});
+
+  tabs.addEventListener('touchmove',e=>{
+    if(y0==null||e.touches.length!==1) return;
+    const dy=y0-e.touches[0].clientY, dx=Math.abs(e.touches[0].clientX-x0);
+    /* Vertical AND decisive, or it is somebody's thumb wobbling on a button. */
+    if(!live && Math.abs(dy)>THRESH && Math.abs(dy)>dx){ live=true; tabs.classList.add('dragging'); }
+    if(!live) return;
+    e.preventDefault();                       // now it is a drag, not a scroll
+    if(swiped) return;                        // one commit per gesture
+    if(dy>COMMIT && !moreIsOpen()){ setMoreOpen(true); swiped=true; }
+    else if(dy<-COMMIT && moreIsOpen()){ setMoreOpen(false); swiped=true; }
+  },{passive:false});
+
+  /* The window in which a click is the phantom one a browser fires at the end of
+     a touch, rather than a tap somebody meant. It has to be a WINDOW and not a
+     flag: the first version left a flag set until a click came to clear it, so a
+     swipe that opened nothing armed a trap that ate the next tap on the bar,
+     whenever that happened to be. That is the exact "sometimes it navigates and
+     sometimes it does not" this whole gesture had to avoid, and it was found by
+     pressing More right after a swipe that did nothing. */
+  tabs.addEventListener('touchend',()=>{
+    /* 350ms, not longer. The browser's compatibility click is dispatched within
+       a frame or two of touchend; anything past that is a person deciding to
+       press something, and a window wide enough to eat a decision is the same
+       bug in a slower disguise. */
+    if(live) swallowUntil=Date.now()+350;
+    y0=null; live=false; swiped=false;
+    tabs.classList.remove('dragging');
+  },{passive:true});
+  tabs.addEventListener('touchcancel',()=>{
+    y0=null; live=false; swiped=false; swallowUntil=0; tabs.classList.remove('dragging');
+  },{passive:true});
+
+  /* Capture, so it runs before the tab buttons' own handlers. */
+  tabs.addEventListener('click',e=>{
+    if(Date.now()>=swallowUntil) return;
+    swallowUntil=0;                            // one click, never a second
+    e.preventDefault(); e.stopPropagation();
+  },true);
+
+  /* Tapping the grip toggles it, the way a real drawer handle does. It sits
+     above the buttons, so there is nothing underneath it to swallow. */
+  const grip=document.getElementById('tabGrip');
+  if(grip) grip.addEventListener('click',()=>setMoreOpen(!moreIsOpen()));
+})();
 /* The FAB is fixed-positioned, but the notch it sits in is placed by flexbox - and
    the flex math shifts when a tab is hidden (Build at stage 1 / spending mode).
    So the FAB follows the notch's real position instead of assuming viewport centre. */

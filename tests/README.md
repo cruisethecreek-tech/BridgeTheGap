@@ -769,6 +769,22 @@ a balance has to record a reading, two corrections on one day have to collapse
 into one, and the aggregate trend has to name which account moved and by how
 much rather than printing the net.
 
+It also holds **the swipe-up drawer**, driven with real `TouchEvent`s at the
+element in a `hasTouch` context rather than through a synthetic shortcut, so the
+listeners run the way they would under a thumb. The gesture itself is the easy
+half; the section is mostly about the seven buttons underneath it. A swipe too
+small to be decisive must do nothing, a plain tap on a drawer option must still
+navigate, the compatibility click a phone fires at the end of a drag must be
+swallowed, and the very next real tap must land.
+
+That last pair is where the first version failed, and the failing case is now
+its own property: **a swipe that opened nothing must leave no trap for the next
+tap.** The original swallowed the following click with a flag that waited for a
+click to clear it, so a non-committing swipe armed a trap that ate whatever came
+next, minutes later if that is when it came. The check waits half a second - far
+longer than any browser's compat click, far shorter than a human swipe-then-tap
+- and presses More.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

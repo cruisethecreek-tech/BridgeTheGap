@@ -467,6 +467,16 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**Swipe up for the drawer.** Asked for as *"I intuitively want to slide up from the bottom while on mobile to reveal the other options."* The right instinct - every drawer on a phone works that way, and this one only opened by hitting one 64px target in the corner of the bar.
+
+The whole nav bar is the handle now: swipe up anywhere on it to open the More tray, swipe down to close. A **grip** sits above the tabs so the gesture is advertised rather than hidden - a drawer without a handle is a secret. The grip is `aria-hidden` on purpose: the More button beside it is the same control, already labelled and already in the tab order, and a second stop announcing the same thing is noise. Tapping the grip toggles it too, the way a real drawer handle does.
+
+`setMoreOpen()` / `moreIsOpen()` are the single door, so the button, the gesture and the handle cannot drift apart. The tray content rises (`@keyframes moreRise`) rather than appearing - the bar's height has to change instantly, so the movement is carried by the content, and it is dropped entirely under `prefers-reduced-motion`.
+
+**The care is not in the gesture, it is in not breaking the seven buttons underneath it.** Nothing happens until the finger has moved 10px and is moving more vertically than horizontally; `preventDefault` is only called once that is true, so a plain tap keeps all of its native behaviour. The compatibility click a phone fires at the end of a drag is swallowed once by a capture-phase listener.
+
+One bug worth recording, caught by the probe rather than by reading the code. The first version swallowed that click using a **flag** that stayed set until a click arrived to clear it - so a swipe that opened nothing armed a trap, and the next tap on the bar, whenever it came, was eaten. A bar where a decisive tap sometimes navigates and sometimes does not is worse than no gesture at all, which is exactly what the comment above the code already said before the code went and did it. It is a **350ms window** now: wide enough for the browser's compatibility click, too narrow to eat a decision.
+
 **The expected balance shows its work, and the readings are kept.** Sent as two phone screenshots of a Joint Checking row - *"Expected now $6,637.64, +$2,794.36 logged since"* with a button - and three questions: *"this figure needs to show its work"*, *"a way to say it's already been added and can be dismissed"*, and *"are all these figures actually being tracked when changed?"*
 
 The third one had an uncomfortable answer: **no.** The monthly snapshot stored a single aggregate `bank` figure, so Joint Checking up $2,794 and Stash down $2,000 in the same month showed as $794 of nothing-in-particular. No individual account had a history at all - retyping a balance overwrote the number and the old one was gone. And "Tendencies" is about spending categories; it never touched accounts.
