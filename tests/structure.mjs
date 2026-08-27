@@ -6146,6 +6146,138 @@ check('...but no longer hides which account moved, or by how much',
       /Joint Checking up/.test(acTrend) && /Stash down/.test(acTrend)
         && /2,794/.test(acTrend) && /2,000/.test(acTrend), acTrend.slice(0,220));
 
+/* ---- 81. swipe up for the drawer ----
+   Asked for as: "I intuitively want to slide up from the bottom while on
+   mobile to reveal the other options." The right instinct - every drawer on a
+   phone works that way, and this one only opened by hitting one 64px target in
+   the corner of the bar.
+
+   The whole bar is the handle now, with a grip above the tabs that says so,
+   because a gesture nothing on screen advertises is a gesture nobody finds.
+
+   The care is not in the gesture. It is in not breaking the seven buttons
+   underneath it, and that is what most of this section checks: nothing happens
+   until the finger has moved decisively and vertically, the phantom click a
+   phone fires at the end of a drag is swallowed, and a deliberate tap
+   afterwards still lands.
+
+   The first version failed that last one in a way worth recording. It swallowed
+   the next click using a FLAG that stayed set until a click came to clear it -
+   so a swipe that opened nothing armed a trap, and the next tap on the bar,
+   whenever it happened, was eaten. A bar where a decisive tap sometimes
+   navigates and sometimes does not is worse than no gesture at all, which is
+   what the comment above the code already said before the code did it wrong.
+   It is a 350ms window now, wide enough for the browser's compatibility click
+   and too narrow to eat a decision. */
+const swipeCtx = await b.newContext({ viewport:{width:390,height:844}, hasTouch:true, isMobile:true });
+const sp = await swipeCtx.newPage();
+const swipeErrs=[]; sp.on('pageerror',e=>swipeErrs.push(e.message));
+await sp.goto('file://'+process.cwd()+'/app.html'); await sp.waitForTimeout(400);
+await sp.evaluate(st=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(st)),
+  {...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+   categories:[{id:'c',name:'Food'}], budgets:{'2026-08':{c:400}},
+   transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}]});
+await sp.reload(); await sp.waitForTimeout(700);
+
+/* Real TouchEvents at the element, so the listeners run as they would under a
+   thumb rather than through a synthetic shortcut. */
+const drag = (dy) => sp.evaluate(async (dy)=>{
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const el=document.getElementById('tabs'), r=el.getBoundingClientRect();
+  const x=r.left+r.width*0.25, y=r.top+8;
+  const mk=(type,cx,cy)=>{ const t=new Touch({identifier:1,target:el,clientX:cx,clientY:cy});
+    el.dispatchEvent(new TouchEvent(type,{touches:type==='touchend'?[]:[t],
+      targetTouches:type==='touchend'?[]:[t],changedTouches:[t],bubbles:true,cancelable:true})); };
+  mk('touchstart',x,y);
+  for(let i=1;i<=6;i++){ mk('touchmove',x,y-(dy*i/6)); await wait(12); }
+  mk('touchend',x,y-dy);
+  await wait(220);
+  return document.getElementById('tabs').classList.contains('more-open');
+}, dy);
+
+const swipeUI = await sp.evaluate(()=>{
+  const g=document.getElementById('tabGrip'), r=g?g.getBoundingClientRect():null;
+  return { hasGrip:!!g, w:r?Math.round(r.width):0, h:r?Math.round(r.height):0,
+           hidden:g?g.getAttribute('aria-hidden'):null };
+});
+check('the bar carries a visible handle, so the gesture is not a secret',
+      swipeUI.hasGrip===true && swipeUI.h>=3 && swipeUI.w>=30, JSON.stringify(swipeUI));
+check('...and it is decoration to a screen reader, since More is the labelled control',
+      swipeUI.hidden==='true');
+
+check('swiping up opens the drawer', (await drag(70))===true);
+const shown = await sp.evaluate(()=>{
+  const t=document.getElementById('tabMore'), r=t.getBoundingClientRect();
+  const opts=[...document.querySelectorAll('#tabMore .tab')].filter(x=>{
+    const b=x.getBoundingClientRect();
+    return b.width>20 && b.height>20 && b.top>=0 && b.bottom<=innerHeight+1; });
+  return {h:Math.round(r.height), onScreen:r.top>=0&&r.bottom<=innerHeight+1, n:opts.length};
+});
+check('...and every one of the seven options is actually on the glass, not just class-toggled',
+      shown.h>20 && shown.onScreen===true && shown.n===7, JSON.stringify(shown));
+check('swiping down closes it', (await drag(-70))===false);
+check('a swipe too small to be decisive does nothing', (await drag(14))===false);
+check('a swipe down on a closed drawer does nothing', (await drag(-70))===false);
+
+/* The button and the gesture are the same control and must never disagree. */
+await sp.waitForTimeout(500);
+await sp.evaluate(()=>document.getElementById('moreBtn').click());
+await sp.waitForTimeout(160);
+check('the More button still opens it, and says so to a screen reader',
+      await sp.evaluate(()=>document.getElementById('tabs').classList.contains('more-open')
+        && document.getElementById('moreBtn').getAttribute('aria-expanded')==='true'));
+check('...and a swipe down closes what the button opened, button state and all',
+      (await drag(-70))===false
+        && await sp.evaluate(()=>document.getElementById('moreBtn').getAttribute('aria-expanded')==='false'));
+
+/* The thing that must not break. */
+await sp.evaluate(()=>document.getElementById('moreBtn').click());
+await sp.waitForTimeout(160);
+await sp.evaluate(()=>document.querySelector('#tabMore .tab[data-view="reflect"]').click());
+await sp.waitForTimeout(320);
+check('a plain tap on a drawer option still navigates',
+      await sp.evaluate(()=>document.getElementById('view-reflect').classList.contains('on')));
+
+const phantom = await sp.evaluate(async ()=>{
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('home'); setMoreOpen(false); await wait(200);
+  const el=document.getElementById('tabs'), r=el.getBoundingClientRect();
+  const x=r.left+r.width*0.25, y=r.top+8;
+  const mk=(type,cx,cy)=>{ const t=new Touch({identifier:1,target:el,clientX:cx,clientY:cy});
+    el.dispatchEvent(new TouchEvent(type,{touches:type==='touchend'?[]:[t],targetTouches:type==='touchend'?[]:[t],
+      changedTouches:[t],bubbles:true,cancelable:true})); };
+  mk('touchstart',x,y); for(let i=1;i<=6;i++){ mk('touchmove',x,y-70*i/6); await wait(10); } mk('touchend',x,y-70);
+  await wait(60);
+  const opt=document.querySelector('#tabMore .tab[data-view="learn"]');
+  opt.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+  await wait(260);
+  const swallowed=!document.getElementById('view-learn').classList.contains('on');
+  opt.click(); await wait(260);
+  return {swallowed, nextWorks:document.getElementById('view-learn').classList.contains('on')};
+});
+check('the click a phone fires at the end of a swipe does not navigate',
+      phantom.swallowed===true);
+check('...and the very next real tap does', phantom.nextWorks===true);
+
+const stranded = await sp.evaluate(async ()=>{
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('home'); setMoreOpen(false); await wait(200);
+  const el=document.getElementById('tabs'), r=el.getBoundingClientRect();
+  const x=r.left+r.width*0.25, y=r.top+8;
+  const mk=(type,cx,cy)=>{ const t=new Touch({identifier:1,target:el,clientX:cx,clientY:cy});
+    el.dispatchEvent(new TouchEvent(type,{touches:type==='touchend'?[]:[t],targetTouches:type==='touchend'?[]:[t],
+      changedTouches:[t],bubbles:true,cancelable:true})); };
+  /* downward on a closed drawer: a real gesture that commits nothing */
+  mk('touchstart',x,y); for(let i=1;i<=6;i++){ mk('touchmove',x,y+70*i/6); await wait(10); } mk('touchend',x,y+70);
+  await wait(500);
+  document.getElementById('moreBtn').click(); await wait(220);
+  return document.getElementById('tabs').classList.contains('more-open');
+});
+check('a swipe that opened nothing leaves no trap for the next tap',
+      stranded===true);
+check('nothing in the gesture threw', swipeErrs.length===0, swipeErrs.join(' | '));
+await swipeCtx.close();
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
