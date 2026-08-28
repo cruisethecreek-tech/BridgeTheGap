@@ -467,6 +467,30 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**Saying less at a glance.** Sent as two screen recordings with: *"The entire thing is a bit unorganized. Everything just feels like a big run-on sentence. The site lacks a distinguisher of what is what when looking at it at a glance, and so much data gets lost when trying to browse quickly."*
+
+Measured before arguing with it: **82 intro paragraphs, 28 of them over 200 characters**, every one rendered at the same size, weight and colour as the next. The longest was 489 characters and had been added two days earlier. Every one was written to earn its place at the time. Nobody was reading them as a set - and this session is where they came from, because each fix shipped with a paragraph of honest explanation.
+
+Two changes, and **neither deletes a word**.
+
+**A heading you can find.** A short accent rule above every panel title and accordion heading, dimmed and shortened on a closed one - so an open section reads as a place you are in and a closed one reads as a door. That is the "distinguisher of what is what" the ask names, and it costs no copy at all.
+
+**Prose is clamped, not cut.** Long intros show two lines and a **More**. Clamped deliberately rather than collapsed into a `<details>`: clipped text is still *rendered*, so `innerText` still returns it, a screen reader still reads it, and find-in-page still finds it. A `<details>` would have hidden it from all three - and from most of the structure suite, which reads copy through `innerText`. The visual saving is identical; only the honesty differs.
+
+`clampPass()` **measures** at the width being read rather than guessing from a character count, because a sentence that overflows at 320px fits at 900, and a control that reveals nothing is worse than no control. It runs on tab change and on resize, skips paragraphs already measured at that width, and does nothing at all in Full mode.
+
+**Settings → How much it explains** offers Brief (default) and Full. `state.sayMode`, validated in `normalizeState` against a literal - never a const declared further down, which is the temporal-dead-zone bug that has emptied this app twice.
+
+**An amount it could not name is still an amount.** *"It's the only logged one entry"* - sent again, with the reader now saying *"Read 1 line"* for a screenshot holding four.
+
+The previous fix was right and insufficient. The OCR could not be reproduced locally (no engine in the dev environment, the CDN blocked), so rather than guess at Tesseract's output I went looking for what the code does badly **whatever it is handed** - and found it: an amount whose description did not survive was dropped on the floor, silently, by `if(desc.length<2) continue`.
+
+That is exactly the shape of the report. A bank screen is two columns, and a page-segmenter that reads the left column and then the right one hands back every description in a block followed by every amount in a block. Only the first amount has any text in front of it: **one row named, three dropped without a word** - "Read 1 line", and the one that landed looks perfect.
+
+The amount is the part OCR gets right and the part that is tedious to retype; the name is on the photo two inches away. So the row is kept, blank and flagged (`.ql-unnamed`, with the placeholder *"Name this one from the photo"*), the note counts both halves - *"Read 4 amounts, and could put a name to 1 of them"* - and the raw OCR text is one tap away under **Show me what it actually read**, so a bad read is something you can see rather than something you have to infer.
+
+The rule this is an instance of, which this file has now recorded three times: **a silent drop is worse than a visible gap.** A person can fix a gap.
+
 **The reader survives OCR, and deleting an entry is armed.** Two reports off one screenshot: *"the delete button is too destructive"* and *"when adding it was only one thing added and that's the BMV entry."*
 
 The second is the interesting one, and **the first instinct was wrong.** Driving `qlSave` with four filled rows logged four - the save step was innocent. The loss was upstream, in a pattern of my own making: records were anchored on a `$`, which is safe and brittle. Tesseract reading a phone screenshot renders `-$59.25` cleanly about as often as it renders it `-S59.25` or drops the mark entirely, so three of four records vanished and one logged. That looks exactly like a bad reader rather than a strict pattern, and it is worse than a visible failure because **the one that did land looks right.**

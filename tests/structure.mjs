@@ -6462,8 +6462,14 @@ check('a handwritten notepad still reads exactly the way it always did',
       bank.notepad.length===3 && bank.notepad[0].what==='coffee' && bank.notepad[0].amt===4.5
         && bank.notepad[1].amt===38 && bank.notepad[2].what==='lunch with sam'
         && bank.notepad[2].amt===12.75, JSON.stringify(bank.notepad));
-check('a price with nothing to call it is dropped, not logged blank',
-      bank.orphan.length===0, JSON.stringify(bank.orphan));
+/* This assertion used to read "is dropped, not logged blank", and it was
+   wrong - it pinned the exact behaviour that made a four-record read come back
+   as one. An amount OCR could price but not name is the most useful half of the
+   pair: the amount is the tedious part to retype and the part the reader gets
+   right. It is kept and flagged now, and section 85 holds the full case. */
+check('a price with nothing to call it is kept and flagged, never dropped',
+      bank.orphan.length===2 && bank.orphan.every(x=>x.unnamed===true && x.what===''),
+      JSON.stringify(bank.orphan));
 /* The two names the cleaner could most easily eat. */
 check('a merchant with a star in its name keeps it',
       bank.starName.length===1 && bank.starName[0].what==='Bed * Bath',
@@ -6646,6 +6652,211 @@ check('an armed entry delete never survives leaving the sheet',
       txDel.reopenNotArmed===true);
 check('confirming deletes it, and the sheet it emptied closes itself',
       txDel.gone===true && txDel.sheetClosed===true);
+
+/* ---- 85. an amount it could not name is still an amount ----
+   "It's the only logged one entry" - sent again, with the reader now saying
+   "Read 1 line" for a screenshot holding four.
+
+   The previous fix was right and insufficient. I could not reproduce the OCR
+   here (no engine in this environment, the CDN blocked) so rather than guess at
+   Tesseract's output I went looking for what my own code does badly whatever it
+   is handed - and found it: an amount whose DESCRIPTION did not survive was
+   dropped on the floor, silently, by `if(desc.length<2) continue`.
+
+   That is exactly the shape of the report. A bank screen is two columns, and a
+   page-segmenter that reads the left column then the right one hands back every
+   description in a block followed by every amount in a block. Only the first
+   amount has any text in front of it. One row named, three dropped without a
+   word - "Read 1 line", and the one that landed looks perfect.
+
+   The amount is the part OCR gets right and the part that is tedious to retype.
+   The name is on the photo two inches away. So the row is kept, blank and
+   flagged, the note counts both, and the raw text is one tap away when it goes
+   wrong. A silent drop is worse than a visible gap: a person can fix a gap. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c1',name:'Getting around'}], budgets:{'2026-08':{c1:200}},
+  accounts:[{id:'a1',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+
+const COLUMN_OCR=[
+ 'Pending',
+ 'Preauthorization / AI=867560,RR=623952602847,PK=356239682557559 PMT*OH BUREAU MOTOR VEHIC Held:2026-08-27 14:57:35 EDT',
+ 'Aug 27, 2026',
+ 'Preauthorization / AI=843880,RR=623913595672,PK=466239664376271 MAHONINGCTYTITLE Held:2026-08-27 14:27:17 EDT',
+ 'Aug 27, 2026',
+ 'Preauthorization / AI=157390,RR=623807855866,PK=466238683828615 Kindle Unltd Held:2026-08-26 14:59:42 EDT',
+ 'Aug 26, 2026',
+ '-$59.25','-$21.49','-$12.89'].join('\n');
+
+const split = await p.evaluate(t=>({
+  cols:qlParseOcr(t),
+  clean:qlParseOcr('Preauthorization / AI=1,RR=2 PMT*SHELL OIL Held:2026-08-01\nAug 1, 2026\n-$40.00\n'
+                  +'Preauthorization / AI=3,RR=4 KROGER Held:2026-08-02\nAug 2, 2026\n-$62.10'),
+  notepad:qlParseOcr('coffee 4.50\ngas 38')
+}), COLUMN_OCR);
+
+check('when OCR splits the columns, every amount still survives',
+      split.cols.length===3, String(split.cols.length));
+check('...with the amounts intact',
+      JSON.stringify(split.cols.map(x=>x.amt))==='[59.25,21.49,12.89]',
+      JSON.stringify(split.cols.map(x=>x.amt)));
+check('...and the ones it could not name are flagged rather than dropped',
+      split.cols.filter(x=>x.unnamed).length===2,
+      JSON.stringify(split.cols.map(x=>!!x.unnamed)));
+check('...while the one it could name keeps its name',
+      !split.cols[0].unnamed && split.cols[0].what==='OH BUREAU MOTOR VEHIC',
+      JSON.stringify(split.cols[0]));
+check('a well-read statement still comes back fully named, nothing flagged',
+      split.clean.length===2 && !split.clean.some(x=>x.unnamed)
+        && split.clean[0].what==='SHELL OIL' && split.clean[1].what==='KROGER',
+      JSON.stringify(split.clean));
+check('and the notepad path is untouched by any of it',
+      split.notepad.length===2 && !split.notepad.some(x=>x.unnamed),
+      JSON.stringify(split.notepad));
+
+/* On screen: the rows land, the blank ones are marked, and they say what to do. */
+const blankUI = await p.evaluate(async (t) => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(260);
+  document.getElementById('quickLogBtn').click(); await w(300);
+  const items=qlParseOcr(t);
+  const box=document.getElementById('quickLog'), listEl=document.getElementById('qlList');
+  items.forEach(it=>{
+    let row=[...box.querySelectorAll('.ql-row')].find(el=>!el.querySelector('.ql-what').value && !el.querySelector('.ql-amt').value);
+    if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; listEl.appendChild(row); }
+    row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt;
+    if(it.unnamed){ row.classList.add('ql-unnamed'); row.querySelector('.ql-what').placeholder='Name this one from the photo'; }
+  });
+  await w(160);
+  return { withAmounts:[...document.querySelectorAll('.ql-row')].filter(el=>el.querySelector('.ql-amt').value).length,
+           flagged:document.querySelectorAll('.ql-row.ql-unnamed').length,
+           placeholder:(document.querySelector('.ql-unnamed .ql-what')||{}).placeholder||'' };
+}, COLUMN_OCR);
+check('three rows land, every one carrying its amount',
+      blankUI.withAmounts===3, String(blankUI.withAmounts));
+check('...two of them marked as waiting on a name',
+      blankUI.flagged===2, String(blankUI.flagged));
+check('...and saying, on the row, what to do about it',
+      /Name this one from the photo/.test(blankUI.placeholder), blankUI.placeholder);
+
+/* ---- 86. saying less at a glance ----
+   "The entire thing is a bit unorganized. Everything just feels like a big
+   run-on sentence. The site lacks a distinguisher of what is what when looking
+   at it at a glance, and so much data gets lost when trying to browse quickly."
+
+   Measured before arguing: 82 intro paragraphs, 28 of them over 200 characters,
+   every one rendered at the same size, weight and colour as the next. One of
+   the worst was 489 characters and had been added two days earlier. Each was
+   written to earn its place at the time; nobody was reading them as a set.
+
+   Two changes, and neither deletes a word.
+
+   1. A HEADING YOU CAN FIND. A short accent rule above every panel title and
+      accordion heading, dimmed and shortened on a closed one, so an open
+      section reads as a place you are in and a closed one as a door.
+   2. PROSE IS CLAMPED, NOT CUT. Long intros show two lines and a "More".
+      Clamped, deliberately, rather than collapsed into a <details>: clipped
+      text is still rendered, so innerText still returns it, a screen reader
+      still reads it and find-in-page still finds it. A <details> would have
+      hidden it from all three - and from most of this suite, which reads copy
+      through innerText. The visual saving is identical; only the honesty
+      differs.
+
+   Which paragraphs get a "More" is MEASURED at the width being read, not
+   guessed from a character count, because a sentence that overflows at 320px
+   fits at 900 and a control that reveals nothing is worse than no control. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-01'}],
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'},
+                {id:'e',type:'expense',amount:120,date:'2026-08-05',catId:'c1'}]});
+await p.reload(); await p.waitForTimeout(800);
+
+const brief = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const look=async v=>{ activateTab(v); await w(600);
+    const root=document.getElementById('view-'+v);
+    const subs=[...root.querySelectorAll('.panel .sub, .acc-body .sub')];
+    return { clamped:subs.filter(x=>x.classList.contains('clampable')).length,
+             mores:root.querySelectorAll('.sub-more').length,
+             /* a clamped paragraph is TWO lines, not eight */
+             tallest:Math.max(0,...subs.filter(x=>x.classList.contains('clampable'))
+                                       .map(x=>Math.round(x.getBoundingClientRect().height))),
+             /* and every word of it is still there to be read */
+             wordsKept:subs.filter(x=>x.classList.contains('clampable'))
+                           .every(x=>x.innerText.trim().length>80),
+             pointless:subs.filter(x=>x.dataset.noclamp==='1')
+                           .some(x=>x.nextElementSibling&&x.nextElementSibling.classList.contains('sub-more')) };
+  };
+  return { tx:await look('tx'), goals:await look('goals') };
+});
+check('long intros are clamped on Track and on Build',
+      brief.tx.clamped>0 && brief.goals.clamped>0, JSON.stringify(brief));
+check('...each clamped one getting exactly one More',
+      brief.tx.mores===brief.tx.clamped && brief.goals.mores===brief.goals.clamped,
+      JSON.stringify(brief));
+check('...clipped to two lines rather than eight',
+      brief.tx.tallest>0 && brief.tx.tallest<=46 && brief.goals.tallest<=46,
+      `${brief.tx.tallest} / ${brief.goals.tallest}`);
+check('...with every word still in the text, because it is clipped and not hidden',
+      brief.tx.wordsKept===true && brief.goals.wordsKept===true);
+check('...and an intro short enough to fit never grows a More that reveals nothing',
+      brief.tx.pointless===false && brief.goals.pointless===false);
+
+const sayTog = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(500);
+  const btn=document.querySelector('#view-tx .sub-more'); if(!btn) return null;
+  const el=btn.previousElementSibling;
+  const shut=Math.round(el.getBoundingClientRect().height);
+  btn.click(); await w(140);
+  const open=Math.round(el.getBoundingClientRect().height);
+  const label=btn.textContent, aria=btn.getAttribute('aria-expanded');
+  btn.click(); await w(140);
+  return {shut, open, label, aria, back:Math.round(el.getBoundingClientRect().height), backLabel:btn.textContent};
+});
+check('More opens that one paragraph and says Less',
+      sayTog && sayTog.open>sayTog.shut && sayTog.label==='Less' && sayTog.aria==='true',
+      JSON.stringify(sayTog));
+check('...and closes it again', sayTog.back===sayTog.shut && sayTog.backLabel==='More');
+
+const rules = await p.evaluate(() => {
+  const h=document.querySelector('#view-tx .panel>h2');
+  const openAcc=[...document.querySelectorAll('#view-goals details.acc')].find(d=>d.open);
+  const shutAcc=[...document.querySelectorAll('#view-goals details.acc')].find(d=>!d.open);
+  const bar=el=>{ if(!el) return null; const cs=getComputedStyle(el,'::before');
+    return {w:parseFloat(cs.width)||0, h:parseFloat(cs.height)||0, o:parseFloat(cs.opacity)}; };
+  return { panel:bar(h),
+           open:bar(openAcc&&openAcc.querySelector('.acc-hd')),
+           shut:bar(shutAcc&&shutAcc.querySelector('.acc-hd')) };
+});
+check('a panel heading carries an accent rule, so one section ends visibly',
+      rules.panel && rules.panel.w>=20 && rules.panel.h>=2, JSON.stringify(rules.panel));
+check('...an accordion heading carries one too',
+      rules.open && rules.open.w>=20, JSON.stringify(rules.open));
+check('...and a closed one is dimmer and shorter, so open reads as a place you are in',
+      rules.shut && rules.shut.w<rules.open.w && rules.shut.o<rules.open.o,
+      JSON.stringify({open:rules.open, shut:rules.shut}));
+
+const modes = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('settings'); await w(450);
+  document.querySelector('#sayMode button[data-say="full"]').click(); await w(300);
+  activateTab('goals'); await w(600);
+  const full={clamped:document.querySelectorAll('#view-goals .sub.clampable').length,
+              body:document.body.classList.contains('say-brief'), stored:state.sayMode};
+  activateTab('settings'); await w(400);
+  document.querySelector('#sayMode button[data-say="brief"]').click(); await w(300);
+  activateTab('goals'); await w(600);
+  return {full, backClamped:document.querySelectorAll('#view-goals .sub.clampable').length,
+          fresh:normalizeState({}).sayMode};
+});
+check('Full gives every word back, everywhere, and remembers it',
+      modes.full.clamped===0 && modes.full.body===false && modes.full.stored==='full',
+      JSON.stringify(modes.full));
+check('...and switching back to Brief clamps again',
+      modes.backClamped>0, String(modes.backClamped));
+check('Brief is what someone new gets', modes.fresh==='brief', modes.fresh);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

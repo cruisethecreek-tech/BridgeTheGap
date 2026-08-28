@@ -838,6 +838,36 @@ The entry delete is checked the way the category delete is - armed, the question
 naming the amount and what the plan gets back, no stale arm surviving a
 navigation - because this is the third surface to get the same report.
 
+It also holds **the amount with no name**, a section written without being able
+to reproduce the failure. The reader said "Read 1 line" for a screenshot holding
+four, and no OCR engine was available locally to see why. Rather than guess at
+Tesseract, the question became what the code does badly *whatever* it is handed -
+and the answer was that an amount whose description did not survive was dropped
+silently.
+
+So the fixture is the shape that produces it: a two-column page read as one
+block of descriptions followed by one block of amounts, where only the first
+amount has any text in front of it. The properties are that every amount
+survives, the ones that could not be named are flagged rather than dropped, the
+one that could keeps its name, and a well-read statement still comes back with
+nothing flagged at all - that last one being what stops the fix from turning
+into a machine for producing blank rows.
+
+It also holds **saying less at a glance**, which is mostly a set of assertions
+about *rendered geometry* rather than copy. A clamped paragraph has to be two
+lines and not eight, measured from its bounding box; each clamped one has to get
+exactly one More and each short one none, because a control that reveals nothing
+is worse than no control; and the accent rule on a closed accordion has to be
+dimmer and shorter than on an open one, since that difference is the whole
+"which section am I in" signal.
+
+The property that guards the approach is this: **every word of a clamped
+paragraph is still in `innerText`.** The text is clipped, not hidden, which is
+why a `<details>` was rejected - it would have taken the copy away from screen
+readers, find-in-page, and most of this suite, which reads copy through
+`innerText`. The visual saving would have been identical and the honesty would
+not.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.
