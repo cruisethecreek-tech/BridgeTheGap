@@ -6999,6 +6999,148 @@ const photoCopy = await p.evaluate(async () => {
 check('the camera is not named for one kind of paper',
       /photo/i.test(photoCopy.label) && !/notepad/i.test(photoCopy.label), photoCopy.label);
 
+/* ---- 89. an account you can rename, reorder, and a debt you cannot lose ----
+   Three asks off one screen: "editor for these accounts, changing the names or
+   the type of account? reorder ability?" and "debt payoff tracker is too
+   destructive."
+
+   Everything about an account except its balance was write-once. A typo in a
+   name, or picking Other when you meant Savings, could only be fixed by
+   deleting the account - which takes its whole reading history and orphans
+   every entry filed against it. A rename should not cost you a year of
+   readings.
+
+   Reorder is the same engine the plan and the recurring list already use, as a
+   third scope rather than a third copy. The property that matters: only the
+   DISPLAY is ordered. Every total sums the array as it stands, so dragging one
+   account above another cannot move a single figure.
+
+   And the debt delete is the fourth surface to get the too-destructive report,
+   after the recurring list, the category sheet and the entry sheet. Same
+   answer. The question names the balance and the rate, and says the thing a
+   person actually needs to hear: removing it from the planner does not pay
+   anything off. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-01',
+             hist:[{d:'2026-07-01',b:1500,how:'first'},{d:'2026-08-01',b:2000,how:'bank'}]},
+            {id:'a2',name:'Stash',kind:'invest',balance:18000,updated:'2026-08-01'},
+            {id:'a3',name:'Coinbase',kind:'other',balance:14782.70,updated:'2026-08-01'}],
+  transactions:[{id:'t1',type:'expense',amount:50,date:'2026-08-05',catId:'c1',acctId:'a3'}],
+  debts:[{id:'d1',name:'Visa',balance:2400,apr:23.9,minPayment:75},
+         {id:'d2',name:'Car loan',balance:9000,apr:6.4,minPayment:220}],
+  debtBudget:500});
+await p.reload(); await p.waitForTimeout(700);
+
+const acctEd = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); renderAccounts(); await w(420);
+  const o={};
+  o.hasPencil=!!document.querySelector('[data-acctedit="a3"]');
+  document.querySelector('[data-acctedit="a3"]').click(); await w(320);
+  o.prefilled=(document.getElementById('aeName')||{}).value;
+  o.cardFieldsHidden=document.getElementById('aeLimWrap').classList.contains('hide');
+  document.getElementById('aeKind').value='credit';
+  document.getElementById('aeKind').dispatchEvent(new Event('change',{bubbles:true})); await w(220);
+  o.cardFieldsShown=!document.getElementById('aeLimWrap').classList.contains('hide');
+  o.earmarkDropped=document.getElementById('aePurpWrap').classList.contains('hide');
+  document.getElementById('aeName').value='Rewards Card';
+  document.getElementById('aeLim').value='13700';
+  document.getElementById('aeApr').value='13';
+  const nwBefore=netWorth();
+  document.querySelector('[data-acctsave="a3"]').click(); await w(420);
+  const a=state.accounts.find(x=>x.id==='a3');
+  o.name=a.name; o.kind=a.kind; o.limit=a.limit; o.apr=a.apr; o.balance=a.balance;
+  o.nwMoved=Math.round((netWorth()-nwBefore)*100)/100;
+  o.txKept=state.transactions.filter(t=>t.acctId==='a3').length;
+  /* a rename must never cost the readings */
+  document.querySelector('[data-acctedit="a1"]').click(); await w(300);
+  document.getElementById('aeName').value='Main Checking';
+  document.querySelector('[data-acctsave="a1"]').click(); await w(380);
+  const chk=state.accounts.find(x=>x.id==='a1');
+  o.renamed=chk.name; o.readingsKept=(chk.hist||[]).length;
+  return o;
+});
+check('every account row offers an editor, prefilled with what it is called now',
+      acctEd.hasPencil===true && acctEd.prefilled==='Coinbase', acctEd.prefilled);
+check('...showing the card fields only once a card is picked, without saving first',
+      acctEd.cardFieldsHidden===true && acctEd.cardFieldsShown===true);
+check('...and dropping the earmark question, which owed money cannot answer',
+      acctEd.earmarkDropped===true);
+check('the new name, kind, limit and rate all stick',
+      acctEd.name==='Rewards Card' && acctEd.kind==='credit'
+        && acctEd.limit===13700 && acctEd.apr===13, JSON.stringify(acctEd));
+check('turning an account into a card turns the stored balance over with it',
+      acctEd.balance===-14782.7, String(acctEd.balance));
+check('...so net worth moves by twice the balance, which is what changing sides means',
+      Math.abs(acctEd.nwMoved-(-29565.4))<0.02, String(acctEd.nwMoved));
+check('...while everything logged against it stays put', acctEd.txKept===1);
+check('a rename never costs the reading history',
+      acctEd.renamed==='Main Checking' && acctEd.readingsKept===2, JSON.stringify(acctEd));
+
+const acctRo = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  o.hasBtn=!!document.getElementById('acctReorderBtn');
+  o.before=[...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+  const bankBefore=bankTotal(), nwBefore=netWorth();
+  document.getElementById('acctReorderBtn').click(); await w(360);
+  o.grips=document.querySelectorAll('#acctList [data-grip][data-scope="accts"]').length;
+  moveAcct('a2',-1); renderAccounts(); await w(320);
+  o.after=[...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+  o.totalsUnmoved=bankTotal()===bankBefore && netWorth()===nwBefore;
+  document.getElementById('acctReorderBtn').click(); await w(280);
+  o.gripsGone=document.querySelectorAll('#acctList [data-grip]').length===0;
+  o.kept=[...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+  return o;
+});
+check('the accounts list reorders by the same gesture the other two lists use',
+      acctRo.hasBtn===true && acctRo.grips===3, JSON.stringify({b:acctRo.hasBtn,g:acctRo.grips}));
+check('...moving one actually moves it',
+      JSON.stringify(acctRo.after)!==JSON.stringify(acctRo.before),
+      JSON.stringify(acctRo.before)+' -> '+JSON.stringify(acctRo.after));
+check('...and not one total on the page moves, because only the display is ordered',
+      acctRo.totalsUnmoved===true);
+check('...and leaving the mode puts the grips away and keeps the order',
+      acctRo.gripsGone===true && JSON.stringify(acctRo.kept)===JSON.stringify(acctRo.after));
+await p.reload(); await p.waitForTimeout(800);
+const acctRoKept = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); await w(420);
+  return [...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+});
+check('...and the order is still there after a reload',
+      JSON.stringify(acctRoKept)===JSON.stringify(acctRo.after), JSON.stringify(acctRoKept));
+
+const debtDel = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('debt'); await w(520);
+  const o={}, n0=state.debts.length;
+  o.startsAsButton=!!document.querySelector('[data-deldebt="d1"]') && !document.querySelector('.debtrow.confirming');
+  document.querySelector('[data-deldebt="d1"]').click(); await w(320);
+  o.armedNotFired=state.debts.length===n0 && !!document.querySelector('.debtrow.confirming');
+  o.question=document.querySelector('.debtrow.confirming').innerText;
+  document.querySelector('[data-deldebtno]').click(); await w(260);
+  o.keptIt=state.debts.length===n0 && !document.querySelector('.debtrow.confirming');
+  document.querySelector('[data-deldebt="d1"]').click(); await w(260);
+  document.querySelector('[data-deldebtyes="d1"]').click(); await w(380);
+  o.gone=!state.debts.some(x=>x.id==='d1');
+  o.otherKept=state.debts.some(x=>x.id==='d2');
+  return o;
+});
+check('the debt delete starts as a button, not a question',
+      debtDel.startsAsButton===true);
+check('...and one tap arms it rather than removing anything',
+      debtDel.armedNotFired===true);
+check('...with the question naming the balance and the rate that leave the plan',
+      /\$2,400/.test(debtDel.question) && /23\.9%/.test(debtDel.question),
+      debtDel.question.replace(/\n/g,' | '));
+check('...and saying plainly that removing it pays nothing off',
+      /does not pay anything off/.test(debtDel.question));
+check('"Keep it" changes nothing', debtDel.keptIt===true);
+check('confirming removes that one and leaves the other alone',
+      debtDel.gone===true && debtDel.otherKept===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

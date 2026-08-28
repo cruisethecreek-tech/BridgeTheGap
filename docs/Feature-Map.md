@@ -467,6 +467,16 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**An account you can rename, reorder, and a debt you cannot lose.** Three asks off one screen: *"editor for these accounts, changing the names or the type of account? reorder ability?"* and *"debt payoff tracker is too destructive."*
+
+**The editor.** Everything about an account except its balance was write-once. A typo in a name, or picking **Other** when you meant **Savings**, could only be fixed by deleting the account - which takes its whole reading history with it and orphans every entry filed against it. A rename should not cost you a year of readings. The pencil opens name, kind, and either the earmark (for an account) or limit / rate / secured (for a card), swapping live as you change the kind.
+
+The one real subtlety: **flipping between an account and a card flips what the stored balance means**, because owed is held negative. So the figure is turned over with it rather than silently changing sign on the net worth line - which is why turning a $14,782 holding into a card moves net worth by *twice* that, and why the suite asserts exactly that number.
+
+**Reorder** is the same engine the plan and the recurring list already use, added as a third `DRAG_SCOPES` entry rather than a third copy of the pointer handling. The property worth keeping: **only the display is ordered.** `acctOrder()` sorts a copy for rendering; every total still sums `state.accounts` as it stands, so dragging Coinbase above Stash cannot move a single figure. Asserted by comparing `bankTotal()` and `netWorth()` either side of a move.
+
+**The debt delete is the fourth surface to get the too-destructive report** - after the recurring list, the category sheet and the entry sheet. Same answer, and the question names the balance and the rate that leave the plan, plus the thing a person actually needs to hear: *removing it from the planner does not pay anything off.*
+
 **The thing you just logged is the thing you are checking.** Asked as *"why did Fees go 5th in the list if it was the most recent entry?"*
 
 Because the sort only ever compared dates:

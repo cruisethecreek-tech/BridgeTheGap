@@ -882,6 +882,22 @@ note *below the strip* without changing the strip's height - asserted by
 measuring the strip before and after, because a note dropped into one cell of a
 four-cell grid pushes that tile's own number out of shape.
 
+It also holds **editing and reordering an account**, where two properties carry
+the section. A rename must not cost the reading history - checked by counting
+readings before and after - and reordering must move **no total at all**,
+checked by comparing `bankTotal()` and `netWorth()` either side of a drag,
+because only the display is sorted and a second sorted copy is exactly how that
+would break.
+
+The awkward one is asserted rather than avoided: flipping an account to a card
+flips what its stored balance *means*, since owed is held negative. So net worth
+has to move by **twice** the balance, and the suite states that number outright
+rather than checking it merely changed.
+
+The debt delete is checked the way the other three armed deletes are, and it is
+the fourth surface to get the same report - which is itself the argument for the
+pattern being a pattern.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

@@ -1916,6 +1916,18 @@
   .ach-r b{flex:none}
   .ach-r i{font-style:normal;font-size:11px}
   .ach-h{flex:1 0 100%;font-size:10.5px;color:var(--muted)}
+  .ac-pen{background:none;border:none;color:var(--muted);font-size:15px;padding:4px 6px;flex:none;cursor:pointer}
+  .ac-pen:hover{color:var(--accent)}
+  .acct-row.editing{display:block}
+  .ac-edit{width:100%}
+  .ae-h{font-weight:800;font-size:14px;margin-bottom:9px}
+  .ae-f{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:13px}
+  .ae-f>span:first-child{flex:none;width:74px;color:var(--muted);font-weight:700}
+  .ae-f input[type=text],.ae-f select{flex:1;min-width:0}
+  .ae-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin:9px 0 0}
+  .ae-a{display:flex;gap:8px;margin-top:11px}
+  .ae-a .btn{flex:1}
+  .debtrow.confirming{display:block}
   .ac-kindnote,.ac-credit-note{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);
     border-left:3px solid var(--accent);border-radius:11px;padding:11px 13px;font-size:12.5px;line-height:1.6}
   .ac-kindnote span,.ac-credit-note span{display:block;margin-top:8px;color:var(--muted)}
@@ -2974,6 +2986,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <option value="1">Backed by something I own</option>
             </select>
             <button class="btn sm primary" id="addAcct">＋ Add</button>
+            <button class="btn sm ghost" id="acctReorderBtn">Reorder</button>
           </div>
           <div id="acctKindNote"></div>
           <div id="acctList"></div>
@@ -5043,19 +5056,40 @@ function renderDebt(){
     rn.innerHTML = note ? `<div class="reflect-note">${note}</div>` : '';
   }
   const box=document.getElementById('debtList'); if(!box) return;
-  box.innerHTML = state.debts.length ? state.debts.map(d=>`
+  /* Fourth surface to get the same report - the recurring list, the category
+     sheet, the entry sheet, and now this. One tap on a red cross removed a debt
+     and everything the planner had worked out from it, on a row of number fields
+     a thumb is already moving across. */
+  box.innerHTML = state.debts.length ? state.debts.map(d=>{
+    if(debtDelId===d.id){
+      const bal=+d.balance||0, apr=+d.apr||0;
+      return `<div class="debtrow confirming"><div class="rec-conf">
+        <div class="rc-q">Remove <b>${escapeHtml(d.name)}</b>?</div>
+        <div class="rc-w">${bal>0?`Its <b>${usd(bal)}</b>${apr>0?` at <b>${apr}%</b>`:''} leaves the payoff plan, and every date below is worked out again without it. `:''}It does not touch anything you have logged, and it does not pay anything off - the debt is still there, just not in this planner.</div>
+        <div class="rc-a"><button class="btn sm danger" data-deldebtyes="${d.id}">Remove it</button><button class="btn sm ghost" data-deldebtno="1">Keep it</button></div>
+      </div></div>`;
+    }
+    return `
     <div class="debtrow">
       <span class="dr-name">${escapeHtml(d.name)}</span>
       <label class="dr-f">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.balance||0}" data-debt="${d.id}" data-k="balance"></label>
       <label class="dr-f"><input type="number" min="0" step="0.1" value="${d.apr||0}" data-debt="${d.id}" data-k="apr">%</label>
       <label class="dr-f">min $<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.minPayment||0}" data-debt="${d.id}" data-k="minPayment"></label>
       <button class="btn sm danger ghost" data-deldebt="${d.id}">✕</button>
-    </div>`).join('') : '<div class="empty" style="margin-top:10px">No debts yet. Add what you owe above, or import from your liabilities.</div>';
+    </div>`;
+  }).join('') : '<div class="empty" style="margin-top:10px">No debts yet. Add what you owe above, or import from your liabilities.</div>';
   box.querySelectorAll('input[data-debt]').forEach(inp=>inp.addEventListener('input',()=>{
     const d=state.debts.find(x=>x.id===inp.dataset.debt); if(!d) return;
     d[inp.dataset.k]=parseFloat(inp.value)||0; save(); renderDebtResults();
   }));
-  box.querySelectorAll('button[data-deldebt]').forEach(b=>b.addEventListener('click',()=>{ state.debts=state.debts.filter(x=>x.id!==b.dataset.deldebt); save(); renderDebt(); }));
+  box.querySelectorAll('button[data-deldebt]').forEach(b=>b.addEventListener('click',()=>{ debtDelId=b.dataset.deldebt; renderDebt(); }));
+  box.querySelectorAll('button[data-deldebtno]').forEach(b=>b.addEventListener('click',()=>{ debtDelId=null; renderDebt(); }));
+  box.querySelectorAll('button[data-deldebtyes]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.deldebtyes;
+    if(debtDelId!==id) return;                 // a stale arm never removes the wrong row
+    debtDelId=null;
+    state.debts=state.debts.filter(x=>x.id!==id); save(); renderDebt();
+  }));
   const sn=document.getElementById('debtStratNote'); if(sn) sn.textContent=DEBT_STRAT_NOTE[state.debtStrategy||'avalanche']||'';
   document.querySelectorAll('#debtStrategy button').forEach(b=>b.classList.toggle('on',b.dataset.s===(state.debtStrategy||'avalanche')));
   wireUnitField({id:'debtBudget', dflt:'month', kinds:['week','biweek','month'], why:'debtBudget',
@@ -6586,6 +6620,21 @@ function setRecReorder(on){
     toast('Drag anything by its grip, or start from one of the arrangements.');
 }
 document.getElementById('recReorderBtn').addEventListener('click',()=>setRecReorder(!recReorder));
+/* Third list, same mode again. Nothing new to learn on a screen you have
+   already learned once. */
+let acctReorder=false;
+function setAcctReorder(on){
+  acctReorder=!!on;
+  const b=document.getElementById('acctReorderBtn');
+  if(b){ b.textContent=acctReorder?'Done reordering':'Reorder'; b.classList.toggle('primary',acctReorder); }
+  document.body.classList.toggle('reordering',acctReorder||recReorder||catReorder);
+  renderAccounts();
+  if(acctReorder && typeof toast==='function')
+    toast('Drag any account by its grip. The order is yours alone - no total on this page changes.');
+}
+document.addEventListener('click',e=>{
+  if(e.target && e.target.id==='acctReorderBtn') setAcctReorder(!acctReorder);
+});
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-arrange]'); if(!b) return;
   const k=b.dataset.arrange;
@@ -6596,6 +6645,8 @@ document.addEventListener('click',e=>{
 /* the floating way out - and it puts you back where the toolbar is, so the next
    thing you reach for is where you left it rather than wherever you had scrolled to */
 document.getElementById('reorderDone').addEventListener('click',()=>{
+  if(typeof acctReorder!=='undefined' && acctReorder){ setAcctReorder(false);
+    const p=document.getElementById('acctReorderBtn'); if(p) p.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   /* whichever list you are in the middle of - the floating button is the same
      button, and it puts you back at the toolbar you left */
   const wasRec=recReorder;
@@ -6791,7 +6842,11 @@ const DRAG_SCOPES={
   rec:{  rows:()=>[...document.querySelectorAll('#recList [data-row]')],
          name:id=>recLabel(state.recurring.find(r=>r.id===id))||'This one',
          moveTo:(id,i)=>moveRecTo(id,i), step:(id,d)=>moveRec(id,d),
-         redraw:()=>renderRecurring() }
+         redraw:()=>renderRecurring() },
+  accts:{rows:()=>[...document.querySelectorAll('#acctList [data-row]')],
+         name:id=>acctName(id)||'This account',
+         moveTo:(id,i)=>moveAcctTo(id,i), step:(id,d)=>moveAcct(id,d),
+         redraw:()=>renderAccounts() }
 };
 const dragScope=()=>DRAG_SCOPES[(drag&&drag.scope)||'cats']||DRAG_SCOPES.cats;
 function dragSiblings(parentId, scope){
@@ -10514,8 +10569,39 @@ const ACCT_PURPOSES=[
   {k:'retire', label:'Retirement'}
 ];
 function acctKind(k){ return ACCT_KINDS.find(x=>x.k===k)||ACCT_KINDS[0]; }
-let backfillAcct=null, recDelId=null, acctDelId=null;
+let backfillAcct=null, recDelId=null, acctDelId=null, acctEditId=null;
 function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0),0); }
+/* ---------- the order you keep them in ----------
+   Asked for beside the editor: "reorder ability?" Same answer the plan and the
+   recurring list already have, and the same engine - a scope, not a second copy
+   of a hundred lines of pointer handling.
+   Only the DISPLAY is ordered. Every total above sums the array as it stands,
+   so dragging Coinbase above Stash cannot change a single figure - which is the
+   property worth keeping, and the one a second sorted copy would break. */
+function acctOrder(list){
+  return (list||[]).map((a,i)=>({a,i})).sort((x,y)=>{
+    const sx=Number.isFinite(+x.a.sort)?+x.a.sort:x.i, sy=Number.isFinite(+y.a.sort)?+y.a.sort:y.i;
+    return sx===sy ? x.i-y.i : sx-sy;
+  }).map(x=>x.a);
+}
+function moveAcctTo(id, idx){
+  const sibs=acctOrder(state.accounts);
+  const i=sibs.findIndex(x=>x.id===id); if(i<0) return false;
+  const rest=sibs.slice(); const [me]=rest.splice(i,1);
+  rest.splice(Math.max(0,Math.min(rest.length,idx)),0,me);
+  if(rest.every((x,k)=>x.id===sibs[k].id)) return false;    // dropped back where it started
+  rest.forEach((x,k)=>{ x.sort=k; });
+  save(); return true;
+}
+function moveAcct(id,dir){
+  const sibs=acctOrder(state.accounts);
+  const i=sibs.findIndex(x=>x.id===id), j=i+dir;
+  if(i<0||j<0||j>=sibs.length) return false;
+  const out=sibs.slice();
+  out.splice(j,0,out.splice(i,1)[0]);
+  out.forEach((x,k)=>{ x.sort=k; });
+  save(); return true;
+}
 /* ---------- the borrowing side ----------
    bankTotal() stays the signed net of every account, because the net worth
    identity is built on it. But "in the bank" is a different sentence from
@@ -11171,7 +11257,7 @@ function renderAccounts(){
   if(pSel && !pSel.options.length) pSel.innerHTML=ACCT_PURPOSES.map(p=>`<option value="${p.k}">${escapeHtml(p.label)}</option>`).join('');
   if(typeof syncAcctKindForm==='function') syncAcctKindForm();
   const box=document.getElementById('acctList'); if(!box) return;
-  const accts=state.accounts||[];
+  const accts=acctOrder(state.accounts);
   box.innerHTML = accts.length ? accts.map(a=>{
     const k=acctKind(a.kind), pur=ACCT_PURPOSES.find(p=>p.k===a.purpose);
     const tag=(a.purpose&&pur)?`<span class="ac-tag">${escapeHtml(pur.label)}</span>`:'';
@@ -11224,7 +11310,27 @@ function renderAccounts(){
         <div class="rc-a"><button class="btn sm danger" data-acctdelyes="${a.id}">Remove it</button><button class="btn sm ghost" data-acctdelno="1">Keep it</button></div>
       </div></div>`;
     }
-    return `<div class="acct-row${owed?' owed':''}"><span class="ac-ic">${k.ic}</span><div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
+    /* The editor. Everything about an account except its balance was write-once:
+       a typo in the name, or picking Other when you meant Savings, could only be
+       fixed by deleting the account - which takes its whole reading history and
+       every entry filed against it. A rename should not cost you a year of
+       readings. */
+    if(acctEditId===a.id){
+      const owedNow=isOwedAcct(a);
+      return `<div class="acct-row editing"><div class="ac-edit">
+        <div class="ae-h">Editing <b>${escapeHtml(a.name)}</b></div>
+        <label class="ae-f"><span>Called</span><input type="text" id="aeName" value="${escapeHtml(a.name)}" maxlength="40"></label>
+        <label class="ae-f"><span>Kind</span><select id="aeKind">${ACCT_KINDS.map(x=>`<option value="${x.k}"${x.k===a.kind?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
+        <label class="ae-f${owedNow?' hide':''}" id="aePurpWrap"><span>Its job</span><select id="aePurp">${ACCT_PURPOSES.map(x=>`<option value="${x.k}"${x.k===(a.purpose||'')?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
+        <label class="ae-f${owedNow?'':' hide'}" id="aeLimWrap"><span>Limit</span><span class="sw-dol">$<input type="number" id="aeLim" min="0" step="any" value="${acctLimit(a)||''}" placeholder="none set"></span></label>
+        <label class="ae-f${owedNow?'':' hide'}" id="aeAprWrap"><span>Rate</span><span class="sw-dol"><input type="number" id="aeApr" min="0" max="100" step="0.01" value="${a.apr!=null?a.apr:''}" placeholder="none set">%</span></label>
+        <label class="ae-f${owedNow?'':' hide'}" id="aeSecWrap"><span>Backed by</span><select id="aeSec"><option value="">Nothing (a card)</option><option value="1"${a.secured?' selected':''}>Something I own</option></select></label>
+        <p class="ae-note">Changing the kind changes how it counts - a card comes off your net worth, savings adds to it. Nothing you have logged against it moves, and every reading it holds stays.</p>
+        <div class="ae-a"><button class="btn sm primary" data-acctsave="${a.id}">Save</button><button class="btn sm ghost" data-acctcancel="1">Cancel</button></div>
+      </div></div>`;
+    }
+    return `<div class="acct-row${owed?' owed':''}" data-row="${a.id}">${
+      acctReorder?`<button class="cat-grip" data-grip="${a.id}" data-scope="accts" aria-label="Drag to move ${escapeHtml(a.name)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`:`<span class="ac-ic">${k.ic}</span>`}<div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="ac-pen" data-acctedit="${a.id}" title="Rename or change what kind it is" aria-label="Edit ${escapeHtml(a.name)}">✎</button><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
   }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
@@ -11286,7 +11392,51 @@ function renderAccounts(){
       ? `Checked, and kept at ${usd(isOwedAcct(a)?acctOwed(a):held)}. The ${usd(Math.abs(a.lastGap))} the ledger expected ${a.lastGap<0?'and never arrived':'that is not there'} is now on the record - that is the number worth chasing.`
       : `Checked and unchanged. The date moved, the money did not.`);
   }));
-  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=b.dataset.acctdel; renderAccounts(); }));
+  box.querySelectorAll('button[data-acctedit]').forEach(b=>b.addEventListener('click',()=>{
+    acctEditId=b.dataset.acctedit; acctDelId=null; renderAccounts();
+    const f=document.getElementById('aeName'); if(f){ f.focus(); f.select&&f.select(); }
+  }));
+  box.querySelectorAll('button[data-acctcancel]').forEach(b=>b.addEventListener('click',()=>{ acctEditId=null; renderAccounts(); }));
+  /* The credit-only fields follow the kind while the editor is open, so picking
+     Credit card does not require saving and reopening to find the limit. */
+  { const k=document.getElementById('aeKind');
+    if(k) k.addEventListener('change',()=>{
+      const owed=!!acctKind(k.value).owed;
+      ['aeLimWrap','aeAprWrap','aeSecWrap'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle('hide',!owed); });
+      const pw=document.getElementById('aePurpWrap'); if(pw) pw.classList.toggle('hide',owed);
+    }); }
+  box.querySelectorAll('button[data-acctsave]').forEach(b=>b.addEventListener('click',()=>{
+    const a=(state.accounts||[]).find(x=>x.id===b.dataset.acctsave); if(!a) return;
+    const nm=(document.getElementById('aeName').value||'').trim();
+    if(!nm){ if(typeof toast==='function') toast('An account needs a name - it is how every entry finds its way back to it.'); return; }
+    const wasOwed=isOwedAcct(a);
+    const kind=document.getElementById('aeKind').value||a.kind;
+    const nowOwed=!!acctKind(kind).owed;
+    a.name=nm; a.kind=kind;
+    /* Flipping between a card and an account flips what the stored balance
+       MEANS - owed is held negative - so the figure is turned over with it
+       rather than silently changing sign on the net worth line. */
+    if(nowOwed!==wasOwed) a.balance=-(+a.balance||0);
+    if(nowOwed){
+      a.purpose='';
+      const L=parseFloat((document.getElementById('aeLim')||{}).value);
+      if(L>0) a.limit=L; else delete a.limit;
+      const ap=parseFloat((document.getElementById('aeApr')||{}).value);
+      if(ap>=0&&ap<=100) a.apr=ap; else delete a.apr;
+      if((document.getElementById('aeSec')||{}).value) a.secured=true; else delete a.secured;
+    } else {
+      a.purpose=(document.getElementById('aePurp')||{}).value||'';
+      delete a.limit; delete a.apr; delete a.secured;
+    }
+    acctEditId=null; save();
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    if(typeof refreshCatSelects==='function') refreshCatSelects();
+    renderAccounts(); renderNetWorth(); renderTx(); renderHome();
+    if(typeof toast==='function') toast(nowOwed!==wasOwed
+      ? `${nm} is ${nowOwed?'a line of credit now - what is on it comes off your net worth':'an account now - what is in it counts toward your net worth'}.`
+      : `Saved. Every entry and every reading it holds came with it.`);
+  }));
+  box.querySelectorAll('button[data-acctdel]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=b.dataset.acctdel; acctEditId=null; renderAccounts(); }));
   box.querySelectorAll('button[data-acctdelno]').forEach(b=>b.addEventListener('click',()=>{ acctDelId=null; renderAccounts(); }));
   box.querySelectorAll('button[data-acctdelyes]').forEach(b=>b.addEventListener('click',()=>{
     acctDelId=null;
@@ -11451,6 +11601,7 @@ function syncAcctKindForm(){
     renderAccounts(); renderNetWorth(); renderHome();
   });
 })();
+let debtDelId=null;
 let assetKind='real';
 document.getElementById('assetKind').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return; assetKind=b.dataset.k;
