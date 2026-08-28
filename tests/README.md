@@ -853,6 +853,21 @@ one that could keeps its name, and a well-read statement still comes back with
 nothing flagged at all - that last one being what stops the fix from turning
 into a machine for producing blank rows.
 
+It also holds **saying less at a glance**, which is mostly a set of assertions
+about *rendered geometry* rather than copy. A clamped paragraph has to be two
+lines and not eight, measured from its bounding box; each clamped one has to get
+exactly one More and each short one none, because a control that reveals nothing
+is worse than no control; and the accent rule on a closed accordion has to be
+dimmer and shorter than on an open one, since that difference is the whole
+"which section am I in" signal.
+
+The property that guards the approach is this: **every word of a clamped
+paragraph is still in `innerText`.** The text is clipped, not hidden, which is
+why a `<details>` was rejected - it would have taken the copy away from screen
+readers, find-in-page, and most of this suite, which reads copy through
+`innerText`. The visual saving would have been identical and the honesty would
+not.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

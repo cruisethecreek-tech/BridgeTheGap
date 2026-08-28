@@ -92,10 +92,32 @@ for(const w of WIDTHS){
         }
         return false;
       };
+      /* The box an element is actually allowed to paint in: its own rect,
+         narrowed by every ancestor that clips. Without this, a <b> on line 5 of
+         a paragraph clamped to two lines still reports its full geometry - it is
+         invisible on screen and the browser paints nothing there, but
+         getBoundingClientRect does not know that, so it reads as text sitting on
+         top of whatever follows. Found the day intro prose started being clamped,
+         as three overlaps that do not exist. */
+      const clipBox=e=>{
+        let box=e.getBoundingClientRect();
+        let L=box.left,T=box.top,R=box.right,B=box.bottom;
+        for(let a=e.parentElement; a && a!==root.parentElement; a=a.parentElement){
+          const s=getComputedStyle(a);
+          const clips=/hidden|clip|auto|scroll/.test(s.overflow+s.overflowX+s.overflowY);
+          if(!clips) continue;
+          const r=a.getBoundingClientRect();
+          L=Math.max(L,r.left); T=Math.max(T,r.top);
+          R=Math.min(R,r.right); B=Math.min(B,r.bottom);
+        }
+        return {left:L,top:T,right:R,bottom:B,width:R-L,height:B-T};
+      };
       const leaves=[...root.querySelectorAll('*')].filter(e=>{
         if(!vis(e)||e.offsetParent===null||byDesign(e)) return false;
         const r=e.getBoundingClientRect();
-        return [...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()) && r.width>0 && r.height>0;
+        if(!([...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()) && r.width>0 && r.height>0)) return false;
+        const c=clipBox(e);            // clipped away entirely: the browser paints nothing here
+        return c.width>1 && c.height>1;
       });
       const id=e=>(e.className||e.tagName)+' "'+e.textContent.trim().slice(0,26)+'"';
       const ov=[];
@@ -103,7 +125,13 @@ for(const w of WIDTHS){
         const A=leaves[i],B=leaves[j];
         if(A.contains(B)||B.contains(A)) continue;
         let ox=0,oy=0;
-        for(const a of A.getClientRects())for(const c of B.getClientRects()){
+        /* Rects narrowed to what each element may actually paint, so a partially
+           clipped line cannot collide using the half that is not on screen. */
+        const cA=clipBox(A), cB=clipBox(B);
+        const nar=(r,c)=>({left:Math.max(r.left,c.left), top:Math.max(r.top,c.top),
+                           right:Math.min(r.right,c.right), bottom:Math.min(r.bottom,c.bottom)});
+        for(const a0 of A.getClientRects())for(const c0 of B.getClientRects()){
+          const a=nar(a0,cA), c=nar(c0,cB);
           const x=Math.min(a.right,c.right)-Math.max(a.left,c.left);
           const y=Math.min(a.bottom,c.bottom)-Math.max(a.top,c.top);
           if(x>2&&y>2&&x*y>ox*oy){ ox=x; oy=y; }

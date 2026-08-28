@@ -940,8 +940,43 @@
 
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
   .panel + .panel{margin-top:18px}
-  .panel h2{font-size:18px;font-weight:800;margin-bottom:4px}
+  /* ---------- saying less at a glance ----------
+     "Everything just feels like a big run-on sentence. The site lacks a
+     distinguisher of what is what when looking at it at a glance, and so much
+     data gets lost when trying to browse quickly."
+
+     Measured rather than argued with: 82 intro paragraphs, 28 of them over 200
+     characters, every one rendered at the same size, weight and colour as the
+     next. Each was written to earn its place at the time. Nobody was reading
+     them as a set.
+
+     Two changes, and neither deletes a word.
+
+     1. A HEADING YOU CAN FIND. A panel title now carries a short accent rule
+        above it, so the eye lands on where one thing ends and the next begins
+        instead of scanning cream for a bold line.
+     2. PROSE IS CLAMPED, NOT CUT. Long intros show two lines with a "more" you
+        can tap. The text stays in the DOM and stays rendered - clipped, not
+        hidden - so a screen reader still reads it, find-in-page still finds it,
+        and nothing that quotes this copy loses a sentence. */
+  .panel h2{font-size:18px;font-weight:800;margin-bottom:4px;letter-spacing:-.01em}
+  .panel>h2::before,
+  details.acc>summary .acc-hd::before{content:'';display:block;width:26px;height:3px;border-radius:3px;
+    background:var(--accent);margin:0 0 9px;opacity:.9}
+  /* An open accordion is a place you are IN, a closed one is a door. The rule
+     says which without needing a second glance at the arrow. */
+  details.acc:not([open])>summary .acc-hd::before{opacity:.35;width:16px}
   .panel .sub{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.5}
+  /* Clamped only once a pass has measured that there is something to clamp, so
+     a two-line intro never grows a "more" that reveals nothing. */
+  .say-brief .sub.clampable{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;margin-bottom:6px}
+  .say-brief .sub.clampable.open{display:block;-webkit-line-clamp:none;margin-bottom:14px}
+  .sub-more{display:none;background:none;border:none;padding:0 0 14px;font:inherit;
+    font-size:12px;font-weight:800;color:var(--accent);cursor:pointer;letter-spacing:.01em}
+  .say-brief .sub.clampable + .sub-more{display:block}
+  .sub-more::after{content:' ▾';font-size:9px}
+  .sub.open + .sub-more::after{content:' ▴'}
 
   .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
   label.fld{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
@@ -3257,6 +3292,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <div id="uiModeNote" class="db-note" style="margin-top:10px"></div>
         </div>
         <div class="databox">
+          <div class="db-head">How much it explains</div>
+          <p class="sub" style="margin:6px 0 10px" data-noclamp="1">Brief shows the first two lines of any explanation and a <b>More</b> to open it. Nothing is deleted or hidden - it is clipped, and every word is one tap away. Full shows all of it, all the time, which is how this started and is why it began to read like one long sentence.</p>
+          <div class="uimode" id="sayMode">
+            <button data-say="brief">Brief</button>
+            <button data-say="full">Full</button>
+          </div>
+        </div>
+        <div class="databox">
           <div class="db-head">Voice &amp; tone</div>
           <p class="sub" style="margin:6px 0 10px">How you want to be held accountable. This is the voice used everywhere - questions, gut-checks, nudges. Forgiving is gentle, Savage pulls no punches. The row below sets how it talks, not how old you are - pick whichever sounds like a person you would listen to.</p>
           <div class="intensity" id="intensity">
@@ -3876,6 +3919,10 @@ function normalizeState(s){
      this file (syncInvestAsset reaching for uid); it does not get shipped
      twice. */
   if(['planned','spent','left'].indexOf(s.planView)<0) s.planView='planned';
+  /* Literal, not a const declared further down - normalizeState runs inside
+     load(), which runs at `let state = load()`, and reaching for a const there
+     is the temporal-dead-zone bug that has emptied this app twice. */
+  if(['brief','full'].indexOf(s.sayMode)<0) s.sayMode='brief';
   /* Heal the app's own bug in the app's own data. "Pay Yourself First" is a
      name this app writes, never one a person types from scratch, and it was
      being created with no growth tag - so every dollar somebody paid themselves
@@ -5494,6 +5541,66 @@ function applyAreaVisibility(){
 }
 const MORE_VIEWS=['impulse','tx','debt','learn','diary','settings'];   // Shield moved into More; its ACTION is the hub's hero row
 let currentTab='home';
+/* ---------- the pass that decides what is worth clamping ----------
+   Measured, not guessed: a paragraph is only given a "more" if it actually
+   overflows two lines at the width it is being read at. A control that reveals
+   nothing is worse than no control, and a 320px phone clamps a sentence that a
+   tablet shows whole - so this runs against the live layout rather than against
+   a character count.
+
+   Cheap on purpose: only the visible view, only paragraphs not already
+   measured at this width, and it bails entirely in Full mode. */
+function sayBrief(){ return state.sayMode!=='full'; }
+function clampPass(view){
+  document.body.classList.toggle('say-brief', sayBrief());
+  if(!sayBrief()) return;
+  const root=view ? document.getElementById('view-'+view) : document;
+  if(!root) return;
+  const w=Math.round(root.clientWidth||0);
+  root.querySelectorAll('.panel .sub, .acc-body .sub').forEach(el=>{
+    if(el.dataset.noclamp==='1') return;
+    /* Nothing that is not on screen. offsetParent was the obvious test and the
+       wrong one: a closed <details> in Chromium still gives its content a real
+       box and a real offsetParent - it is laid out and simply not painted - so
+       the guard passed and prose nobody could see got clamped. Asking whether it
+       sits inside a closed accordion is the question actually being asked, and
+       the toggle listener below measures it the moment one opens. */
+    if(el.closest('details:not([open])')) return;
+    if(el.offsetParent===null) return;
+    if(el.dataset.clampW===String(w)) return;         // already measured at this width
+    el.dataset.clampW=String(w);
+    el.classList.add('clampable');
+    const over=el.scrollHeight > el.clientHeight + 2;
+    if(!over){ el.classList.remove('clampable'); el.dataset.noclamp='1';
+      const nx=el.nextElementSibling; if(nx&&nx.classList.contains('sub-more')) nx.remove(); return; }
+    let btn=el.nextElementSibling;
+    if(!btn||!btn.classList.contains('sub-more')){
+      btn=document.createElement('button'); btn.className='sub-more'; btn.type='button';
+      el.insertAdjacentElement('afterend', btn);
+    }
+    btn.textContent = el.classList.contains('open') ? 'Less' : 'More';
+    btn.setAttribute('aria-expanded', el.classList.contains('open')?'true':'false');
+    btn.onclick=()=>{
+      const open=el.classList.toggle('open');
+      btn.textContent = open ? 'Less' : 'More';
+      btn.setAttribute('aria-expanded', open?'true':'false');
+    };
+  });
+}
+/* Opening an accordion is the first moment its prose has a width to be measured
+   against, so that is when it gets measured. */
+document.addEventListener('toggle',e=>{
+  const d=e.target;
+  if(d && d.tagName==='DETAILS' && d.open) clampPass(typeof currentTab!=='undefined'?currentTab:null);
+}, true);
+/* A width change re-decides it: what needs a "more" at 320px may not at 900. */
+(function(){
+  let t=null;
+  window.addEventListener('resize',()=>{ clearTimeout(t); t=setTimeout(()=>{
+    document.querySelectorAll('[data-clamp-w]').forEach(el=>{ delete el.dataset.clampW; });
+    clampPass(typeof currentView==='function'?currentView():null);
+  },160); });
+})();
 function activateTab(name,fromHistory){
   /* Nothing should be able to land on an area the user switched off - not a
      shortcut, not the map, not a stale history entry from before they hid it. */
@@ -5525,6 +5632,10 @@ function activateTab(name,fromHistory){
   if(name==='debt') renderDebt();
   if(name==='impulse'){ renderVault(); renderLessons(); }
   if(name==='diary') renderDiary();
+  /* After the view has drawn, or there is nothing to measure. Two frames: the
+     first lets the panels lay out, the second catches anything a render kicked
+     off inside them. */
+  requestAnimationFrame(()=>{ clampPass(name); requestAnimationFrame(()=>clampPass(name)); });
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
@@ -5971,6 +6082,27 @@ function renderUiMode(){
 (function(){ const box=document.getElementById('uiMode'); if(!box) return;
   box.addEventListener('click',e=>{ const b=e.target.closest('button[data-m]'); if(!b) return;
     state.uiMode=b.dataset.m; save(); applyStage({silent:true}); renderUiMode(); renderAll&&renderAll(); });
+})();
+function renderSayMode(){
+  const box=document.getElementById('sayMode'); if(!box) return;
+  const on=sayBrief()?'brief':'full';
+  box.querySelectorAll('button[data-say]').forEach(b=>b.classList.toggle('on',b.dataset.say===on));
+}
+(function(){ const box=document.getElementById('sayMode'); if(!box) return;
+  box.addEventListener('click',e=>{ const b=e.target.closest('button[data-say]'); if(!b) return;
+    state.sayMode=b.dataset.say; save(); renderSayMode();
+    /* Switching back to Full has to un-clip what is already on screen, and
+       switching to Brief has to measure it - both need the marks cleared. */
+    document.querySelectorAll('[data-clamp-w]').forEach(el=>{
+      delete el.dataset.clampW; delete el.dataset.noclamp;
+      el.classList.remove('clampable','open');
+      const nx=el.nextElementSibling; if(nx&&nx.classList.contains('sub-more')) nx.remove();
+    });
+    clampPass(typeof currentTab!=='undefined'?currentTab:null);
+    if(typeof toast==='function') toast(sayBrief()
+      ? 'Brief. Every explanation shows its first two lines, with More to open it - nothing is gone.'
+      : 'Full. Every explanation shows in full, everywhere.');
+  });
 })();
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) activateTab(g.dataset.goto); });
 /* Cover First cards deep-link to their own category on Plan: find/create it,
@@ -16305,7 +16437,7 @@ function boot(){
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   applyPanelGates();
-  ensureDay1(); captureSnapshot(); renderUiMode(); applyStage({silent:true});
+  ensureDay1(); captureSnapshot(); renderUiMode(); renderSayMode(); applyStage({silent:true});
   applyHousehold(); applySpending();
   if(state.householdOn && typeof refreshSyncState==='function') refreshSyncState();
   initPWA();

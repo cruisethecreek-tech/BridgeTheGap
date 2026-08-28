@@ -6739,6 +6739,125 @@ check('...two of them marked as waiting on a name',
 check('...and saying, on the row, what to do about it',
       /Name this one from the photo/.test(blankUI.placeholder), blankUI.placeholder);
 
+/* ---- 86. saying less at a glance ----
+   "The entire thing is a bit unorganized. Everything just feels like a big
+   run-on sentence. The site lacks a distinguisher of what is what when looking
+   at it at a glance, and so much data gets lost when trying to browse quickly."
+
+   Measured before arguing: 82 intro paragraphs, 28 of them over 200 characters,
+   every one rendered at the same size, weight and colour as the next. One of
+   the worst was 489 characters and had been added two days earlier. Each was
+   written to earn its place at the time; nobody was reading them as a set.
+
+   Two changes, and neither deletes a word.
+
+   1. A HEADING YOU CAN FIND. A short accent rule above every panel title and
+      accordion heading, dimmed and shortened on a closed one, so an open
+      section reads as a place you are in and a closed one as a door.
+   2. PROSE IS CLAMPED, NOT CUT. Long intros show two lines and a "More".
+      Clamped, deliberately, rather than collapsed into a <details>: clipped
+      text is still rendered, so innerText still returns it, a screen reader
+      still reads it and find-in-page still finds it. A <details> would have
+      hidden it from all three - and from most of this suite, which reads copy
+      through innerText. The visual saving is identical; only the honesty
+      differs.
+
+   Which paragraphs get a "More" is MEASURED at the width being read, not
+   guessed from a character count, because a sentence that overflows at 320px
+   fits at 900 and a control that reveals nothing is worse than no control. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:2000,updated:'2026-08-01'}],
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'},
+                {id:'e',type:'expense',amount:120,date:'2026-08-05',catId:'c1'}]});
+await p.reload(); await p.waitForTimeout(800);
+
+const brief = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const look=async v=>{ activateTab(v); await w(600);
+    const root=document.getElementById('view-'+v);
+    const subs=[...root.querySelectorAll('.panel .sub, .acc-body .sub')];
+    return { clamped:subs.filter(x=>x.classList.contains('clampable')).length,
+             mores:root.querySelectorAll('.sub-more').length,
+             /* a clamped paragraph is TWO lines, not eight */
+             tallest:Math.max(0,...subs.filter(x=>x.classList.contains('clampable'))
+                                       .map(x=>Math.round(x.getBoundingClientRect().height))),
+             /* and every word of it is still there to be read */
+             wordsKept:subs.filter(x=>x.classList.contains('clampable'))
+                           .every(x=>x.innerText.trim().length>80),
+             pointless:subs.filter(x=>x.dataset.noclamp==='1')
+                           .some(x=>x.nextElementSibling&&x.nextElementSibling.classList.contains('sub-more')) };
+  };
+  return { tx:await look('tx'), goals:await look('goals') };
+});
+check('long intros are clamped on Track and on Build',
+      brief.tx.clamped>0 && brief.goals.clamped>0, JSON.stringify(brief));
+check('...each clamped one getting exactly one More',
+      brief.tx.mores===brief.tx.clamped && brief.goals.mores===brief.goals.clamped,
+      JSON.stringify(brief));
+check('...clipped to two lines rather than eight',
+      brief.tx.tallest>0 && brief.tx.tallest<=46 && brief.goals.tallest<=46,
+      `${brief.tx.tallest} / ${brief.goals.tallest}`);
+check('...with every word still in the text, because it is clipped and not hidden',
+      brief.tx.wordsKept===true && brief.goals.wordsKept===true);
+check('...and an intro short enough to fit never grows a More that reveals nothing',
+      brief.tx.pointless===false && brief.goals.pointless===false);
+
+const sayTog = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(500);
+  const btn=document.querySelector('#view-tx .sub-more'); if(!btn) return null;
+  const el=btn.previousElementSibling;
+  const shut=Math.round(el.getBoundingClientRect().height);
+  btn.click(); await w(140);
+  const open=Math.round(el.getBoundingClientRect().height);
+  const label=btn.textContent, aria=btn.getAttribute('aria-expanded');
+  btn.click(); await w(140);
+  return {shut, open, label, aria, back:Math.round(el.getBoundingClientRect().height), backLabel:btn.textContent};
+});
+check('More opens that one paragraph and says Less',
+      sayTog && sayTog.open>sayTog.shut && sayTog.label==='Less' && sayTog.aria==='true',
+      JSON.stringify(sayTog));
+check('...and closes it again', sayTog.back===sayTog.shut && sayTog.backLabel==='More');
+
+const rules = await p.evaluate(() => {
+  const h=document.querySelector('#view-tx .panel>h2');
+  const openAcc=[...document.querySelectorAll('#view-goals details.acc')].find(d=>d.open);
+  const shutAcc=[...document.querySelectorAll('#view-goals details.acc')].find(d=>!d.open);
+  const bar=el=>{ if(!el) return null; const cs=getComputedStyle(el,'::before');
+    return {w:parseFloat(cs.width)||0, h:parseFloat(cs.height)||0, o:parseFloat(cs.opacity)}; };
+  return { panel:bar(h),
+           open:bar(openAcc&&openAcc.querySelector('.acc-hd')),
+           shut:bar(shutAcc&&shutAcc.querySelector('.acc-hd')) };
+});
+check('a panel heading carries an accent rule, so one section ends visibly',
+      rules.panel && rules.panel.w>=20 && rules.panel.h>=2, JSON.stringify(rules.panel));
+check('...an accordion heading carries one too',
+      rules.open && rules.open.w>=20, JSON.stringify(rules.open));
+check('...and a closed one is dimmer and shorter, so open reads as a place you are in',
+      rules.shut && rules.shut.w<rules.open.w && rules.shut.o<rules.open.o,
+      JSON.stringify({open:rules.open, shut:rules.shut}));
+
+const modes = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('settings'); await w(450);
+  document.querySelector('#sayMode button[data-say="full"]').click(); await w(300);
+  activateTab('goals'); await w(600);
+  const full={clamped:document.querySelectorAll('#view-goals .sub.clampable').length,
+              body:document.body.classList.contains('say-brief'), stored:state.sayMode};
+  activateTab('settings'); await w(400);
+  document.querySelector('#sayMode button[data-say="brief"]').click(); await w(300);
+  activateTab('goals'); await w(600);
+  return {full, backClamped:document.querySelectorAll('#view-goals .sub.clampable').length,
+          fresh:normalizeState({}).sayMode};
+});
+check('Full gives every word back, everywhere, and remembers it',
+      modes.full.clamped===0 && modes.full.body===false && modes.full.stored==='full',
+      JSON.stringify(modes.full));
+check('...and switching back to Brief clamps again',
+      modes.backClamped>0, String(modes.backClamped));
+check('Brief is what someone new gets', modes.fresh==='brief', modes.fresh);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
