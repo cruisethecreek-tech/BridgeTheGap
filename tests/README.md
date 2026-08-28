@@ -838,6 +838,21 @@ The entry delete is checked the way the category delete is - armed, the question
 naming the amount and what the plan gets back, no stale arm surviving a
 navigation - because this is the third surface to get the same report.
 
+It also holds **the amount with no name**, a section written without being able
+to reproduce the failure. The reader said "Read 1 line" for a screenshot holding
+four, and no OCR engine was available locally to see why. Rather than guess at
+Tesseract, the question became what the code does badly *whatever* it is handed -
+and the answer was that an amount whose description did not survive was dropped
+silently.
+
+So the fixture is the shape that produces it: a two-column page read as one
+block of descriptions followed by one block of amounts, where only the first
+amount has any text in front of it. The properties are that every amount
+survives, the ones that could not be named are flagged rather than dropped, the
+one that could keeps its name, and a well-read statement still comes back with
+nothing flagged at all - that last one being what stops the fix from turning
+into a machine for producing blank rows.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

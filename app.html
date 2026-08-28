@@ -1877,6 +1877,18 @@
     line-height:1.6;color:var(--muted)}
   .xfer-note b{color:var(--text)}
   .xfer-note .xn-add{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+  /* A row the reader could price but not name. Marked so the eye lands on it,
+     rather than leaving somebody to work out which of nine is the blank one. */
+  .ql-row.ql-unnamed .ql-what{border-color:var(--accent);background:rgba(var(--accent-rgb),.07)}
+  .ql-row.ql-unnamed .ql-what::placeholder{color:var(--accent);opacity:.9}
+  .ql-raw{margin-top:8px}
+  .ql-raw>summary{cursor:pointer;font-size:11.5px;font-weight:800;color:var(--accent);list-style:none}
+  .ql-raw>summary::-webkit-details-marker{display:none}
+  .ql-raw>summary::before{content:'▸ ';font-size:9px}
+  .ql-raw[open]>summary::before{content:'▾ '}
+  .ql-raw pre{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5;
+    max-height:220px;overflow:auto;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:10px;padding:9px 11px;margin:6px 0 0;color:var(--muted)}
   .traplegend{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:0 14px}
   .traplegend>summary{cursor:pointer;font-weight:800;font-size:13.5px;padding:12px 0;color:var(--accent);list-style:none}
   .traplegend>summary::-webkit-details-marker{display:none}
@@ -8364,10 +8376,19 @@ function qlParseOcr(text){
     cursor=QL_MONEY.lastIndex;
     const amt=parseFloat((m[2]||m[3]||'').replace(/,/g,''));
     if(!(amt>0) || amt>=1000000) continue;
-    if(desc.length<2) continue;                       // a price with nothing to call it
+    /* An amount whose NAME did not survive the read is still an amount, and
+       dropping it was the fault behind "it's the only logged one entry": four
+       amounts came off the screen, three lost their description somewhere in
+       the OCR, and three rows vanished without a word. The amount is the hard
+       part to retype and the part OCR gets right; the name is sitting on the
+       photo two inches away. So the row is kept, blank-named and flagged, and
+       the note says how many are waiting on a name. A silent drop is worse than
+       a visible gap - a person can fix a gap. */
+    const named=desc.length>=2;
     /* A statement writes every debit as negative, so a minus is the norm and
        says nothing. An explicit plus is the one that means money arriving. */
-    const row={what:desc.slice(0,80), amt};
+    const row={what:named?desc.slice(0,80):'', amt};
+    if(!named) row.unnamed=true;
     if(m[1]==='+') row.kind='income';
     out.push(row);
   }
@@ -8449,10 +8470,21 @@ function renderQuickLog(){
             if(c && [...c.options].some(o=>o.value==='__income') && c.dataset.touched!=='1'){
               c.value='__income'; c.classList.add('guessed');
               c.title='Read as money in, from the + on the statement - change it if it is wrong'; } }
-          else guessRow(row);
+          else if(it.what) guessRow(row);
+          if(it.unnamed){ row.classList.add('ql-unnamed');
+            row.querySelector('.ql-what').placeholder='Name this one from the photo'; }
           filled++;
         });
-        note.textContent='Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
+        /* "Read 1 line" when four amounts came off the screen is a true
+           sentence that tells you nothing useful. It has to count both: what it
+           could name, and what it could only price. */
+        const blanks=items.filter(x=>x.unnamed).length, named=filled-blanks;
+        note.innerHTML = blanks
+          ? `Read <b>${filled}</b> amount${filled>1?'s':''}, and could put a name to <b>${named}</b> of ${filled>1?'them':'it'}. `
+            + `The other ${blanks===1?'one is':blanks+' are'} below with the amount filled in - the photo is right there, name ${blanks===1?'it':'them'} and log. `
+            + `Nothing counts until you say so.`
+            + `<details class="ql-raw"><summary>Show me what it actually read</summary><pre>${escapeHtml(String((r&&r.data&&r.data.text)||'').slice(0,4000))}</pre></details>`
+          : 'Read '+filled+' line'+(filled>1?'s':'')+' - check them against the photo, fix anything I misread, then log. Nothing counts until you say so.';
         /* A photo is the one path where somebody hands over a whole batch at
            once without touching a single field, so the account is the question
            most likely to go unanswered - and every line of it would land with

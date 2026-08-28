@@ -467,6 +467,16 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**An amount it could not name is still an amount.** *"It's the only logged one entry"* - sent again, with the reader now saying *"Read 1 line"* for a screenshot holding four.
+
+The previous fix was right and insufficient. The OCR could not be reproduced locally (no engine in the dev environment, the CDN blocked), so rather than guess at Tesseract's output I went looking for what the code does badly **whatever it is handed** - and found it: an amount whose description did not survive was dropped on the floor, silently, by `if(desc.length<2) continue`.
+
+That is exactly the shape of the report. A bank screen is two columns, and a page-segmenter that reads the left column and then the right one hands back every description in a block followed by every amount in a block. Only the first amount has any text in front of it: **one row named, three dropped without a word** - "Read 1 line", and the one that landed looks perfect.
+
+The amount is the part OCR gets right and the part that is tedious to retype; the name is on the photo two inches away. So the row is kept, blank and flagged (`.ql-unnamed`, with the placeholder *"Name this one from the photo"*), the note counts both halves - *"Read 4 amounts, and could put a name to 1 of them"* - and the raw OCR text is one tap away under **Show me what it actually read**, so a bad read is something you can see rather than something you have to infer.
+
+The rule this is an instance of, which this file has now recorded three times: **a silent drop is worse than a visible gap.** A person can fix a gap.
+
 **The reader survives OCR, and deleting an entry is armed.** Two reports off one screenshot: *"the delete button is too destructive"* and *"when adding it was only one thing added and that's the BMV entry."*
 
 The second is the interesting one, and **the first instinct was wrong.** Driving `qlSave` with four filled rows logged four - the save step was innocent. The loss was upstream, in a pattern of my own making: records were anchored on a `$`, which is safe and brittle. Tesseract reading a phone screenshot renders `-$59.25` cleanly about as often as it renders it `-S59.25` or drops the mark entirely, so three of four records vanished and one logged. That looks exactly like a bad reader rather than a strict pattern, and it is worse than a visible failure because **the one that did land looks right.**
