@@ -6363,6 +6363,145 @@ check('but an investment still cannot land in a line of credit',
       !cardLists.invest.includes('Rewards Card') && !cardLists.invest.includes('Equity Line'),
       cardLists.invest.join(', '));
 
+/* ---- 83. reading a bank screen, not just a notepad ----
+   Sent as a screenshot of a bank's pending list, read into the quick log, and
+   the result: "it needs to only read the description before Held, the prices
+   are also wrong, a cleared button is also needed."
+
+   The reader was built for a handwritten shopping list, where one line is one
+   purchase and the number at the end is the price. A bank screen breaks every
+   one of those assumptions at once, and broke them SILENTLY - nine rows, all
+   wrong, all plausible enough to log:
+
+     what: "Preauthorization / AI 8..."   $23,952      <- out of RR=623952602847
+     what: "Aug 27"                       $2,026       <- a date wearing a price
+     what: "3913595672 PK..."             $76,271
+
+   Two changes. Records are found by the MONEY, not by the line break, because a
+   bank record wraps across as many lines as it likes and ends with an amount.
+   And the description is cut down to the part a person would actually read.
+
+   The wrapped reference number is the subtle one and it is the whole reason the
+   first fix was not enough: a phone splits "RR=623952602847" as "RR=623952" and
+   "602847", so stripping KEY=VALUE leaves an orphan digit run sitting in the
+   merchant name. "Kindle Unltd" came back as "7855866, Kindle Unltd".
+
+   Every fixture below is the user's own text, wrapped exactly as their phone
+   wrapped it. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c1',name:'Getting around'}], budgets:{'2026-08':{c1:200}},
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}],
+  accounts:[{id:'a1',name:'Free Checking',kind:'checking',balance:2000,updated:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(600);
+
+const BANK_TEXT=[
+ 'Pending','',
+ 'Preauthorization / AI=867560,RR=623952','602847,PK=356239682557559 PMT*OH',
+ 'BUREAU MOTOR VEHIC Held:2026-08-27','14:57:35 EDT Exp:2026-08-30 14:57:35 EDT',
+ 'Aug 27, 2026','-$59.25','',
+ 'Preauthorization / AI=843880,RR=62','3913595672,PK=466239664376271',
+ 'MAHONINGCTYTITLE Held:2026-08-27','14:27:17 EDT Exp:2026-08-30 14:27:17 EDT',
+ 'Aug 27, 2026','-$21.49','',
+ 'Preauthorization / AI=157390,RR=62380','7855866,PK=466238683828615 Kindle',
+ 'Unltd Held:2026-08-26 14:59:42 EDT','Exp:2026-08-29 14:59:42 EDT',
+ 'Aug 26, 2026','-$12.89','',
+ 'Preauthorization / AI=107440,RR=623818','890417,PK=356238640867014 AIRBNB *',
+ 'HMREJET25N Held:2026-08-26 13:48:06','EDT Exp:2026-08-29 13:48:06 EDT',
+ 'Aug 26, 2026','-$329.00'].join('\n');
+
+const bank = await p.evaluate(t=>({
+  rows: qlParseOcr(t),
+  deposit: qlParseOcr('ACH Credit / PAYROLL DIRECT DEP Held:2026-08-25 09:00:00 EDT\nAug 25, 2026\n+$1,300.00'),
+  notepad: qlParseOcr('coffee 4.50\ngas 38\nlunch with sam 12.75'),
+  orphan: qlParseOcr('$14.00\n$9.99'),
+  starName: qlParseOcr('Bed * Bath $40.00'),
+  realPurchase: qlParseOcr('SQ *PURCHASE COFFEE $6.25')
+}), BANK_TEXT);
+
+check('a wrapped bank record is one entry, not one per line',
+      bank.rows.length===4, String(bank.rows.length));
+check('...with the amounts that are actually on the screen',
+      JSON.stringify(bank.rows.map(r=>r.amt))==='[59.25,21.49,12.89,329]',
+      JSON.stringify(bank.rows.map(r=>r.amt)));
+check('...and no reference number ever read as a price',
+      !bank.rows.some(r=>[23952,62,76271,2026,867560,843880,3913595672].includes(r.amt)),
+      JSON.stringify(bank.rows.map(r=>r.amt)));
+check('the description stops before "Held", as asked',
+      !bank.rows.some(r=>/Held/i.test(r.what)), JSON.stringify(bank.rows.map(r=>r.what)));
+check('...and carries none of the plumbing around it',
+      !bank.rows.some(r=>/AI=|RR=|PK=|Preauthorization|Pending|EDT|Exp:/i.test(r.what)),
+      JSON.stringify(bank.rows.map(r=>r.what)));
+check('...nor an orphan half of a reference number split across a line',
+      !bank.rows.some(r=>/\d{5,}/.test(r.what)), JSON.stringify(bank.rows.map(r=>r.what)));
+check('a processor tag comes off the front, leaving the merchant',
+      bank.rows[0].what==='OH BUREAU MOTOR VEHIC', bank.rows[0].what);
+check('a merchant with no tag is left exactly alone',
+      bank.rows[1].what==='MAHONINGCTYTITLE', bank.rows[1].what);
+check('a two-word merchant survives the wrap it was split across',
+      bank.rows[2].what==='Kindle Unltd', bank.rows[2].what);
+check('a booking code comes off the end',
+      bank.rows[3].what==='AIRBNB', bank.rows[3].what);
+check('nothing is read as money in, because a statement writes debits as minus',
+      !bank.rows.some(r=>r.kind==='income'));
+check('an explicit plus IS read as money in, thousands separator and all',
+      bank.deposit.length===1 && bank.deposit[0].kind==='income' && bank.deposit[0].amt===1300,
+      JSON.stringify(bank.deposit));
+
+/* The path this was built for, which must not have moved an inch. */
+check('a handwritten notepad still reads exactly the way it always did',
+      bank.notepad.length===3 && bank.notepad[0].what==='coffee' && bank.notepad[0].amt===4.5
+        && bank.notepad[1].amt===38 && bank.notepad[2].what==='lunch with sam'
+        && bank.notepad[2].amt===12.75, JSON.stringify(bank.notepad));
+check('a price with nothing to call it is dropped, not logged blank',
+      bank.orphan.length===0, JSON.stringify(bank.orphan));
+/* The two names the cleaner could most easily eat. */
+check('a merchant with a star in its name keeps it',
+      bank.starName.length===1 && bank.starName[0].what==='Bed * Bath',
+      JSON.stringify(bank.starName));
+check('...and a merchant whose name contains a lead-in word keeps that too',
+      bank.realPurchase.length===1 && /COFFEE/.test(bank.realPurchase[0].what)
+        && /PURCHASE/i.test(bank.realPurchase[0].what), JSON.stringify(bank.realPurchase));
+
+/* "A cleared button is also needed." Armed, for the same reason a category
+   delete is: clearing nine rows somebody has been correcting is not a thing a
+   thumb should manage on its own. */
+const qlc = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('tx'); await w(280);
+  document.getElementById('quickLogBtn').click(); await w(280);
+  const cb=()=>document.getElementById('qlClear');
+  o.exists=!!cb();
+  cb().click(); await w(140);
+  o.emptyClearsAtOnce=cb().textContent==='Clear';
+  for(let i=0;i<2;i++) document.getElementById('qlAdd').click();
+  [...document.querySelectorAll('.ql-row')].forEach((r,i)=>{
+    r.querySelector('.ql-what').value='thing'+i; r.querySelector('.ql-amt').value=String(10+i); });
+  cb().click(); await w(140);
+  o.armedLabel=cb().textContent;
+  o.nothingLostYet=document.querySelectorAll('.ql-row').length===3;
+  cb().click(); await w(180);
+  o.rowsAfter=document.querySelectorAll('.ql-row').length;
+  o.emptyAfter=!document.querySelector('.ql-what').value && !document.querySelector('.ql-amt').value;
+  o.labelAfter=cb().textContent;
+  document.querySelector('.ql-what').value='x';
+  cb().click(); await w(140);
+  const armedAgain=cb().textContent;
+  document.querySelector('.ql-what').dispatchEvent(new Event('input',{bubbles:true})); await w(140);
+  o.typingDisarms=armedAgain!=='Clear' && cb().textContent==='Clear';
+  return o;
+});
+check('the quick log has a Clear button', qlc.exists===true);
+check('...which clears at once when there is nothing to lose',
+      qlc.emptyClearsAtOnce===true);
+check('...but names what it would cost before doing it',
+      /Clear 3 lines\?/.test(qlc.armedLabel) && qlc.nothingLostYet===true,
+      qlc.armedLabel);
+check('...and the second tap clears, back to one empty row',
+      qlc.rowsAfter===1 && qlc.emptyAfter===true && qlc.labelAfter==='Clear');
+check('typing again cancels an armed clear, because that is a change of mind',
+      qlc.typingDisarms===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

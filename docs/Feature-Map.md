@@ -467,6 +467,32 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**Reading a bank screen, not just a notepad.** Sent as a screenshot of a bank's pending list read into the quick log: *"it needs to only read the description before Held, the prices are also wrong, a cleared button is also needed."*
+
+The reader was built for a handwritten shopping list, where **one line is one purchase and the number at the end is the price**. A bank screen breaks every one of those assumptions at once, and broke them *silently* - nine rows, all wrong, all plausible enough to log:
+
+| what it read | amount | where the number came from |
+|---|---|---|
+| `Preauthorization / AI 8...` | $23,952 | the middle of `RR=623952602847` |
+| `Aug 27` | $2,026 | a date wearing a price |
+| `3913595672 PK...` | $76,271 | another reference |
+
+Two changes, and the first is the one that matters.
+
+**Records are found by the money, not by the line break.** A bank record wraps across as many lines as it likes and ends with an amount, so the text is scanned for real currency tokens (`QL_MONEY`) and everything since the last one is that record's description. A newline means nothing. Requiring the `$` is what makes it safe: reference digits never carry a currency mark.
+
+**The description is cut to the part a person would read** (`qlCleanDesc`): everything from `Held:`/`Exp:`/`Posted:` onward, the `AI=`/`RR=`/`PK=` runs, bare reference digits, stranded timestamps and dates, the screen's own `Pending` heading, a processor tag on the front (`PMT*OH BUREAU MOTOR VEHIC` → `OH BUREAU MOTOR VEHIC`) and a booking code on the end (`AIRBNB * HMREJET25N` → `AIRBNB`).
+
+**The wrapped reference number is the subtle one**, and the reason the first attempt was not enough. A phone splits `RR=623952602847` into `RR=623952` and `602847`, so stripping `KEY=VALUE` leaves an orphan digit run sitting in the merchant name - `Kindle Unltd` came back as `7855866, Kindle Unltd`. The value pattern now absorbs digit-only continuations across the wrap.
+
+Two guards keep it from eating real names. The "cut everything before the last transaction-type lead-in" step only runs when a `KEY=` reference is present - the unmistakable signature of bank plumbing - because without that guard `SQ *PURCHASE COFFEE` loses the purchase and `PAYPAL *PAYMENT` is left with nothing. And the trailing-code strip only fires on something that really looks like a code (letters **and** digits, no spaces), so `Bed * Bath` survives.
+
+With no currency mark anywhere the parser **falls back to the original line-at-a-time reading**, so `coffee 4.50` on a photographed notepad works exactly as it always did.
+
+One thing gained for free: a statement writes every debit as negative, so a minus says nothing - but an **explicit plus** means money arriving, and those rows arrive with the category pre-set to income as a guess you can override.
+
+**A Clear button**, armed rather than instant, for the same reason a category delete is: throwing away nine rows somebody has been correcting is not a thing a thumb should manage on its own. With nothing typed it just clears; with content it reads `Clear 3 lines?` and needs a second tap, and typing again cancels it. It also drops the photo and the read note, so a bad batch goes away completely without closing the panel.
+
 **A card cannot be somewhere money lands until it exists.** Sent as a screenshot of the Move form's destination list - seven accounts, no card, no equity line - with *"shouldn't the move feature have my credit card and HELOC to land in?"*
 
 It should, and it did. Driving the real pickers proved the wiring was already correct: with credit accounts present they appear at both ends of a move, and a card is **preselected** as the destination because that is what a move usually is. They were missing because the two accounts had never been created.

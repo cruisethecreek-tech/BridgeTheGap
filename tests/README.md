@@ -801,6 +801,25 @@ from and hand over the trail, and that nudge has to stop once a card exists.
 Both ends of a move must offer cards; an investment still must not be able to
 land in a line of credit.
 
+It also holds **reading a bank screen**, where the fixtures are the user's own
+pasted text wrapped exactly as their phone wrapped it. The quick-log reader was
+built for a handwritten shopping list and a bank's pending list breaks every one
+of its assumptions silently - nine rows, all wrong, every price lifted out of a
+reference number and every description carrying the plumbing around it.
+
+The properties are about what a person would read: a wrapped record is one entry
+rather than one per line, the amounts are the ones on the screen, no reference
+number is ever read as a price, and the description stops before `Held` with no
+orphan half of a wrapped reference left in it. Then the two names the cleaner
+could most easily eat, both asserted positively: a merchant with a star in its
+name keeps it, and a merchant whose name *contains* a lead-in word
+(`SQ *PURCHASE COFFEE`) keeps that too. And the path it was built for - a
+handwritten `coffee 4.50` - has to read exactly as it always did.
+
+The Clear button is checked the way the category delete is: it clears at once
+when there is nothing to lose, names what it would cost when there is, needs the
+second tap, and disarms when you start typing again.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.
