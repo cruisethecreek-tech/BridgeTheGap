@@ -868,6 +868,20 @@ readers, find-in-page, and most of this suite, which reads copy through
 `innerText`. The visual saving would have been identical and the honesty would
 not.
 
+It also holds **a figure showing its working**, where the fixtures are chosen so
+the sum can be checked by hand: 6,000 in, 1,300 out, 400 put away, one move.
+6,000 - 1,300 - 400 = 4,300, the move counts for nothing, and the total in the
+card has to be the figure on the tile - checked as one assertion, because a
+working that does not land on the number it explains is worse than none.
+
+The reachability property is the one worth naming: the explanation for that
+figure had existed for weeks, wired to a chart legend four screens from the tile
+that raises the question. So the check is not "does the copy exist" but "does
+the tile carry a way to reach it". And a `?` inside a grid tile must open its
+note *below the strip* without changing the strip's height - asserted by
+measuring the strip before and after, because a note dropped into one cell of a
+four-cell grid pushes that tile's own number out of shape.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.
