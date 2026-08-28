@@ -467,6 +467,25 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**A figure that will not show its working.** Sent with *"Logged net (all time)"* circled: *"How did this figure come about? There's no explanation or flip card. It's not teaching you anything about money, it's just stating facts without any data."*
+
+**Half of that was already built and unreachable.** The explanation existed - and was wired to the trend chart's legend, four screens away, rather than to the tile where the question actually gets asked. Every other figure in that strip that needed one carried a `?`; this one, the least self-evident of them, had none. That is its own lesson: a written explanation nobody can reach from the thing it explains is the same as no explanation.
+
+**The other half was fair.** The card explained what the number was *not* - not net worth, not the bank balance - and never once showed the sum that produces it. A figure that will not show its arithmetic is asking to be trusted, which is the one thing this app refuses to ask for anywhere else.
+
+The card leads with the sum now:
+
+```
+Logged coming in    2 entries   +$6,000
+Logged going out    2 entries   −$1,300
+Logged put away     1 entry       −$400
+Which leaves        6 in total    $4,300
+```
+
+Then the window it covers, why a **move** counts for nothing in it (money between your own accounts is neither earned nor spent), **what it is good for** - it is the only figure in the app that measures your own typing, so it is the only one that can catch a double-logged paycheck - and only then what it is not.
+
+One layout fix came with it: a `?` inside a summary **tile** used to drop its note into that cell of the grid, shoving the tile's own number out of shape. From a tile the note now lands under the whole strip, where there is a full row's width to read it in.
+
 **Saying less at a glance.** Sent as two screen recordings with: *"The entire thing is a bit unorganized. Everything just feels like a big run-on sentence. The site lacks a distinguisher of what is what when looking at it at a glance, and so much data gets lost when trying to browse quickly."*
 
 Measured before arguing with it: **82 intro paragraphs, 28 of them over 200 characters**, every one rendered at the same size, weight and colour as the next. The longest was 489 characters and had been added two days earlier. Every one was written to earn its place at the time. Nobody was reading them as a set - and this session is where they came from, because each fix shipped with a paragraph of honest explanation.

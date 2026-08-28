@@ -1518,6 +1518,19 @@
   .ufld .fl-k{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
   .ufld .fl-in{display:inline-flex;align-items:center;gap:5px;color:var(--text);font-weight:800;font-size:15px}
   .ufld .fl-in input{font-size:15px}
+  /* The working, shown as a sum rather than described in a sentence. A figure
+     that will not show its arithmetic is asking to be trusted, and this app
+     does not ask for that anywhere else. */
+  .wk-sum{margin:2px 0 10px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:4px 12px}
+  .wk-r{display:flex;align-items:baseline;gap:9px;padding:7px 0;font-size:13px;border-top:1px solid var(--line)}
+  .wk-r:first-child{border-top:none}
+  .wk-r span{flex:1;min-width:0}
+  .wk-r i{font-style:normal;font-size:11px;color:var(--muted);flex:none}
+  .wk-r b{flex:none;font-weight:800;font-variant-numeric:tabular-nums}
+  .wk-r.tot{border-top:2px solid var(--accent);font-weight:800}
+  .wk-r.tot b{font-size:15px;color:var(--accent)}
+  .wk-p{font-size:12.5px;line-height:1.6;margin:0 0 9px}
+  .wk-p:last-child{margin-bottom:0}
   .why-q{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;
     margin-left:6px;padding:0;border-radius:50%;border:1px solid var(--line);background:transparent;
     color:var(--muted);font:inherit;font-size:12px;font-weight:900;line-height:1;cursor:pointer;vertical-align:middle}
@@ -8829,7 +8842,7 @@ function renderTx(){
     <div class="stat"><div class="k">${(txAllMonths?'All-time ':'')+lifeLabel('spent','Spent')}</div><div class="v">${money(exp)}</div></div>
     ${showInv?`<div class="stat"><div class="k">Invested ${txAllMonths?'(all time)':'(month)'}</div><div class="v pos">${money(inv)}</div></div>`:''}
     <div class="stat"><div class="k">Net ${txAllMonths?'(all time)':'(month)'}${whyBtn('txNet')}</div><div class="v ${(inc-exp-inv)<0?'bad':'good'}">${money(inc-exp-inv)}</div></div>
-    ${dupBalance?'':`<div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}</div><div class="v ${bal<0?'bad':'pos'}">${money(bal)}</div></div>`}`;
+    ${dupBalance?'':`<div class="stat"><div class="k">${(state.accounts||[]).length?'Logged net (all time)':'Balance (all time)'}${whyBtn('loggedNet')}</div><div class="v ${bal<0?'bad':'pos'}">${money(bal)}</div></div>`}`;
   const bn=document.getElementById('bankNote');
   if(bn){
     const n=(state.accounts||[]).filter(a=>!isOwedAcct(a)).length, exp=assetAcctExpected(), said=assetAcctTotal(), drift=Math.round((exp-said)*100)/100;
@@ -12134,14 +12147,34 @@ const FIELD_WHY={
         ? `<b>${money(lim)} &divide; ${dim} days = ${money(lim/dim)} a day.</b> Every day you come in under that goes green; a day with nothing logged earns a star. It is split evenly rather than by weekday, because a rule you can predict is a rule you can beat.`
         : `Whatever you set is divided by the days in the month to make a daily allowance. Beat it and the day goes green.`; } },
   enough:{ t:'What "Enough" is for', b:()=>`The monthly spend where more money stops buying you a better life. It is not a budget and nothing enforces it - it is the line that tells you when a raise should turn into freedom instead of quietly turning into a bigger normal.<br><br>The app compares it against what you actually spend and says so when the two drift apart.` },
-  loggedNet:{ t:'Why this is not your net worth', b:()=>{
-      const led=state.transactions.reduce((s,t)=>s+txDelta(t),0);
-      const nw=netWorth(), bank=bankTotal();
-      return `Three different numbers live on this screen and they are supposed to differ.<br><br>`
-        + `<b>${money(led)}</b> is this line: every dollar you have <b>logged as coming in</b>, minus everything you logged going out, since the first entry. It is a record of your typing, not of your wealth - it knows nothing that happened before you started, and nothing you never logged.<br><br>`
-        + `<b>${money(nw)}</b> is net worth: what you <b>own</b> minus what you <b>owe</b>, taken from your accounts, assets and liabilities. It is a statement about today.<br><br>`
-        + `<b>${money(bank)}</b> is what your accounts actually say.<br><br>`
-        + `If this line is much larger than the other two, the usual reason is <b>income logged twice</b> - a paycheck entered by hand that a recurring rule also posted. Open Track, expand Money in, and look for the same amount on the same day.`; } },
+  /* "How did this figure come about? There's no explanation or flip card. It's
+     not teaching you anything about money, it's just stating facts."
+     Half of that was already fixed and unreachable: this card existed, and was
+     wired to the trend chart's legend rather than to the tile the question gets
+     asked at. The other half is fair. It explained what the number was NOT and
+     never once showed the sum that produces it. A figure that will not show its
+     working is asking to be trusted, which is the one thing this app refuses to
+     ask for anywhere else. The arithmetic leads now. */
+  loggedNet:{ t:'Where this figure comes from', b:()=>{
+      const tx=state.transactions||[];
+      const nOf=k=>tx.filter(t=>t.type===k).length;
+      const sum=k=>tx.filter(t=>t.type===k).reduce((s,t)=>s+(+t.amount||0),0);
+      const inc=sum('income'), exp=sum('expense'), inv=sum('invest'), mov=nOf('transfer');
+      const led=tx.reduce((s,t)=>s+txDelta(t),0);
+      const dates=tx.map(t=>t.date).filter(Boolean).sort();
+      const span=dates.length ? `${dates[0]} to ${dates[dates.length-1]}` : 'no entries yet';
+      const row=(label,n,amt,sign)=>`<div class="wk-r"><span>${label}</span><i>${n} ${n===1?'entry':'entries'}</i><b>${sign}${money(amt)}</b></div>`;
+      return `<div class="wk-sum">`
+        + row('Logged coming in', nOf('income'), inc, '+')
+        + row('Logged going out', nOf('expense'), exp, '&minus;')
+        + (inv>0?row('Logged put away', nOf('invest'), inv, '&minus;'):'')
+        + `<div class="wk-r tot"><span>Which leaves</span><i>${tx.length} in total</i><b>${money(led)}</b></div>`
+        + `</div>`
+        + `<p class="wk-p">Every entry you have ever logged, added up, across <b>${escapeHtml(span)}</b>.`
+        + (mov>0?` The <b>${mov}</b> ${mov===1?'move':'moves'} you logged count for nothing here on purpose - money going from one of your accounts to another is not earned and not spent.`:'')
+        + `</p>`
+        + `<p class="wk-p"><b>What it is good for.</b> Nothing else in this app measures your own typing, so this is the only figure that can catch a mistake in it. If it runs far ahead of what your accounts actually hold, the usual cause is <b>income logged twice</b> - a paycheck entered by hand that a recurring rule also posted. Open Money in below and look for the same amount on the same day.</p>`
+        + `<p class="wk-p"><b>What it is not.</b> Not your net worth (<b>${money(netWorth())}</b>, what you own minus what you owe) and not your bank balance (<b>${money(bankTotal())}</b>, what your accounts say). It knows nothing that happened before your first entry, and nothing you never logged - so it is a record of what you wrote down, and it grows for as long as you keep earning more than you spend, whatever your balance does.</p>`; } },
   assetPays:{ t:'The other half of the test', b:()=>{
       const pays=(state.assets||[]).reduce((s,a)=>s+(+a.pays||0),0);
       const cost=(state.assets||[]).reduce((s,a)=>s+(+a.cost||0),0);
@@ -12159,13 +12192,20 @@ function whyBtn(k){ return FIELD_WHY[k] ? `<button type="button" class="why-q" d
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-why]'); if(!b) return;
   const k=b.dataset.why, w=FIELD_WHY[k]; if(!w) return;
-  const host=b.closest('label,.fld,.ec-row,.li-cost,.row')||b.parentNode;
-  const open=host.parentNode.querySelector(`.why-note[data-forwhy="${k}"]`);
+  /* A tile in a summary grid is not a field. Dropping the note in after it puts
+     a paragraph inside one cell of a four-cell grid, which shoves the tile's own
+     number out of shape - so from a tile the note lands under the whole strip,
+     where there is a full row's width to read it in. */
+  const stat=b.closest('.stat,.fstat');
+  const host=stat||b.closest('label,.fld,.ec-row,.li-cost,.row')||b.parentNode;
+  const after=stat?host.parentNode:host;
+  const parent=after.parentNode; if(!parent) return;
+  const open=parent.querySelector(`.why-note[data-forwhy="${k}"]`);
   if(open){ open.remove(); b.classList.remove('on'); return; }
   const d=document.createElement('div');
   d.className='why-note'; d.dataset.forwhy=k;
   d.innerHTML=`<div class="wn-t">${escapeHtml(w.t)}</div><div class="wn-b">${typeof w.b==='function'?w.b():w.b}</div>`;
-  host.parentNode.insertBefore(d, host.nextSibling);
+  parent.insertBefore(d, after.nextSibling);
   b.classList.add('on');
 });
 /* One listener for every period picker in the app. The number stays exactly as

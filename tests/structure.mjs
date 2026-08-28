@@ -6858,6 +6858,85 @@ check('...and switching back to Brief clamps again',
       modes.backClamped>0, String(modes.backClamped));
 check('Brief is what someone new gets', modes.fresh==='brief', modes.fresh);
 
+/* ---- 87. a figure that will not show its working ----
+   "How did this figure come about? There's no explanation or flip card. It's
+   not teaching you anything about money, it's just stating facts without any
+   data." Sent with "Logged net (all time)" circled.
+
+   Half of that was already built and unreachable. The explanation existed - and
+   was wired to the trend chart's legend, four screens away, rather than to the
+   tile where the question actually gets asked. Every other figure in that strip
+   that needed one had a "?"; this one, the least self-evident of them, had none.
+
+   The other half was fair. The card explained what the number was NOT - not net
+   worth, not the bank - and never once showed the sum that produces it. A
+   figure that will not show its arithmetic is asking to be trusted, which is
+   the one thing this app refuses to ask for anywhere else.
+
+   Fixtures picked so the sum is checkable by hand: 6,000 in, 1,300 out, 400 put
+   away, one move. 6,000 - 1,300 - 400 = 4,300, and the move counts for nothing. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:5000,updated:'2026-08-01'},
+            {id:'a2',name:'Savings',kind:'savings',balance:1000,updated:'2026-08-01'}],
+  transactions:[
+    {id:'i1',type:'income',amount:4000,date:'2026-07-01',source:'Pay',acctId:'a1'},
+    {id:'i2',type:'income',amount:2000,date:'2026-08-01',source:'Pay',acctId:'a1'},
+    {id:'e1',type:'expense',amount:800,date:'2026-07-05',catId:'c1',acctId:'a1'},
+    {id:'e2',type:'expense',amount:500,date:'2026-08-05',catId:'c1',acctId:'a1'},
+    {id:'v1',type:'invest',amount:400,date:'2026-08-06',source:'Fund',acctId:'a1'},
+    {id:'m1',type:'transfer',amount:250,date:'2026-08-07',acctId:'a1',destAcctId:'a2'}]});
+await p.reload(); await p.waitForTimeout(700);
+
+const workings = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(600);
+  const tiles=[...document.querySelectorAll('#txSummary .stat')].map(t=>({
+    k:t.querySelector('.k').textContent.replace('?','').trim(),
+    v:t.querySelector('.v').textContent, why:!!t.querySelector('[data-why]')}));
+  const btn=document.querySelector('#txSummary [data-why="loggedNet"]');
+  if(!btn) return {tiles, opened:false};
+  const stripBefore=Math.round(document.getElementById('txSummary').getBoundingClientRect().height);
+  btn.click(); await w(280);
+  const note=document.querySelector('.why-note[data-forwhy="loggedNet"]');
+  const o={ tiles, opened:!!note, inTile:!!(note&&note.closest('.stat')),
+    stripBefore, stripAfter:Math.round(document.getElementById('txSummary').getBoundingClientRect().height),
+    rows:[...document.querySelectorAll('.why-note .wk-r')].map(x=>x.innerText.replace(/\n/g,' | ')),
+    txt:note?note.innerText:'' };
+  btn.click(); await w(220);
+  o.closes=!document.querySelector('.why-note[data-forwhy="loggedNet"]');
+  return o;
+});
+check('the all-time figure carries a ? where the question gets asked',
+      workings.tiles.some(t=>/Logged net/.test(t.k) && t.why),
+      JSON.stringify(workings.tiles));
+check('...opening below the strip rather than inside one cell of the grid',
+      workings.opened===true && workings.inTile===false);
+check('...without shoving the tiles it sits under out of shape',
+      workings.stripBefore===workings.stripAfter,
+      `${workings.stripBefore} -> ${workings.stripAfter}`);
+check('the working is a sum, line by line, with the entry counts behind each',
+      workings.rows.length===4
+        && /Logged coming in \| 2 entries \| \+\$6,000/.test(workings.rows[0])
+        && /Logged going out \| 2 entries \| −\$1,300/.test(workings.rows[1])
+        && /Logged put away \| 1 entry \| −\$400/.test(workings.rows[2]),
+      JSON.stringify(workings.rows));
+check('...ending on the figure that is actually on the tile',
+      /Which leaves \| 6 in total \| \$4,300/.test(workings.rows[3])
+        && workings.tiles.some(t=>/Logged net/.test(t.k) && /\$4,300/.test(t.v)),
+      workings.rows[3]);
+check('...over the window the sum actually covers',
+      /2026-07-01 to 2026-08-07/.test(workings.txt), workings.txt.slice(0,160));
+check('...saying why a move counts for nothing in it',
+      /1 move/.test(workings.txt) && /not earned and not spent/.test(workings.txt));
+check('it teaches what the figure is FOR, not only what it is not',
+      /What it is good for/.test(workings.txt) && /logged twice/.test(workings.txt),
+      workings.txt.slice(0,400));
+check('...while still separating it from net worth and from the bank',
+      /What it is not/.test(workings.txt) && /net worth/.test(workings.txt)
+        && /bank balance/.test(workings.txt));
+check('tapping the ? again puts it away', workings.closes===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
