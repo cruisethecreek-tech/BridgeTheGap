@@ -6937,6 +6937,68 @@ check('...while still separating it from net worth and from the bank',
         && /bank balance/.test(workings.txt));
 check('tapping the ? again puts it away', workings.closes===true);
 
+/* ---- 88. the thing you just logged is the thing you are checking ----
+   "Why did Fees go 5th in the list if it was the most recent entry?"
+
+   Because the sort only ever compared dates:
+
+     list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
+
+   Array.sort is stable, so five entries sharing a date kept their position in
+   state.transactions - the order they were TYPED, oldest first. Log five things
+   today and the one you just added sits at the bottom of the five, which is the
+   opposite of what a ledger is for: you open it to check the last thing you did.
+
+   A transaction carries a date and no time, so there is no clock to sort by. Its
+   position in the array is the record of when it was entered, and reading that
+   backwards is the honest answer. The fixture is the user's own screen. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c1',name:'Getting Around'},{id:'c2',name:'Fees'},{id:'c3',name:'Power & Wi-Fi'}],
+  budgets:{'2026-08':{c1:300,c2:100,c3:200}},
+  transactions:[
+    {id:'t1',type:'expense',amount:329,date:'2026-08-28',catId:'c1',note:'Sugarcreek'},
+    {id:'t2',type:'expense',amount:59.25,date:'2026-08-28',catId:'c1',note:'OH BUREAU MOTOR VEHIC'},
+    {id:'t3',type:'expense',amount:12.89,date:'2026-08-28',catId:'c1',note:'Kindle Unltd'},
+    {id:'t4',type:'expense',amount:52.77,date:'2026-08-28',catId:'c1'},
+    {id:'t5',type:'expense',amount:21.49,date:'2026-08-28',catId:'c2'},
+    {id:'t6',type:'expense',amount:60.70,date:'2026-08-27',catId:'c3'},
+    {id:'t7',type:'expense',amount:44.16,date:'2026-08-26',catId:'c1',note:'Franks'}]});
+await p.reload(); await p.waitForTimeout(700);
+const ledOrder = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(500);
+  const first=[...document.querySelectorAll('#txList .tx')].map(x=>x.dataset.txsheet);
+  /* and one logged right now has to land at the top of its day */
+  document.getElementById('txAmt').value='9.99';
+  document.getElementById('txDate').value='2026-08-28';
+  document.getElementById('txCat').value='c2';
+  document.getElementById('txNote').value='Brand new';
+  document.getElementById('addTx').click(); await w(500);
+  const top=document.querySelector('#txList .tx');
+  return {first, topAfter:top?top.innerText.replace(/\n/g,' '):''};
+});
+check('the newest entry of the day leads the ledger, rather than trailing it',
+      ledOrder.first[0]==='t5', JSON.stringify(ledOrder.first));
+check('...with the rest of that day behind it, newest to oldest',
+      JSON.stringify(ledOrder.first.slice(0,5))==='["t5","t4","t3","t2","t1"]',
+      JSON.stringify(ledOrder.first));
+check('...and older days still below it, which the date sort always got right',
+      ledOrder.first[5]==='t6' && ledOrder.first[6]==='t7',
+      JSON.stringify(ledOrder.first));
+check('an entry logged this second appears at the top of its day',
+      /Brand new/.test(ledOrder.topAfter), ledOrder.topAfter);
+
+/* The photo path was named for one kind of paper and takes several. */
+const photoCopy = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(320);
+  if(!document.querySelector('#quickLog .ql-panel')) document.getElementById('quickLogBtn').click();
+  await w(360);
+  return { label:(document.getElementById('qlSnap')||{}).textContent||'' };
+});
+check('the camera is not named for one kind of paper',
+      /photo/i.test(photoCopy.label) && !/notepad/i.test(photoCopy.label), photoCopy.label);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

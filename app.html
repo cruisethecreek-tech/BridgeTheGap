@@ -1929,6 +1929,7 @@
      rather than leaving somebody to work out which of nine is the blank one. */
   .ql-row.ql-unnamed .ql-what{border-color:var(--accent);background:rgba(var(--accent-rgb),.07)}
   .ql-row.ql-unnamed .ql-what::placeholder{color:var(--accent);opacity:.9}
+  .ql-reads{display:block;margin-top:7px;padding-top:7px;border-top:1px solid var(--line);font-size:12px;line-height:1.55}
   .ql-raw{margin-top:8px}
   .ql-raw>summary{cursor:pointer;font-size:11.5px;font-weight:800;color:var(--accent);list-style:none}
   .ql-raw>summary::-webkit-details-marker{display:none}
@@ -8561,7 +8562,7 @@ function renderQuickLog(){
   if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPhotoFile=null; return; }
   box.innerHTML=`<div class="ql-panel">
     <div class="ql-head"><span>One line each, then log them all. The little stuff is where it hides - and money you <b>put away</b> goes in here too, at the bottom of the category list.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
-    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Snap my notepad</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
+    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Take a photo</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
     ${qlAcctRowHTML()}
@@ -8586,7 +8587,12 @@ function renderQuickLog(){
     qlPhotoURL=URL.createObjectURL(f);
     prev.innerHTML=`<img class="ql-photo-img" src="${qlPhotoURL}" alt="Your notepad">`;
     readBtn.classList.remove('hide');
-    note.textContent='Your photo stays on this phone. Use it as a reference while you type - or tap "Read it for me" and I\'ll take a first pass. You review every line before anything logs.';
+    /* It was called "snap my notepad" and read like it only took one thing. It
+       takes anything with numbers on it, and the honest part is that some of
+       those read far better than others - a person who knows that aims the
+       camera better and is not surprised by a bad pass. */
+    note.innerHTML='Your photo stays on this phone. Use it as a reference while you type - or tap <b>Read it for me</b> and I will take a first pass. You review every line before anything logs.'
+      + '<span class="ql-reads">Reads best: a bank or card statement on screen, a printed receipt, a typed list. Reads worst: a pump or till display - those seven-segment digits defeat most readers - and handwriting, which is genuinely hard. On anything it struggles with you will still get the amounts, with the names left for you to fill in.</span>';
   }
   readBtn.onclick=async()=>{
     if(!qlPhotoFile&&!qlPhotoURL) return;
@@ -8868,7 +8874,19 @@ function renderTxList(){
       t.type==='transfer'?`${acctName(t.acctId)} ${acctName(t.destAcctId)}`:''].join(' ').toLowerCase();
     return hay.includes(q);
   });
-  list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
+  /* Date descending, then MOST RECENTLY ADDED first within a day.
+     "Why did Fees go 5th in the list if it was the most recent entry?" Because
+     the sort only ever compared dates, and Array.sort is stable - so entries
+     sharing a date kept their position in state.transactions, which is the order
+     they were typed, oldest first. Five things logged today put the one you just
+     added at the bottom of the five, which is the opposite of what a ledger is
+     for: the last thing you did is the thing you are checking.
+     A transaction carries a date and no time, so there is no clock to sort by.
+     Its position in the array IS the record of when it was entered, and reading
+     that backwards is the honest answer to "what did I just do". */
+  const seq=new Map(state.transactions.map((t,i)=>[t.id,i]));
+  list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0)
+                 || ((seq.get(b.id)||0)-(seq.get(a.id)||0)));
   const box=document.getElementById('txList');
   if(!list.length){ box.innerHTML=`<div class="empty" style="margin-top:14px">No transactions here yet. Log one above.</div>`; return; }
   /* Same move as the Plan tab, for the same reason. A ledger row had a date, a

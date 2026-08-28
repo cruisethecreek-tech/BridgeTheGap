@@ -467,6 +467,20 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**The thing you just logged is the thing you are checking.** Asked as *"why did Fees go 5th in the list if it was the most recent entry?"*
+
+Because the sort only ever compared dates:
+
+```js
+list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
+```
+
+`Array.sort` is **stable**, so five entries sharing a date kept their position in `state.transactions` - the order they were *typed*, oldest first. Log five things today and the one you just added sits at the bottom of the five, which is the opposite of what a ledger is for: you open it to check the last thing you did.
+
+A transaction carries a date and no time, so there is no clock to sort by. Its **position in the array** is the record of when it was entered, and reading that backwards is the honest answer. Sorted by date descending, then by insertion order descending.
+
+**And the camera takes more than a notepad.** It was labelled *"Snap my notepad"* and read like it accepted one thing; it accepts anything with numbers on it. The note now says which inputs read well and which do not - a statement on screen or a printed receipt read well, a **seven-segment pump or till display** and handwriting read badly - because a person who knows that aims the camera better and is not surprised by a poor pass. And on anything it struggles with, the amounts still land with the names left blank, which is the behaviour the previous fix put in.
+
 **A figure that will not show its working.** Sent with *"Logged net (all time)"* circled: *"How did this figure come about? There's no explanation or flip card. It's not teaching you anything about money, it's just stating facts without any data."*
 
 **Half of that was already built and unreachable.** The explanation existed - and was wired to the trend chart's legend, four screens away, rather than to the tile where the question actually gets asked. Every other figure in that strip that needed one carried a `?`; this one, the least self-evident of them, had none. That is its own lesson: a written explanation nobody can reach from the thing it explains is the same as no explanation.
