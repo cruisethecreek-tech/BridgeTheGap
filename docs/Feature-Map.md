@@ -467,6 +467,16 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**The reader survives OCR, and deleting an entry is armed.** Two reports off one screenshot: *"the delete button is too destructive"* and *"when adding it was only one thing added and that's the BMV entry."*
+
+The second is the interesting one, and **the first instinct was wrong.** Driving `qlSave` with four filled rows logged four - the save step was innocent. The loss was upstream, in a pattern of my own making: records were anchored on a `$`, which is safe and brittle. Tesseract reading a phone screenshot renders `-$59.25` cleanly about as often as it renders it `-S59.25` or drops the mark entirely, so three of four records vanished and one logged. That looks exactly like a bad reader rather than a strict pattern, and it is worse than a visible failure because **the one that did land looks right.**
+
+A money token has two shapes now: a `$` amount, or **any number with exactly two decimal places**. Inside bank text the second is nearly as safe as the first - a reference has no decimal point, a date uses hyphens, a time uses colons - and it survives the mark being eaten.
+
+And which reading to use is decided **from the text itself** (`qlLooksLikeStatement`) rather than from whether the money pattern happened to hit. Deciding it by "did anything match" is what let a bad OCR pass fall through to `qlParseNotepad`, a reading built for a shopping list. A statement the reader cannot get a single amount out of now reports nothing, rather than guessing.
+
+**The delete is armed** - third time this exact report has arrived, after the recurring list and the category sheet, and the same answer. One tap turns the button into a question that names the amount, what it was called, everything linked that leaves with it, and what the category gets back this month. The armed id clears on open and on close, and the commit refuses to fire unless it matches the entry the sheet is actually showing.
+
 **Reading a bank screen, not just a notepad.** Sent as a screenshot of a bank's pending list read into the quick log: *"it needs to only read the description before Held, the prices are also wrong, a cleared button is also needed."*
 
 The reader was built for a handwritten shopping list, where **one line is one purchase and the number at the end is the price**. A bank screen breaks every one of those assumptions at once, and broke them *silently* - nine rows, all wrong, all plausible enough to log:

@@ -8329,19 +8329,40 @@ function qlCleanDesc(raw){
   t=t.replace(/^[\s*\/:,.·•-]+|[\s*\/:,.·•-]+$/g,'').replace(/\s+/g,' ').trim();
   return t;
 }
-/* A real money token: a $ amount, or a signed one. Reference digits never carry
-   a currency mark, which is what makes this safe. */
-const QL_MONEY=/([+-]?)\s*\$\s*(\d[\d,]*(?:\.\d{1,2})?)/g;
+/* A real money token, two ways. The second is why a whole batch went missing:
+   requiring the $ was safe and brittle. Tesseract reading a phone screenshot
+   renders "-$59.25" cleanly about as often as it renders it "-S59.25" or drops
+   the mark entirely, so three of four records vanished and one logged - which
+   looks exactly like the reader working badly rather than a pattern being too
+   strict.
+     1. a $ amount, decimals optional:            $1,300
+     2. ANY number with exactly two decimals:     59.25
+   The second is nearly as safe as the first inside bank text and far more
+   robust: a reference number has no decimal point, a date uses hyphens, a time
+   uses colons. It is only reached in statement mode, where those are the only
+   shapes on offer. */
+const QL_MONEY=/([+−–-])?\s*(?:\$\s*(\d[\d,]*(?:\.\d{1,2})?)|(\d[\d,]*\.\d{2}))(?![\d.])/g;
+/* Which reading to use, decided from the text itself rather than from whether a
+   pattern happened to hit. Deciding it by "did the money pattern match" is what
+   let a bad OCR pass fall through to a reading built for something else. */
+function qlLooksLikeStatement(t){
+  const s=String(t||'');
+  return /\$/.test(s)
+      || /\b[A-Z]{2,5}\s*=\s*[\w-]/.test(s)
+      || /\b(?:held|exp|posted)\s*:/i.test(s)
+      || /\b(?:preauthorization|pre-authorization|pos\s+debit|pos\s+purchase|debit\s+card\s+purchase|check\s+card|ach\s+(?:debit|credit|payment)|electronic\s+(?:withdrawal|deposit))\b/i.test(s);
+}
 function qlParseOcr(text){
   const raw=String(text||'');
   const out=[];
+  if(!qlLooksLikeStatement(raw)) return qlParseNotepad(raw);
   QL_MONEY.lastIndex=0;
   let m, cursor=0, hits=0;
   while((m=QL_MONEY.exec(raw))!==null){
     hits++;
     const desc=qlCleanDesc(raw.slice(cursor, m.index));
     cursor=QL_MONEY.lastIndex;
-    const amt=parseFloat(m[2].replace(/,/g,''));
+    const amt=parseFloat((m[2]||m[3]||'').replace(/,/g,''));
     if(!(amt>0) || amt>=1000000) continue;
     if(desc.length<2) continue;                       // a price with nothing to call it
     /* A statement writes every debit as negative, so a minus is the norm and
@@ -8350,11 +8371,17 @@ function qlParseOcr(text){
     if(m[1]==='+') row.kind='income';
     out.push(row);
   }
-  if(hits) return out;
-  /* No currency marks anywhere: this is the notepad it was built for. */
-  raw.split(/\n+/).forEach(line=>{
+  /* A statement the reader could not get a single amount out of is worth
+     reporting as nothing, rather than quietly falling back to a reading built
+     for something else and producing rows nobody can explain. */
+  return hits ? out : [];
+}
+/* The path this was built for: one line, one purchase, price at the end. */
+function qlParseNotepad(raw){
+  const out=[];
+  String(raw||'').split(/\n+/).forEach(line=>{
     const l=line.trim(); if(!l) return;
-    const mm=l.match(/^(.*?)[\s.·•:\-]*(\d{1,5}(?:[.,]\d{1,2})?)\s*$/);
+    const mm=l.match(/^(.*?)[\s.·•:\-]*\$?\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*$/);
     if(!mm) return;
     const what=mm[1].replace(/[^\w\s'&\/+-]/g,' ').replace(/\s+/g,' ').trim();
     const amt=parseFloat(mm[2].replace(',','.'));
@@ -8721,14 +8748,15 @@ function deleteTx(id){
 }
 
 /* ---------- the transaction sheet ---------- */
-let txSheetId=null;
+let txSheetId=null, txDelArm=null;
 function openTxSheet(id){
   if(!state.transactions.some(t=>t.id===id)) return;
+  txDelArm=null;                      // a delete armed on one entry never survives to another
   txSheetId=id; renderTxSheet();
   document.getElementById('txSheet').classList.add('on');
   pushOverlay();
 }
-function closeTxSheet(){ txSheetId=null; const el=document.getElementById('txSheet'); if(el) el.classList.remove('on'); }
+function closeTxSheet(){ txSheetId=null; txDelArm=null; const el=document.getElementById('txSheet'); if(el) el.classList.remove('on'); }
 /* Every edit goes through here so the things hanging off a transaction cannot
    quietly fall out of step with it. Changing the amount of an invest has to move
    the asset behind it by the difference, or net worth drifts by exactly the
@@ -8861,9 +8889,31 @@ function renderTxSheet(){
     <div class="cs-card">${facts.map(f=>`<div class="cs-row"><span>${escapeHtml(f[0])}</span><b>${escapeHtml(String(f[1]))}</b></div>`).join('')}</div>
     ${t.recId?`<p class="cs-note">Changing it here changes this one entry, not the rule behind it. The rule lives in <b>Recurring</b>, further down this tab.</p>`:''}</div>` : '';
 
+  /* Third time this exact report has arrived - the recurring list, then the
+     category sheet, now here. One tap on a red button and a logged entry was
+     gone, on a sheet you reach by tapping the row itself, which means the whole
+     journey from "look at this" to "it is deleted" was two taps in the same
+     corner of the screen.
+     Armed, with the question naming what actually goes: the amount, what it was
+     called, and every linked record that leaves with it. "Are you sure?" asks
+     nobody anything. */
+  const armed=txDelArm===t.id;
+  const alsoGoes=[];
+  if(gift) alsoGoes.push('its record in Giving');
+  if(link) alsoGoes.push('the gut-check it came from');
+  if(t.type==='invest'&&(t.ikind||'holds')!=='self') alsoGoes.push('its share of Invested capital');
+  if(t.type==='transfer') alsoGoes.push('the move, so both accounts go back to what they expected');
+  const what = t.type==='income' ? (t.source||'this income')
+             : t.type==='transfer' ? 'this move'
+             : t.type==='invest' ? (t.source||'this investment')
+             : (catName(t.catId)||t.note||'this entry');
   const danger=`<div class="cs-sec"><div class="cs-h">Remove it</div>
-    <p class="cs-note">This deletes the entry itself${gift?', its record in Giving':''}${link?', and the gut-check it came from':''}${t.type==='invest'&&(t.ikind||'holds')!=='self'?', and takes the money back out of Invested capital':''}${t.type==='transfer'?', and both accounts go back to what they expected before the move':''}. Nothing else moves.</p>
-    <button class="btn sm danger ghost" data-txdel="${t.id}">Delete this entry</button></div>`;
+    ${armed
+      ? `<div class="cs-arm"><div class="ca-q">Delete <b>${moneyOwner(t.amount,owner)}</b> for <b>${escapeHtml(what)}</b>?</div>
+           <div class="ca-w">${alsoGoes.length?`It takes ${alsoGoes.join(', ')} with it. `:''}Nothing else moves${t.type==='expense'&&t.catId?`, and ${escapeHtml(catName(t.catId)||'that category')} gets the ${money(t.amount)} back this month`:''}.</div>
+           <div class="ca-a"><button class="btn sm danger" data-txdelyes="${t.id}">Delete it</button><button class="btn sm ghost" data-txdelno="1">Keep it</button></div></div>`
+      : `<p class="cs-note">This deletes the entry itself${gift?', its record in Giving':''}${link?', and the gut-check it came from':''}${t.type==='invest'&&(t.ikind||'holds')!=='self'?', and takes the money back out of Invested capital':''}${t.type==='transfer'?', and both accounts go back to what they expected before the move':''}. Nothing else moves.</p>
+         <button class="btn sm danger ghost" data-txdel="${t.id}">Delete this entry</button>`}</div>`;
 
   body.innerHTML=fields+planLine+energy+context+danger;
 
@@ -8899,7 +8949,16 @@ function renderTxSheet(){
     nci.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); make(); } });
   }
   body.querySelectorAll('[data-txenergy]').forEach(b=>b.addEventListener('click',()=>editTx(t.id,{energy:b.dataset.txenergy||undefined})));
-  body.querySelectorAll('[data-txdel]').forEach(b=>b.addEventListener('click',()=>{ const id=b.dataset.txdel; closeTxSheet(); dismissOverlay(); deleteTx(id); }));
+  /* Arms only. The commit is the second button, and it refuses to fire unless
+     the armed id is the entry this sheet is actually showing - a stale arm
+     surviving a navigation is how a second tap deletes the wrong thing. */
+  body.querySelectorAll('[data-txdel]').forEach(b=>b.addEventListener('click',()=>{ txDelArm=b.dataset.txdel; renderTxSheet(); }));
+  body.querySelectorAll('[data-txdelno]').forEach(b=>b.addEventListener('click',()=>{ txDelArm=null; renderTxSheet(); }));
+  body.querySelectorAll('[data-txdelyes]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.txdelyes;
+    if(txDelArm!==id || txSheetId!==id) return;
+    txDelArm=null; closeTxSheet(); dismissOverlay(); deleteTx(id);
+  }));
 }
 (function(){
   const x=document.getElementById('txSheetX'); if(x) x.addEventListener('click',dismissOverlay);

@@ -3685,10 +3685,20 @@ const delSafe = await p.evaluate(async () => {
   const assetOf=()=>((state.assets||[]).find(a=>a.auto==='invest')||{}).value||0;
   const before=assetOf();
   document.querySelector('[data-txsheet="x3"]').click(); await wait(200);
-  document.querySelector('#txSheetBody [data-txdel]').click(); await wait(300);
-  return { before, after:assetOf(), gone:!state.transactions.some(t=>t.id==='x3'),
+  /* Two taps now: the first arms, the second commits. The property that the
+     first one deletes NOTHING is asserted here rather than assumed, because
+     that is the whole point of arming it. */
+  document.querySelector('#txSheetBody [data-txdel]').click(); await wait(280);
+  const armedOnly={ still:state.transactions.some(t=>t.id==='x3'),
+                    asked:!!document.querySelector('#txSheetBody .cs-arm') };
+  document.querySelector('#txSheetBody [data-txdelyes]').click(); await wait(320);
+  return { before, after:assetOf(), armedOnly,
+           gone:!state.transactions.some(t=>t.id==='x3'),
            closed:!document.getElementById('txSheet').classList.contains('on') };
 });
+check('one tap on the entry delete asks rather than deletes',
+      delSafe.armedOnly.still===true && delSafe.armedOnly.asked===true,
+      JSON.stringify(delSafe.armedOnly));
 check('deleting from the sheet still unwinds what was behind it, and closes',
       delSafe.gone===true && delSafe.after===0 && delSafe.before===550 && delSafe.closed===true,
       JSON.stringify(delSafe));
@@ -6501,6 +6511,141 @@ check('...and the second tap clears, back to one empty row',
       qlc.rowsAfter===1 && qlc.emptyAfter===true && qlc.labelAfter==='Clear');
 check('typing again cancels an armed clear, because that is a change of mind',
       qlc.typingDisarms===true);
+
+/* ---- 84. the reader survives OCR, and deleting an entry is armed ----
+   Two reports off one screenshot: "the delete button is too destructive" and
+   "when adding it was only one thing added and that's the BMV entry."
+
+   The second one is the interesting one, and the first instinct - that the save
+   step was dropping rows - was wrong. Driving qlSave with four filled rows
+   logged four. The loss was upstream, in a pattern of my own making: records
+   were anchored on a $, which is safe and brittle. Tesseract reading a phone
+   screenshot renders "-$59.25" cleanly about as often as it renders it "-S59.25"
+   or drops the mark, so three of four records vanished and one logged. Which
+   looks exactly like a bad reader rather than a strict pattern, and is worse
+   than a visible failure because the one that did land looks right.
+
+   A money token now has two shapes: a $ amount, or ANY number with exactly two
+   decimal places. Inside bank text the second is nearly as safe as the first -
+   a reference has no decimal point, a date uses hyphens, a time uses colons -
+   and it survives the mark being eaten.
+
+   Which reading to use is decided from the text itself now rather than from
+   whether the pattern happened to hit. Deciding it by "did anything match" is
+   what let a bad OCR pass fall through to a reading built for a shopping list.
+
+   And the delete: third time this report has arrived - recurring, then the
+   category sheet, now the entry sheet. Same answer, and the question names the
+   amount, what it was, and what the plan gets back. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:70,
+  categories:[{id:'c1',name:'Getting around'}], budgets:{'2026-08':{c1:200}},
+  accounts:[{id:'a1',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-01'}],
+  transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'},
+                {id:'e1',type:'expense',amount:59.25,date:'2026-08-27',catId:'c1',
+                 note:'OH BUREAU MOTOR VEHIC',acctId:'a1'}]});
+await p.reload(); await p.waitForTimeout(600);
+
+/* The same four records, with the dollar sign eaten on three of them - one
+   dropped entirely, one read as an em dash, one as a bare decimal. */
+const OCR_TEXT=[
+ 'Pending',
+ 'Preauthorization / AI=867560,RR=623952','602847,PK=356239682557559 PMT*OH',
+ 'BUREAU MOTOR VEHIC Held:2026-08-27','14:57:35 EDT Exp:2026-08-30 14:57:35 EDT',
+ 'Aug 27, 2026','-$59.25',
+ 'Preauthorization / AI=843880,RR=62','3913595672,PK=466239664376271',
+ 'MAHONINGCTYTITLE Held:2026-08-27','14:27:17 EDT Exp:2026-08-30 14:27:17 EDT',
+ 'Aug 27, 2026','-21.49',
+ 'Preauthorization / AI=157390,RR=62380','7855866,PK=466238683828615 Kindle',
+ 'Unltd Held:2026-08-26 14:59:42 EDT','Exp:2026-08-29 14:59:42 EDT',
+ 'Aug 26, 2026','—12.89',
+ 'Preauthorization / AI=107440,RR=623818','890417,PK=356238640867014 AIRBNB *',
+ 'HMREJET25N Held:2026-08-26 13:48:06','EDT Exp:2026-08-29 13:48:06 EDT',
+ 'Aug 26, 2026','-329.00'].join('\n');
+
+const ocr = await p.evaluate(t=>({
+  rows:qlParseOcr(t),
+  notepad:qlParseOcr('coffee 4.50\ngas 38\nlunch with sam 12.75'),
+  notepadDollars:qlParseOcr('coffee $4.50\ngas $38'),
+  unreadable:qlParseOcr('Preauthorization / AI=99,RR=88 SOME MERCHANT Held:2026-08-01'),
+  clean:qlParseOcr('Preauthorization / AI=1,RR=2 PMT*SHELL OIL Held:2026-08-01\nAug 1, 2026\n-$40.00')
+}), OCR_TEXT);
+
+check('a bank read survives OCR eating three of the four dollar signs',
+      ocr.rows.length===4, String(ocr.rows.length));
+check('...with every amount right',
+      JSON.stringify(ocr.rows.map(r=>r.amt))==='[59.25,21.49,12.89,329]',
+      JSON.stringify(ocr.rows.map(r=>r.amt)));
+check('...and every name right',
+      JSON.stringify(ocr.rows.map(r=>r.what))
+        ==='["OH BUREAU MOTOR VEHIC","MAHONINGCTYTITLE","Kindle Unltd","AIRBNB"]',
+      JSON.stringify(ocr.rows.map(r=>r.what)));
+check('...and still no reference number read as a price',
+      !ocr.rows.some(r=>r.amt>100000 || [2026,62,623952,867560].includes(r.amt)));
+check('a clean single record is unaffected',
+      ocr.clean.length===1 && ocr.clean[0].amt===40 && ocr.clean[0].what==='SHELL OIL',
+      JSON.stringify(ocr.clean));
+check('a handwritten notepad still reads every line, decimals or not',
+      ocr.notepad.length===3 && ocr.notepad[1].what==='gas' && ocr.notepad[1].amt===38,
+      JSON.stringify(ocr.notepad));
+check('...and one written with dollar signs reads correctly too',
+      ocr.notepadDollars.length===2 && ocr.notepadDollars[0].what==='coffee'
+        && ocr.notepadDollars[1].amt===38, JSON.stringify(ocr.notepadDollars));
+check('a statement with no readable amount reports nothing rather than guessing',
+      ocr.unreadable.length===0, JSON.stringify(ocr.unreadable));
+
+/* The save step, which the first instinct blamed and which was innocent. */
+const saveAll = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(260);
+  document.getElementById('quickLogBtn').click(); await w(280);
+  const items=[['OH BUREAU MOTOR VEHIC',59.25],['MAHONINGCTYTITLE',21.49],
+               ['Kindle Unltd',12.89],['AIRBNB',329]];
+  for(let i=1;i<items.length;i++) document.getElementById('qlAdd').click();
+  [...document.querySelectorAll('.ql-row')].forEach((el,i)=>{
+    el.querySelector('.ql-what').value=items[i][0];
+    el.querySelector('.ql-amt').value=String(items[i][1]); });
+  const before=state.transactions.length;
+  document.getElementById('qlSave').click(); await w(420);
+  return {added:state.transactions.length-before};
+});
+check('four rows in the quick log log four entries, not one',
+      saveAll.added===4, String(saveAll.added));
+
+/* The delete, armed like the other two before it. */
+const txDel = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  activateTab('tx'); openTxSheet('e1'); await w(320);
+  o.startsAsButton=!!document.querySelector('[data-txdel="e1"]') && !document.querySelector('.cs-arm');
+  const n0=state.transactions.length;
+  document.querySelector('[data-txdel="e1"]').click(); await w(260);
+  o.armedNotFired=state.transactions.length===n0 && !!document.querySelector('.cs-arm');
+  o.question=document.querySelector('.cs-arm').innerText;
+  document.querySelector('[data-txdelno]').click(); await w(220);
+  o.keptIt=state.transactions.length===n0 && !document.querySelector('.cs-arm');
+  document.querySelector('[data-txdel="e1"]').click(); await w(200);
+  closeTxSheet(); openTxSheet('e1'); await w(300);
+  o.reopenNotArmed=!document.querySelector('.cs-arm') && txDelArm===null;
+  document.querySelector('[data-txdel="e1"]').click(); await w(220);
+  document.querySelector('[data-txdelyes="e1"]').click(); await w(400);
+  o.gone=!state.transactions.some(t=>t.id==='e1');
+  o.sheetClosed=!document.getElementById('txSheet').classList.contains('on');
+  return o;
+});
+check('deleting an entry starts as a button, not a question',
+      txDel.startsAsButton===true);
+check('...and one tap arms it rather than deleting anything',
+      txDel.armedNotFired===true);
+check('...with the question naming the amount and what it was',
+      /\$59\.25/.test(txDel.question) && /Getting around/.test(txDel.question),
+      txDel.question.replace(/\n/g,' | '));
+check('...and what the plan gets back if it goes',
+      /gets the \$59\.25 back/.test(txDel.question), txDel.question.replace(/\n/g,' | '));
+check('"Keep it" changes nothing', txDel.keptIt===true);
+check('an armed entry delete never survives leaving the sheet',
+      txDel.reopenNotArmed===true);
+check('confirming deletes it, and the sheet it emptied closes itself',
+      txDel.gone===true && txDel.sheetClosed===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

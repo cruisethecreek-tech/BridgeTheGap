@@ -820,6 +820,24 @@ The Clear button is checked the way the category delete is: it clears at once
 when there is nothing to lose, names what it would cost when there is, needs the
 second tap, and disarms when you start typing again.
 
+It also holds **surviving OCR**, which is the section that exists because a
+probe blamed the wrong thing first. A batch read from a bank screenshot logged
+one entry instead of four, and the obvious suspect was the save step - so the
+suite drives `qlSave` with four filled rows and asserts four land. It always
+did. The loss was a `$`-anchored pattern meeting an OCR pass that eats dollar
+signs, and the fixture now feeds exactly that: the same four records with the
+mark dropped on one, read as an em dash on another, and intact on only one.
+
+The property that follows is worth stating plainly: **a statement the reader
+cannot get an amount out of must report nothing**, rather than falling through
+to a reading built for a shopping list and producing rows nobody can explain.
+Which reading applies is decided from the text, not from whether a pattern
+happened to match.
+
+The entry delete is checked the way the category delete is - armed, the question
+naming the amount and what the plan gets back, no stale arm surviving a
+navigation - because this is the third surface to get the same report.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.
