@@ -1042,6 +1042,49 @@ know a suite can fail: two rooms given the same hue, a light entry deleted, the
 wash alpha pushed to 60%, and a tint set to the panel's own colour each produced
 the specific message they should. A check that has never failed is a guess.
 
+## Two sweeps that came out of one phone pass
+
+`deadpanel.mjs` and `unexplained.mjs` exist because two of eight reports were
+not really about the feature named in them.
+
+**`deadpanel.mjs`** generalises the Tripwires bug: its render function was wired
+only into the sync-pull path and into its own add/remove handlers - handlers on
+controls that could not exist until something drew them. So the panel was empty
+from boot for everybody. The sweep boots cold and walks every tab the way a
+thumb would, then reports any **panel whose entire body is empty**.
+
+Getting the rule right mattered more than writing it. The first version flagged
+any empty container and produced 29 hits, nearly all correct behaviour - banners
+that fill when there is something to say, result slots that fill after an
+action. Narrowed to *a panel with a heading, an intro and nothing else*, it
+reports exactly one thing on the broken build (`impulse → "Tripwires"`) and
+nothing on the fixed one. **A sweep that flags 29 things flags nothing.**
+
+**`unexplained.mjs`** is the "audit the entire app" half of the Sovereignty
+Audit report. It walks every tab and finds **headline figures with no way to ask
+where they came from** - skipping anything you typed, since the box beside it is
+the explanation. Its most useful property is that it came back almost empty: the
+only figures in the whole app that could not show their working were the three
+in the panel that was reported. That is worth knowing in both directions.
+
+## A load that fails must not delete anything
+
+The most serious thing in this batch was found by a fixture that would not load.
+`load()` was a single try/catch returning `defaultState()` on any throw, so a
+stray reference inside `normalizeState` - our own tidy-up pass, not the user's
+data - silently discarded an entire budget. Nothing errored to the page. The app
+simply opened one morning as though it had never been used.
+
+Section 95 asserts the two halves separately, because they are different
+failures: a throw inside our tidy-up hands back the **parsed state
+un-normalized** (checked by stubbing `normalizeState` to throw and confirming
+the wage, the categories and the transactions all survive), and unreadable JSON
+stashes the raw text under its own key **before** falling back. Both set a flag
+the app surfaces on the next boot.
+
+The general rule this leaves: **a catch that returns a default is a catch that
+can delete data.** Anywhere one exists, ask what it is discarding.
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor

@@ -986,6 +986,21 @@
   :root[data-theme="light"] body[data-view="diary"]   {--view:84,74,140}
   :root[data-theme="light"] body[data-view="settings"]{--view:92,84,74}
 
+  .arrival{background:var(--panel);border:1px solid var(--line);border-left:3px solid rgb(var(--view,var(--accent-rgb)));
+    border-radius:16px;padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .ar-k{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgb(var(--view,var(--accent-rgb)))}
+  .ar-t{font-size:16px;font-weight:800;margin-top:3px}
+  .ar-w{font-size:13px;color:var(--muted);line-height:1.6;margin-top:7px}
+  .ar-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .ns-outgrown{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;
+    padding:13px 15px;margin:10px 0 4px;font-size:13px;line-height:1.6;color:var(--muted)}
+  .ns-outgrown b{color:var(--text)}
+  .story-q{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
+  .sq-k{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .sq-a{font-size:15px;font-weight:700;margin-top:5px;line-height:1.5}
+  .sq-a.none{font-weight:600;color:var(--muted)}
+  .sq-n{font-size:13px;color:var(--muted);line-height:1.6;margin-top:6px}
+  .sq-go{margin-top:10px}
   .view{display:none;padding:24px 0}
   /* The wash. Strongest where the eye lands on arrival and gone by the second
      panel, which is what makes it an ANSWER to "where am I" rather than a
@@ -2096,6 +2111,29 @@
     border-top:1px dashed var(--line);margin-top:2px;padding-top:8px;font-size:12px;color:var(--muted);font-weight:600}
   .debtrow .dr-r b{color:var(--text)}
   .debtrow .dr-over{color:var(--accent-2)}
+  .time-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    padding:11px 13px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);margin-bottom:10px}
+  .th-k{font-size:12px;color:var(--muted);font-weight:600} .th-k b{color:var(--text)}
+  .th-v{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+  .th-v.over{color:var(--accent-2)} .th-v.good{color:var(--good)}
+  .time-row.lvl1{margin-left:16px}
+  .time-row.lvl2{margin-left:32px}
+  .time-row .tr-l b{font-weight:800}
+  .time-row .tr-plan{display:inline-flex;flex-direction:column;gap:1px;flex:none}
+  .time-row .tr-plan input{width:62px;background:var(--ink);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:6px 8px;font-size:13px;text-align:right}
+  .tr-roll{font-style:normal;font-size:9.5px;color:var(--muted);font-weight:700;text-align:right}
+  .time-row .tr-h i{display:block;font-style:normal;font-size:9.5px;color:var(--muted);font-weight:700}
+  .time-row .tr-h.good{color:var(--good)} .time-row .tr-h.over{color:var(--accent-2)}
+  .time-row .tr-sub{font-size:11px}
+  .time-add{display:flex;gap:8px;margin-top:12px}
+  .time-add input{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:9px 11px;font-size:14px}
+  @media(max-width:430px){ .time-row .tr-b{flex:1 1 100%;justify-content:flex-end} }
+  .debtrow .dr-good{color:var(--good)}
+  .debtrow .dr-eq{flex:1 1 100%}
+  .debtrow .dr-kind select{background:var(--ink);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:6px 7px;font-size:12px;max-width:132px}
   .debtrow .dr-sec{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:700}
   .debtrow .dr-sec select{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 7px;font-size:12px}
   /* Borrow it or wait for it */
@@ -2782,7 +2820,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div class="hh-eye" id="hhEye">Zero-Based Budgeting · No Filter</div>
         <h1 class="hh-title" id="hhTitle">Tell every dollar where to go.</h1>
         <p class="hh-sub" id="hhSub">Budget to zero, gut-check every purchase, and watch your dreams get funded - in plain, unfiltered English.</p>
-        <div class="hh-cta"><button class="btn primary" data-goto="budget" id="hhCta">Start budgeting →</button><button class="btn ghost" data-goto="impulse">Run a gut check</button></div>
+        <div class="hh-cta"><button class="btn primary" data-arrive="bag" id="hhCta">Start budgeting →</button><button class="btn ghost" data-arrive="gutcheck">Run a gut check</button></div>
       </div>
 
       <div id="dataGuard"></div>
@@ -3089,11 +3127,13 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub">List what you owe, set what you can throw at it each month, and see the fastest, cheapest way out - with the interest priced in hours of your life.</p>
         <div id="debtReflectNote"></div>
         <div class="row">
+          <label class="fld">What kind<select id="debtKindSel" style="min-width:160px"></select></label>
           <label class="fld">Debt<input type="text" id="debtName" placeholder="Visa, car loan…" style="width:150px"></label>
           <label class="fld">Balance $<input type="number" id="debtBal" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:110px"></label>
           <label class="fld">Rate APR %<input type="number" id="debtApr" min="0" step="0.1" placeholder="19.9" style="width:100px"></label>
           <label class="fld">Min pay $<input type="number" id="debtMin" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:100px"></label>
-          <label class="fld">Limit $<input type="number" id="debtLim" inputmode="decimal" min="0" step="0.01" placeholder="cards &amp; lines only" style="width:130px"></label>
+          <label class="fld hide" id="debtLimWrap">Limit $<input type="number" id="debtLim" inputmode="decimal" min="0" step="0.01" placeholder="the most you can owe" style="width:150px"></label>
+          <label class="fld hide" id="debtWorthWrap"><span id="debtWorthLbl">What it is worth $</span><input type="number" id="debtWorth" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:150px"></label>
           <button class="btn primary" id="addDebt">Add</button>
         </div>
         <!-- Someone who has never budgeted does not know what APR means or where
@@ -3105,8 +3145,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <li><b>Balance</b> - what you still owe today, not what you borrowed. Top of the statement, or the app for that card or loan.</li>
             <li><b>Rate APR %</b> - the interest they charge you per year. On a card statement it is usually called <i>purchase APR</i> or <i>interest rate</i>, often on the back or the last page. On a loan it is on the agreement.</li>
             <li><b>Min pay $</b> - the smallest payment they will accept without a late fee. On a card statement it is the <i>minimum payment due</i>.</li>
-            <li><b>Limit $</b> - only for a card or a line of credit: the most they will let you owe. Called the <i>credit limit</i> or <i>credit line</i>, usually next to the balance. <b>Leave it blank for a car loan, a mortgage or a student loan</b> - those cannot lend you anything back, and a blank here is how the app knows the difference.</li>
+            <li><b>Limit $</b> - only for a card or a line of credit: the most they will let you owe. Called the <i>credit limit</i> or <i>credit line</i>, usually next to the balance.</li>
+            <li><b>What it is worth</b> - only for a loan attached to a thing: what the house or the car would actually sell for <b>today</b>, not what you paid. A rough honest number beats a flattering exact one. This is what lets the app tell you whether the loan is buying you something or costing you more than the thing is worth.</li>
           </ul>
+          <p><b>Pick the kind first.</b> It decides which of those you are asked for - a card is asked for its limit, a mortgage for the value of the house, a student loan for neither, because it has no other side.</p>
           <p>Do not have the rate to hand? Add the debt anyway with the balance - it still counts what you owe. Come back and fill the rate in when you have the statement, and the numbers sharpen up.</p>
         </details>
         <div style="margin-top:8px"><button class="btn sm ghost" id="importLiab">⤵ Import from my liabilities</button></div>
@@ -3433,6 +3475,17 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <span class="sub" id="diaryHint" style="font-size:12.5px"></span>
         </div>
         <div id="diarySuggest"></div>
+      </div>
+      <!-- "See my money story should navigate to The Diary - there it should hold
+           the intake question as well as anything else to add, encouraging them
+           to add to their diary." The lesson's button used to land on Home,
+           which holds no money story at all. The answers it is talking about
+           were given during setup and have sat in state ever since, read by the
+           tone engine and shown to nobody. -->
+      <div class="panel" id="storyPanel">
+        <h2>Your money story</h2>
+        <p class="sub">The part of this that is not arithmetic. What you said at the start is here, in your words, and the questions under it are the ones worth coming back to - not once, but whenever the answer changes.</p>
+        <div id="storyBody"></div>
       </div>
       <div class="panel">
         <h2>Your story so far</h2>
@@ -4166,6 +4219,33 @@ const LESSONS=[
 ];
 
 /* ---------- state ---------- */
+/* Up here for the same reason as TIME_SEED below: the migration reads it. */
+const DEBT_KINDS=[
+  {k:'card',     label:'Credit card',            room:true,  worth:false, secured:false},
+  {k:'line',     label:'HELOC / line of credit', room:true,  worth:false, secured:true,  backs:'your home'},
+  {k:'mortgage', label:'Mortgage',               room:false, worth:true,  secured:true,  backs:'the property',
+                 worthLabel:'Home value',        worthHint:'what it would sell for today'},
+  {k:'auto',     label:'Car loan',               room:false, worth:true,  secured:true,  backs:'the car', falls:true,
+                 worthLabel:'Car value',         worthHint:'what it would sell for today'},
+  {k:'student',  label:'Student loan',           room:false, worth:false, secured:false},
+  {k:'personal', label:'Personal loan',          room:false, worth:false, secured:false},
+  {k:'medical',  label:'Medical bill',           room:false, worth:false, secured:false},
+  {k:'other',    label:'Something else',         room:true,  worth:true,  secured:false,
+                 worthLabel:'What it is worth',  worthHint:'if it is attached to something'}
+];
+
+/* Defined up here, not beside the rest of the week's code: the migration reads
+   it, and the migration runs from load() long before that section is reached.
+   A const in the temporal dead zone throws rather than reading as undefined. */
+const TIME_SEED=[
+  {id:'sleep',  name:'Sleep',        hint:'the one that pays for the other four', target:56},
+  {id:'health', name:'Health',       hint:'moved, trained, ate right',            target:5},
+  {id:'learn',  name:'Learning',     hint:'a skill, a book, a course',            target:3},
+  {id:'build',  name:'Building',     hint:'side work, the dream',                 target:5},
+  {id:'people', name:'People',       hint:'family, friends, network',             target:8},
+  {id:'leak',   name:'Screen drift', hint:'scroll, autoplay', target:0, leak:true}
+];
+
 function defaultState(){
   return { intensity:'blunt', lesson:0, activeMonth:thisMonth(),
            categories:[], budgets:{}, transactions:[], goals:[],
@@ -4177,7 +4257,7 @@ function defaultState(){
            snapshots:[], retroView:{gran:'month', range:'all', from:'', to:''},
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, dayToDay:[], rateDraft:null, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
-           comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
+           comfortMenu:[], timeLog:[], timeCats:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[], roomPay:0, calConfirm:false,
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
@@ -4324,18 +4404,58 @@ function normalizeState(s){
        and wrong semantically - debtLimit reads 0 and not-set the same way, but
        writing 0 onto every car loan makes the data claim something it should
        not. Only a real positive number survives. */
-    if(!(num(d.limit)>0)) delete d.limit; else d.limit=num(d.limit); });
+    if(!(num(d.limit)>0)) delete d.limit; else d.limit=num(d.limit);
+    /* Same rule as the limit: absent means "not asked", which is different from
+       worth nothing, and a stored 0 would make every unsecured loan claim to be
+       attached to something worthless. */
+    if(!(num(d.worth)>0)) delete d.worth; else d.worth=num(d.worth);
+    if(d.kind && !DEBT_KINDS.some(x=>x.k===d.kind)) delete d.kind; });
   s.roomPay=num(s.roomPay);
+  /* The week's categories, seeded once. The five original lanes keep their exact
+     ids so every hour already logged lands where it always did, and Sleep joins
+     them because a time budget that ignores a third of the week is a toy. */
+  if(!Array.isArray(s.timeCats) || !s.timeCats.length) s.timeCats=TIME_SEED.map((x,i)=>({...x, sort:i}));
+  s.timeCats=s.timeCats.filter(c=>c&&c.id&&c.name).map((c,i)=>({...c, sort:Number.isFinite(+c.sort)?+c.sort:i,
+    target:num(c.target)}));
   (s.recurring||[]).forEach(r=>{ r.amount=num(r.amount); if(r.hours!=null) r.hours=num(r.hours); });
   (s.timeLog||[]).forEach(e=>{ e.hours=num(e.hours); });
   s.hourlyWage=num(s.hourlyWage); s.hoursPerWeek=num(s.hoursPerWeek); s.spendLimit=num(s.spendLimit);
   s.wageB=num(s.wageB); s.enough=num(s.enough); s.givingPct=num(s.givingPct); s.debtBudget=num(s.debtBudget);
   return s;
 }
+/* This used to be one try/catch returning defaultState() on ANY throw - and
+   that is how a stray reference inside normalizeState silently deleted a
+   person's entire budget. No error, no warning, just an app that opened one
+   morning as though they had never used it. Found by a fixture that would not
+   load; the fixture was the lucky part.
+
+   Two separate failures, handled separately, and neither of them discards data:
+
+   Unreadable JSON is genuinely unusable, so defaults are the only option - but
+   the raw text is kept under its own key first, because a corrupted backup is
+   still the only copy of somebody's year and a support conversation can start
+   from it.
+
+   A throw inside normalizeState is a bug in OUR tidy-up, not a problem with
+   their data. The parsed state is handed back un-normalized rather than thrown
+   away: a formatting pass that cannot run is not a reason to delete a budget. */
 function load(){
-  try{ const r=localStorage.getItem(STORE_KEY); if(!r) return defaultState();
-       return normalizeState(Object.assign(defaultState(), JSON.parse(r))); }
-  catch(e){ return defaultState(); }
+  let raw=null;
+  try{ raw=localStorage.getItem(STORE_KEY); }catch(e){ return defaultState(); }
+  if(!raw) return defaultState();
+  let parsed=null;
+  try{ parsed=JSON.parse(raw); }
+  catch(e){
+    try{ localStorage.setItem(STORE_KEY+'__unreadable', raw); }catch(_){}
+    const d=defaultState(); d.loadFailed='unreadable'; return d;
+  }
+  const merged=Object.assign(defaultState(), parsed);
+  try{ return normalizeState(merged); }
+  catch(e){
+    try{ localStorage.setItem(STORE_KEY+'__prenormalize', raw); }catch(_){}
+    merged.loadFailed='tidy-up: '+((e&&e.message)||'unknown');
+    return merged;
+  }
 }
 /* Gates are re-evaluated on every save, and that is deliberate.
    They used to run in exactly two places - boot() and renderAll() - so a panel
@@ -5338,15 +5458,35 @@ function noAprIn(debts){
    whole list on a keystroke would tear out the input the thumb is in - the same
    fault the account balance box had, and there is no reason to ship it twice. */
 function debtRoomHTML(d){
-  const lim=debtLimit(d); if(!(lim>0)) return '';
-  const room=debtRoom(d), util=debtUtil(d), owed=Math.max(0,+d.balance||0);
-  const over=owed>lim;
-  return `<div class="dr-room">
-      <span class="dr-r">${over
-        ? `<b class="dr-over">${usd(owed-lim)} over the limit</b>`
-        : `<b>${usd(room)}</b> left to draw of ${usd(lim)}`}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}</span>
-      <label class="dr-sec"><span>Backed by</span><select data-debtsec="${d.id}"><option value="">Nothing</option><option value="1"${d.secured?' selected':''}>My home or something I own</option></select></label>
-    </div>`;
+  const lim=debtLimit(d), worth=debtWorth(d);
+  const k=debtKind(d);
+  const wantsRoom = k ? k.room : lim>0;
+  const wantsWorth = k ? k.worth : worth>0;
+  if(!wantsRoom && !wantsWorth && !lim && !worth) return '';
+  const owed=Math.max(0,+d.balance||0);
+  /* The field is ALWAYS the field - the derived line sits beside it rather than
+     replacing it. The first version swapped the input for the summary once a
+     value existed, which meant a limit could be set exactly once and never
+     corrected. A number you typed has to stay typeable. */
+  let out='<div class="dr-room">';
+  if(wantsRoom || lim>0){
+    const room=debtRoom(d), util=debtUtil(d), over=lim>0&&owed>lim;
+    out += `<label class="dr-f">limit $<input type="number" inputmode="decimal" min="0" step="0.01" value="${lim||''}" placeholder="none" data-debt="${d.id}" data-k="limit"></label>`;
+    if(lim>0) out += `<span class="dr-r">${over?`<b class="dr-over">${usd(owed-lim)} over the limit</b>`:`<b>${usd(room)}</b> left to draw`}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}</span>`;
+  }
+  /* The number that answers "is this an asset or a liability". Asked inline
+     rather than in an editor, because it is the one figure here that moves on
+     its own - a car is worth less every month and nobody goes looking for a
+     form to say so. */
+  if(wantsWorth || worth>0){
+    const lbl=(k&&k.worthLabel)||'Worth';
+    out += `<label class="dr-f">${escapeHtml(lbl)} $<input type="number" inputmode="decimal" min="0" step="0.01" value="${worth||''}" placeholder="today's value" data-debt="${d.id}" data-k="worth"></label>`;
+    if(worth>0) out += `<span class="dr-r dr-eq">${debtUnderwater(d)
+          ? `<b class="dr-over">${usd(-debtEquity(d))} underwater</b>`
+          : `<b class="dr-good">${usd(debtEquity(d))} equity</b>`}${debtLTV(d)!=null?` <span class="ac-util ${debtLTV(d)>=100?'hot':debtLTV(d)>=80?'warm':'cool'}">${debtLTV(d)}% of its value</span>`:''}</span>`;
+  }
+  out += `<label class="dr-sec"><span>Backed by</span><select data-debtsec="${d.id}"><option value="">Nothing</option><option value="1"${d.secured?' selected':''}>My home or something I own</option></select></label>`;
+  return out+'</div>';
 }
 function redrawRoomLine(d){
   const inp=document.querySelector('#debtList .debtrow input[data-debt="'+d.id+'"][data-k="limit"]');
@@ -5361,6 +5501,52 @@ function redrawRoomLine(d){
     save(); renderRoom();
   });
 }
+/* ============================================================
+   WHAT KIND OF DEBT THIS IS
+
+   "Debt payoff should have an option for the type, as a dropdown, so what
+   follows changes the required fields - a credit card should have the interest
+   rate, balance, minimum payment and limit, but choosing a mortgage should have
+   balance, interest rate, minimum payment, home value. Knowing any statistics
+   will help decide if it's an asset or a liability and can give advice
+   accordingly in the reflect."
+
+   The planner treated a $78,000 mortgage and a $400 store card as the same
+   object: a name, a balance, a rate and a minimum. It could tell you which to
+   attack first and it could not tell you that one of them is attached to
+   something worth more than the loan and the other is attached to nothing.
+
+   A limit and a value are the same shape of question - "what is the other side
+   of this?" - and which one gets asked is the whole reason the type exists. A
+   card's other side is room you have not drawn. A mortgage's is a house. A
+   student loan has none, and asking would be noise.
+
+   The type is also what makes "asset or liability" answerable. A loan secured
+   on something worth more than the balance leaves equity; one secured on
+   something worth less is underwater, and a car loan is underwater far more
+   often than anybody expects. The planner can finally say which. */
+function debtKind(d){
+  const k=(d&&d.kind)||'';
+  return DEBT_KINDS.find(x=>x.k===k) || null;
+}
+function debtKindLabel(d){ const k=debtKind(d); return k?k.label:''; }
+/* Backwards compatible on purpose: every debt in every existing install has no
+   kind at all, and a limit typed before types existed still means revolving. */
+function debtRevolving(d){ const k=debtKind(d); return (k?k.room:false) || debtLimit(d)>0; }
+function debtSecuredOn(d){
+  const k=debtKind(d);
+  if(k&&k.secured) return k.backs||'something you own';
+  return d&&d.secured ? 'something you own' : '';
+}
+function debtWorth(d){ const v=+((d||{}).worth); return (isFinite(v)&&v>0)?v:0; }
+/* The answer to "is this an asset or a liability", which is only askable once
+   the thing behind the loan has a number on it. Equity is what would be left if
+   you sold it today and cleared the loan - positive and the debt is buying you
+   something, negative and you would still owe after handing back the keys. */
+function debtEquity(d){ const w=debtWorth(d); return w>0 ? Math.round((w-Math.max(0,+d.balance||0))*100)/100 : null; }
+function debtLTV(d){ const w=debtWorth(d); return w>0 ? Math.round(Math.max(0,+d.balance||0)/w*1000)/10 : null; }
+function debtUnderwater(d){ const e=debtEquity(d); return e!=null && e<0; }
+function securedDebts(){ return (state.debts||[]).filter(d=>debtWorth(d)>0); }
 function debtLimit(d){ const L=+((d||{}).limit); return (isFinite(L)&&L>0)?L:0; }
 function debtRoom(d){ const L=debtLimit(d); return L>0 ? Math.round((L-Math.max(0,+d.balance||0))*100)/100 : null; }
 function debtUtil(d){ const L=debtLimit(d); return L>0 ? Math.round(Math.max(0,+d.balance||0)/L*1000)/10 : null; }
@@ -5489,7 +5675,7 @@ function renderDebt(){
       <label class="dr-f">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.balance||0}" data-debt="${d.id}" data-k="balance"></label>
       <label class="dr-f"><input type="number" min="0" step="0.1" value="${d.apr||0}" data-debt="${d.id}" data-k="apr">%</label>
       <label class="dr-f">min $<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.minPayment||0}" data-debt="${d.id}" data-k="minPayment"></label>
-      <label class="dr-f">limit $<input type="number" inputmode="decimal" min="0" step="0.01" value="${lim||''}" placeholder="none" data-debt="${d.id}" data-k="limit"></label>
+      <label class="dr-f dr-kind"><select data-debtkind="${d.id}"><option value="">Kind?</option>${DEBT_KINDS.map(k=>`<option value="${k.k}"${d.kind===k.k?' selected':''}>${escapeHtml(k.label)}</option>`).join('')}</select></label>
       <button class="btn sm danger ghost" data-deldebt="${d.id}">✕</button>
       ${roomLine}
     </div>`;
@@ -5497,16 +5683,25 @@ function renderDebt(){
   box.querySelectorAll('input[data-debt]').forEach(inp=>inp.addEventListener('input',()=>{
     const d=state.debts.find(x=>x.id===inp.dataset.debt); if(!d) return;
     const k=inp.dataset.k, v=parseFloat(inp.value)||0;
-    if(k==='limit'){
+    if(k==='limit' || k==='worth'){
       /* Clearing the box has to remove the property, not set it to zero - the
          absence is what says "this is not a line", and a stored 0 would leave a
          car loan claiming to be revolving with no room. */
-      if(v>0) d.limit=v; else delete d.limit;
+      if(v>0) d[k]=v; else delete d[k];
       save(); renderDebtResults(); renderRoom(); redrawRoomLine(d);
       return;
     }
     d[k]=v; save(); renderDebtResults();
-    if(k==='balance' && debtLimit(d)>0){ renderRoom(); redrawRoomLine(d); }
+    if(k==='balance' && (debtLimit(d)>0 || debtWorth(d)>0)){ renderRoom(); redrawRoomLine(d); }
+  }));
+  box.querySelectorAll('select[data-debtkind]').forEach(sel=>sel.addEventListener('change',()=>{
+    const d=state.debts.find(x=>x.id===sel.dataset.debtkind); if(!d) return;
+    const k=DEBT_KINDS.find(x=>x.k===sel.value);
+    if(k){ d.kind=k.k; if(k.secured) d.secured=true; } else delete d.kind;
+    /* Full redraw here, not the in-place one: changing the kind changes WHICH
+       fields the row has, which is a different row rather than a new number in
+       the same one. */
+    save(); renderDebt();
   }));
   box.querySelectorAll('select[data-debtsec]').forEach(sel=>sel.addEventListener('change',()=>{
     const d=state.debts.find(x=>x.id===sel.dataset.debtsec); if(!d) return;
@@ -6280,10 +6475,19 @@ function activateTab(name,fromHistory){
   if(name==='learn') renderCharts();
   if(name==='reflect') renderReflectTab();
   renderAreaGuide(name);   // introduces the area once, then never again
+  /* Every time, unlike the guide above: this is about the reason you came, and
+     that is new on each arrival. Leaving for anywhere else drops it. */
+  if(typeof renderArrival==='function') renderArrival(name);
   if(name==='home') renderHome();
   if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
-  if(name==='impulse'){ renderVault(); renderLessons(); }
+  /* "Tripwires has no actionable button." It had four, and none of them had
+     ever been drawn. renderTripwires was wired ONLY into the sync-pull path and
+     into add/remove - the two handlers on controls that could not exist until
+     something had drawn them. So from boot the panel was its explanatory
+     paragraph and nothing else, for everybody, forever. A render function that
+     no surface calls is a panel that does not exist. */
+  if(name==='impulse'){ renderVault(); renderLessons(); renderTripwires(); }
   if(name==='diary') renderDiary();
   /* After the view has drawn, or there is nothing to measure. Two frames: the
      first lets the panels lay out, the second catches anything a render kicked
@@ -9464,13 +9668,90 @@ function recTxNote(r){
    priced in dollars at the user's own rate, because the feed monetizes them
    even when the user doesn't. Rolling 7-day window; log kept to 90 days.
    ============================================================ */
-const TIME_KINDS=[
-  {k:'health', ic:'', label:'Health',       hint:'moved, cooked, slept right'},
-  {k:'learn',  ic:'', label:'Learning',     hint:'a skill, a book, a course'},
-  {k:'build',  ic:'', label:'Building',     hint:'side work, the dream'},
-  {k:'people', ic:'', label:'People',       hint:'family, friends, network'},
-  {k:'leak',   ic:'', label:'Screen drift', hint:'scroll, autoplay'}
-];
+/* ============================================================
+   THE WEEK, BUDGETED
+
+   "Your week in hours needs its own categories, some subcategories, just like
+   the money aspect - it should mirror the tracking system we have set up so we
+   know exactly what goes to sleep, what goes towards health and exercise etc.
+   It almost needs to be its own budget."
+
+   It was five fixed lanes and a +1 button. You could not add a lane, split one,
+   or say what you were AIMING for - which meant it recorded hours and never
+   planned them, and a record without a plan is the thing this app spends its
+   whole time arguing against on the money side.
+
+   So it is the money model, in hours: categories you name, subcategories under
+   them, a target on each, and a roll-up. Planned against actual, 168 as the
+   ceiling instead of your income, and the same rule that a parent's number is
+   whatever its children add up to plus anything put straight against it.
+
+   Sleep is seeded because it was missing entirely, and it is a third of the
+   week. A time budget that ignores the biggest block in it is a toy.
+
+   The five original lanes keep their exact ids, so every hour anybody has
+   already logged still lands in the right place with no migration at all - the
+   old `kind` field simply IS the category id now. */
+/* A pure read. The first version seeded AND called save() from in here, which
+   made every render of the week a write to storage - and a write during boot
+   overwrote state that had only just been set, which is how a fixture loaded
+   fine and came back empty. A getter that saves is a getter that can destroy
+   what it was asked about. Seeding happens once, in the migration, where every
+   other shape fix in this app already lives. */
+function timeCats(){ return Array.isArray(state.timeCats)?state.timeCats:(state.timeCats=[]); }
+function timeCat(id){ return timeCats().find(c=>c.id===id)||null; }
+function timeTop(){ return timeCats().filter(c=>!c.parentId).sort((a,b)=>(+a.sort||0)-(+b.sort||0)); }
+function timeChildren(id){ return timeCats().filter(c=>c.parentId===id).sort((a,b)=>(+a.sort||0)-(+b.sort||0)); }
+function timeIsLeak(c){
+  if(!c) return false;
+  if(c.leak) return true;
+  const p=c.parentId?timeCat(c.parentId):null;
+  return !!(p&&p.leak);
+}
+/* An entry's category. `kind` is the old field name and still the live one for
+   everything logged before this existed - reading both is what makes the seed
+   ids matter. */
+function timeEntryCat(e){ return (e&&(e.catId||e.kind))||''; }
+function timeOwn(id){
+  const from=timeWeekFrom();
+  return (state.timeLog||[]).filter(e=>e.date>=from && timeEntryCat(e)===id)
+    .reduce((s,e)=>s+(+e.hours||0),0);
+}
+/* Same rule as a money category: what is against it, plus everything under it. */
+function timeUsed(id){ return Math.round((timeOwn(id)+timeChildren(id).reduce((s,c)=>s+timeUsed(c.id),0))*100)/100; }
+function timeOwnTarget(c){ const t=+((c||{}).target); return isFinite(t)&&t>0?t:0; }
+function timeTarget(id){
+  const c=timeCat(id); if(!c) return 0;
+  const kids=timeChildren(id);
+  return Math.round((timeOwnTarget(c)+kids.reduce((s,k)=>s+timeTarget(k.id),0))*100)/100;
+}
+function timePlannedTotal(){ return Math.round(timeTop().reduce((s,c)=>s+timeTarget(c.id),0)*100)/100; }
+function timeLoggedTotal(){ return Math.round(timeTop().reduce((s,c)=>s+timeUsed(c.id),0)*100)/100; }
+/* 168 minus the hours already sold to work, which is the only part of the week
+   nobody gets to plan. That remainder is the real budget. */
+function timeSold(){ return Math.max(0,+state.hoursPerWeek||0); }
+function timeFree(){ return Math.max(0, 168-timeSold()); }
+function timeUnplanned(){ return Math.round((timeFree()-timePlannedTotal())*100)/100; }
+function addTimeCat(name, parentId){
+  const n=String(name||'').trim(); if(!n) return null;
+  const list=timeCats();
+  const sibs=parentId?timeChildren(parentId):timeTop();
+  const c={id:uid(), name:n, target:0, sort:sibs.length?Math.max(...sibs.map(x=>+x.sort||0))+1:0};
+  if(parentId) c.parentId=parentId;
+  list.push(c); save(); return c;
+}
+function removeTimeCat(id){
+  /* The hours logged against it are moved to its parent rather than deleted -
+     they happened, and losing them because a label changed would make the
+     record dishonest to make the screen tidy. Orphan children move up too. */
+  const c=timeCat(id); if(!c) return;
+  const up=c.parentId||null;
+  (state.timeLog||[]).forEach(e=>{ if(timeEntryCat(e)===id){ if(up){ e.catId=up; delete e.kind; } else { e.catId='__gone'; delete e.kind; } } });
+  timeChildren(id).forEach(k=>{ if(up) k.parentId=up; else delete k.parentId; });
+  state.timeCats=timeCats().filter(x=>x.id!==id);
+  save();
+}
+const TIME_KINDS=TIME_SEED.map(x=>({k:x.id, ic:'', label:x.name, hint:x.hint}));   // kept: older code reads this shape
 /* Shift a local date by whole CALENDAR days. Subtracting n*86400000 ms subtracts
    physical hours, and a DST jump means a calendar day is not always 24 of those -
    30 days after spring-forward, the ms version lands a day early and a "7-day
@@ -9478,7 +9759,7 @@ const TIME_KINDS=[
    in local calendar space, which is the thing actually meant. (Audit F10.) */
 function shiftDays(iso,n){ const [y,m,d]=String(iso).split('-').map(Number); return localYMD(new Date(y,m-1,d+n)); }
 function timeWeekFrom(){ return shiftDays(todayStr(),-6); }
-function timeWeekTotals(){ const from=timeWeekFrom(); const tot={}; (state.timeLog||[]).forEach(e=>{ if(e.date>=from) tot[e.kind]=(tot[e.kind]||0)+(+e.hours||0); }); return tot; }
+function timeWeekTotals(){ const from=timeWeekFrom(); const tot={}; (state.timeLog||[]).forEach(e=>{ if(e.date>=from){ const k=timeEntryCat(e); tot[k]=(tot[k]||0)+(+e.hours||0); } }); return tot; }
 function logTime(kind,hours){
   state.timeLog=state.timeLog||[];
   // a week only has 168 hours; sold hours are already spoken for. Refuse a total
@@ -9486,29 +9767,75 @@ function logTime(kind,hours){
   const tot=timeWeekTotals();
   const used=Object.values(tot).reduce((s,v)=>s+v,0)+(state.hoursPerWeek||0);
   if(used+hours>168){ if(typeof toast==='function') toast("That's past 168 hours - a week doesn't hold any more than that."); return; }
-  state.timeLog.push({id:uid(),date:todayStr(),kind,hours});
+  state.timeLog.push({id:uid(),date:todayStr(),catId:kind,hours});
   const cutoff=shiftDays(todayStr(),-90);
   state.timeLog=state.timeLog.filter(e=>e.date>=cutoff);   // bound storage; the ledger is about this season, not forever
   save(); renderTimeLog();
 }
 function unlogTime(kind){
   const from=timeWeekFrom(); const arr=state.timeLog||[];
-  for(let i=arr.length-1;i>=0;i--){ if(arr[i].kind===kind&&arr[i].date>=from){ arr.splice(i,1); break; } }
+  for(let i=arr.length-1;i>=0;i--){ if(timeEntryCat(arr[i])===kind&&arr[i].date>=from){ arr.splice(i,1); break; } }
   save(); renderTimeLog();
 }
 function renderTimeLog(){
   const rows=document.getElementById('timeRows'); if(!rows) return;
-  const tot=timeWeekTotals(), r1=x=>Math.round(x*10)/10;
-  rows.innerHTML=TIME_KINDS.map(k=>{
-    const h=r1(tot[k.k]||0);
-    return `<div class="time-row ${k.k==='leak'?'leak':''}"><span class="tr-ic">${k.ic}</span><span class="tr-l">${escapeHtml(k.label)}<i>${escapeHtml(k.hint)}</i></span><span class="tr-h">${h?h+'h this week':'·'}</span><span class="tr-b"><button class="btn sm ghost" data-tmin="${k.k}" ${h?'':'disabled'} title="Undo an hour">−</button><button class="btn sm" data-tadd="${k.k}">+1 hr</button></span></div>`;
-  }).join('');
+  const r1=x=>Math.round(x*10)/10;
+  const rowFor=(c,depth)=>{
+    const kids=timeChildren(c.id), isGroup=kids.length>0;
+    const used=timeUsed(c.id), tgt=timeTarget(c.id), own=timeOwn(c.id), ownT=timeOwnTarget(c);
+    const leak=timeIsLeak(c);
+    /* On a leak lane the target is a CEILING, not a goal, so over is bad and
+       under is good - the exact opposite of every other row here, and the one
+       place this differs from the money plan it copies. */
+    const over = tgt>0 && (leak ? used>tgt : used>tgt);
+    const pill = tgt>0 ? (leak ? (used>tgt?'over':'good') : (used>=tgt?'good':(used>0?'spent':'none'))) : 'none';
+    return `<div class="time-row lvl${depth}${leak?' leak':''}" data-timerow="${c.id}">
+      <span class="tr-l"><b>${escapeHtml(c.name)}</b>${c.hint?`<i>${escapeHtml(c.hint)}</i>`:''}${isGroup?`<span class="cat-count">${kids.length}</span>`:''}</span>
+      <span class="tr-plan"><input type="number" min="0" step="0.5" inputmode="decimal" value="${ownT||''}" placeholder="0" data-ttarget="${c.id}" aria-label="Hours a week you are aiming for in ${escapeHtml(c.name)}">${isGroup&&tgt>ownT?`<i class="tr-roll">${r1(tgt)}h with its subs</i>`:'<i class="tr-roll">h a week</i>'}</span>
+      <span class="tr-h ${pill}">${used?r1(used)+'h':'·'}${tgt>0?`<i>${leak?'of ' + r1(tgt) + 'h cap':'of '+r1(tgt)+'h'}</i>`:''}</span>
+      <span class="tr-b">
+        <button class="btn sm ghost" data-tmin="${c.id}" ${own>0?'':'disabled'} title="Undo an hour">−</button>
+        <button class="btn sm" data-tadd="${c.id}">+1 hr</button>
+        <button class="btn sm ghost tr-sub" data-tsub="${c.id}" title="Add a subcategory under ${escapeHtml(c.name)}">+ sub</button>
+        <button class="del" data-tdel="${c.id}" title="Remove ${escapeHtml(c.name)}">&#10005;</button>
+      </span>
+    </div>` + kids.map(k=>rowFor(k,depth+1)).join('');
+  };
+  const free=timeFree(), planned=timePlannedTotal(), left=timeUnplanned();
+  rows.innerHTML=`<div class="time-head">
+      <span class="th-k">${timeSold()?`${r1(timeSold())}h sold to work, so`:'Nothing sold to work yet, so'} <b>${r1(free)}h</b> are yours to plan</span>
+      <span class="th-v ${left<0?'over':left<=0.5?'good':''}">${left>=0?`${r1(left)}h unplanned`:`${r1(-left)}h over`}</span>
+    </div>`
+    + timeTop().map(c=>rowFor(c,0)).join('')
+    + `<div class="time-add"><input type="text" id="timeCatNew" maxlength="28" placeholder="Something else your week goes to"><button class="btn sm primary" id="timeCatAdd">Add</button></div>`;
   rows.querySelectorAll('[data-tadd]').forEach(b=>b.onclick=()=>logTime(b.dataset.tadd,1));
   rows.querySelectorAll('[data-tmin]').forEach(b=>b.onclick=()=>unlogTime(b.dataset.tmin));
+  rows.querySelectorAll('[data-ttarget]').forEach(i=>i.addEventListener('change',()=>{
+    const c=timeCat(i.dataset.ttarget); if(!c) return;
+    const v=parseFloat(i.value)||0;
+    if(v>0) c.target=v; else delete c.target;
+    save(); renderTimeLog();
+  }));
+  rows.querySelectorAll('[data-tsub]').forEach(b=>b.onclick=()=>{
+    const c=timeCat(b.dataset.tsub); if(!c) return;
+    const n=prompt(`What goes under ${c.name}?`,''); if(!n) return;
+    addTimeCat(n, c.id); renderTimeLog();
+  });
+  rows.querySelectorAll('[data-tdel]').forEach(b=>b.onclick=()=>{
+    const c=timeCat(b.dataset.tdel); if(!c) return;
+    const used=timeUsed(c.id);
+    if(!confirm(`Remove ${c.name}?`+(used>0?`\n\nThe ${r1(used)}h logged against it ${c.parentId?'move up to '+((timeCat(c.parentId)||{}).name||'its parent'):'stay in the record'} - they happened either way.`:''))) return;
+    removeTimeCat(c.id); renderTimeLog();
+  });
+  const nb=document.getElementById('timeCatAdd'), ni=document.getElementById('timeCatNew');
+  if(nb&&ni){
+    const go=()=>{ if(!ni.value.trim()) return; addTimeCat(ni.value); ni.value=''; renderTimeLog(); };
+    nb.onclick=go; ni.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } };
+  }
   const sum=document.getElementById('timeSummary'); if(!sum) return;
-  const invested=TIME_KINDS.filter(k=>k.k!=='leak').reduce((s,k)=>s+(tot[k.k]||0),0);
-  const leak=tot.leak||0, H=effectiveHourly();
-  const sold=state.hoursPerWeek>0?state.hoursPerWeek:0;
+  const invested=timeTop().filter(c=>!timeIsLeak(c)).reduce((s,c)=>s+timeUsed(c.id),0);
+  const leak=timeTop().filter(timeIsLeak).reduce((s,c)=>s+timeUsed(c.id),0), H=effectiveHourly();
+  const sold=timeSold();
   const soldTxt=sold?`~${sold}h sold to work`:`work hours not set (Settings)`;
   let leakLine='';
   if(leak>0&&H>0){ const v=leak*H, t=baseInt();
@@ -10027,7 +10354,9 @@ const LESSON_ACTIONS={
   'The 24-Hour Rule':          {label:'Gut-check something',     run:()=>{ activateTab('impulse'); setTimeout(openModal,160); }},
   'Value Per Dollar, Not Price':{label:'Price it in life-hours', run:()=>{ activateTab('impulse'); setTimeout(openModal,160); }},
   "What's Actually an Asset?": {label:'Look at what I own',      run:()=>lessonGo('goals','assetName')},
-  'Your Money Script':         {label:'See my money story',      run:()=>lessonGo('home')},
+  /* Went to Home, which holds no money story at all - the answer it is talking
+     about was given at intake and lives in the Diary. */
+  'Your Money Script':         {label:'See my money story',      run:()=>arrive('moneystory')},
   'Notice, Name, Slow, Redesign, Automate':{label:'Run a gut-check', run:()=>{ activateTab('impulse'); setTimeout(openModal,160); }},
   'Name the Feeling First':    {label:'Build my comfort list',   run:()=>lessonGo('settings','comfortInput')},
   'Look at the Number':        {label:'Open my ledger',          run:()=>lessonGo('tx','txAmt')},
@@ -10544,26 +10873,58 @@ async function refreshSyncState(){
 
 /* ---------- Debt Payoff Planner controls ---------- */
 (function(){
+  /* The dropdown is the first field for a reason: it decides which of the rest
+     are even asked. Filling it in last would mean typing a limit into a form
+     that then hides it. */
+  const ks=document.getElementById('debtKindSel');
+  if(ks){
+    ks.innerHTML=`<option value="">Pick one…</option>`+DEBT_KINDS.map(k=>`<option value="${k.k}">${escapeHtml(k.label)}</option>`).join('');
+    const sync=()=>{
+      const k=DEBT_KINDS.find(x=>x.k===ks.value);
+      const lw=document.getElementById('debtLimWrap'), ww=document.getElementById('debtWorthWrap');
+      if(lw) lw.classList.toggle('hide', !(k&&k.room));
+      if(ww) ww.classList.toggle('hide', !(k&&k.worth));
+      const lbl=document.getElementById('debtWorthLbl');
+      if(lbl&&k&&k.worth) lbl.textContent=(k.worthLabel||'What it is worth')+' $';
+      const wi=document.getElementById('debtWorth');
+      if(wi&&k&&k.worth) wi.placeholder=k.worthHint||'0';
+      const nm=document.getElementById('debtName');
+      if(nm&&k&&!nm.value.trim()) nm.placeholder=k.k==='mortgage'?'The house':k.k==='auto'?'The car':k.label;
+    };
+    ks.addEventListener('change',sync); sync();
+  }
   const add=document.getElementById('addDebt');
   if(add) add.addEventListener('click',()=>{
     const name=document.getElementById('debtName').value.trim();
     const bal=parseFloat(document.getElementById('debtBal').value)||0;
-    const lim=parseFloat(document.getElementById('debtLim').value)||0;
+    const kindV=(document.getElementById('debtKindSel')||{}).value||'';
+    const kind=DEBT_KINDS.find(x=>x.k===kindV)||null;
+    const lim=(kind&&kind.room)?(parseFloat(document.getElementById('debtLim').value)||0):0;
+    const worth=(kind&&kind.worth)?(parseFloat(document.getElementById('debtWorth').value)||0):0;
     if(!name){ alert('Give the debt a name.'); return; }
+    /* The kind decides which other fields exist, so it cannot be optional: with
+       none chosen the limit box is hidden, and the old "enter a balance, or a
+       limit if it is a line" message then pointed at a field that was not on
+       screen. A dead end with instructions. */
+    if(!kind){ alert('Pick what kind of debt it is first - that decides what else you are asked for. A card wants its limit; a mortgage wants what the house is worth; a student loan wants neither.'); return; }
     /* A line with a limit and nothing on it was refused here, which is precisely
        the case that made the limit worth having: a HELOC at 3.49% sitting at
        zero is not an empty row, it is the cheapest money this person has access
        to and the only debt on the list that could fund something tomorrow. A
        balance of nothing is a real answer as long as the app has been told what
        the line is. Without a limit it is still not - a $0 car loan is a typo. */
-    if(bal<=0 && !(lim>0)){ alert('Enter the balance you owe - or put in the credit limit, if this is a card or line you have not drawn on.'); return; }
+    if(bal<=0 && !(lim>0)){ alert(kind.room
+      ? 'Enter the balance you owe - or put in the credit limit, if this is a line you have not drawn on.'
+      : 'Enter the balance you owe.'); return; }
     const rec={ id:uid(), name, balance:bal, apr:parseFloat(document.getElementById('debtApr').value)||0, minPayment:parseFloat(document.getElementById('debtMin').value)||0 };
     /* Stored only when it is a real answer. An absent limit means "not a line",
        which is a different statement from a limit of zero, and the whole
        revolving/not revolving split downstream reads it that way. */
     if(lim>0) rec.limit=lim;
+    if(worth>0) rec.worth=worth;
+    if(kind){ rec.kind=kind.k; if(kind.secured) rec.secured=true; }
     state.debts.push(rec);
-    ['debtName','debtBal','debtApr','debtMin','debtLim'].forEach(id=>document.getElementById(id).value='');
+    ['debtName','debtBal','debtApr','debtMin','debtLim','debtWorth'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
     save(); renderDebt();
   });
   const imp=document.getElementById('importLiab');
@@ -11675,11 +12036,13 @@ function renderSovereignty(){
   const s=sovereignty(), t=SOV_TIERS[s.tier];
   const runwayTxt = s.pureRunway==null?'-':fmtRunway(s.pureRunway);
   box.innerHTML=`
-    <div class="sov-tier t${s.tier}"><span class="ic">${t.ic}</span><div><div class="t-name">Tier ${s.tier}: ${t.name}</div><div class="t-sub">${t.sub}</div></div></div>
+    <div class="sov-tier t${s.tier}"><span class="ic">${t.ic}</span><div><div class="t-name">Tier ${s.tier}: ${t.name}${whyBtn('sovAudit')}</div><div class="t-sub">${t.sub}</div></div></div>
     <div class="sov-metrics">
-      <div class="sov-m"><div class="k">Sovereign Capital Ratio</div><div class="v">${Math.round(s.scr)}%</div><div class="scr-bar"><div class="real" style="width:${s.scr}%"></div><div class="stuff" style="width:${100-s.scr}%"></div></div></div>
-      <div class="sov-m"><div class="k">Overhead Drag / mo</div><div class="v" style="color:${s.overhead>0?'var(--accent-2)':'var(--good)'}">${money(s.overhead)}</div></div>
-      <div class="sov-m"><div class="k">Pure Freedom Runway</div><div class="v" style="color:var(--good)">${runwayTxt}</div></div>
+      <!-- One note explains all four figures, so each carries its own way in.
+           Whichever number stopped somebody is the one they will tap. -->
+      <div class="sov-m"><div class="k">Sovereign Capital Ratio${whyBtn('sovAudit')}</div><div class="v">${Math.round(s.scr)}%</div><div class="scr-bar"><div class="real" style="width:${s.scr}%"></div><div class="stuff" style="width:${100-s.scr}%"></div></div></div>
+      <div class="sov-m"><div class="k">Overhead Drag / mo${whyBtn('sovAudit')}</div><div class="v" style="color:${s.overhead>0?'var(--accent-2)':'var(--good)'}">${money(s.overhead)}</div></div>
+      <div class="sov-m"><div class="k">Pure Freedom Runway${whyBtn('sovAudit')}</div><div class="v" style="color:var(--good)">${runwayTxt}</div></div>
     </div>`;
 }
 /* War Chest = money you refused to spend and did NOT route to a dream. Goal-directed
@@ -12672,7 +13035,55 @@ function diaryPrompt(k){
   if(gap<=2 && k==='note') return "How has it gone since you last wrote"+name+"?";
   return kind.prompt;
 }
+/* The answers setup already has, shown to the person who gave them. They have
+   been in state since the intake chat, read by the tone engine to decide how
+   blunt to be, and never once displayed - so the app knew somebody's money story
+   and never let them see it. Each one is a question rather than a verdict,
+   because the useful thing about these is that the answer changes. */
+const STORY_Q=[
+  {k:'why',   q:'Why you are here',
+   get:()=>((state.intake&&state.intake.why)||'').trim(),
+   ask:'What are you actually working toward? Not the number - the reason.',
+   prompt:'The thing I am really doing this for is '},
+  {k:'moneyStory', q:'What money felt like growing up',
+   get:()=>({fear:'Never enough, and it was frightening', tight:'Tight, but we managed',
+             stable:'Comfortable and steady', chaos:'Feast or famine'}
+            [(state.intake&&state.intake.reflections&&state.intake.reflections.moneyStory)||''])||'',
+   note:()=>((state.intake&&state.intake.reflections&&state.intake.reflections.moneyStoryNote)||'').trim(),
+   ask:'Write the money sentence you heard most as a kid. Whose voice is it in? Is it still serving you?',
+   prompt:'The thing I heard most about money growing up was '},
+  {k:'situation', q:'Where you said you were standing',
+   get:()=>({survive:'In survival mode', treading:'Treading water',
+             ok:'Getting by, want more', good:'Comfortable and building'}
+            [(state.intake&&state.intake.reflections&&state.intake.reflections.situation)||''])||'',
+   ask:'Is that still true? This is the one that changes fastest, and the app is still speaking to the old answer until you say so.',
+   prompt:'Where I am actually standing right now is '}
+];
+function renderStory(){
+  const box=document.getElementById('storyBody'); if(!box) return;
+  box.innerHTML=STORY_Q.map(q=>{
+    const a=q.get(), note=q.note?q.note():'';
+    return `<div class="story-q"><div class="sq-k">${escapeHtml(q.q)}</div>
+      <div class="sq-a${a?'':' none'}">${a?escapeHtml(a):'You skipped this one at setup, which is a fine answer. It is still worth having.'}</div>
+      ${note?`<div class="sq-n">In your words: &ldquo;${escapeHtml(note)}&rdquo;</div>`:''}
+      <div class="sq-n">${escapeHtml(q.ask)}</div>
+      <div class="sq-go"><button class="btn sm ghost" data-storywrite="${q.k}">Write about this →</button></div></div>`;
+  }).join('')
+  + `<p class="sub" style="margin-top:14px">Nothing here is graded and nothing leaves this device. The entries you write land in <b>Your story so far</b> below, and anything that sounds like money gets offered up to log - so a sentence about a bad week can become the entry that explains a number three months from now.</p>`;
+  box.querySelectorAll('[data-storywrite]').forEach(b=>b.addEventListener('click',()=>{
+    const q=STORY_Q.find(x=>x.k===b.dataset.storywrite); if(!q) return;
+    const t=document.getElementById('diaryText'); if(!t) return;
+    /* Seeded, not replaced: somebody halfway through an entry must not lose it
+       because they tapped a prompt. */
+    if(t.value.trim()) t.value=t.value.replace(/\s*$/,'')+'\n\n'+q.prompt;
+    else t.value=q.prompt;
+    t.scrollIntoView({behavior:'smooth',block:'center'});
+    t.focus();
+    try{ t.setSelectionRange(t.value.length,t.value.length); }catch(_){}
+  }));
+}
 function renderDiaryForm(){
+  renderStory();
   const chips=document.getElementById('diaryKinds');
   if(chips) chips.innerHTML=DIARY_KINDS.map(k=>`<button class="dy-chip${k.k===diaryKind?' on':''}" data-dk="${k.k}">${k.ic} ${escapeHtml(k.label)}</button>`).join('');
   const ask=document.getElementById('diaryAsk');
@@ -13025,6 +13436,34 @@ function periodWork(v,k,unitWord){
    user's own live numbers rather than a worked example.
    ============================================================ */
 const FIELD_WHY={
+  /* "As far as the sovereignty audit - what is it tied to, how do you change it,
+     and where is this explained? Should be a question mark icon next to it
+     explaining, instead of having the user guess."
+
+     Every one of those was fair. The panel printed a tier, three figures and a
+     verdict about whether your stuff owns you, built entirely out of Assets vs
+     Liabilities two panels above it - and never said so. A person reading
+     "Tier 1: Encumbered" had no way to learn what would move it.
+
+     So this names the inputs, shows the arithmetic on their own numbers, and
+     ends with the only part that matters: what would actually change it. */
+  sovAudit:{ t:'What this is worked out from, and how to move it', b:()=>{
+      const s=sovereignty();
+      const real=money(s.real), stuff=money(s.stuff);
+      let out=`Everything here comes from <b>Assets vs Liabilities</b>, further up this same tab. Nothing else feeds it - not your budget, not what you have logged. Change what is listed there and every number below moves.<br><br>`;
+      out+=`<b>The split.</b> Each asset you have added is marked as something that <b>pays you</b> or something that <b>costs you</b>. Right now that is <b>${real}</b> that pays and <b>${stuff}</b> that costs.<br>`;
+      out+= (s.real+s.stuff)>0
+        ? `Sovereign Capital Ratio = ${real} &divide; (${real} + ${stuff}) = <b>${Math.round(s.scr)}%</b>.<br><br>`
+        : `With nothing listed, the ratio has nothing to divide and shows <b>0%</b>. That is an empty page, not a verdict.<br><br>`;
+      out+=`<b>Overhead Drag</b> is the monthly cost you typed against those assets, added up: <b>${money(s.overhead)}</b> a month.<br><br>`;
+      out+=`<b>Pure Freedom Runway</b> is what you would have left after clearing every liability, divided by your essentials:<br>`;
+      out+= s.ess>0
+        ? `(${real} &minus; ${money(s.L)} owed) &divide; ${money(s.ess)} a month = <b>${s.pureRunway==null?'-':fmtRunway(s.pureRunway)}</b>.<br><br>`
+        : `it needs your monthly essentials, and nothing is assigned to the Four Walls yet - so it cannot be worked out.<br><br>`;
+      out+=`<b>The tier</b> is read off that runway: under 3 months (or overhead above 40% of essentials) is <b>Encumbered</b>, 3 to 11 is <b>Tethered</b>, 12+ is <b>Unbound</b>, and once 4% of your paying assets covers a year of essentials it is <b>Untouchable</b>.<br><br>`;
+      out+=`<b>What moves it:</b> add the assets you actually own, and mark honestly which ones pay you and which cost you - most people have never separated the two. Then either grow the paying side or cut what you owe. Nothing here can be set by hand, and that is deliberate: a tier you could type in would tell you nothing.`;
+      return out; } },
+
   levBreak:{ t:'How the break-even is worked out', b:()=>{
       const L=state.lev||{}, m=leverageMath(+L.amt||0, +L.apr||0, +L.ret||0, +L.years||5, +L.pay||0, +L.cash||0);
       if(!(m.A>0)) return 'Put an amount and a rate in and this shows its working.';
@@ -14777,6 +15216,66 @@ const AREA_GUIDE={
 };
 function guideSeen(v){ return !!(state.seenGuide&&state.seenGuide[v]); }
 function guidesOff(){ return state.guidesOff===true; }
+/* ============================================================
+   ARRIVING SOMEWHERE ON PURPOSE
+
+   "Running a gut check takes you to Shield but it never mentions what a gut
+   check is in Shield. Same with Secure the bag."
+
+   Both buttons worked. Both went to the right tab. And both dropped somebody
+   into a screen full of unrelated panels with no thread back to the sentence
+   they had just pressed - so the app looked like it had ignored them. A
+   navigation that lands is not the same as a navigation that ARRIVES.
+
+   The area guide next to this is a different thing: it introduces a room the
+   first time you enter it, and then never again. This fires every time, because
+   it is not about the room - it is about the reason you came, and that reason
+   is new each time. It says what you pressed, what it means here, and puts the
+   thing you came for one tap away. Dismissed by acting or by leaving; never
+   stored, because a reason is not a preference.
+   ============================================================ */
+const ARRIVALS={
+  gutcheck:{ tab:'impulse', t:'You came here to run a gut check',
+    w:"A gut check is this app's word for stopping between wanting a thing and buying it. You put in what it costs, it prices the thing in hours of your life rather than dollars, and asks what you were actually feeling when you reached for it. It never blocks anything and it never judges the answer - most of the time people buy the thing anyway, and know why.",
+    act:'Start one', run:()=>{ if(typeof openModal==='function') openModal(); } },
+  bag:{ tab:'budget', t:'Securing the bag starts here',
+    w:"It means one thing in this app: every dollar you have gets a job before the month spends it for you. Money left unassigned is the money that disappears. Below is what you have coming in, what you have given a job to, and what is still loose.",
+    act:'Assign what is loose', focus:'catName' },
+  moneystory:{ tab:'diary', t:'Your money story lives here',
+    w:"You already answered the question that starts it during setup. That answer is below, in your own words, and this is the place to keep pulling the thread - what you heard about money growing up, whose voice it was in, and whether it is still serving you. Nobody reads this but you.",
+    act:'Write an entry', focus:'diaryText' }
+};
+let arrivalKey=null;
+function arrive(k){
+  const a=ARRIVALS[k]; if(!a) return;
+  if(typeof areaOff==='function' && areaOff(a.tab)) return;
+  arrivalKey=k;
+  activateTab(a.tab);
+  renderArrival(a.tab);
+}
+function renderArrival(view){
+  document.querySelectorAll('.arrival').forEach(x=>x.remove());
+  const a=arrivalKey&&ARRIVALS[arrivalKey];
+  if(!a || a.tab!==view) { arrivalKey=null; return; }
+  const sec=document.getElementById('view-'+view); if(!sec) return;
+  const el=document.createElement('div');
+  el.className='arrival';
+  el.innerHTML=`<div class="ar-k">Why you are here</div>
+    <div class="ar-t">${escapeHtml(a.t)}</div>
+    <p class="ar-w">${escapeHtml(a.w)}</p>
+    <div class="ar-row"><button class="btn sm primary" data-arrun>${escapeHtml(a.act)} →</button>
+      <button class="btn sm ghost" data-arclose>Close</button></div>`;
+  sec.insertBefore(el, sec.firstChild);
+  const done=()=>{ arrivalKey=null; el.remove(); };
+  el.querySelector('[data-arclose]').onclick=done;
+  el.querySelector('[data-arrun]').onclick=()=>{
+    const run=a.run, f=a.focus;
+    done();
+    if(run) setTimeout(run,120);
+    else if(f && typeof trailFocus==='function') trailFocus(f);
+  };
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-arrive]'); if(b) arrive(b.dataset.arrive); });
 function renderAreaGuide(view){
   const sec=document.getElementById('view-'+view); if(!sec) return;
   const old=sec.querySelector('.areaguide'); if(old) old.remove();
@@ -15635,6 +16134,41 @@ REPORT_SIGNALS.push(
             + ` This app is not going to tell you to do it. It has told you what it costs either way, which is the part you could not see from two separate screens.`
             + ` ${voice(RP_TONE.rateSpread,null)}`,
         bad:false };
+    }},
+
+  /* ---- the thing behind the loan, and whether it is worth more than the loan ----
+     "Knowing any statistics will help decide if it's an asset or a liability and
+     can give advice accordingly in the reflect." This is that. It only fires
+     once somebody has said what the thing is worth, because without that number
+     the question genuinely cannot be answered - and guessing it from the loan
+     would be the app inventing the one fact it is reporting. */
+  { k:'debtEquity', run(){
+      const held=securedDebts(); if(!held.length) return null;
+      const under=held.filter(debtUnderwater);
+      const up=held.filter(d=>!debtUnderwater(d) && debtEquity(d)>0);
+      const worst=under.slice().sort((a,b)=>debtEquity(a)-debtEquity(b))[0];
+      const best=up.slice().sort((a,b)=>debtEquity(b)-debtEquity(a))[0];
+      if(!worst && !best) return null;
+      const netEq=held.reduce((s,d)=>s+(debtEquity(d)||0),0);
+      const kindOf=d=>{ const k=debtKind(d); return k?k.label.toLowerCase():'loan'; };
+      if(worst){
+        const gap=-debtEquity(worst);
+        return { t:`${escapeHtml(worst.name)} is worth less than you owe on it`, standing:true, bad:true,
+          body:`You owe <b>${money(worst.balance)}</b> against something worth <b>${money(debtWorth(worst))}</b>. `
+            + `Sell it today, hand over every penny, and you would still owe <b>${money(gap)}</b>. `
+            + `That is what being underwater means, and on a ${kindOf(worst)} it is ordinary rather than shameful - the thing falls faster than the loan does for the first few years.`,
+          work:`${money(debtWorth(worst))} worth − ${money(worst.balance)} owed = −${money(gap)}`,
+          nudge:`The part worth knowing: <b>you cannot get out of this by selling.</b> Until the gap closes, the only exits are keeping it and paying it down, or finding ${money(gap)} on the day you sell. `
+            + (up.length?`Across everything you have listed the equity still nets to <b>${money(netEq)}</b>, so the picture is not all one way. `:'')
+            + `This is not a reason to panic and it is a reason to know. ${voice(RP_TONE.owedUp,null)}` };
+      }
+      const eq=debtEquity(best), ltv=debtLTV(best);
+      return { t:`${escapeHtml(best.name)} is buying you something`, standing:true, bad:false,
+        body:`You owe <b>${money(best.balance)}</b> against something worth <b>${money(debtWorth(best))}</b>, so <b>${money(eq)}</b> of it is yours. `
+          + `That is the difference between a debt and a liability: this one has an asset on the other side of it${ltv!=null?`, and you are ${ltv}% of the way in`:''}.`,
+        work:`${money(debtWorth(best))} worth − ${money(best.balance)} owed = ${money(eq)} yours`,
+        nudge:`What this does <b>not</b> mean is that the debt is free - it still costs ${(+best.apr||0)>0?`<b>${best.apr}%</b> a year`:'whatever its rate is'}, and equity you cannot spend does not pay a bill. `
+          + `What it means is that the payoff order on this page is a question about <b>rates</b>, not about which loan feels heaviest. ${voice(RP_TONE.owedDown,null)}` };
     }},
 
   /* ---- which dollar works hardest, when more than one balance is carried ---- */
@@ -17668,6 +18202,13 @@ function boot(){
   if(postRecurring(shiftMonth(thisMonth(),-1))+postRecurring(thisMonth())>0) save();
   renderBudget(); renderTx(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); renderLesson();
   renderAccounts(); renderNetWorth(); renderImpulse(); renderVault(); renderLessons(); renderRecurring(); renderCharts(); renderReflectTab(); renderDebt(); renderComfortMenu();
+  renderTripwires();   // boot never drew it either, so the panel was empty until a sync pull
+  /* Said out loud. A load that half-failed is the one moment this app must not
+     be quiet: the person is looking at their own money and some of it may not
+     have survived the trip. */
+  if(state.loadFailed && typeof toast==='function') setTimeout(()=>toast(state.loadFailed==='unreadable'
+    ? 'Your saved data could not be read, so this opened empty. The original has been kept on this device rather than overwritten - do not re-enter anything yet, and export a backup from Settings first.'
+    : 'Something went wrong tidying your saved data, so it loaded exactly as it was stored. Everything is here; if a figure looks odd, export a backup from Settings before changing it.'), 900);
   document.getElementById('wage').value = state.hourlyWage || ''; updateWageNote();
   wireHpw();
   renderFreedomToggle(); renderTrSettings(); wireHpw(); fillTrapPickers();
@@ -17782,8 +18323,11 @@ function renderHome(){
     setTxt('hhTitle','Keep your spending honest.');
     setTxt('hhSub',"No four walls, no zero-based math - just your purchases, weighed in hours of your life before you buy.");
     setTxt('hhCta','Gut-check a purchase');
-    const cta=document.getElementById('hhCta'); if(cta) cta.setAttribute('data-goto','impulse');
-  } else { const cta=document.getElementById('hhCta'); if(cta) cta.setAttribute('data-goto','budget'); }
+    /* The hero CTA swaps destination by situation, and used to swap the
+       attribute that only changes tab. It swaps the ARRIVAL now, so whichever
+       one it points at still explains itself on landing. */
+    const cta=document.getElementById('hhCta'); if(cta){ cta.removeAttribute('data-goto'); cta.setAttribute('data-arrive','gutcheck'); }
+  } else { const cta=document.getElementById('hhCta'); if(cta){ cta.removeAttribute('data-goto'); cta.setAttribute('data-arrive','bag'); } }
   const M=state.activeMonth;
   // MUST match the Plan tab exactly: count each pool ONCE. Summing every category
   // double-counted any parent that also had subcategories, so Home and Plan
@@ -17887,8 +18431,33 @@ function renderNextSteps(){
   const wallsCovered=WALLS.filter(w=>wallAssigned(w,M)>0).length;
   const unlocked=state.vault.filter(v=>v.unlocksAt<=Date.now()).length;
   const firstUncovered=WALLS.find(w=>wallAssigned(w,M)<=0);
+  /* "This shows I'm on stage 3 but the do this next step shows survival mode."
+     Both were reading real state and disagreeing with each other in public.
+     The stage badge is EVIDENCE - assets, goals, runway, what has actually been
+     built. The situation is a SELF-REPORT, given once during setup and never
+     asked again, so somebody who was scared in March is still being spoken to
+     as if it is March.
+
+     Evidence wins, and only where it is unambiguous. A person is treated as out
+     of survival when the app can point at why: stage 3 reached, or a cushion of
+     real money behind them. Anything less and the old answer stands, because
+     telling somebody who is genuinely struggling that they have graduated is a
+     worse failure than the mismatch this fixes. The self-report is never
+     overwritten either - it is theirs, and the Diary now asks whether it still
+     holds rather than the app deciding quietly. */
   const sit=(state.intake&&state.intake.reflections&&state.intake.reflections.situation)||'';
-  const survival = sit==='survive'||sit==='treading';
+  const said = sit==='survive'||sit==='treading';
+  const rw=(typeof freedomRunway==='function')?freedomRunway():null;
+  /* Runway alone is not evidence, and the first draft treated it as if it were.
+     It is cash divided by ESSENTIALS, so somebody who has budgeted one category
+     has a tiny denominator and a flattering runway - $3,000 against a $400 Food
+     line reads as 7.5 months and means nothing. The runway only counts as proof
+     once the four walls are actually funded, which is when that denominator
+     becomes a real month. */
+  const wallsAllCovered = WALLS.every(w=>wallAssigned(w,M)>0);
+  const outgrown = said && ((typeof activeStage==='function' && activeStage()>=3 && (state.assets||[]).length>0)
+                            || (rw!=null && rw>=3 && wallsAllCovered));
+  const survival = said && !outgrown;
   const hasCushion = state.goals.some(g=>/cushion|emergency|buffer|rainy|safety/i.test(g.name));
   const steps=[];
   if(income<=0) steps.push(['','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
@@ -17910,7 +18479,14 @@ function renderNextSteps(){
   if(giveReachable && giveTarget>0 && givenM<giveTarget) steps.push(['',`Give ${actMoney(giveTarget-givenM)} to hit your target`,'Keep the money circulating - abundance flows to those who keep it moving.','give']);
   else if(giveReachable && !state.giving.length && income>0) steps.push(['','Give something forward','Even a small amount, on purpose, changes your relationship with money.','give']);
   if(!steps.length) steps.push(['','You\'re on track', voice(VOICE.onTrack,null), 'tab:tx']);
+  /* Said out loud rather than switched quietly. The person told this app
+     something true at the time; it has stopped being true, and they are the
+     only one who can confirm that. */
+  const outgrownNote = outgrown
+    ? `<p class="ns-outgrown">You told me at setup you were <b>${sit==='survive'?'in survival mode':'treading water'}</b>, and this page still had you there. It does not any more - ${(typeof activeStage==='function'&&activeStage()>=3&&(state.assets||[]).length>0)?'you have reached stage 3 with real assets behind you':`your walls are funded and you are carrying ${fmtRunway(rw)} of runway`}. Your own answer has not been changed, because it is yours. ${trailBtn('diary','Say where you actually are now','ghost')}</p>`
+    : '';
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
+    outgrownNote+
     steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`).join('');
 }
 /* ============================================================
@@ -17953,6 +18529,9 @@ const TRAIL={
      same room the dream panel prices, and the accounts panel is where somebody
      is standing when they first see the figure. */
   room:     {tab:'debt',     focus:'roomPay',      label:'Price it against a dream'},
+  /* Where a self-report gets revisited, which is the only honest place to send
+     somebody the app has just told it no longer believes. */
+  diary:    {tab:'diary',    focus:'diaryText',    label:'Write where you are now'},
   hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},
   gutcheck: {tab:'impulse',  modal:true,           label:'Run a gut-check'}
 };
