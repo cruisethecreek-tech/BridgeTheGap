@@ -1947,6 +1947,64 @@
   .ae-a{display:flex;gap:8px;margin-top:11px}
   .ae-a .btn{flex:1}
   .debtrow.confirming{display:block}
+  /* The planning calendar. A month grid has to survive 320px, so the cells are
+     a 7-column fr grid with dots rather than text - the names live in the list
+     below, where there is room to read them and a box to tick. */
+  .cal-mode{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:11px 12px;
+    border-radius:12px;background:var(--panel-2);border:1px solid var(--line);
+    font-size:12px;color:var(--muted);line-height:1.55}
+  .cal-mode input{width:19px;height:19px;flex:none;margin-top:1px;accent-color:var(--accent)}
+  .cal-mode b{color:var(--text)}
+  .cal-nav{margin-top:12px}
+  .cal-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .cal-m{font-size:15px;font-weight:800}
+  .cal-sum{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+  .cal-sum b.up{color:var(--good)} .cal-sum b.down{color:var(--accent-2)}
+  .cal-net{color:var(--muted);font-weight:700}
+  .cal-done{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:3px}
+  .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px}
+  .cal-dow span{text-align:center;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+  .cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:3px}
+  /* Seven columns on a 320px phone leave 31px a cell at a 3px gap. The cell is
+     a jump-link rather than the control - the checkbox below is what gets
+     tapped - but 31px is under any thumb guidance, so the gap goes rather than
+     the cell. */
+  @media(max-width:400px){ .cal-g,.cal-dow{gap:2px} .cal-c{padding:3px 1px 2px} }
+  .cal-c{min-height:40px;border-radius:9px;border:1px solid transparent;padding:3px 2px 2px;
+    display:flex;flex-direction:column;align-items:center;gap:2px}
+  .cal-c.pad{border:0}
+  .cal-c .cal-n{font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+  .cal-c.has{background:var(--panel-2);border-color:var(--line);cursor:pointer}
+  .cal-c.has .cal-n{color:var(--text);font-weight:800}
+  .cal-c.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .cal-c.all{background:rgba(var(--good-rgb),.1);border-color:rgba(var(--good-rgb),.35)}
+  .cal-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;align-items:center;min-height:8px}
+  .cal-d{width:6px;height:6px;border-radius:50%;display:inline-block;flex:none;
+    border:1px solid transparent;background:transparent}
+  .cal-d.in{border-color:var(--good)} .cal-d.out{border-color:var(--accent-2)} .cal-d.inv{border-color:var(--accent)}
+  /* Hollow means scheduled, filled means it actually landed - the one visual
+     difference the whole feature turns on, so it is a fill and not a shade. */
+  .cal-d.in.got{background:var(--good)} .cal-d.out.got{background:var(--accent-2)} .cal-d.inv.got{background:var(--accent)}
+  .cal-more{font-size:8px;font-weight:800;color:var(--muted);font-style:normal;line-height:1}
+  .cal-key{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:10.5px;color:var(--muted);font-weight:700}
+  .cal-key span{display:inline-flex;align-items:center;gap:4px}
+  .cal-day{margin-top:12px;padding:11px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line)}
+  .cal-day.ahead{opacity:.82;border-style:dashed}
+  .cal-day.now{border-color:var(--accent)}
+  .cal-day.flash{box-shadow:0 0 0 2px var(--accent)}
+  .cal-dh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+  .cal-dl{color:var(--muted);letter-spacing:0;text-transform:none;font-weight:600}
+  .cal-r{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--line);margin-top:6px}
+  .cal-r:first-of-type{border-top:0;margin-top:2px}
+  .cal-r input{width:19px;height:19px;flex:none;accent-color:var(--accent)}
+  .cal-rn{flex:1;min-width:0;font-size:13.5px;font-weight:700}
+  .cal-r.got .cal-rn{color:var(--muted)}
+  .cal-rt{display:block;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-top:1px}
+  .cal-rt.in{color:var(--good)} .cal-rt.out{color:var(--accent-2)} .cal-rt.inv{color:var(--accent)}
+  .cal-ra{flex:none;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+  .cal-ra.up{color:var(--good)} .cal-ra.down{color:var(--accent-2)}
+  .cal-note{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:12px}
   /* The limit's own line. It appears only when a limit does, so an ordinary
      loan row keeps exactly the shape it always had. */
   .debtrow .dr-room{flex:1 1 100%;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
@@ -2728,6 +2786,30 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div id="recList"></div>
         <div style="margin-top:14px"><button class="btn sm" id="postRec">Post recurring</button></div>
+      </div>
+
+      <!-- Asked for as: "In the plan category I would like a planning calendar
+           which holds all of my reoccurring payments and income as a visual..
+           With a simple check box that says did it land in my account.. So it
+           can be added to My tracker".
+
+           The list above is a list of RULES. It says a bill repeats monthly and
+           never says the shape of the month - which week is heavy, whether the
+           paycheck lands before the rent, how many days sit between the two.
+           That shape is the whole reason people plan, and a list cannot show it.
+
+           The checkbox needed no new state and that is the point of it. An
+           occurrence is "landed" exactly when a transaction exists carrying that
+           rule's id and that date, which is the same test postRecurring already
+           uses to avoid posting twice. So the box is a VIEW of the tracker
+           rather than a second record of it, and the two can never disagree. -->
+      <div class="panel" id="calPanel">
+        <h2>The month, laid out</h2>
+        <p class="sub">Every repeat you have set, on the day it actually falls. Tick one when it lands in your account and it is logged on Track; untick it and the entry comes back off. Nothing here changes the rule - it only says what has really happened yet.</p>
+        <label class="cal-mode"><input type="checkbox" id="calConfirm"><span><b>Wait for me to tick it.</b> Off, repeats post themselves on the day, the way they always have. On, nothing lands until you say it did - which is the difference between a plan and a record, and the only way the app can show you a paycheck that never arrived.</span></label>
+        <div id="calNav" class="cal-nav"></div>
+        <div id="calGrid"></div>
+        <div id="calList"></div>
       </div>
 
       <div class="panel" id="subSweepPanel">
@@ -4011,7 +4093,7 @@ function defaultState(){
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, dayToDay:[], rateDraft:null, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
-           debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[], roomPay:0,
+           debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[], roomPay:0, calConfirm:false,
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
 }
@@ -4133,7 +4215,21 @@ function normalizeState(s){
   s.lessons.forEach(l=>{ l.amount=num(l.amount); });
   Object.keys(s.budgets||{}).forEach(m=>{ const b=s.budgets[m]; if(!b||typeof b!=='object'){ delete s.budgets[m]; return; } Object.keys(b).forEach(k=>{ b[k]=Math.max(0,num(b[k])); }); });   // a negative assignment is invented money - clamp stored data too, so old saves heal
   (s.transactions||[]).forEach(t=>{ t.amount=num(t.amount); if(t.hours!=null) t.hours=num(t.hours); });
-  (s.accounts||[]).forEach(a=>{ a.balance=num(a.balance); });
+  (s.accounts||[]).forEach(a=>{ a.balance=num(a.balance);
+    /* "My overflow income didn't change or statistics when I changed my balance.
+       Are they all being tracked?" They were. Every one of them - the balance,
+       the bank total, net worth, the month's snapshot, and a reading. The row
+       just said nothing, because the reading history stays silent under two
+       readings and an account added before readings existed started at zero of
+       them. So the first change made a history of one, which renders as nothing,
+       which is indistinguishable from not being tracked at all.
+
+       Half the fix is here: an account carrying a balance AND the date it was
+       read already HAS a reading - two stored facts, never converted into the
+       shape that can show them. Writing it down is not inventing data, it is
+       restating what is there, and it means the next change produces a real
+       movement between two real dates instead of a lonely first entry. */
+    if(a.updated && !(a.hist||[]).length) a.hist=[{d:a.updated, b:num(a.balance), how:'first'}]; });
   (s.assets||[]).forEach(a=>{ a.value=num(a.value); a.cost=num(a.cost); });
   (s.liabilities||[]).forEach(l=>{ l.value=num(l.value); });
   (s.goals||[]).forEach(g=>{ g.target=num(g.target); g.saved=num(g.saved); });
@@ -11273,7 +11369,20 @@ function acctAt(a, month){
    left to be trusted. Silent until there are two readings, because one reading
    is a balance, not a history. */
 function acctHistHTML(a){
-  const h=(a.hist||[]); if(h.length<2) return '';
+  const h=(a.hist||[]); if(!h.length) return '';
+  const owed0=isOwedAcct(a);
+  /* One reading used to render nothing, on the reasoning that one reading is a
+     balance rather than a history. True, and it made the row unable to answer
+     "is this being recorded" for exactly the account that has no ledger against
+     it - the one where the reading is the ONLY evidence. A history of one is
+     still proof it was written down, so it says so. */
+  if(h.length===1){
+    const x=h[0];
+    return `<details class="ac-hist"><summary>1 reading, taken ${escapeHtml(x.d)}</summary>
+      <div class="ach-rows"><div class="ach-r"><span class="ach-d">${escapeHtml(x.d)}</span><b>${usd(owed0?Math.max(0,-x.b):x.b)}</b><i>first reading</i></div></div>
+      <p class="acw-note">Recorded. The next time you retype this number, the change between the two lands here and in the month's figures - that is the trend this app is built on. History starts the day the account was added; anything before it was never recorded and cannot be recovered.</p>
+    </details>`;
+  }
   const owed=isOwedAcct(a);
   const show=h.slice(-8).slice().reverse();
   const first=h[0], last=h[h.length-1];
@@ -11836,8 +11945,24 @@ function renderAccounts(){
        never sees a minus sign and every sum downstream still gets one. */
     const typed=isOwedAcct(a) ? -Math.abs(parseFloat(i.value)||0) : (parseFloat(i.value)||0);
     const hadHistory=!!a.updated && acctLoggedSince(a)!==0;
+    /* Captured before acctNote overwrites today's entry, or the movement being
+       reported is the movement from itself, which is always zero. */
+    const prev=(a.hist||[]).filter(x=>x.d!==todayStr()).slice(-1)[0];
+    const before=+a.balance||0;
     a.balance=typed; a.updated=todayStr();
     acctNote(a, typed, 'bank');
+    if(!hadHistory){
+      /* Nothing logged against this account, so there is no gap to find and the
+         reconcile branch below stays quiet - which meant typing a new balance
+         here produced no response whatsoever. The balance moved, the bank total
+         moved, net worth moved and the month's snapshot moved, and the screen
+         said nothing, so "did that do anything?" was a fair question with no
+         answer on it. It gets one now, naming the move and where it landed. */
+      const d=Math.round((typed-(prev?prev.b:before))*100)/100;
+      if(typeof toast==='function') toast(Math.abs(d)>0.005
+        ? `${escapeHtml(a.name)} ${d>0?'up':'down'} ${usd(Math.abs(d))}${prev?` since ${prev.d}`:''}. Recorded as a reading, and this month's figures are worked out again from it.`
+        : `${escapeHtml(a.name)} unchanged at ${usd(typed)}. Recorded anyway - a reading that did not move is still a reading, and the trend needs it.`);
+    }
     if(hadHistory){
       a.lastGap=Math.round((typed-expected)*100)/100;
       a.lastRecon=todayStr();
@@ -13797,13 +13922,21 @@ document.getElementById('addRec').addEventListener('click',()=>{
   save(); renderRecurring(); renderBudget(); renderTx(); renderHome();
   if(typeof renderNetWorth==='function') renderNetWorth();
   if(typeof updateWageNote==='function') updateWageNote();
-  if(postedNow && typeof toast==='function') toast('Added, and posted '+postedNow+' that was already due.');
+  if(typeof toast==='function'){
+    if(postedNow) toast('Added, and posted '+postedNow+' that was already due.');
+    /* Under confirm-first nothing posts on its own, so "Added" with silence
+       afterwards would read as a rule that did nothing. It says where to go
+       and tick it instead. */
+    else if(calConfirmOn()) toast('Added. It will not post itself - tick it on the calendar below when it actually lands.');
+  }
 });
 document.getElementById('postRec').addEventListener('click',()=>{
-  const n=postRecurring(state.activeMonth);
+  const n=postRecurring(state.activeMonth, true);   // a person asking out loud, not the app deciding
   if(n){ save(); renderBudget(); renderTx(); renderNetWorth(); alert('Posted '+n+' recurring item'+(n>1?'s':'')+' to '+fmtMonth(state.activeMonth)+'.'); }
   else alert(state.activeMonth===thisMonth()
-    ? 'Everything due so far this month is already posted. The rest will post as each date arrives.'
+    ? 'Everything due so far this month is already posted. '+(calConfirmOn()
+        ? 'The rest wait for you to tick them on the calendar.'
+        : 'The rest will post as each date arrives.')
     : 'Recurring items are already posted for '+fmtMonth(state.activeMonth)+'.');
 });
 /* Every select that lists categories, refreshed from one place. Adding a category
@@ -14024,6 +14157,7 @@ function resolveCatChoice(selId, newId){
   });
 })();
 function renderRecurring(){
+  renderCalendar();   // one owner: every path that changes a rule or the month comes through here
   refreshCatSelects();
   const pr=document.getElementById('postRec');
   if(pr) pr.textContent = state.activeMonth===thisMonth()
@@ -14147,7 +14281,201 @@ function recNextDue(r){
    future months post in full (browsing back is history; browsing forward is a
    deliberate planning act). Boot also sweeps last month so nothing is ever
    missed by not opening the app for a while. */
-function postRecurring(month){
+/* ============================================================
+   THE PLANNING CALENDAR - the month in the shape it actually has
+
+   "In the plan category I would like a planning calendar which holds all of my
+   reoccurring payments and income as a visual.. With a simple check box that
+   says did it land in my account.. So it can be added to My tracker."
+
+   The recurring list is a list of RULES. It can say a bill repeats monthly and
+   it can never say the SHAPE of the month - which week is heavy, whether the
+   paycheck lands before the rent or four days after it, how long the gap runs.
+   That shape is the entire reason a person plans, and no list shows it.
+
+   The design decision worth writing down is the checkbox, because it introduces
+   no new state at all. An occurrence has "landed" exactly when a transaction
+   exists carrying that rule's id and that date - which is the same test
+   postRecurring already runs to avoid posting twice. So the box READS the
+   tracker rather than keeping a second opinion about it, and the two cannot
+   drift apart. Tick posts the entry, untick removes it, and the rule is never
+   touched by either.
+   ============================================================ */
+function calOccurrences(month){
+  const out=[];
+  (state.recurring||[]).forEach(r=>{
+    recOccurrences(r,month).forEach(date=>{
+      const tx=(state.transactions||[]).find(t=>t.recId===r.id && t.date===date);
+      out.push({r, date, tx:tx||null, landed:!!tx,
+                amount:tx?(+tx.amount||0):(+r.amount||0),
+                type:r.type||'expense', label:recLabel(r)});
+    });
+  });
+  /* Date first, then money in before money out on the same day, because on the
+     day both happen the order you want to see is what arrived and then what
+     left it. Same-day ties fall back to the rule's own order. */
+  const seq=new Map((state.recurring||[]).map((r,i)=>[r.id,i]));
+  const rank=t=>t==='income'?0:t==='invest'?1:2;
+  out.sort((a,b)=> (a.date<b.date?-1:a.date>b.date?1:0)
+                || (rank(a.type)-rank(b.type))
+                || ((seq.get(a.r.id)||0)-(seq.get(b.r.id)||0)));
+  return out;
+}
+/* What a rule's occurrence is worth to the month's arithmetic. Income adds,
+   everything else takes - the same signed rule the ledger uses, kept in one
+   place here so the calendar's totals cannot drift from Track's. */
+function calDelta(o){ return o.type==='income' ? o.amount : -o.amount; }
+function calMonthSums(month){
+  const occ=calOccurrences(month);
+  const sum=f=>occ.filter(f).reduce((s,o)=>s+o.amount,0);
+  return { inAll:sum(o=>o.type==='income'), outAll:sum(o=>o.type!=='income'),
+           inLanded:sum(o=>o.type==='income'&&o.landed), outLanded:sum(o=>o.type!=='income'&&o.landed),
+           count:occ.length, landed:occ.filter(o=>o.landed).length };
+}
+/* Posting one occurrence, by hand, from the calendar. Deliberately built on the
+   same fields postRecurring writes - a transaction the calendar creates and one
+   the scheduler creates have to be the same object, or unticking would fail to
+   find what auto-posting made. */
+function calPost(recId, date){
+  const r=(state.recurring||[]).find(x=>x.id===recId); if(!r) return false;
+  if((state.transactions||[]).some(t=>t.recId===recId && t.date===date)) return false;
+  const raid=(r.acctId && (state.accounts||[]).some(a=>a.id===r.acctId)) ? r.acctId : defaultAcctId();
+  let tx;
+  if(r.type==='income'){
+    tx={id:uid(),type:'income',amount:+r.amount||0,source:r.source,date,note:recTxNote(r),recId:r.id};
+    if(r.owner) tx.owner=r.owner;
+  } else if(r.type==='invest'){
+    const ik=r.ikind||'holds';
+    tx={id:uid(),type:'invest',amount:+r.amount||0,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik};
+    if(r.destAcctId && (state.accounts||[]).some(a=>a.id===r.destAcctId)) tx.destAcctId=r.destAcctId;
+  } else {
+    tx={id:uid(),type:'expense',amount:+r.amount||0,catId:r.catId,date,note:recTxNote(r),recId:r.id};
+  }
+  if(raid) tx.acctId=raid;
+  state.transactions.push(tx);
+  if(r.type==='invest' && (r.ikind||'holds')!=='self' && typeof syncInvestAsset==='function') syncInvestAsset();
+  save();
+  return true;
+}
+/* Unticking removes only what the RULE created - a transaction carrying that
+   rule's id on that date. It can never reach a hand-logged entry, and it never
+   touches the rule, so the box is reversible in one tap rather than being the
+   kind of delete this app makes people confirm. */
+function calUnpost(recId, date){
+  const before=(state.transactions||[]).length;
+  state.transactions=(state.transactions||[]).filter(t=>!(t.recId===recId && t.date===date));
+  if(state.transactions.length===before) return false;
+  if(typeof syncInvestAsset==='function') syncInvestAsset();
+  save();
+  return true;
+}
+function renderCalendar(){
+  const grid=document.getElementById('calGrid'); if(!grid) return;
+  const nav=document.getElementById('calNav'), list=document.getElementById('calList');
+  const M=state.activeMonth, dim=daysInMonth(M), today=todayStr();
+  const occ=calOccurrences(M), sums=calMonthSums(M);
+  const byDay={};
+  occ.forEach(o=>{ (byDay[o.date]=byDay[o.date]||[]).push(o); });
+  if(nav){
+    const net=sums.inAll-sums.outAll;
+    nav.innerHTML=`<div class="cal-h"><span class="cal-m">${escapeHtml(fmtMonth(M))}</span>`
+      + `<span class="cal-sum">${occ.length?`<b class="up">+${money(sums.inAll)}</b> <b class="down">&minus;${money(sums.outAll)}</b> <span class="cal-net">net ${net>=0?'+':'&minus;'}${money(Math.abs(net))}</span>`:''}</span></div>`
+      + (occ.length?`<div class="cal-done">${sums.landed} of ${sums.count} ${sums.landed===1?'has':'have'} landed &middot; ${money(sums.inLanded)} in, ${money(sums.outLanded)} out so far</div>`:'');
+  }
+  if(!occ.length){
+    grid.innerHTML=`<div class="empty" style="margin-top:12px">Nothing repeats yet. Set your paycheck and your fixed bills above and this fills in - the shape of the month is the part a list cannot show you.</div>`;
+    if(list) list.innerHTML='';
+    return;
+  }
+  /* A month grid, starting on the weekday the 1st actually falls on. Day names
+     are taken from the browser rather than hard-coded, so a week that starts on
+     Monday somewhere else still lines up with the dates under it. */
+  const firstDow=new Date(M+'-01T00:00:00').getDay();
+  const dows=[...Array(7)].map((_,i)=>new Date(Date.UTC(2024,0,7+i)).toLocaleDateString(undefined,{weekday:'narrow'}));
+  const cells=[];
+  for(let i=0;i<firstDow;i++) cells.push('<div class="cal-c pad"></div>');
+  for(let d=1;d<=dim;d++){
+    const date=M+'-'+String(d).padStart(2,'0');
+    const mine=byDay[date]||[];
+    const isToday=date===today;
+    const allIn=mine.length&&mine.every(o=>o.landed);
+    const dots=mine.slice(0,4).map(o=>`<i class="cal-d ${o.type==='income'?'in':o.type==='invest'?'inv':'out'}${o.landed?' got':''}"></i>`).join('');
+    cells.push(`<div class="cal-c${mine.length?' has':''}${isToday?' today':''}${allIn?' all':''}"${mine.length?` data-calday="${date}"`:''}>`
+      + `<span class="cal-n">${d}</span><span class="cal-dots">${dots}${mine.length>4?`<i class="cal-more">+${mine.length-4}</i>`:''}</span></div>`);
+  }
+  grid.innerHTML=`<div class="cal-dow">${dows.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div>`
+    + `<div class="cal-g">${cells.join('')}</div>`
+    + `<div class="cal-key"><span><i class="cal-d in"></i> money in</span><span><i class="cal-d out"></i> money out</span><span><i class="cal-d inv"></i> invested</span><span><i class="cal-d out got"></i> landed</span></div>`;
+  if(!list) return;
+  /* The list is the part you act on. Grouped by day so the calendar above and
+     the rows below are reading the same month the same way. */
+  const days=Object.keys(byDay).sort();
+  list.innerHTML=days.map(date=>{
+    const mine=byDay[date];
+    const ahead=date>today;
+    return `<div class="cal-day${ahead?' ahead':''}${date===today?' now':''}" id="calday-${date}">
+      <div class="cal-dh"><span>${escapeHtml(fmtDayShort(date))}</span><span class="cal-dl">${ahead?'still to come':date===today?'today':''}</span></div>`
+      + mine.map(o=>`<label class="cal-r${o.landed?' got':''}">
+          <input type="checkbox" data-calland="${o.r.id}" data-caldate="${o.date}"${o.landed?' checked':''} aria-label="${o.landed?'Landed':'Did it land'}: ${escapeHtml(o.label)} on ${escapeHtml(o.date)}">
+          <span class="cal-rn">${escapeHtml(o.label)}<i class="cal-rt ${o.type==='income'?'in':o.type==='invest'?'inv':'out'}">${o.type==='income'?'in':o.type==='invest'?'invested':'out'}</i></span>
+          <span class="cal-ra ${o.type==='income'?'up':'down'}">${o.type==='income'?'+':'&minus;'}${money(o.amount)}</span>
+        </label>`).join('')
+      + `</div>`;
+  }).join('')
+  + `<p class="cal-note">A tick means it actually landed, and puts the entry on Track. It is not a promise that it will - a bill dated the 5th sitting unticked on the 9th is the app telling you something, not a bug. Untick and the entry comes straight back off; the repeat rule itself is never touched either way.</p>`;
+  list.querySelectorAll('input[data-calland]').forEach(cb=>cb.addEventListener('change',()=>{
+    const id=cb.dataset.calland, date=cb.dataset.caldate;
+    const r=(state.recurring||[]).find(x=>x.id===id);
+    const ok = cb.checked ? calPost(id,date) : calUnpost(id,date);
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    /* renderRecurring redraws this calendar, so it is the only one called -
+       having the handler also call renderCalendar would rebuild the row twice
+       and throw away the listener it is running inside. */
+    renderRecurring(); renderTx(); renderBudget(); renderHome();
+    if(ok && typeof toast==='function') toast(cb.checked
+      ? `${escapeHtml(recLabel(r))} logged on ${fmtDayShort(date)}. It is on Track now and counted in this month.`
+      : `${escapeHtml(recLabel(r))} taken back off ${fmtDayShort(date)}. The repeat rule is untouched - tick it again when it lands.`);
+  }));
+  const cm=document.getElementById('calConfirm');
+  if(cm && document.activeElement!==cm){ cm.checked=calConfirmOn(); }
+  if(cm && !cm.dataset.wired){
+    cm.dataset.wired='1';
+    cm.addEventListener('change',()=>{
+      state.calConfirm=cm.checked; save();
+      /* Turning it OFF has to catch up on everything that was waiting, or the
+         month sits half empty and the setting looks like it broke something. */
+      const caught=cm.checked?0:postRecurring(thisMonth(), true);
+      if(caught) save();
+      renderRecurring(); renderTx(); renderBudget(); renderHome();
+      if(typeof toast==='function') toast(cm.checked
+        ? 'Nothing will post itself from now on. What is already logged stays logged - untick anything that never actually landed.'
+        : caught ? `Back to posting on the day. ${caught} that ${caught===1?'was':'were'} already due went on just now.`
+                 : 'Back to posting on the day.');
+    });
+  }
+  grid.querySelectorAll('[data-calday]').forEach(c=>c.addEventListener('click',()=>{
+    const el=document.getElementById('calday-'+c.dataset.calday);
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1200); }
+  }));
+}
+/* Whether a repeat lands on its own or waits to be confirmed.
+
+   The calendar was asked for with "a simple check box that says did it land in
+   my account", and the first build put that box on top of an engine that had
+   already posted everything - so every past occurrence arrived pre-ticked and
+   the box confirmed nothing. A tick that is always already there is not a
+   confirmation, it is decoration.
+
+   Auto-posting is still the default, because it is what every existing install
+   expects and because for most bills it is right: the direct debit went out
+   whether or not anyone opened the app. But a paycheck that did NOT arrive, or
+   a bill that bounced, is exactly the thing a person needs to see - so this
+   makes waiting a choice, and the calendar is where you make it. The manual
+   "Post recurring" button is unaffected either way: that is somebody asking
+   out loud, not the app deciding on their behalf. */
+function calConfirmOn(){ return !!state.calConfirm; }
+function postRecurring(month, force){
+  if(calConfirmOn() && !force) return 0;
   let added=0;
   const cap = (month===thisMonth()) ? todayStr() : null;
   state.recurring.forEach(r=>{
