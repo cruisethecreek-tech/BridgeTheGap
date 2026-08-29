@@ -8071,6 +8071,79 @@ check('...against 168 less what is sold to work, not against nothing',
 check('...and hours logged before any of this still land where they always did',
       eight.oldHours===2, String(eight.oldHours));
 
+/* ============================================================
+   97. "HOW WOULD MY 13 YEAR OLD UNDERSTAND THIS?"
+
+   Asked of the leverage panel, and the honest answer was: they would not, and
+   neither would most adults. Every label was a term of art - return, held for,
+   rate you pay per year - and the headline announced a PERCENTAGE, which is the
+   one shape of number nobody feels.
+
+   Not fixed by dumbing the arithmetic down; the sums underneath are byte for
+   byte the same. Fixed by saying them in words a person already owns and by
+   putting the answer in DOLLARS. "$669.88 a year" lands where "2.68%" does not.
+
+   The property worth guarding is the vocabulary, not any one sentence - so the
+   check is that nothing over nine letters survives in plain mode. Three words
+   crossed that line while this was being written (enforceable, break-even,
+   asymmetry) and all three were in the copy before it was measured.
+   ============================================================ */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  lev:{amt:25000, apr:3.9, ret:15, years:5, pay:300, cash:600}});
+await p.reload(); await p.waitForTimeout(800);
+
+const pw97 = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('debt'); renderLeverage(); await w(460);
+  const o={};
+  const story=document.querySelector('#levPanel .lev-101');
+  o.storyClosed=!!story && !story.open;
+  if(story) story.open=true; await w(140);
+  o.story=story?story.innerText:'';
+  if(story){ story.open=false; delete story.dataset.opened; }
+  o.sharpLabels=[...document.querySelectorAll('#levPanel [data-plain]')].map(x=>x.textContent);
+  o.sharpHead=document.getElementById('levResults').innerText.split('\n')[0];
+  const cb=document.getElementById('levPlain');
+  cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true})); await w(460);
+  o.plainLabels=[...document.querySelectorAll('#levPanel [data-plain]')].map(x=>x.textContent);
+  o.hints=[...document.querySelectorAll('#levPanel [data-plainh]')].map(x=>x.textContent).filter(Boolean);
+  o.plainTxt=document.getElementById('levResults').innerText;
+  o.opened=!!document.querySelector('#levPanel .lev-101').open;
+  o.cards=document.querySelectorAll('#levResults .lev-card').length;
+  o.stored=state.plainWords;
+  return o;
+});
+check('the panel carries a four-sentence account of what borrowing to build IS',
+      /borrow \$100/.test(pw97.story) && /bigger/.test(pw97.story)
+        && /both directions/.test(pw97.story), pw97.story.slice(0,120));
+check('...closed by default, so it is a door and not a lecture', pw97.storyClosed===true);
+check('...and opened for you the moment you ask for pw97 words', pw97.opened===true);
+/* the dollars go to everyone, not only to pw97 mode */
+check('even unchanged, the headline now gives the dollars beside the percentage',
+      /2\.68%/.test(pw97.sharpHead) && /\$669\.88/.test(pw97.sharpHead), pw97.sharpHead);
+check('pw97 words swap every label for English somebody already owns',
+      pw97.sharpLabels[0]==='Amount borrowed'
+        && pw97.plainLabels[0]==='Money you would borrow'
+        && pw97.plainLabels[2]==='What you think it will make you',
+      JSON.stringify(pw97.plainLabels));
+check('...with a hint under the ones that need one, and none before that',
+      pw97.hints.length>=4 && pw97.hints.some(h=>/not yours/i.test(h)), JSON.stringify(pw97.hints));
+check('the headline becomes dollars with no percentage left in it',
+      /\$669\.88 a year/.test(pw97.plainTxt.split('\n')[0])
+        && !/%/.test(pw97.plainTxt.split('\n')[0]), pw97.plainTxt.split('\n')[0]);
+check('...and the comparison is dollars against dollars',
+      /\$3,750 a year against the \$669\.88/.test(pw97.plainTxt), pw97.plainTxt.slice(0,240));
+/* the vocabulary, which is the thing actually asked about */
+const pw97Long=[...new Set((pw97.plainLabels.join(' ')+' '+pw97.hints.join(' ')+' '+pw97.plainTxt)
+  .match(/[A-Za-z][A-Za-z'-]{9,}/g)||[])];
+check('nothing over nine letters survives in pw97 mode', pw97Long.length===0, pw97Long.join(', '));
+/* and the rule that no rewording is allowed to break */
+check('pw97 mode still never prints an upside without its downside',
+      pw97.cards===2 && /If it makes nothing/.test(pw97.plainTxt), String(pw97.cards));
+check('...and still refuses to say whether to do it',
+      /will not tell you whether to do it/.test(pw97.plainTxt));
+check('the choice is remembered', pw97.stored===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
