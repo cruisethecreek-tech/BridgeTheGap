@@ -2451,8 +2451,18 @@ check('...but the rule is anchored to the real payday, not the 1st',
 check('pay that already landed posts on the day it landed',
       paid.paid.inc===3200 && paid.paid.dates[0].slice(0,7)===paid.today.slice(0,7)
         && paid.paid.dates[0]<=paid.today, paid.paid.dates.join(','));
+/* This one used to assert "two paydays, $2,953.84". It broke by itself the
+   morning today became a payday - a third date landed and the count was wrong
+   without a line of the app changing. The claim in the name is cadence, so the
+   check is cadence now: fourteen days apart, nothing posted into the future,
+   and the money equal to the per-payday amount times however many landed. */
+const bwD=paid.biweekly.dates;
+const bwGap=(a,b)=>Math.round((Date.parse(a+'T00:00:00Z')-Date.parse(b+'T00:00:00Z'))/86400000);
 check('biweekly walks forward at the right cadence, per payday',
-      paid.biweekly.inc===2953.84 && paid.biweekly.dates.length===2, JSON.stringify(paid.biweekly.dates));
+      bwD.length>=2 && bwD.every((d,i)=>i===0||bwGap(d,bwD[i-1])===14)
+        && bwD.every(d=>d<=paid.today)
+        && Math.abs(paid.biweekly.inc-bwD.length*1476.92)<0.005,
+      JSON.stringify(bwD)+' = '+paid.biweekly.inc);
 check('...carrying the per-payday amount, not the monthly one',
       /^1476\.92\|biweekly\|/.test(paid.biweekly.rec[0]), paid.biweekly.rec[0]);
 check('skipping invents nothing and starts next month',
@@ -7025,7 +7035,8 @@ await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:
   accounts:[{id:'a1',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-01',
              hist:[{d:'2026-07-01',b:1500,how:'first'},{d:'2026-08-01',b:2000,how:'bank'}]},
             {id:'a2',name:'Stash',kind:'invest',balance:18000,updated:'2026-08-01'},
-            {id:'a3',name:'Coinbase',kind:'other',balance:14782.70,updated:'2026-08-01'}],
+            {id:'a3',name:'Coinbase',kind:'other',balance:14782.70,updated:'2026-08-01'},
+            {id:'a4',name:'Everyday Checking',kind:'checking',balance:640,updated:'2026-08-01'}],
   transactions:[{id:'t1',type:'expense',amount:50,date:'2026-08-05',catId:'c1',acctId:'a3'}],
   debts:[{id:'d1',name:'Visa',balance:2400,apr:23.9,minPayment:75},
          {id:'d2',name:'Car loan',balance:9000,apr:6.4,minPayment:220}],
@@ -7086,7 +7097,9 @@ const acctRo = await p.evaluate(async () => {
   const bankBefore=bankTotal(), nwBefore=netWorth();
   document.getElementById('acctReorderBtn').click(); await w(360);
   o.grips=document.querySelectorAll('#acctList [data-grip][data-scope="accts"]').length;
-  moveAcct('a2',-1); renderAccounts(); await w(320);
+  /* a4 shares the spending group with a1, because a move is now confined to
+     its own group - an account alone under its header has nowhere to go */
+  moveAcct('a4',-1); renderAccounts(); await w(320);
   o.after=[...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
   o.totalsUnmoved=bankTotal()===bankBefore && netWorth()===nwBefore;
   document.getElementById('acctReorderBtn').click(); await w(280);
@@ -7095,7 +7108,34 @@ const acctRo = await p.evaluate(async () => {
   return o;
 });
 check('the accounts list reorders by the same gesture the other two lists use',
-      acctRo.hasBtn===true && acctRo.grips===3, JSON.stringify({b:acctRo.hasBtn,g:acctRo.grips}));
+      acctRo.hasBtn===true && acctRo.grips===4, JSON.stringify({b:acctRo.hasBtn,g:acctRo.grips}));
+/* Grouped by kind, chosen over a flat order - and the two turned out not to be
+   exclusive. The headers partition the list; a drag stays inside its own group
+   the same way a subcategory stays inside its parent. */
+const acctGrp = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); renderAccounts(); await w(420);
+  const groups=[...document.querySelectorAll('#acctList .acg')].map(el=>({
+    name:el.querySelector('.acg-n').textContent,
+    total:el.querySelector('.acg-v').textContent,
+    sub:el.querySelector('.acg-s').textContent,
+    lvls:[...new Set([...el.querySelectorAll('[data-row]')].map(r=>r.dataset.lvl))] }));
+  return {groups, rows:document.querySelectorAll('#acctList [data-row]').length,
+          cardSibs:dragSiblings('owe','accts').length,
+          investSibs:dragSiblings('grow','accts').length};
+});
+check('the accounts list is grouped, one header per kind that holds something',
+      acctGrp.groups.length>=2, JSON.stringify(acctGrp.groups.map(x=>x.name)));
+check('...spendable first, owed last',
+      acctGrp.groups[0].name==='Spending money'
+        && acctGrp.groups[acctGrp.groups.length-1].name!=='Spending money',
+      JSON.stringify(acctGrp.groups.map(x=>x.name)));
+check('...with no account lost to a group', acctGrp.rows===4, String(acctGrp.rows));
+check('...each header carrying its own total and its count',
+      acctGrp.groups.every(g=>/^\$/.test(g.total) && /account/.test(g.sub)),
+      JSON.stringify(acctGrp.groups.map(g=>g.name+'='+g.total)));
+check('...and every row tagged with its group, so a drag knows its siblings',
+      acctGrp.groups.every(g=>g.lvls.length===1), JSON.stringify(acctGrp.groups.map(g=>g.lvls)));
 check('...moving one actually moves it',
       JSON.stringify(acctRo.after)!==JSON.stringify(acctRo.before),
       JSON.stringify(acctRo.before)+' -> '+JSON.stringify(acctRo.after));
@@ -7111,6 +7151,25 @@ const acctRoKept = await p.evaluate(async () => {
 });
 check('...and the order is still there after a reload',
       JSON.stringify(acctRoKept)===JSON.stringify(acctRo.after), JSON.stringify(acctRoKept));
+/* Adding the pencil cost the name its width: at 320px the body measured 17px
+   and "Joint Checking" came out one letter per line. The row wraps now, and the
+   kind left the row entirely because the group header above says it. */
+for(const W of [320,390]){
+  await p.setViewportSize({width:W,height:1000});
+  await p.waitForTimeout(340);
+  const m = await p.evaluate(async () => {
+    const w=ms=>new Promise(r=>setTimeout(r,ms));
+    activateTab('goals'); renderAccounts(); await w(320);
+    return [...document.querySelectorAll('.acct-row')].map(r=>({
+      body:Math.round(r.querySelector('.ac-b').getBoundingClientRect().width),
+      nameH:Math.round(r.querySelector('.ac-n').getBoundingClientRect().height) }));
+  });
+  check('at '+W+'px an account name has real width to sit in',
+        m.length>0 && m.every(x=>x.body>=140), JSON.stringify(m));
+  check('...and no name is shredded down the page at '+W+'px',
+        m.every(x=>x.nameH<=64), JSON.stringify(m));
+}
+await p.setViewportSize({width:390,height:1000}); await p.waitForTimeout(300);
 
 const debtDel = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));

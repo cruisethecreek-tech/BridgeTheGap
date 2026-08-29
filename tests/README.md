@@ -898,6 +898,37 @@ The debt delete is checked the way the other three armed deletes are, and it is
 the fourth surface to get the same report - which is itself the argument for the
 pattern being a pattern.
 
+**Grouping the accounts under headers by kind** turned out to change what
+reordering means, and that is what the checks are built around. A drag is now
+confined to its own group, so the suite tags every row with `data-lvl` and
+asserts each group's rows all carry the same one - a group whose rows disagree
+is a group a drag can escape. The fixture had to change with it: it originally
+held one checking, one investment and one other account, so after the editor
+turned the third into a card **every account was alone under its own header**
+and `moveAcct` correctly did nothing. The check failed on a fixture that could
+not express the thing it was testing, not on the code. A second checking account
+fixes it, and the lesson is worth keeping - *when reordering gains a boundary,
+any fixture with one item per bucket stops testing reordering at all.*
+
+The header itself is checked for carrying its own total and its own count, since
+a header that only labels is a line of decoration; and the width checks moved
+here too, because the group header is what let the row stop naming its kind. At
+320px the row body measured **17px** with the pencil added and "Joint Checking"
+came out one letter per line - so the geometry is asserted at 320 and 390, on
+the body's real width and the name's rendered height, not on a character count.
+
+### A test can go stale on its own
+
+One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor
+28 days back. It broke overnight, with no code change, the morning today itself
+became a payday and a third date landed. That is the second date bomb this
+suite has grown (the first pinned a reward streak to `3`), and the fix is the
+same shape both times: **assert the property the name claims, not a count that
+happens to hold today.** The check now says the dates are fourteen days apart,
+none of them are in the future, and the money equals the per-payday amount times
+however many landed - which is what "walks forward at the right cadence"
+actually means.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.

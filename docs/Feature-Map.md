@@ -473,7 +473,15 @@ The one way this can still double count is a card tracked as an account **and** 
 
 The one real subtlety: **flipping between an account and a card flips what the stored balance means**, because owed is held negative. So the figure is turned over with it rather than silently changing sign on the net worth line - which is why turning a $14,782 holding into a card moves net worth by *twice* that, and why the suite asserts exactly that number.
 
+**Grouped by kind**, chosen over a flat manual order - and the two turned out not to be exclusive. `ACCT_GROUPS` partitions the list into **Spending money / Savings / Investments / Everything else / Cards & credit lines**, spendable first and owed last, each header carrying **its own total** and its account count. A heading that only labels is a heading you scroll past. The cards group is priced as what is **owed** (a positive figure), since it is the one group whose number points the other way.
+
+Reorder survives inside that: every row carries `data-lvl="<group>"`, so a drag is confined to its own group exactly the way a subcategory can only be reordered among its brothers. A card cannot be dragged into Savings, and nobody meant to. `acctReseat()` permutes only the sort slots that group already held, so reordering Savings cannot shuffle the Investments below it.
+
 **Reorder** is the same engine the plan and the recurring list already use, added as a third `DRAG_SCOPES` entry rather than a third copy of the pointer handling. The property worth keeping: **only the display is ordered.** `acctOrder()` sorts a copy for rendering; every total still sums `state.accounts` as it stands, so dragging Coinbase above Stash cannot move a single figure. Asserted by comparing `bankTotal()` and `netWorth()` either side of a move.
+
+Typing a new balance also stopped throwing while it was in there: the change handler redrew the whole list from inside the event, tearing out the input the browser was still focused on, and Chromium threw mid-`innerHTML`. The number was always saved - the exception landed after `save()` - but a console full of errors is a console nobody reads. It lets go of the box first and draws on the next tick.
+
+One regression the grouping paid for, found by measuring rather than looking: adding the pencil cost the account name its width, and at 320px the row body measured **17px** - "Joint Checking" came out one letter per line. Shaving pixels off the balance input would only have moved the cliff, so the row **wraps** on a narrow phone: the name takes a full line, the amount and its two buttons sit beneath it. And the kind left the row entirely, because the group header above now states it and printing it twice was the reason there was no room. Body width and name height are asserted at 320 and 390.
 
 **The debt delete is the fourth surface to get the too-destructive report** - after the recurring list, the category sheet and the entry sheet. Same answer, and the question names the balance and the rate that leave the plan, plus the thing a person actually needs to hear: *removing it from the planner does not pay anything off.*
 

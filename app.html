@@ -1916,6 +1916,25 @@
   .ach-r b{flex:none}
   .ach-r i{font-style:normal;font-size:11px}
   .ach-h{flex:1 0 100%;font-size:10.5px;color:var(--muted)}
+  /* Adding the pencil cost the name its width: at 320px the body measured 17px
+     and "Joint Checking" came out one letter per line. Shaving pixels off the
+     input would only move the cliff, so the row wraps instead - the name takes
+     a full line and the amount and its two buttons sit beneath it. The kind
+     itself left the row entirely, because the group header above now says it
+     and printing it twice was the reason there was no room. */
+  @media(max-width:430px){
+    .acct-row{flex-wrap:wrap;row-gap:8px}
+    .acct-row .ac-b{flex:1 1 100%}
+    .acct-row .sw-dol{margin-left:auto}
+  }
+  .acg{margin-top:16px}
+  .acg:first-child{margin-top:12px}
+  .acg-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .acg-n{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+  .acg-v{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+  .acg-v.owed{color:var(--accent-2)}
+  .acg-s{font-size:11px;color:var(--muted);margin:1px 0 2px;font-weight:600}
+  .acg .acct-row:first-of-type{margin-top:6px}
   .ac-pen{background:none;border:none;color:var(--muted);font-size:15px;padding:4px 6px;flex:none;cursor:pointer}
   .ac-pen:hover{color:var(--accent)}
   .acct-row.editing{display:block}
@@ -6843,7 +6862,7 @@ const DRAG_SCOPES={
          name:id=>recLabel(state.recurring.find(r=>r.id===id))||'This one',
          moveTo:(id,i)=>moveRecTo(id,i), step:(id,d)=>moveRec(id,d),
          redraw:()=>renderRecurring() },
-  accts:{rows:()=>[...document.querySelectorAll('#acctList [data-row]')],
+  accts:{rows:g=>[...document.querySelectorAll('#acctList [data-row][data-lvl="'+(g||'')+'"]')],
          name:id=>acctName(id)||'This account',
          moveTo:(id,i)=>moveAcctTo(id,i), step:(id,d)=>moveAcct(id,d),
          redraw:()=>renderAccounts() }
@@ -10578,29 +10597,71 @@ function bankTotal(){ return (state.accounts||[]).reduce((s,a)=>s+(+a.balance||0
    Only the DISPLAY is ordered. Every total above sums the array as it stands,
    so dragging Coinbase above Stash cannot change a single figure - which is the
    property worth keeping, and the one a second sorted copy would break. */
+/* ---------- grouped by what they are ----------
+   Chosen over a flat manual order: "group them under headers by kind." Seven
+   accounts in one cream column is the same wall of text problem in another
+   costume - the eye has nothing to land on, so finding checking means reading
+   all seven names. Kind is the thing you already sort by in your head.
+
+   The two are not exclusive, which is the better answer than picking one: the
+   headers partition the list, and a drag is confined to its own group, exactly
+   the way a subcategory can only be reordered among its brothers. A card cannot
+   be dragged into Savings, and nobody meant to.
+
+   Each header carries its group's own total, because a heading that only
+   labels is a heading you scroll past. Cards last and priced as what is OWED,
+   since that is the one group whose number points the other way. */
+const ACCT_GROUPS=[
+  {k:'spend', label:'Spending money',  kinds:['checking','cash'],
+   note:'What you could spend today'},
+  {k:'save',  label:'Savings',         kinds:['savings'],
+   note:'Put aside, still yours'},
+  {k:'grow',  label:'Investments',     kinds:['invest'],
+   note:'Working, not waiting'},
+  {k:'other', label:'Everything else', kinds:['other'],
+   note:'Tracked, uncategorised'},
+  {k:'owe',   label:'Cards & credit lines', kinds:['credit'],
+   note:'What you owe, not what you have'}
+];
+function acctGroupOf(a){
+  const k=(a&&a.kind)||'checking';
+  const g=ACCT_GROUPS.find(x=>x.kinds.includes(k));
+  return g?g.k:'other';
+}
+function acctsInGroup(key){ return acctOrder(state.accounts).filter(a=>acctGroupOf(a)===key); }
+/* Sort numbers are handed out once, from the order on screen, so a move inside
+   one group can permute that group's slots and leave every other account's
+   position exactly where it was. */
+function normalizeAcctSort(){
+  const o=acctOrder(state.accounts);
+  const need=o.some(a=>!Number.isFinite(+a.sort));
+  if(need) o.forEach((a,i)=>{ a.sort=i; });
+}
 function acctOrder(list){
   return (list||[]).map((a,i)=>({a,i})).sort((x,y)=>{
     const sx=Number.isFinite(+x.a.sort)?+x.a.sort:x.i, sy=Number.isFinite(+y.a.sort)?+y.a.sort:y.i;
     return sx===sy ? x.i-y.i : sx-sy;
   }).map(x=>x.a);
 }
-function moveAcctTo(id, idx){
-  const sibs=acctOrder(state.accounts);
+/* Both moves are confined to the account's own group, and both write back into
+   the slots that group already held - so reordering Savings cannot shuffle the
+   Investments below it. */
+function acctReseat(id, place){
+  const me=(state.accounts||[]).find(x=>x.id===id); if(!me) return false;
+  normalizeAcctSort();
+  const sibs=acctsInGroup(acctGroupOf(me));
   const i=sibs.findIndex(x=>x.id===id); if(i<0) return false;
-  const rest=sibs.slice(); const [me]=rest.splice(i,1);
-  rest.splice(Math.max(0,Math.min(rest.length,idx)),0,me);
+  const rest=sibs.slice(); rest.splice(i,1);
+  const at=place(i, sibs.length); if(at==null) return false;
+  rest.splice(Math.max(0,Math.min(rest.length,at)),0,me);
   if(rest.every((x,k)=>x.id===sibs[k].id)) return false;    // dropped back where it started
-  rest.forEach((x,k)=>{ x.sort=k; });
+  const slots=sibs.map(x=>+x.sort).sort((a,b)=>a-b);
+  rest.forEach((x,k)=>{ x.sort=slots[k]; });
   save(); return true;
 }
+function moveAcctTo(id, idx){ return acctReseat(id, ()=>idx); }
 function moveAcct(id,dir){
-  const sibs=acctOrder(state.accounts);
-  const i=sibs.findIndex(x=>x.id===id), j=i+dir;
-  if(i<0||j<0||j>=sibs.length) return false;
-  const out=sibs.slice();
-  out.splice(j,0,out.splice(i,1)[0]);
-  out.forEach((x,k)=>{ x.sort=k; });
-  save(); return true;
+  return acctReseat(id,(i,n)=>{ const j=i+dir; return (j<0||j>=n)?null:j; });
 }
 /* ---------- the borrowing side ----------
    bankTotal() stays the signed net of every account, because the net worth
@@ -11258,7 +11319,7 @@ function renderAccounts(){
   if(typeof syncAcctKindForm==='function') syncAcctKindForm();
   const box=document.getElementById('acctList'); if(!box) return;
   const accts=acctOrder(state.accounts);
-  box.innerHTML = accts.length ? accts.map(a=>{
+  const rowHTML=a=>{
     const k=acctKind(a.kind), pur=ACCT_PURPOSES.find(p=>p.k===a.purpose);
     const tag=(a.purpose&&pur)?`<span class="ac-tag">${escapeHtml(pur.label)}</span>`:'';
     const moved=acctLoggedSince(a), exp=acctExpected(a);
@@ -11329,9 +11390,24 @@ function renderAccounts(){
         <div class="ae-a"><button class="btn sm primary" data-acctsave="${a.id}">Save</button><button class="btn sm ghost" data-acctcancel="1">Cancel</button></div>
       </div></div>`;
     }
-    return `<div class="acct-row${owed?' owed':''}" data-row="${a.id}">${
-      acctReorder?`<button class="cat-grip" data-grip="${a.id}" data-scope="accts" aria-label="Drag to move ${escapeHtml(a.name)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`:`<span class="ac-ic">${k.ic}</span>`}<div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated:''} &middot; ${escapeHtml(k.label)}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="ac-pen" data-acctedit="${a.id}" title="Rename or change what kind it is" aria-label="Edit ${escapeHtml(a.name)}">✎</button><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
-  }).join('') : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
+    return `<div class="acct-row${owed?' owed':''}" data-row="${a.id}" data-lvl="${acctGroupOf(a)}">${
+      acctReorder?`<button class="cat-grip" data-grip="${a.id}" data-scope="accts" aria-label="Drag to move ${escapeHtml(a.name)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`:`<span class="ac-ic">${k.ic}</span>`}<div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated:''}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="ac-pen" data-acctedit="${a.id}" title="Rename or change what kind it is" aria-label="Edit ${escapeHtml(a.name)}">✎</button><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
+  };
+  /* A header per group that actually holds something, carrying that group's own
+     total. An empty group is not a heading, it is a gap. */
+  box.innerHTML = accts.length
+    ? ACCT_GROUPS.map(g=>{
+        const mine=accts.filter(a=>acctGroupOf(a)===g.k);
+        if(!mine.length) return '';
+        const owed=g.k==='owe';
+        const tot=owed ? mine.reduce((s,a)=>s+acctOwed(a),0)
+                       : mine.reduce((s,a)=>s+(+a.balance||0),0);
+        return `<div class="acg"><div class="acg-h"><span class="acg-n">${escapeHtml(g.label)}</span>`
+          + `<span class="acg-v${owed&&tot>0?' owed':''}">${usd(tot)}</span></div>`
+          + `<div class="acg-s">${escapeHtml(g.note)} &middot; ${mine.length} account${mine.length===1?'':'s'}</div>`
+          + mine.map(rowHTML).join('') + `</div>`;
+      }).join('')
+    : `<div class="empty" style="margin-top:12px">No accounts yet. Add checking first - it's the number your budget is actually spending.</div>`;
   box.querySelectorAll('input[data-acctbal]').forEach(i=>i.addEventListener('change',()=>{
     const a=(state.accounts||[]).find(x=>x.id===i.dataset.acctbal); if(!a) return;
     /* The moment the app earns its keep. Whatever the bank actually says is
@@ -11361,7 +11437,12 @@ function renderAccounts(){
        boot, so a change made today would not reach the trend until tomorrow.
        captureSnapshot upserts the current month, so this just keeps it current. */
     if(typeof captureSnapshot==='function') captureSnapshot();
-    renderAccounts(); renderNetWorth(); renderHome();
+    /* Re-rendering from inside the change handler tears out the very input the
+       browser is still focused on, and Chromium throws mid-innerHTML because a
+       node it was removing moved under it. Let go of the box first, then draw
+       on the next tick - the number is already saved either way. */
+    i.blur();
+    setTimeout(()=>{ renderAccounts(); renderNetWorth(); renderHome(); },0);
   }));
   box.querySelectorAll('button[data-acctuse]').forEach(b=>b.addEventListener('click',()=>{
     const a=(state.accounts||[]).find(x=>x.id===b.dataset.acctuse); if(!a) return;
