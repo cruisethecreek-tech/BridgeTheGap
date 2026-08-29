@@ -994,6 +994,34 @@ anything was ticked) and was actually the feature being pointless. Waiting is
 now a mode, and both directions are asserted: turning it on must not un-log
 anything, turning it off must catch up what was due.
 
+**Category faces** are guarded on the two properties that separate them from
+decoration. Every category must get one **without anyone typing anything** - so
+the fixture is the user's own nine names and the check is that all nine come out
+distinct on a cold start. And the guess must be **derived rather than stored**:
+renaming a category changes its face, while a *chosen* face survives a rename.
+That is one assertion in each direction, and storing the guess at creation would
+fail exactly one of them - which is why both are there rather than the easier
+"a face is present".
+
+Adding it broke an unrelated check, correctly. A drag test asserted the rendered
+row text matched a real category name, and rows now read `🎉Fun` where the stored
+name is `Fun`. The fix strips the face before comparing rather than loosening the
+check to a substring match - which would have passed but stopped noticing
+truncation, the thing that check exists for. **When rendered text gains a prefix,
+strip it; do not weaken the comparison.**
+
+**Planning ahead** is checked for what a future month is not allowed to claim.
+The boxes must be *disabled*, nothing may read as landed, and the note has to say
+why - because a dead checkbox with no explanation is indistinguishable from a
+broken one. The suite also steps two months forward to find a yearly repeat,
+which is the case that proves the calendar reads the month it is given rather
+than the month it was built for.
+
+One collision worth remembering: the new block declared `const plan` in a file
+that already had one, and the suite failed to parse at all rather than failing a
+check. That is the third identifier collision this file has produced. In a
+single-scope test file of this size, name new bindings for their section.
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor

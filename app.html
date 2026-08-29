@@ -1144,7 +1144,7 @@
      grow into spare space, shrink to a readable floor, never past it. */
   .subrow .sub-name,.cat.grp .cat-name{display:block;flex:1 1 7em;min-width:7em}
   .rw-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-    overflow-wrap:break-word;min-width:0}
+    overflow-wrap:break-word;min-width:0;flex:1 1 auto}
   .subrow .sub-assign{display:flex;align-items:center;gap:5px;min-width:0}
   .growth-tag.mini{font-size:9.5px;padding:1px 5px;letter-spacing:.2px}
   .rep-dot{font-size:12px;color:var(--muted);flex:none}
@@ -1211,6 +1211,23 @@
   .ca-a .btn{flex:1;min-width:120px}
   .cs-note{font-size:13px;line-height:1.55;color:var(--muted);margin:9px 0 0}
   .cs-rename{margin-bottom:12px;display:flex;gap:8px}
+  /* The face sits in its own narrow box so the name keeps the width it had -
+     a category name is the thing being typed and must not lose room to the
+     decoration beside it. */
+  .cs-rename .cat-face{width:56px;flex:none;text-align:center;font-size:19px;line-height:1.1}
+  .cs-rename .cat-rename{flex:1;min-width:0}
+  .cs-faces{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 8px}
+  .csf-k{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+  .csf{width:34px;height:34px;flex:none;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);font-size:17px;line-height:1;padding:0;cursor:pointer}
+  .csf.word{width:auto;padding:0 10px;font-size:11.5px;font-weight:800;color:var(--muted)}
+  .cs-note.tight{margin-top:0}
+  .cs-face{margin-right:7px}
+  .tx-e{margin-right:4px}
+  /* The face is a fixed-width column so nine names start on the same pixel.
+     A ragged left edge would have cost more legibility than the emoji bought. */
+  .rw-nm .rw-e{flex:none;width:1.35em;text-align:center;font-size:1.05em;line-height:1;
+    margin-right:2px;filter:saturate(.92)}
   .cs-rep{display:flex;align-items:flex-start;gap:11px}
   .cs-repk{font-size:13px;line-height:1.55;color:var(--muted)}
   .cs-repk b{color:var(--text)}
@@ -1956,7 +1973,17 @@
   .cal-mode input{width:19px;height:19px;flex:none;margin-top:1px;accent-color:var(--accent)}
   .cal-mode b{color:var(--text)}
   .cal-nav{margin-top:12px}
-  .cal-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .cal-arw{width:32px;height:32px;flex:none;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--text);font-size:17px;line-height:1;padding:0;cursor:pointer}
+  .cal-now{border:1px solid var(--line);background:transparent;color:var(--muted);
+    border-radius:20px;padding:4px 11px;font-size:11px;font-weight:800;cursor:pointer}
+  .cal-tag{display:inline-block;font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:20px;
+    padding:1px 7px;margin-left:7px;vertical-align:middle}
+  .cal-r.soon{opacity:.75}
+  .cal-r input:disabled{opacity:.4}
+  .cal-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cal-h .cal-m{flex:1;min-width:0}
   .cal-m{font-size:15px;font-weight:800}
   .cal-sum{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
   .cal-sum b.up{color:var(--good)} .cal-sum b.down{color:var(--accent-2)}
@@ -7995,7 +8022,12 @@ function renderBudget(){
       /* Renaming happens in the sheet, never here. Two live inputs carrying the
          same data-rename would have the save button picking one of them at
          random, and the row has no room for a text field anyway. */
-      const nameHTML = `<button class="rw-nm" data-catsheet="${c.id}" title="${escapeHtml(c.name)}"><span class="rw-t">${escapeHtml(c.name)}</span>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag mini" title="${escapeHtml(GROWTH_TAG[c.growth]||'Not spending')}">${escapeHtml(GROWTH_TAG_SHORT[c.growth]||'not spent')}</span>`:''}${recForCat(c.id)?'<span class="rep-dot" title="This repeats">&#8635;</span>':''}</button>`;
+      /* aria-hidden on the face: a screen reader announcing "receipt Food"
+         is worse than "Food", and the emoji carries no information the name
+         does not already carry. It is there to be recognised at a glance, and
+         a glance is not how that reader works. */
+      const face=catEmoji(c);
+      const nameHTML = `<button class="rw-nm" data-catsheet="${c.id}" title="${escapeHtml(c.name)}">${face?`<span class="rw-e" aria-hidden="true">${escapeHtml(face)}</span>`:''}<span class="rw-t">${escapeHtml(c.name)}</span>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag mini" title="${escapeHtml(GROWTH_TAG[c.growth]||'Not spending')}">${escapeHtml(GROWTH_TAG_SHORT[c.growth]||'not spent')}</span>`:''}${recForCat(c.id)?'<span class="rep-dot" title="This repeats">&#8635;</span>':''}</button>`;
       if(isGroup){
         return `<div class="cat grp${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
           <div class="cat-top">
@@ -8095,7 +8127,34 @@ function wirePlan(box, isMain){
     });
   });
   box.querySelectorAll('button[data-editcat]').forEach(btn=>btn.addEventListener('click',()=>{ catEditId=btn.dataset.editcat; planRefresh(); const inp=box.querySelector('input[data-rename]'); if(inp){ inp.focus(); inp.select&&inp.select(); } }));
-  const saveRename=(id)=>{ const inp=box.querySelector('input[data-rename="'+id+'"]'); const c=state.categories.find(x=>x.id===id); if(c&&inp&&inp.value.trim()) c.name=inp.value.trim(); catEditId=null; save(); planRefresh(); renderTx(); };
+  const saveRename=(id)=>{
+    const inp=box.querySelector('input[data-rename="'+id+'"]');
+    const fin=box.querySelector('input[data-face="'+id+'"]');
+    const c=state.categories.find(x=>x.id===id);
+    if(c&&inp&&inp.value.trim()) c.name=inp.value.trim();
+    if(c&&fin){
+      const v=fin.value.trim();
+      /* Blank hands the choice back to the guesser, which is different from
+         choosing to have none - "None" writes an empty string and that string
+         is kept. Deleting the property is what makes a rename matter again. */
+      if(!v) delete c.emoji;
+      else if(v!==guessCatEmoji(c.name,c.growth)) c.emoji=v;
+      else delete c.emoji;   // picking exactly what it would have guessed is not an override
+    }
+    catEditId=null; save(); planRefresh(); renderTx();
+  };
+  box.querySelectorAll('button[data-pickface]').forEach(btn=>btn.addEventListener('click',()=>{
+    const fin=box.querySelector('input[data-face]'); if(!fin) return;
+    fin.value=btn.dataset.pickface;
+  }));
+  box.querySelectorAll('button[data-faceauto]').forEach(btn=>btn.addEventListener('click',()=>{
+    const c=state.categories.find(x=>x.id===catSheetId); if(!c) return;
+    delete c.emoji; save(); renderCatSheet(); planRefresh();
+  }));
+  box.querySelectorAll('button[data-facenone]').forEach(btn=>btn.addEventListener('click',()=>{
+    const c=state.categories.find(x=>x.id===catSheetId); if(!c) return;
+    c.emoji=''; save(); renderCatSheet(); planRefresh();
+  }));
   box.querySelectorAll('button[data-renamesave]').forEach(btn=>btn.addEventListener('click',()=>saveRename(btn.dataset.renamesave)));
   box.querySelectorAll('input[data-rename]').forEach(inp=>inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); saveRename(inp.dataset.rename); } else if(e.key==='Escape'){ catEditId=null; planRefresh(); } }));
   /* Arms. Does not delete. */
@@ -8226,10 +8285,15 @@ function renderCatSheet(){
   const a=catAssigned(c.id,M), own=assignedFor(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
   const pct=a>0?Math.min(100,(sp/a)*100):(sp>0?100:0);
   const t=document.getElementById('catSheetTitle');
-  if(t) t.innerHTML=`${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename ${escapeHtml(c.name)} (keeps your transactions)">&#9998;</button>`;
+  const face=catEmoji(c);
+  if(t) t.innerHTML=`${face?`<span class="cs-face" aria-hidden="true">${escapeHtml(face)}</span>`:''}${escapeHtml(c.name)}<button class="mini-edit cat-edit" data-editcat="${c.id}" title="Rename ${escapeHtml(c.name)} (keeps your transactions)">&#9998;</button>`;
 
   const rename = c.id===catEditId
-    ? `<div class="cs-rename"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></div>` : '';
+    ? `<div class="cs-rename"><input type="text" class="cat-face" value="${escapeHtml(face)}" data-face="${c.id}" maxlength="4" aria-label="Emoji for ${escapeHtml(c.name)}" placeholder="\u{1F642}"><input type="text" class="cat-rename" value="${escapeHtml(c.name)}" data-rename="${c.id}" placeholder="Category name"><button class="btn sm primary" data-renamesave="${c.id}">Save</button></div>
+       <div class="cs-faces"><span class="csf-k">Pick one</span>${CAT_FACE_PICKS.map(e=>`<button class="csf" data-pickface="${escapeHtml(e)}" aria-label="Use ${escapeHtml(e)}">${escapeHtml(e)}</button>`).join('')}
+         <button class="csf word" data-faceauto="1" title="Go back to choosing from the name">Auto</button>
+         <button class="csf word" data-facenone="1" title="No emoji on this one">None</button></div>
+       <p class="cs-note tight">Left blank it picks one from the name and keeps up with a rename. Choose your own and it stays put, whatever you call the category later.</p>` : '';
 
   /* No carry-forward line here, on purpose. This app has never rolled a leftover
      into next month, and a row labelled "from last month" would be inventing a
@@ -9472,6 +9536,11 @@ function renderTxList(){
                : t.type==='invest' ? (t.source||'Investment')
                : t.type==='transfer' ? `${acctName(t.acctId)||'somewhere'} → ${acctName(t.destAcctId)||'somewhere'}`
                : (t.note || catName(t.catId) || 'Expense');
+    /* The category is named in one of two places depending on whether the entry
+       carries a note, so the face has to follow it rather than sit in a fixed
+       slot - otherwise half the ledger wears one and half does not. */
+    const catFace = t.type==='expense' ? catFaceOf(t.catId) : '';
+    const faceOnWhat = t.type==='expense' && !t.note ? catFace : '';
     /* The category still earns its place on the row - a ledger you cannot scan
        by category is a list of prices. It is dimmed and truncates on its own so
        a long one cannot eat the note. */
@@ -9486,7 +9555,7 @@ function renderTxList(){
        is what actually happens when a thumb lands on it. */
     return `<button class="tx ${t.type}" data-txsheet="${t.id}" aria-label="Open the ${escapeHtml(what)} entry from ${mon} ${day}">
       <span class="tx-date">${mon}<b>${day}</b></span>
-      <span class="tx-main"><span class="tx-what">${escapeHtml(what)}</span>${tail?`<span class="tx-tail">${escapeHtml(tail)}</span>`:''}${t.recId?'<span class="tx-rep" title="Posted by a repeat">&#8635;</span>':''}</span>
+      <span class="tx-main"><span class="tx-what">${faceOnWhat?`<span class="tx-e" aria-hidden="true">${escapeHtml(faceOnWhat)}</span>`:''}${escapeHtml(what)}</span>${tail?`<span class="tx-tail">${catFace?`<span class="tx-e" aria-hidden="true">${escapeHtml(catFace)}</span>`:''}${escapeHtml(tail)}</span>`:''}${t.recId?'<span class="tx-rep" title="Posted by a repeat">&#8635;</span>':''}</span>
       <span class="tx-amt">${t.type==='income'?'+':t.type==='invest'?'→':t.type==='transfer'?'⇄':'−'}${moneyOwner(t.amount,owner)}</span>
     </button>`;
   }).join('');
@@ -14376,16 +14445,43 @@ function renderCalendar(){
   const occ=calOccurrences(M), sums=calMonthSums(M);
   const byDay={};
   occ.forEach(o=>{ (byDay[o.date]=byDay[o.date]||[]).push(o); });
+  /* "I'm not seeing how to plan ahead for future months? What good is a plan if
+     you can't see what you are planning for." Fair, and the fault was purely
+     navigational - recOccurrences has always answered for any month, and the
+     Plan tab's month arrows sit at the very top of a long page, four panels
+     above the calendar. A month view with no way to change the month is a
+     calendar of one month.
+
+     A future month is a FORECAST, not a record, and the screen says so rather
+     than pretending: nothing can have landed in September, so the boxes are not
+     offered and the header states what the month is set to bring instead of how
+     much of it has arrived. Ticking a day that has not happened would be the
+     app inviting somebody to lie to it. */
+  const ahead=M>thisMonth(), behind=M<thisMonth();
   if(nav){
     const net=sums.inAll-sums.outAll;
-    nav.innerHTML=`<div class="cal-h"><span class="cal-m">${escapeHtml(fmtMonth(M))}</span>`
-      + `<span class="cal-sum">${occ.length?`<b class="up">+${money(sums.inAll)}</b> <b class="down">&minus;${money(sums.outAll)}</b> <span class="cal-net">net ${net>=0?'+':'&minus;'}${money(Math.abs(net))}</span>`:''}</span></div>`
-      + (occ.length?`<div class="cal-done">${sums.landed} of ${sums.count} ${sums.landed===1?'has':'have'} landed &middot; ${money(sums.inLanded)} in, ${money(sums.outLanded)} out so far</div>`:'');
+    nav.innerHTML=`<div class="cal-h">
+        <button class="cal-arw" id="calPrev" aria-label="Previous month">&#8249;</button>
+        <span class="cal-m">${escapeHtml(fmtMonth(M))}${ahead?'<i class="cal-tag">planned</i>':behind?'<i class="cal-tag">past</i>':''}</span>
+        <button class="cal-arw" id="calNext" aria-label="Next month">&#8250;</button>
+        ${M!==thisMonth()?`<button class="cal-now" id="calNow">Back to ${escapeHtml(monShort(thisMonth()))}</button>`:''}
+      </div>`
+      + `<div class="cal-sum">${occ.length?`<b class="up">+${money(sums.inAll)}</b> <b class="down">&minus;${money(sums.outAll)}</b> <span class="cal-net">net ${net>=0?'+':'&minus;'}${money(Math.abs(net))}</span>`:''}</div>`
+      + (occ.length?`<div class="cal-done">${ahead
+          ? `Nothing has happened yet - this is what ${escapeHtml(monShort(M))} is set up to bring, on today's rules. ${sums.count} thing${sums.count===1?'':'s'} scheduled.`
+          : `${sums.landed} of ${sums.count} ${sums.landed===1?'has':'have'} landed &middot; ${money(sums.inLanded)} in, ${money(sums.outLanded)} out so far`}</div>`:'');
+    const go=d=>{ state.activeMonth=shiftMonth(state.activeMonth,d); save(); renderBudget(); renderTx(); renderRecurring(); };
+    const pv=document.getElementById('calPrev'), nx=document.getElementById('calNext'), nw=document.getElementById('calNow');
+    if(pv) pv.addEventListener('click',()=>go(-1));
+    if(nx) nx.addEventListener('click',()=>go(1));
+    if(nw) nw.addEventListener('click',()=>{ state.activeMonth=thisMonth(); save(); renderBudget(); renderTx(); renderRecurring(); });
   }
   if(!occ.length){
-    grid.innerHTML=`<div class="empty" style="margin-top:12px">Nothing repeats yet. Set your paycheck and your fixed bills above and this fills in - the shape of the month is the part a list cannot show you.</div>`;
+    grid.innerHTML=`<div class="empty" style="margin-top:12px">${(state.recurring||[]).length
+      ? `Nothing falls in ${escapeHtml(fmtMonth(M))}. Quarterly and yearly repeats only land in the months they are due - step forward to find them.`
+      : `Nothing repeats yet. Set your paycheck and your fixed bills above and this fills in - the shape of the month is the part a list cannot show you.`}</div>`;
     if(list) list.innerHTML='';
-    return;
+    return;   // the arrows above are already drawn, so an empty month is never a dead end
   }
   /* A month grid, starting on the weekday the 1st actually falls on. Day names
      are taken from the browser rather than hard-coded, so a week that starts on
@@ -14412,17 +14508,19 @@ function renderCalendar(){
   const days=Object.keys(byDay).sort();
   list.innerHTML=days.map(date=>{
     const mine=byDay[date];
-    const ahead=date>today;
-    return `<div class="cal-day${ahead?' ahead':''}${date===today?' now':''}" id="calday-${date}">
-      <div class="cal-dh"><span>${escapeHtml(fmtDayShort(date))}</span><span class="cal-dl">${ahead?'still to come':date===today?'today':''}</span></div>`
-      + mine.map(o=>`<label class="cal-r${o.landed?' got':''}">
-          <input type="checkbox" data-calland="${o.r.id}" data-caldate="${o.date}"${o.landed?' checked':''} aria-label="${o.landed?'Landed':'Did it land'}: ${escapeHtml(o.label)} on ${escapeHtml(o.date)}">
+    const later=date>today;
+    return `<div class="cal-day${later?' ahead':''}${date===today?' now':''}" id="calday-${date}">
+      <div class="cal-dh"><span>${escapeHtml(fmtDayShort(date))}</span><span class="cal-dl">${later?'still to come':date===today?'today':''}</span></div>`
+      + mine.map(o=>`<label class="cal-r${o.landed?' got':''}${later?' soon':''}">
+          <input type="checkbox" data-calland="${o.r.id}" data-caldate="${o.date}"${o.landed?' checked':''}${later&&!o.landed?' disabled':''} aria-label="${o.landed?'Landed':later?'Not due yet':'Did it land'}: ${escapeHtml(o.label)} on ${escapeHtml(o.date)}">
           <span class="cal-rn">${escapeHtml(o.label)}<i class="cal-rt ${o.type==='income'?'in':o.type==='invest'?'inv':'out'}">${o.type==='income'?'in':o.type==='invest'?'invested':'out'}</i></span>
           <span class="cal-ra ${o.type==='income'?'up':'down'}">${o.type==='income'?'+':'&minus;'}${money(o.amount)}</span>
         </label>`).join('')
       + `</div>`;
   }).join('')
-  + `<p class="cal-note">A tick means it actually landed, and puts the entry on Track. It is not a promise that it will - a bill dated the 5th sitting unticked on the 9th is the app telling you something, not a bug. Untick and the entry comes straight back off; the repeat rule itself is never touched either way.</p>`;
+  + `<p class="cal-note">${ahead
+    ? `Nothing here can be ticked yet, because none of it has happened. This is the month as your rules currently set it up - change a repeat above and this changes with it, which is what makes it a plan rather than a guess. `
+    : ''}A tick means it actually landed, and puts the entry on Track. It is not a promise that it will - a bill dated the 5th sitting unticked on the 9th is the app telling you something, not a bug. Untick and the entry comes straight back off; the repeat rule itself is never touched either way.</p>`;
   list.querySelectorAll('input[data-calland]').forEach(cb=>cb.addEventListener('change',()=>{
     const id=cb.dataset.calland, date=cb.dataset.caldate;
     const r=(state.recurring||[]).find(x=>x.id===id);
@@ -17905,6 +18003,128 @@ function findOrCreateCat(name,growth){ let c=state.categories.find(k=>!k.parentI
    against it would have counted retirement contributions as money spent.
    They still get assigned (a zero-based plan gives investing a job like anything
    else); they are just no longer CALLED spending. */
+/* ============================================================
+   A FACE FOR EVERY CATEGORY
+
+   "Can each category get its own emoji before the title to give it a bit more
+   personality on an overall very boring website." Sent with a screenshot of
+   nine categories rendered as nine identical beige rows - Food, Power & Wi-Fi,
+   Getting Around, Debt Payments, Emergency Fund, Fun Money, Online shopping,
+   Dream Fund, Trips & travel. Every one the same shape, the same weight, the
+   same colour. It is the same report as "everything feels like a big run-on
+   sentence", arriving on a different screen.
+
+   Two decisions worth writing down.
+
+   It GUESSES rather than asking. A picker on every category is a chore nobody
+   completes, and a budget with three of twelve categories decorated looks
+   broken rather than personal. So the name is matched against a keyword list
+   and a category has a face the moment it exists, with no extra typing ever.
+
+   And the guess is DERIVED, not stored, until somebody overrides it. That
+   matters for renames: call a category "Food" and it gets a plate; rename it to
+   "Groceries" and it becomes a trolley, because the guess is re-run rather than
+   frozen at creation. Only an explicit pick is written to the category, and
+   from then on it is left alone - a chosen face must never be overwritten by a
+   later rename, which is exactly what storing the guess would have caused.
+   ============================================================ */
+const CAT_EMOJI=[
+  /* Order is the whole design: the first match wins, so anything specific has
+     to sit above the generic word it contains. "car insurance" before "car",
+     "pet food" before "food", "coffee" before anything that mentions drinks. */
+  [['petrol','fuel','gas station','gasoline'],'⛽'],
+  [['car insurance','auto insurance'],'🚗'],
+  [['health insurance','medical insurance'],'🏥'],
+  [['life insurance'],'📜'],
+  [['home insurance','house insurance','renters insurance','contents insurance'],'🏠'],
+  [['insurance'],'🛡️'],
+  [['pet food','dog food','cat food'],'🐾'],
+  [['vet','pet','dog','cat food','puppy','kitten'],'🐾'],
+  [['coffee','cafe','café','starbucks','espresso','latte'],'☕'],
+  [['takeaway','take out','takeout','eating out','restaurant','dining','drinks out','fast food','delivery food','doordash','uber eats','grubhub'],'🍔'],
+  [['groceries','grocery','supermarket','food shop','walmart','aldi','costco','tesco','kroger'],'🛒'],
+  [['food','meal','lunch','dinner','breakfast','snack'],'🍽️'],
+  [['alcohol','beer','wine','pub','bar tab'],'🍺'],
+  [['rent'],'🔑'],
+  [['mortgage'],'🏡'],
+  [['property tax','council tax','hoa'],'🏘️'],
+  [['roof','housing','home','house','apartment','flat'],'🏠'],
+  [['power','electric','energy','hydro'],'💡'],
+  [['gas bill','heating','furnace','propane','oil heat'],'🔥'],
+  [['water','sewer'],'🚿'],
+  [['wi-fi','wifi','internet','broadband','router'],'📶'],
+  [['phone','mobile','cell','cellular'],'📱'],
+  [['bin','trash','garbage','waste','recycl'],'🗑️'],
+  [['utilit','bills'],'💡'],
+  [['getting around','transport','commute','transit','bus','train','metro','subway','tube'],'🚌'],
+  [['uber','lyft','taxi','cab','rideshare'],'🚕'],
+  [['flight','airfare','plane'],'✈️'],
+  [['trip','travel','holiday','vacation','hotel'],'✈️'],
+  [['parking','toll'],'🅿️'],
+  [['car payment','vehicle','auto loan'],'🚗'],
+  [['bike','cycl'],'🚲'],
+  [['car','truck','motor','mot ','service & repair'],'🚗'],
+  [['emergency','rainy day','safety net','buffer'],'🛟'],
+  [['dream','wish','someday','bucket'],'✨'],
+  [['debt','loan','credit card','payoff','payment'],'💳'],
+  [['student loan','tuition','college','university','school fee'],'🎓'],
+  [['tax','irs','hmrc'],'🧾'],
+  [['retirement','pension','401k','ira','roth'],'🌴'],
+  [['invest','index fund','stock','brokerage','crypto','bitcoin'],'📈'],
+  [['saving','save','nest egg','sinking'],'🏦'],
+  [['give','giving','charity','donat','tithe','offering'],'🎁'],
+  [['gift','present','birthday','christmas','holiday shopping'],'🎁'],
+  [['child','kid','baby','daycare','nursery','childcare','school'],'🧸'],
+  [['doctor','dentist','medical','health','pharmacy','prescription','therapy','counsel'],'🏥'],
+  [['gym','fitness','workout','yoga','running','sport'],'🏋️'],
+  [['hair','nails','salon','barber','beauty','skincare','cosmetic'],'💇'],
+  [['clothes','clothing','shoes','wardrobe','apparel'],'👕'],
+  [['laundry','dry clean'],'🧺'],
+  [['online shopping','amazon','shopping','ebay','etsy'],'📦'],
+  [['netflix','spotify','streaming','subscription','membership','patreon','disney'],'📺'],
+  [['game','gaming','xbox','playstation','steam','nintendo'],'🎮'],
+  [['book','kindle','reading','library'],'📚'],
+  [['music','concert','vinyl','instrument'],'🎵'],
+  [['movie','cinema','theatre','theater'],'🎬'],
+  [['fun','entertainment','leisure','hobby','play money','blow money','guilt free','guilt-free'],'🎉'],
+  [['date night','romance','anniversary'],'💛'],
+  [['pet insurance'],'🐾'],
+  [['garden','lawn','plant','yard'],'🌱'],
+  [['repair','maintenance','diy','hardware','tools','furniture','decor'],'🔧'],
+  [['cleaning','household','toiletr','supplies','paper goods'],'🧼'],
+  [['work','business','office','software','tools & software','freelance'],'💼'],
+  [['course','training','skill','certification','learning','education'],'🎓'],
+  [['tobacco','smok','vape','cigarette'],'🚬'],
+  [['lottery','gambling','betting','casino'],'🎰'],
+  [['fee','charge','interest','bank fee','overdraft'],'🏦'],
+  [['income','paycheck','salary','wage','pay'],'💵']
+];
+/* The fallback is by KIND rather than one generic for everything, because the
+   three that are not spending are the three the app most wants told apart -
+   money put away, money invested and money given are already coloured
+   differently everywhere else and deserve a face that agrees. */
+const CAT_EMOJI_KIND={invest:'📈', save:'🏦', debt:'💳', give:'🎁'};
+/* A phone keyboard's emoji panel is four taps away and a thousand options deep.
+   These are the ones a budget actually reaches for, so most people never open
+   it - and the field beside them still takes anything at all. */
+const CAT_FACE_PICKS=['🍽️','🛒','🏠','🚗','⛽','💡','📶','💳','🏦','📈','🛟','✨','🎉','🎁','🧸','🏥','👋','📦','📺','🎮','✈️','🐾'];
+function guessCatEmoji(name, growth){
+  const n=' '+String(name||'').toLowerCase().replace(/[^a-z0-9&é\s-]/g,' ')+' ';
+  for(const [keys,e] of CAT_EMOJI){ if(keys.some(k=>n.includes(k))) return e; }
+  return CAT_EMOJI_KIND[growth]||'🧾';
+}
+/* '' is a real answer and must survive: someone who clears the face on one
+   category wants that row bare, and falling back to the guess would put it
+   straight back. So the stored value is checked for EXISTENCE, not truthiness. */
+/* By id, for the surfaces that hold a catId rather than the category itself.
+   catName returns a breadcrumb ("Food > Groceries") and the face belongs to the
+   LEAF, which is the category the entry is actually filed under. */
+function catFaceOf(id){ return catEmoji((state.categories||[]).find(c=>c.id===id)); }
+function catEmoji(c){
+  if(!c) return '';
+  if(typeof c.emoji==='string') return c.emoji;
+  return guessCatEmoji(c.name, c.growth);
+}
 function growthKindFor(name){
   const n=String(name||'').toLowerCase();
   if(n.includes('invest')||n.includes('retirement')) return 'invest';

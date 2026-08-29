@@ -341,8 +341,14 @@ check('...and the editing controls step aside while you move things', inMode.ass
    four characters worked only because this list showed subcategories alone; now
    that every leaf is a row, a real name would fail it. Clipping is the fault -
    measure that. */
+/* Every row now leads with an emoji, so the rendered text is "\u{1F389}Fun" where
+   the stored name is "Fun". The claim here is that the NAME survives at that
+   width - so the face is stripped alongside the trailing repeat glyph rather
+   than the check being loosened to a substring match, which would have stopped
+   noticing truncation entirely. */
+const bareName=t=>t.replace(/^[^\p{L}\p{N}$]+/u,'').replace(/[\u21bb\s]+$/,'').trim();
 check('...leaving the names readable, not truncated to one letter',
-      inMode.subNames.length>0 && inMode.subNames.every(n=>!n.clipped && inMode.realNames.includes(n.full.replace(/[\u21bb\s]+$/,''))),
+      inMode.subNames.length>0 && inMode.subNames.every(n=>!n.clipped && inMode.realNames.includes(bareName(n.full))),
       inMode.subNames.map(n=>`"${n.full}" ${Math.round(n.w)}px${n.clipped?' CLIPPED':''}`).join(' | '));
 
 /* Roof is third. Drag it above the first card. */
@@ -7655,6 +7661,192 @@ for(const W of [320,390]){
   });
   check('the calendar fits at '+W+'px with a touchable cell and box',
         g.over.length===0 && g.cell>=32 && g.box>=17, JSON.stringify(g));
+}
+await p.setViewportSize({width:390,height:1000}); await p.waitForTimeout(300);
+
+/* ============================================================
+   93. A FACE FOR EVERY CATEGORY
+
+   "Can each category get its own emoji before the title to give it a bit more
+   personality on an overall very boring website." Sent with nine categories
+   rendered as nine identical beige rows. Same report as "everything feels like
+   a big run-on sentence", arriving on a different screen.
+
+   The two properties that make this more than decoration:
+
+   It GUESSES, so a category has a face the moment it exists. A picker on every
+   category is a chore nobody finishes, and three of twelve decorated looks
+   broken rather than personal - so the fixture is the user's own nine names and
+   the suite checks all nine come out distinct without a single tap.
+
+   And the guess is DERIVED, not stored. Rename "Food" to "Groceries" and the
+   plate becomes a trolley, because nothing was frozen at creation. Only an
+   explicit pick is written down, and from then on a rename must NOT touch it -
+   which is the pair of assertions that would have caught storing the guess.
+   ============================================================ */
+const NINE=['Food','Power & Wi-Fi','Getting Around','Debt Payments','Emergency Fund',
+            'Fun Money','Online shopping','Dream Fund','Trips & travel'];
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:NINE.map((n,i)=>({id:'f'+i,name:n})),
+  budgets:{'2026-08':Object.fromEntries(NINE.map((n,i)=>['f'+i,100]))},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:3000,updated:'2026-08-01'}]});
+await p.reload(); await p.waitForTimeout(800);
+
+const faces = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); renderBudget(); await w(500);
+  const o={};
+  o.rows=[...document.querySelectorAll('#cats .rw-nm')].map(el=>({
+    e:(el.querySelector('.rw-e')||{}).textContent||'',
+    t:(el.querySelector('.rw-t')||{}).textContent||''}));
+  o.hidden=[...document.querySelectorAll('#cats .rw-e')].every(x=>x.getAttribute('aria-hidden')==='true');
+  o.stored=state.categories.filter(c=>'emoji' in c).length;
+  /* the order property: anything specific must beat the generic word inside it */
+  o.order={carIns:guessCatEmoji('Car insurance',''), ins:guessCatEmoji('Insurance',''),
+           petFood:guessCatEmoji('Pet food',''), food:guessCatEmoji('Food',''),
+           none:guessCatEmoji('Zorblax',''), save:guessCatEmoji('Zorblax','save'),
+           invest:guessCatEmoji('Zorblax','invest')};
+  /* derived, so it keeps up with a rename */
+  const f=state.categories.find(c=>c.name==='Food');
+  o.before=catEmoji(f); f.name='Groceries'; save(); o.after=catEmoji(f);
+  f.name='Food'; save();
+  /* chosen, so it does NOT */
+  openCatSheet('f0'); await w(360);
+  document.querySelector('[data-editcat="f0"]').click(); await w(320);
+  o.hasField=!!document.querySelector('input[data-face="f0"]');
+  o.picks=document.querySelectorAll('#catSheetBody [data-pickface]').length;
+  document.querySelector('input[data-face="f0"]').value='\u{1F355}';
+  document.querySelector('[data-renamesave="f0"]').click(); await w(400);
+  const c0=state.categories.find(x=>x.id==='f0');
+  o.chosen=c0.emoji;
+  c0.name='Pantry'; save(); o.chosenAfterRename=catEmoji(c0); c0.name='Food'; save();
+  /* Auto hands it back, None means none */
+  openCatSheet('f0'); await w(300);
+  document.querySelector('[data-editcat="f0"]').click(); await w(300);
+  document.querySelector('[data-faceauto]').click(); await w(320);
+  o.autoDropped=!('emoji' in state.categories.find(x=>x.id==='f0'));
+  document.querySelector('[data-editcat="f0"]').click(); await w(300);
+  document.querySelector('[data-facenone]').click(); await w(320);
+  o.none=catEmoji(state.categories.find(x=>x.id==='f0'));
+  o.noneStored=state.categories.find(x=>x.id==='f0').emoji;
+  closeCatSheet(); await w(260);
+  renderBudget(); await w(320);
+  o.noneBare=!document.querySelector('#cats [data-catsheet="f0"] .rw-e');
+  delete state.categories.find(x=>x.id==='f0').emoji; save();
+  /* the ledger names categories too - a face on half the rows looks broken */
+  state.transactions=[{id:'x1',type:'expense',amount:20,date:'2026-08-10',catId:'f0'},
+                      {id:'x2',type:'expense',amount:40,date:'2026-08-11',catId:'f2',note:'Tyres'},
+                      {id:'x3',type:'income',amount:900,date:'2026-08-12',source:'Paycheck'}];
+  save(); activateTab('tx'); renderTx(); await w(480);
+  o.led=[...document.querySelectorAll('#txList .tx')].map(el=>({
+    what:(el.querySelector('.tx-what')||{}).textContent||'',
+    tail:(el.querySelector('.tx-tail')||{}).textContent||'',
+    n:el.querySelectorAll('.tx-e').length}));
+  return o;
+});
+check('every category has a face without anyone typing anything',
+      faces.rows.length===9 && faces.rows.every(r=>r.e.length>0),
+      JSON.stringify(faces.rows.map(r=>r.e+r.t)));
+check('...and nine of them do not all get the same one',
+      new Set(faces.rows.map(r=>r.e)).size>=8, String(new Set(faces.rows.map(r=>r.e)).size));
+check('...with the name still beside it rather than replaced by it',
+      faces.rows.every(r=>r.t.length>0));
+check('...and the face hidden from a screen reader, which gains nothing from it',
+      faces.hidden===true);
+check('nothing is written to the data until somebody actually chooses',
+      faces.stored===0, String(faces.stored));
+check('a specific name beats the generic word inside it',
+      faces.order.carIns!==faces.order.ins && faces.order.petFood!==faces.order.food,
+      JSON.stringify(faces.order));
+check('...a name matching nothing still gets one, and money put away gets one that agrees',
+      faces.order.none.length>0 && faces.order.save!==faces.order.none
+        && faces.order.invest!==faces.order.save, JSON.stringify(faces.order));
+check('a guessed face keeps up with a rename, because it was never frozen',
+      faces.before!==faces.after, JSON.stringify([faces.before,faces.after]));
+check('the sheet offers a face field and quick picks beside the rename',
+      faces.hasField===true && faces.picks>=12, JSON.stringify([faces.hasField,faces.picks]));
+check('a chosen face is stored, and a later rename must not take it away',
+      faces.chosen==='\u{1F355}' && faces.chosenAfterRename==='\u{1F355}',
+      JSON.stringify([faces.chosen,faces.chosenAfterRename]));
+check('"Auto" hands the choice back to the name', faces.autoDropped===true);
+check('"None" means none, and never falls back to the guess',
+      faces.none==='' && faces.noneStored==='' && faces.noneBare===true,
+      JSON.stringify([faces.none,faces.noneStored,faces.noneBare]));
+check('the ledger carries the same face, wherever the category is named on the row',
+      faces.led.filter(r=>r.n===1).length===2
+        && (faces.led.find(r=>/Paycheck/.test(r.what))||{}).n===0, JSON.stringify(faces.led));
+/* "I'm not seeing how to plan ahead for future months? What good is a plan if
+   you can't see what you are planning for." The engine could always answer for
+   any month - recOccurrences takes one as an argument - and the Plan tab's own
+   month arrows sit at the top of a long page, four panels above the calendar.
+   A month view with no way to change the month is a calendar of one month.
+
+   What the future month must NOT do is pretend: nothing can have landed in a
+   month that has not happened, so the boxes are unavailable rather than
+   invitingly empty, and the header says what is scheduled instead of how much
+   has arrived. A tick on a day that has not come would be the app inviting
+   somebody to lie to it. */
+const calPlan = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  state.activeMonth='2026-08'; state.transactions=[]; state.calConfirm=true;
+  state.categories=[{id:'rent',name:'Rent'},{id:'subs',name:'Subscriptions'}];
+  state.budgets={'2026-08':{rent:1400}};
+  state.recurring=[
+    {id:'p1',type:'income',amount:1476.92,source:'Paycheck',freq:'biweekly',anchor:'2026-08-07'},
+    {id:'p2',type:'expense',amount:1400,catId:'rent',freq:'monthly',anchor:'2026-08-01'},
+    {id:'p3',type:'expense',amount:340,catId:'subs',freq:'yearly',anchor:'2026-10-09'}];
+  save(); activateTab('budget'); renderRecurring(); await w(560);
+  const o={arrows:!!document.getElementById('calPrev')&&!!document.getElementById('calNext'),
+           noBackHere:!document.getElementById('calNow')};
+  document.getElementById('calNext').click(); await w(580);
+  o.month=state.activeMonth;
+  o.nav=document.getElementById('calNav').innerText;
+  const boxes=[...document.querySelectorAll('#calList input[data-calland]')];
+  o.count=boxes.length; o.allOff=boxes.length>0 && boxes.every(b=>b.disabled && !b.checked);
+  o.landed=calMonthSums(state.activeMonth).landed;
+  o.note=document.getElementById('calList').innerText;
+  o.hasBack=!!document.getElementById('calNow');
+  document.getElementById('calNext').click(); await w(540);
+  o.oct=state.activeMonth;
+  o.yearlyFound=calOccurrences(state.activeMonth).some(x=>x.r.id==='p3');
+  document.getElementById('calNow').click(); await w(540);
+  o.home=state.activeMonth; o.now=thisMonth();
+  return o;
+});
+check('the calendar carries its own month arrows, four panels from the ones at the top',
+      calPlan.arrows===true && calPlan.noBackHere===true);
+check('...and stepping forward moves the whole Plan tab with it',
+      calPlan.month==='2026-09' && calPlan.hasBack===true, calPlan.month);
+check('a month that has not happened is labelled planned, and counts nothing as landed',
+      /planned/i.test(calPlan.nav) && /set up to bring/.test(calPlan.nav) && calPlan.landed===0, calPlan.nav);
+check('...with every box unavailable rather than invitingly empty',
+      calPlan.count>0 && calPlan.allOff===true, JSON.stringify([calPlan.count,calPlan.allOff]));
+check('...and the reason said out loud, so a dead box is not a broken one',
+      /Nothing here can be ticked yet/.test(calPlan.note), calPlan.note.slice(-200));
+check('a yearly repeat is findable by stepping to the month it falls in',
+      calPlan.oct==='2026-10' && calPlan.yearlyFound===true, JSON.stringify([calPlan.oct,calPlan.yearlyFound]));
+check('...and one tap comes back to now', calPlan.home===calPlan.now, calPlan.home+' vs '+calPlan.now);
+
+await p.evaluate((names)=>{ state.categories=names.map((n,i)=>({id:'f'+i,name:n}));
+  state.budgets={'2026-08':Object.fromEntries(names.map((n,i)=>['f'+i,100]))};
+  state.transactions=[]; state.recurring=[]; save(); }, NINE);
+for(const W of [320,390]){
+  await p.setViewportSize({width:W,height:1100});
+  await p.waitForTimeout(340);
+  const m = await p.evaluate(async () => {
+    const w=ms=>new Promise(r=>setTimeout(r,ms));
+    activateTab('budget'); renderBudget(); await w(380);
+    return [...document.querySelectorAll('#cats .rw-nm')].map(el=>{
+      const e=el.querySelector('.rw-e'), t=el.querySelector('.rw-t');
+      if(!e||!t) return null;
+      const er=e.getBoundingClientRect(), tr=t.getBoundingClientRect();
+      return {same:Math.abs(er.top-tr.top)<er.height, w:Math.round(tr.width)};
+    }).filter(Boolean);
+  });
+  /* The face must never wrap onto a line of its own, and must not cost the name
+     the width it had - the whole complaint was rows being hard to read. */
+  check('at '+W+'px the face stays on its name and leaves it real width',
+        m.length===9 && m.every(x=>x.same && x.w>=90), JSON.stringify(m.slice(0,3)));
 }
 await p.setViewportSize({width:390,height:1000}); await p.waitForTimeout(300);
 
