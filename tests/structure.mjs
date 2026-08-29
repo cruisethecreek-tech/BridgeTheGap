@@ -161,6 +161,15 @@ const reopened = await p.evaluate(async () => {
    it into "every panel here reopens when a debt exists" would have quietly
    demanded the wrong gate and lost the distinction. */
 const PAYOFF_PANELS=x=>!/Borrow it or wait/.test(x.h||'');
+/* On a day carrying both, what arrived should be read before what left it. */
+function calOccOrderOk(rows){
+  const by={};
+  rows.forEach(r=>{ const [d,,t]=r.split('|'); (by[d]=by[d]||[]).push(t); });
+  return Object.values(by).every(ts=>{
+    const rank=t=>t==='income'?0:t==='invest'?1:2;
+    return ts.every((t,i)=>i===0||rank(ts[i-1])<=rank(t));
+  });
+}
 check('adding a debt reopens the payoff panels', reopened.filter(PAYOFF_PANELS).every(x=>!x.waiting),
       reopened.map(x=>x.h+(x.waiting?' [still waiting]':'')).join(' | '));
 
@@ -7397,6 +7406,257 @@ check('...while one untouched line and no other debt opens it',
       roomGate.oneUntouchedLine===false);
 check('...and a card kept only on the accounts side opens it just the same',
       roomGate.fromAccountsOnly===false);
+
+/* ============================================================
+   91. A SILENT SUCCESS LOOKS EXACTLY LIKE A FAILURE
+
+   "My overflow income didn't change or statistics when I changed my balance.
+   Are they all being tracked?" - sent with a screenshot where one account
+   carried a full block (expected balance, entries since, show-the-work) and the
+   one below it showed nothing but a date.
+
+   Everything WAS tracked. The balance, the bank total, net worth, the month's
+   snapshot, the trend, the emergency-fund line and a stored reading - all six
+   moved on that keystroke. Not one of them said so. The account had no ledger
+   against it, so the reconcile branch stayed quiet by design, and the reading
+   history rendered nothing because it held one entry and the code returned
+   empty under two. Silence from a working feature is worth less than an error
+   from a broken one, because a person can act on an error.
+
+   The fixture is deliberately theirs: one account with a ledger and readings,
+   one with neither. What is asserted is not "the code runs" but "the screen
+   answers the question the person asked".
+   ============================================================ */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[
+    {id:'jc',name:'Joint Checking',kind:'checking',purpose:'sinking',balance:6637.64,updated:'2026-08-27',
+     hist:[{d:'2026-07-01',b:5000,how:'first'},{d:'2026-08-27',b:6637.64,how:'bank'}]},
+    /* no readings at all - added before the history existed */
+    {id:'ov',name:'Overflow income',kind:'checking',purpose:'emergency',balance:1000,updated:'2026-08-20'}],
+  transactions:[{id:'t1',type:'expense',amount:475.40,date:'2026-08-28',catId:'c1',acctId:'jc'}],
+  snapshots:[{month:'2026-07',bank:6000,owed:0}]});
+await p.reload(); await p.waitForTimeout(800);
+
+const tracked = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  /* the backfill: a balance and the date it was read ARE a reading, and were
+     two stored facts never written into the shape that can show them */
+  /* Cloned, not referenced. Playwright serializes the return value when the
+     evaluate ENDS, so a live array captured at the top comes back carrying
+     every mutation made below it - this read as two readings before the change
+     had happened. A "before" snapshot has to be a copy or it is not a before. */
+  o.seeded=JSON.parse(JSON.stringify(state.accounts.find(x=>x.id==='ov').hist||[]));
+  o.untouched=(state.accounts.find(x=>x.id==='jc').hist||[]).length;
+  activateTab('goals'); renderAccounts(); await w(440);
+  const row=id=>document.querySelector('input[data-acctbal="'+id+'"]').closest('.acct-row').innerText;
+  o.before=row('ov');
+  o.bankBefore=bankTotal(); o.nwBefore=netWorth();
+  o.snapBefore=(state.snapshots.find(s=>s.month==='2026-08')||{}).bank;
+  const toasts=[]; const ot=window.toast; window.toast=m=>{toasts.push(m);};
+  const inp=document.querySelector('input[data-acctbal="ov"]');
+  inp.value='1137.46'; inp.dispatchEvent(new Event('change',{bubbles:true}));
+  await w(540);
+  o.toast=toasts[0]||'';
+  o.after=row('ov');
+  o.hist=state.accounts.find(x=>x.id==='ov').hist;
+  o.bankAfter=bankTotal(); o.nwAfter=netWorth();
+  o.snapAfter=(state.snapshots.find(s=>s.month==='2026-08')||{}).bank;
+  o.summary=document.getElementById('acctSummary').innerText;
+  activateTab('reflect'); rfTab='trends'; renderReflectTab(); await w(300);
+  trendPick='bank'; renderTrendSeries(); await w(300);
+  o.trend=(state.snapshots.find(s=>s.month==='2026-08')||{}).bank;
+  /* a retype that does not move is still a reading - the trend needs the flat
+     months or it reads as a gap in the record */
+  activateTab('goals'); renderAccounts(); await w(400);
+  state.accounts.find(x=>x.id==='ov').hist=[{d:'2026-08-20',b:1137.46,how:'first'}]; save();
+  renderAccounts(); await w(300);
+  toasts.length=0;
+  const same=document.querySelector('input[data-acctbal="ov"]');
+  same.value='1137.46'; same.dispatchEvent(new Event('change',{bubbles:true}));
+  await w(500);
+  o.flatToast=toasts[0]||'';
+  o.flatHist=(state.accounts.find(x=>x.id==='ov').hist||[]).length;
+  /* and the account WITH a ledger keeps its own, different answer */
+  renderAccounts(); await w(360);
+  toasts.length=0;
+  const j=document.querySelector('input[data-acctbal="jc"]');
+  j.value='6000'; j.dispatchEvent(new Event('change',{bubbles:true}));
+  await w(500);
+  window.toast=ot;
+  o.ledgerToast=toasts[0]||'';
+  o.ledgerGap=state.accounts.find(x=>x.id==='jc').lastGap;
+  return o;
+});
+check('a balance and the date it was read are recorded as the reading they already were',
+      tracked.seeded.length===1 && tracked.seeded[0].d==='2026-08-20'
+        && tracked.seeded[0].b===1000 && tracked.seeded[0].how==='first', JSON.stringify(tracked.seeded));
+check('...without touching an account that already kept its own', tracked.untouched===2);
+check('one reading renders, where it used to render nothing at all',
+      /1 reading, taken 2026-08-20/.test(tracked.before), tracked.before);
+check('...and after a change the row states both readings and what moved between them',
+      /2 readings since 2026-08-20/.test(tracked.after) && /up \$137\.46/.test(tracked.after), tracked.after);
+check('...with the reading stored, dated today, and named as read off the bank',
+      tracked.hist.length===2 && tracked.hist[1].b===1137.46 && tracked.hist[1].how==='bank',
+      JSON.stringify(tracked.hist));
+check('an account with nothing logged against it now answers when you retype it',
+      /up \$137\.46/.test(tracked.toast) && /since 2026-08-20/.test(tracked.toast)
+        && /worked out again/.test(tracked.toast), tracked.toast);
+/* the four figures that were always moving, silently. Each one asserted because
+   "it was tracked" is a claim, and the person had no way to check it. */
+check('the bank total moves by exactly what was typed',
+      Math.abs((tracked.bankAfter-tracked.bankBefore)-137.46)<0.01,
+      JSON.stringify([tracked.bankBefore,tracked.bankAfter]));
+check('...net worth with it', Math.abs((tracked.nwAfter-tracked.nwBefore)-137.46)<0.01,
+      JSON.stringify([tracked.nwBefore,tracked.nwAfter]));
+check('...this month\'s snapshot is rewritten from it, not left until tomorrow',
+      tracked.snapAfter>tracked.snapBefore && Math.abs(tracked.snapAfter-7775)<1,
+      JSON.stringify([tracked.snapBefore,tracked.snapAfter]));
+check('...which is what the trend reads, and is what "statistics" meant here',
+      Math.abs(tracked.trend-7775)<1, String(tracked.trend));
+check('...and the earmarked total reworks itself from the new figure',
+      /\$1,137\.46/.test(tracked.summary), tracked.summary.slice(0,200));
+check('a balance retyped unchanged is still recorded, and still says so',
+      /unchanged/.test(tracked.flatToast) && /still a reading/.test(tracked.flatToast)
+        && tracked.flatHist===2, tracked.flatToast);
+check('an account that DOES carry a ledger still reports the gap instead',
+      /without being logged/.test(tracked.ledgerToast) && typeof tracked.ledgerGap==='number',
+      tracked.ledgerToast);
+
+/* ============================================================
+   92. THE PLANNING CALENDAR, AND THE BOX THAT CONFIRMS SOMETHING
+
+   "In the plan category I would like a planning calendar which holds all of my
+   reoccurring payments and income as a visual.. With a simple check box that
+   says did it land in my account.. So it can be added to My tracker."
+
+   Two properties carry this section.
+
+   The first is that the checkbox keeps NO state of its own. An occurrence has
+   landed exactly when a transaction exists carrying that rule's id and that
+   date - the same test postRecurring uses to avoid posting twice - so the box
+   reads the tracker rather than holding a second opinion about it. That is why
+   the suite checks a scheduler-posted month renders as ticked without anything
+   else happening: two records of one fact is how a calendar and a ledger start
+   disagreeing, and there is only one record here.
+
+   The second was found by building it wrong. The first version put the box on
+   top of an engine that already auto-posted everything, so every past
+   occurrence arrived pre-ticked and the box confirmed nothing. A tick that is
+   always already there is decoration. Waiting is now a choice, defaulted OFF so
+   no existing install changes behaviour, and both directions are asserted -
+   turning it on must not un-log anything, turning it off must catch up.
+   ============================================================ */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  hourlyWage:30, calConfirm:true,
+  categories:[{id:'rent',name:'Rent'},{id:'subs',name:'Subscriptions'}],
+  budgets:{'2026-08':{rent:1400,subs:80}},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:3000,updated:'2026-08-01'}],
+  recurring:[
+    {id:'r1',type:'income',amount:1476.92,source:'Paycheck',freq:'biweekly',anchor:'2026-08-07',acctId:'a1'},
+    {id:'r2',type:'expense',amount:1400,catId:'rent',freq:'monthly',anchor:'2026-08-01',acctId:'a1'},
+    {id:'r3',type:'expense',amount:19.99,catId:'subs',freq:'monthly',anchor:'2026-08-12',acctId:'a1'},
+    {id:'r4',type:'invest',amount:200,source:'Index fund',freq:'monthly',anchor:'2026-08-15',acctId:'a1',ikind:'holds'},
+    {id:'r5',type:'expense',amount:60,catId:'subs',freq:'monthly',anchor:'2026-08-31',acctId:'a1'}]});
+await p.reload(); await p.waitForTimeout(850);
+
+const cal = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); renderRecurring(); await w(560);
+  const o={};
+  o.occ=calOccurrences('2026-08').map(x=>x.date+'|'+x.label+'|'+x.type);
+  o.sums=calMonthSums('2026-08');
+  o.cells=document.querySelectorAll('#calGrid .cal-c').length;
+  o.pad=document.querySelectorAll('#calGrid .cal-c.pad').length;
+  o.marked=document.querySelectorAll('#calGrid .cal-c.has').length;
+  o.boxes=document.querySelectorAll('#calList input[data-calland]').length;
+  o.nav=document.getElementById('calNav').innerText;
+  o.aheadMarked=document.querySelectorAll('#calList .cal-day.ahead').length;
+  o.note=document.getElementById('calList').innerText;
+  /* tick */
+  o.txBefore=state.transactions.length;
+  const cb=document.querySelector('input[data-calland="r2"][data-caldate="2026-08-01"]');
+  cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true})); await w(540);
+  const tx=state.transactions.find(x=>x.recId==='r2');
+  o.tx=tx?{type:tx.type,amount:tx.amount,date:tx.date,catId:tx.catId,acctId:tx.acctId}:null;
+  o.spent=spentFor('rent','2026-08');
+  o.ticked=document.querySelector('input[data-calland="r2"][data-caldate="2026-08-01"]').checked;
+  /* untick */
+  const cb2=document.querySelector('input[data-calland="r2"][data-caldate="2026-08-01"]');
+  cb2.checked=false; cb2.dispatchEvent(new Event('change',{bubbles:true})); await w(540);
+  o.txEnd=state.transactions.length; o.spentEnd=spentFor('rent','2026-08');
+  o.ruleKept=(state.recurring||[]).some(r=>r.id==='r2');
+  /* the OTHER mode: what the scheduler posts by itself must read as landed */
+  state.transactions=[]; state.calConfirm=false; save();
+  const n=postRecurring('2026-08');
+  save(); renderRecurring(); await w(520);
+  const boxes=[...document.querySelectorAll('#calList input[data-calland]')];
+  o.auto={posted:n, ticked:boxes.filter(x=>x.checked).length, landed:calMonthSums('2026-08').landed};
+  /* and the toggle, both ways */
+  const had=state.transactions.length;
+  const m=document.getElementById('calConfirm');
+  m.checked=true; m.dispatchEvent(new Event('change',{bubbles:true})); await w(500);
+  o.onKept=state.transactions.length===had;
+  o.whileOn=postRecurring('2026-08');
+  const m2=document.getElementById('calConfirm');
+  m2.checked=false; m2.dispatchEvent(new Event('change',{bubbles:true})); await w(540);
+  o.caughtUp=state.transactions.length;
+  return o;
+});
+/* August 2026 has 31 days and opens on a Saturday, so six pad cells lead it.
+   Biweekly from the 7th falls on the 7th and the 21st and nowhere else. */
+check('every repeat is laid out on the day it actually falls',
+      cal.occ.length===6 && cal.occ[0].startsWith('2026-08-01')
+        && cal.occ[5].startsWith('2026-08-31'), JSON.stringify(cal.occ));
+check('...a fortnightly paycheck twice in the month, not once',
+      cal.occ.filter(x=>/Paycheck/.test(x)).length===2, JSON.stringify(cal.occ));
+check('...money in ordered before money out on a shared day',
+      calOccOrderOk(cal.occ), JSON.stringify(cal.occ));
+check('the grid is the whole month, offset to the weekday it opens on',
+      cal.cells===31+cal.pad && cal.pad===6, JSON.stringify([cal.cells,cal.pad]));
+check('...one marked day per date something falls on', cal.marked===6, String(cal.marked));
+check('...and one box per occurrence, not per rule', cal.boxes===6, String(cal.boxes));
+check('the month is totalled both directions before anything has happened',
+      Math.abs(cal.sums.inAll-2953.84)<0.01 && Math.abs(cal.sums.outAll-1679.99)<0.01,
+      JSON.stringify(cal.sums));
+check('...and nothing reads as landed while nothing is logged',
+      /0 of 6/.test(cal.nav) && cal.sums.landed===0, cal.nav);
+check('days still to come are set apart from days already gone',
+      cal.aheadMarked===1 && /still to come/.test(cal.note), String(cal.aheadMarked));
+check('...and an unticked bill in the past is named as information, not a fault',
+      /telling you something, not a bug/.test(cal.note), cal.note.slice(-200));
+check('ticking writes one entry, in the same shape the scheduler writes',
+      cal.tx && cal.tx.type==='expense' && cal.tx.amount===1400 && cal.tx.date==='2026-08-01'
+        && cal.tx.catId==='rent' && cal.tx.acctId==='a1', JSON.stringify(cal.tx));
+check('...counted by the month immediately, and the box stays ticked because it reads the tracker',
+      cal.spent===1400 && cal.ticked===true, JSON.stringify([cal.spent,cal.ticked]));
+check('unticking takes that entry straight back off and leaves the rule alone',
+      cal.txEnd===cal.txBefore && cal.spentEnd===0 && cal.ruleKept===true,
+      JSON.stringify([cal.txEnd,cal.spentEnd,cal.ruleKept]));
+check('what the scheduler posted by itself reads as landed, with no second record',
+      cal.auto.posted>0 && cal.auto.ticked===cal.auto.posted
+        && cal.auto.landed===cal.auto.posted, JSON.stringify(cal.auto));
+check('turning waiting on never un-logs what is already there', cal.onKept===true);
+check('...and stops anything posting on its own', cal.whileOn===0, String(cal.whileOn));
+check('...while turning it back off catches up rather than leaving a hole in the month',
+      cal.caughtUp>0, String(cal.caughtUp));
+for(const W of [320,390]){
+  await p.setViewportSize({width:W,height:1100});
+  await p.waitForTimeout(340);
+  const g = await p.evaluate(async () => {
+    const w=ms=>new Promise(r=>setTimeout(r,ms));
+    activateTab('budget'); renderRecurring(); await w(400);
+    const doc=document.documentElement;
+    return {over:[...document.querySelectorAll('#calPanel *')]
+              .filter(e=>e.getBoundingClientRect().right>doc.clientWidth+1).map(e=>e.className).slice(0,3),
+            cell:Math.round(document.querySelector('#calGrid .cal-c').getBoundingClientRect().width),
+            box:Math.round(document.querySelector('#calList input[data-calland]').getBoundingClientRect().width)};
+  });
+  check('the calendar fits at '+W+'px with a touchable cell and box',
+        g.over.length===0 && g.cell>=32 && g.box>=17, JSON.stringify(g));
+}
+await p.setViewportSize({width:390,height:1000}); await p.waitForTimeout(300);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

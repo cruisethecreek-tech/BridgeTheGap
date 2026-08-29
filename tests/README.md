@@ -962,6 +962,38 @@ needs both cleared before "no room" means anything, and the fix added the missin
 third case: a card kept only on the accounts side, with no debts at all, opens
 the panel too.
 
+**The hardest thing to test is a feature that works silently.** A user reported
+that changing a balance did nothing - and every figure had moved: the balance,
+the bank total, net worth, the month's snapshot, the trend and a stored reading.
+Six correct behaviours, zero visible ones. No suite caught it because every
+suite was asking "did the number change" and the answer was always yes. So the
+section asserts all six *and* asserts that the screen says so - the row states
+both readings and the movement, and the app answers when you type into an
+account with no ledger against it. **A silent success is worth less than a loud
+failure**, because a person can act on a failure.
+
+That section also caught a test bug of a kind worth naming. A "before" snapshot
+was taken as `o.seeded = a.hist` - a live reference - and Playwright serializes
+the return value when the *evaluate ends*, so it came back carrying every
+mutation made after it. The before-state showed the after-state and the check
+failed on a fixture that could not represent a before. **A snapshot has to be a
+copy or it is not a snapshot** (`JSON.parse(JSON.stringify(...))`).
+
+**The planning calendar** is guarded on the property that makes it safe rather
+than the pixels that make it look right: the checkbox keeps **no state**. An
+occurrence has landed exactly when a transaction with that rule's id and date
+exists, so the suite checks that a month the *scheduler* posted renders as fully
+ticked with nothing else happening. Two records of one fact is how a calendar
+and a ledger start disagreeing, and there is only one record here.
+
+Its second property came from building it wrong. The first version put the box
+on an engine that already auto-posted everything, so every past occurrence
+arrived pre-ticked - a tick that is always already there confirms nothing. The
+probe that found this looked like a fixture problem (`5 of 5 have landed` before
+anything was ticked) and was actually the feature being pointless. Waiting is
+now a mode, and both directions are asserted: turning it on must not un-log
+anything, turning it off must catch up what was due.
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor
