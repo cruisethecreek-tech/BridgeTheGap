@@ -844,6 +844,11 @@ const debt = await p.evaluate(async () => {
   const set=(id,v)=>{const e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true}));};
   const out={};
   // a debt with no rate and no payment yet - the very first thing that happens
+  /* The kind is the first field now and is required: it decides which of the
+     others are even shown, so a debt added without it would be a debt the form
+     could not have asked about properly. */
+  const ks=document.getElementById('debtKindSel');
+  ks.value='card'; ks.dispatchEvent(new Event('change',{bubbles:true})); await wait(200);
   set('debtName','Visa'); set('debtBal','2400'); set('debtApr',''); set('debtMin','');
   document.getElementById('addDebt').click(); await wait();
   out.noPayment=document.getElementById('debtResults').textContent.replace(/\s+/g,' ').trim();
@@ -1432,6 +1437,8 @@ const pgate = await p.evaluate(async () => {
   activateTab('debt'); await wait(350);
   out.planBefore=gated('gate-debtplan'); out.investBefore=gated('investPanel');
   const set=(id,v)=>{ const e=document.getElementById(id); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true})); };
+  const ks2=document.getElementById('debtKindSel');
+  ks2.value='card'; ks2.dispatchEvent(new Event('change',{bubbles:true})); await wait(200);
   set('debtName','Visa'); set('debtBal','5000'); set('debtApr','7'); set('debtMin','500');
   document.getElementById('addDebt').click(); await wait(400);
   out.planAfter=gated('gate-debtplan'); out.investAfter=gated('investPanel');
@@ -7914,6 +7921,155 @@ check('the active tab and the heading rule land on the same colour',
       JSON.stringify([tint.tabColour,tint.pageRule]));
 check('...and the wash is a gradient on the page itself, so it travels with it',
       /gradient/.test(tint.wash), tint.wash.slice(0,60));
+
+/* The week's ledger only counts the last seven days, so an entry pinned to a
+   literal date stops counting the moment the calendar moves past it. Taken from
+   the machine's own clock instead - this file has already grown two date bombs
+   and does not need a third. */
+const ISO_TODAY=(()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+/* ============================================================
+   95. LOAD MUST NEVER DELETE A BUDGET TO FIX ITSELF
+
+   Found while building the rest of this batch: a fixture that would not load.
+   load() was one try/catch returning defaultState() on ANY throw, so a stray
+   reference inside normalizeState - our own tidy-up pass, not the user's data -
+   silently discarded everything. No error, no warning, an app that opens one
+   morning as though it had never been used.
+
+   The fixture was the lucky part. On a phone this is somebody's year.
+
+   Unreadable JSON genuinely leaves no option but defaults, so the raw text is
+   kept under its own key first. A throw in normalizeState is a bug in OUR code
+   and the parsed state is handed back un-normalized: a formatting pass that
+   cannot run is not a reason to delete a budget. Both say so out loud.
+   ============================================================ */
+const loadSafe = await p.evaluate(async () => {
+  const KEY='unfiltered_budget_v2';
+  const real={onboarded:true,uiMode:'all',hourlyWage:31,activeMonth:'2026-08',
+    categories:[{id:'z1',name:'Food'}],budgets:{'2026-08':{z1:400}},
+    transactions:[{id:'zt',type:'income',amount:1234,date:'2026-08-05',source:'Pay'}],
+    accounts:[],goals:[],impulse:[],recurring:[],assets:[],liabilities:[],diary:[],
+    intake:{},lessons:[],debts:[],vault:[],snapshots:[],timeLog:[]};
+  const o={};
+  /* a tidy-up that throws must not cost anything */
+  localStorage.setItem(KEY, JSON.stringify(real));
+  const saved=normalizeState;
+  window.normalizeState=()=>{ throw new Error('boom'); };
+  const kept=load();
+  window.normalizeState=saved;
+  o.keptWage=kept.hourlyWage; o.keptTx=(kept.transactions||[]).length;
+  o.keptCats=(kept.categories||[]).length; o.flagged=!!kept.loadFailed;
+  o.rawIntact=localStorage.getItem(KEY)===JSON.stringify(real);
+  /* unreadable text is kept rather than overwritten */
+  localStorage.setItem(KEY, '{not json at all');
+  const fresh=load();
+  o.freshIsDefault=(fresh.transactions||[]).length===0;
+  o.freshFlagged=fresh.loadFailed==='unreadable';
+  o.stashed=localStorage.getItem(KEY+'__unreadable')==='{not json at all';
+  localStorage.setItem(KEY, JSON.stringify(real));
+  return o;
+});
+check('a throw in our own tidy-up hands back the data un-normalized, not defaults',
+      loadSafe.keptWage===31 && loadSafe.keptTx===1 && loadSafe.keptCats===1,
+      JSON.stringify(loadSafe));
+check('...flagged, because a half-failed load is the one moment to speak up',
+      loadSafe.flagged===true);
+check('...and what was stored is left exactly as it was', loadSafe.rawIntact===true);
+check('unreadable text keeps the original rather than overwriting it',
+      loadSafe.stashed===true && loadSafe.freshFlagged===true, JSON.stringify(loadSafe));
+check('...and only then falls back to an empty app', loadSafe.freshIsDefault===true);
+
+/* ============================================================
+   96. THE EIGHT FROM ONE PHONE PASS
+
+   A batch of reports in one message, and what they had in common: the app knew
+   the right answer and did not say it. A trail that landed with no explanation.
+   A stage badge contradicting the copy beneath it. A figure built from a panel
+   two screens away that never named it. A panel whose render nothing called.
+   ============================================================ */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  hoursPerWeek:40,
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:3000,updated:'2026-08-01'}],
+  assets:[{id:'as1',name:'Rental',value:120000,kind:'real'},{id:'as2',name:'Car',value:9000,kind:'stuff',cost:200}],
+  liabilities:[{id:'l1',name:'Card',value:800,apr:22}],
+  timeLog:[{id:'e1',date:ISO_TODAY,kind:'health',hours:2},{id:'e2',date:ISO_TODAY,kind:'leak',hours:6}],
+  debts:[{id:'d1',name:'The truck',kind:'auto',balance:22000,apr:8.4,minPayment:480,worth:16500,secured:true}],
+  intake:{why:'I just want to feel like I am working for something',
+          reflections:{situation:'survive',moneyStory:'chaos',moneyStoryNote:'It came and went'}}});
+await p.reload(); await p.waitForTimeout(850);
+
+const eight = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  /* 1 + 2: a trail that explains itself on landing */
+  activateTab('home'); await w(400);
+  document.querySelector('#view-home [data-arrive="gutcheck"]').click(); await w(480);
+  o.gutTab=currentTab;
+  o.gutNote=(document.querySelector('#view-impulse .arrival')||{}).innerText||'';
+  activateTab('home'); await w(300);
+  o.ctaArrives=!!document.getElementById('hhCta').getAttribute('data-arrive');
+  /* 3: the stage badge and the copy under it agree */
+  renderNextSteps(); await w(360);
+  o.survivalGone=!/survival mode this is the whole game/.test(document.getElementById('nextSteps').innerText);
+  o.saidSo=!!document.querySelector('.ns-outgrown');
+  o.answerKept=state.intake.reflections.situation==='survive';
+  /* 4: the panel that never drew */
+  activateTab('impulse'); await w(460);
+  o.twDrawn=document.getElementById('tripwireBody').children.length>0;
+  o.twActs=document.getElementById('tripwireBody').querySelectorAll('button').length;
+  /* 5: the figure that would not show its working */
+  activateTab('goals'); await w(360);
+  const det=document.getElementById('sovAudit').closest('details'); if(det) det.open=true;
+  renderSovereignty(); await w(400);
+  o.sovAsks=document.querySelectorAll('#sovAudit [data-why="sovAudit"]').length;
+  document.querySelector('#sovAudit [data-why="sovAudit"]').click(); await w(380);
+  o.sovNote=[...document.querySelectorAll('.why-note')].map(x=>x.innerText).join(' ');
+  /* 6: the money story, in the room that holds it */
+  arrive('moneystory'); await w(520);
+  o.storyTab=currentTab;
+  o.story=(document.getElementById('storyBody')||{}).innerText||'';
+  /* 7: the debt knows what it is, and what is behind it */
+  activateTab('debt'); renderDebt(); await w(460);
+  o.kindPicker=!!document.getElementById('debtKindSel');
+  o.equity=/underwater/.test(document.getElementById('debtList').innerText);
+  const sig=REPORT_SIGNALS.find(x=>x.k==='debtEquity').run();
+  o.sig=sig?sig.nudge:'';
+  /* 8: the week, budgeted */
+  activateTab('tx'); renderTimeLog(); await w(460);
+  o.sleep=!!timeCat('sleep');
+  o.oldHours=timeUsed('health');
+  o.targets=document.querySelectorAll('[data-ttarget]').length;
+  o.canSub=document.querySelectorAll('[data-tsub]').length;
+  o.head=(document.querySelector('.time-head')||{}).innerText||'';
+  return o;
+});
+check('a trail lands where it said and explains what you came for',
+      eight.gutTab==='impulse' && /hours of your life/.test(eight.gutNote), eight.gutNote.slice(0,140));
+check('...and the hero CTA arrives rather than just switching tab', eight.ctaArrives===true);
+check('a stage-3 person with assets stops being told they are in survival mode',
+      eight.survivalGone===true && eight.saidSo===true);
+check('...and their own answer is not overwritten to achieve it', eight.answerKept===true);
+check('Tripwires draws, with something to press', eight.twDrawn===true && eight.twActs>=3,
+      String(eight.twActs));
+check('every sovereignty figure can be asked where it came from', eight.sovAsks===4, String(eight.sovAsks));
+check('...and the answer names its source, its arithmetic and what would move it',
+      /Assets vs Liabilities/.test(eight.sovNote) && /What moves it/.test(eight.sovNote),
+      eight.sovNote.slice(0,160));
+check('the money story lands in the Diary holding the answers it refers to',
+      eight.storyTab==='diary' && /working for something/.test(eight.story)
+        && /Feast or famine/.test(eight.story), eight.story.slice(0,160));
+check('a debt can say what kind it is, and what it is attached to',
+      eight.kindPicker===true && eight.equity===true);
+check('...and Reflect answers the asset-or-liability question from it',
+      /cannot get out of this by selling/.test(eight.sig), eight.sig.slice(0,140));
+check('the week is a budget: lanes with targets, subcategories, and sleep in it',
+      eight.sleep===true && eight.targets>=6 && eight.canSub>=6,
+      JSON.stringify([eight.targets,eight.canSub]));
+check('...against 168 less what is sold to work, not against nothing',
+      /yours to plan/.test(eight.head), eight.head);
+check('...and hours logged before any of this still land where they always did',
+      eight.oldHours===2, String(eight.oldHours));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
