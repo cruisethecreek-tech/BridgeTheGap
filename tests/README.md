@@ -942,6 +942,26 @@ it. Feeding the fixture a limit would have made the sweep pass and quietly
 deleted the distinction, so the sweep now skips this panel by name and the
 separate gate is asserted directly, in both directions.
 
+**Letting one line live on two screens** put the suite's attention exactly where
+the damage would be. A HELOC can now sit in the payoff planner *and* on the
+accounts side, which immediately raises the question of whether anything gets
+counted twice. It does not - `netWorth()` reads accounts and liabilities and has
+never read `state.debts`, and `pricedLines()` dedupes by name - but "it does not"
+is a claim, so it is three assertions: net worth moves by the owed amount
+**exactly once**, the room total and line count are **unchanged** by the
+crossing, and the rate layer sees **one** line, not two. None of those would fail
+loudly on their own; a double count just makes a person poorer on paper and looks
+like arithmetic.
+
+Then a fixture leak of the useful kind. The block that crosses a HELOC over left
+a credit account in state, and the *next* check - "two loans and no line leave
+the room panel waiting" - went green off the leftover account's room rather than
+off what it was testing. The panel gates on room from **either** side, which is
+correct, and the check had only silenced one of them. A gate fed by two sources
+needs both cleared before "no room" means anything, and the fix added the missing
+third case: a card kept only on the accounts side, with no debts at all, opens
+the panel too.
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor

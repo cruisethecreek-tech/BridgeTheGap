@@ -1962,6 +1962,13 @@
   .room-util{margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);font-size:13px;line-height:1.55}
   .room-warn,.room-sec{margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--panel-2);
     border:1px solid var(--line);border-left:3px solid var(--accent-2);font-size:13px;line-height:1.55}
+  .room-drift{margin-top:10px;padding:13px;border-radius:12px;background:var(--panel-2);
+    border:1px solid var(--line);border-left:3px solid var(--accent-2);font-size:13px;line-height:1.6}
+  .room-drift span{display:block;margin-top:6px;color:var(--muted)}
+  .room-add{margin-top:10px;padding:13px;border-radius:12px;background:var(--panel-2);
+    border:1px solid var(--line);border-left:3px solid var(--accent);font-size:13px;line-height:1.6}
+  .room-add span{display:block;margin-top:6px;color:var(--muted)}
+  .room-add button{margin-top:10px}
   .room-none{margin-top:12px;padding:13px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);font-size:13px;line-height:1.6}
   .room-goals{margin-top:16px}
   .room-lbl{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
@@ -3063,11 +3070,11 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <select id="acctKind" style="min-width:120px"></select>
             <select id="acctPurpose" style="min-width:140px"></select>
             <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px" aria-label="What is in it today"></span>
-            <span class="sw-dol hide" id="acctLimWrap">Limit $<input type="number" id="acctLim" min="0" step="any" placeholder="13700" style="width:100px" aria-label="Credit limit"></span>
+            <span class="sw-dol hide" id="acctLimWrap">Limit $<input type="number" id="acctLim" min="0" step="any" placeholder="the most you can owe" style="width:100px" aria-label="Credit limit"></span>
             <span class="sw-dol hide" id="acctAprWrap"><input type="number" id="acctApr" min="0" max="100" step="0.01" placeholder="Rate" style="width:80px" aria-label="Interest rate">%</span>
             <select id="acctSecured" class="hide" style="min-width:160px" aria-label="What is backing this line">
               <option value="">Backed by nothing (a card)</option>
-              <option value="1">Backed by something I own</option>
+              <option value="1">Backed by my home or something I own</option>
             </select>
             <button class="btn sm primary" id="addAcct">＋ Add</button>
             <button class="btn sm ghost" id="acctReorderBtn">Reorder</button>
@@ -5157,7 +5164,7 @@ function debtRoomHTML(d){
       <span class="dr-r">${over
         ? `<b class="dr-over">${usd(owed-lim)} over the limit</b>`
         : `<b>${usd(room)}</b> left to draw of ${usd(lim)}`}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}</span>
-      <label class="dr-sec"><span>Backed by</span><select data-debtsec="${d.id}"><option value="">Nothing</option><option value="1"${d.secured?' selected':''}>Something I own</option></select></label>
+      <label class="dr-sec"><span>Backed by</span><select data-debtsec="${d.id}"><option value="">Nothing</option><option value="1"${d.secured?' selected':''}>My home or something I own</option></select></label>
     </div>`;
 }
 function redrawRoomLine(d){
@@ -5679,6 +5686,44 @@ function renderRoom(){
             : ` Under the 30% most scoring models watch. Worth knowing which side of it a purchase would put you on before you make it.`)
       + `</div>`);
   }
+  /* "Now add my HELOC limit to the accounts side too." The two sides are not
+     duplicates and neither is redundant, which is exactly why the trail is an
+     offer with the reason attached rather than a silent copy:
+
+       the planner  - works out the payoff order, the date, the interest
+       the accounts - is what net worth counts, and the only figure in this app
+                      that comes from outside your own typing
+
+     Net worth reads state.accounts and state.liabilities and has never read
+     state.debts, so a line living in both places is counted exactly once. The
+     rate layer dedupes by name, so it stays one line there too. What the person
+     gains is a reading history and a net worth that knows the line exists. */
+  const inAccts=new Set(creditAccts().map(a=>normName(a.name)));
+  const notTracked=(state.debts||[]).filter(d=>debtLimit(d)>0 && !inAccts.has(normName(d.name)));
+  if(notTracked.length){
+    bits.push(`<div class="room-add"><b>${notTracked.map(d=>escapeHtml(d.name)).join(', ')} ${notTracked.length===1?'is':'are'} in this planner but not in your accounts.</b>
+      <span>Those are two different jobs, not two copies. This planner works out the payoff order and what the interest costs. The accounts side is what your <b>net worth</b> counts, and it is the one number in the app that comes from outside your own typing - so a line kept there gets a reading history and shows up in the scoreboard. Net worth has never counted anything in this planner, so adding ${notTracked.length===1?'it':'them'} there counts ${notTracked.length===1?'it':'them'} once, not twice.</span>
+      <button class="btn sm primary" id="roomToAccts">Track ${notTracked.length===1?'it':'them'} under Build too</button></div>`);
+  }
+  /* The cost of letting a line live on both sides, named rather than hidden.
+     They are not double counted - net worth has never read state.debts - but
+     they can DRIFT, and a payoff date worked out from a stale balance is worse
+     than one worked out from no balance, because it looks finished. Nothing is
+     synced automatically: the accounts figure is a reading off a statement and
+     the planner figure is what someone typed, and quietly overwriting either
+     with the other would destroy the one property that makes the accounts side
+     worth anything. So it says which is which and leaves the choice. */
+  const drift=(state.debts||[]).map(d=>{
+    const a=creditAccts().find(x=>normName(x.name)===normName(d.name));
+    if(!a) return null;
+    const here=Math.max(0,+d.balance||0), there=acctOwed(a);
+    return Math.abs(here-there)>0.5 ? {name:d.name, here, there, when:a.updated} : null;
+  }).filter(Boolean);
+  if(drift.length){
+    bits.push(`<div class="room-drift"><b>${drift.map(x=>escapeHtml(x.name)).join(', ')} ${drift.length===1?'says':'say'} two different things.</b>
+      ${drift.map(x=>`<span>${escapeHtml(x.name)}: <b>${money(x.here)}</b> in this planner, <b>${money(x.there)}</b> under Build${x.when?` as of ${x.when}`:''}.</span>`).join('')}
+      <span>Neither is double counted - net worth only ever reads the Build side, and the payoff dates on this screen only ever read the planner. But the payoff date is worked out from the planner's figure, and a date built on a stale balance is worse than no date, because it looks finished. Nothing is synced for you: the Build figure is what you read off a statement and this one is what you typed, and the app will not quietly overwrite either with the other. Retype whichever one has gone out of date.</span></div>`);
+  }
   if(unpriced.length){
     bits.push(`<div class="room-warn"><b>${unpriced.map(l=>escapeHtml(l.name)).join(', ')}</b> ${unpriced.length===1?'has':'have'} room but no rate. Room without a rate is money of unknown price, and this screen will not guess at it - put the APR on ${unpriced.length===1?'it':'them'} above and ${unpriced.length===1?'it':'they'} can be priced against a dream like the rest.</div>`);
   }
@@ -5748,6 +5793,31 @@ function renderRoom(){
   bits.push(`<div class="room-honest"><b>Why this is not the panel above.</b> Leverage prices a rate you pay against a return you hope for, and sometimes that arithmetic comes out ahead. A dream returns nothing - a kitchen pays no dividend, a holiday never comes back - so there is no break-even here to clear and no version where borrowing wins on the money. It cannot. What it buys is time, and time is worth something; it is just worth something you have to price yourself.
     <br><br>Every figure here assumes the rate holds, ignores fees, annual charges and any promotional period that ends, and assumes you actually keep paying the same amount every month, which is the assumption that breaks most often. ${voice(VOICE.roomWait,null)} This will not tell you whether to do it. That was never something arithmetic could answer.</div>`);
   box.innerHTML=bits.join('');
+  const toA=document.getElementById('roomToAccts');
+  if(toA) toA.addEventListener('click',()=>{
+    const have=new Set(creditAccts().map(a=>normName(a.name)));
+    const mine=(state.debts||[]).filter(d=>debtLimit(d)>0 && !have.has(normName(d.name)));
+    if(!mine.length) return;
+    state.accounts=state.accounts||[];
+    mine.forEach(d=>{
+      /* Owed is stored negative on this side and typed positive on the other -
+         the one conversion the whole credit model rests on. Carrying it over by
+         hand is exactly where it would get dropped, so it happens here once. */
+      const rec={id:uid(), name:d.name, kind:'credit', purpose:'',
+                 balance:-Math.max(0,+d.balance||0), updated:todayStr(), limit:debtLimit(d)};
+      if((+d.apr||0)>0) rec.apr=+d.apr;
+      if(d.secured) rec.secured=true;
+      acctNote(rec, rec.balance, 'first');
+      state.accounts.push(rec);
+    });
+    save();
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    if(typeof refreshCatSelects==='function') refreshCatSelects();
+    if(typeof renderAccounts==='function') renderAccounts();
+    if(typeof renderNetWorth==='function') renderNetWorth();
+    renderRoom();
+    if(typeof toast==='function') toast(`${mine.map(d=>d.name).join(', ')} now sits under Build as well. What you owe on ${mine.length===1?'it':'them'} comes off your net worth from here, and the payoff plan on this screen is unchanged.`);
+  });
 }
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
 /* Coerced on the way out, not trusted on the way in: a budget value that arrived
@@ -10914,7 +10984,12 @@ const ACCT_KINDS=[
      every existing signed sum - net worth, the assets/owed split, an expense
      charged to the card, a payment landing on it - comes out right without a
      single one of them learning that credit exists. */
-  {k:'credit',   ic:'', label:'Credit card / line of credit', liquid:false, owed:true},
+  /* Labelled "Credit card / line of credit" until someone with a HELOC asked to
+     have it on this side "too" - having already found the planner. Both halves
+     of that label were correct and neither said the word on their paperwork.
+     A person scanning a dropdown for their product does not translate; they
+     conclude it is not here. */
+  {k:'credit',   ic:'', label:'Credit card, HELOC or line of credit', liquid:false, owed:true},
   {k:'other',    ic:'', label:'Other',    liquid:false}
 ];
 const ACCT_PURPOSES=[
@@ -11726,7 +11801,7 @@ function renderAccounts(){
         <label class="ae-f${owedNow?' hide':''}" id="aePurpWrap"><span>Its job</span><select id="aePurp">${ACCT_PURPOSES.map(x=>`<option value="${x.k}"${x.k===(a.purpose||'')?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
         <label class="ae-f${owedNow?'':' hide'}" id="aeLimWrap"><span>Limit</span><span class="sw-dol">$<input type="number" id="aeLim" min="0" step="any" value="${acctLimit(a)||''}" placeholder="none set"></span></label>
         <label class="ae-f${owedNow?'':' hide'}" id="aeAprWrap"><span>Rate</span><span class="sw-dol"><input type="number" id="aeApr" min="0" max="100" step="0.01" value="${a.apr!=null?a.apr:''}" placeholder="none set">%</span></label>
-        <label class="ae-f${owedNow?'':' hide'}" id="aeSecWrap"><span>Backed by</span><select id="aeSec"><option value="">Nothing (a card)</option><option value="1"${a.secured?' selected':''}>Something I own</option></select></label>
+        <label class="ae-f${owedNow?'':' hide'}" id="aeSecWrap"><span>Backed by</span><select id="aeSec"><option value="">Nothing (a card)</option><option value="1"${a.secured?' selected':''}>My home or something I own</option></select></label>
         <p class="ae-note">Changing the kind changes how it counts - a card comes off your net worth, savings adds to it. Nothing you have logged against it moves, and every reading it holds stays.</p>
         <div class="ae-a"><button class="btn sm primary" data-acctsave="${a.id}">Save</button><button class="btn sm ghost" data-acctcancel="1">Cancel</button></div>
       </div></div>`;
@@ -11929,8 +12004,24 @@ function renderAccounts(){
        out, because the net is the number net worth actually uses. */
     const room=cards.reduce((s,a)=>s+(acctHeadroom(a)||0),0);
     const priced=cards.filter(a=>+a.apr>0).slice().sort((x,y)=>(+y.apr)-(+x.apr));
-    bits.push(`<div class="ac-line">On the cards: <b>${usd(owe)}</b>${owe>0?` <span class="ac-sub">· net of the bank, <b>${usd(assetAcctTotal()-owe)}</b></span>`:` <span class="ac-sub">· nothing owed</span>`}</div>`);
-    if(room>0) bits.push(`<div class="ac-line">Room you have not spent: <b>${usd(room)}</b>. That is borrowing power, not money - it costs you nothing while it sits there and it is not part of your net worth.</div>`);
+    /* Every line here said "the cards" until a HELOC arrived on this side. A
+       home equity line is not a card, and the difference is not cosmetic: the
+       room on a card is unsecured and the room on a HELOC has your house behind
+       it. Calling both "the cards" makes the two look like the same kind of
+       money, which is the one impression this app must never leave. */
+    const backed=cards.filter(a=>a.secured), plain=cards.filter(a=>!a.secured);
+    const owedWord = backed.length && plain.length ? 'On the cards and lines'
+                   : backed.length ? (backed.length===1?'On '+escapeHtml(backed[0].name):'On the lines')
+                   : 'On the cards';
+    bits.push(`<div class="ac-line">${owedWord}: <b>${usd(owe)}</b>${owe>0?` <span class="ac-sub">· net of the bank, <b>${usd(assetAcctTotal()-owe)}</b></span>`:` <span class="ac-sub">· nothing owed</span>`}</div>`);
+    if(room>0){
+      const secRoom=backed.reduce((t,a)=>t+(acctHeadroom(a)||0),0);
+      bits.push(`<div class="ac-line">Room you have not spent: <b>${usd(room)}</b>. That is borrowing power, not money - it costs you nothing while it sits there and it is not part of your net worth.`
+        + (secRoom>0
+            ? ` <b>${usd(secRoom)}</b> of it sits behind something you own, which is a different kind of room from a card's: cheaper to use, and secured against a thing you would rather keep.`
+            : '')
+        + `${trailBtn('room','Price it against a dream','ghost')}</div>`);
+    }
     /* Two lines at two rates is the whole reason the question gets asked. The
        app can just say which one is expensive rather than leaving it to be
        felt. */
@@ -17365,6 +17456,10 @@ const TRAIL={
   skill:    {tab:'goals',    focus:'skillName',    label:'Invest in a skill'},
   debt:     {tab:'debt',     focus:'debtName',     label:'Open the payoff planner'},
   leverage: {tab:'debt',     focus:'levAmt',       label:'Price it as leverage'},
+  /* Two doors into the same fact: a limit typed on the accounts side is the
+     same room the dream panel prices, and the accounts panel is where somebody
+     is standing when they first see the figure. */
+  room:     {tab:'debt',     focus:'roomPay',      label:'Price it against a dream'},
   hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},
   gutcheck: {tab:'impulse',  modal:true,           label:'Run a gut-check'}
 };

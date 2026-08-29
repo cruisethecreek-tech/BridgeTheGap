@@ -7295,6 +7295,74 @@ check('a debt with no limit keeps exactly the row it always had',
       room.plainRow===true);
 check('...and the panel goes back to waiting, because there is nothing to price',
       room.gatedAgain===true);
+/* ---- the same line, on both sides, counted once ----
+   "Now add my HELOC limit to the accounts side too." The accounts side already
+   held a limit, a rate and a collateral flag - but under the label "Credit card
+   / line of credit", with a card-sized placeholder and a summary that called
+   everything "the cards". Both halves of that label were correct and neither
+   was the word on anybody's paperwork.
+
+   The risk the crossing introduces is double counting, so that is what gets
+   asserted hardest. Net worth reads accounts and liabilities and has never read
+   state.debts, and the rate layer dedupes by name - so a line living in both
+   places has to move net worth exactly once and appear in pricedLines exactly
+   once. What it CAN do is drift, and that is named rather than synced away. */
+const heloc = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  state.accounts=[{id:'k1',name:'Checking',kind:'checking',balance:4000,updated:'2026-08-01'}];
+  state.debts=[{id:'h1',name:'Home equity',balance:2500,apr:3.49,minPayment:50,limit:50000,secured:true}];
+  state.goals=[{id:'gg',name:'Kitchen',target:10000,saved:0,date:'',goalType:'foundation'}];
+  state.roomPay=500; save();
+  activateTab('goals'); await w(360);
+  const o={ kinds:[...document.getElementById('acctKind').options].map(x=>x.textContent),
+            sec:[...document.getElementById('acctSecured').options].map(x=>x.textContent) };
+  activateTab('debt'); renderDebt(); await w(480);
+  o.nwBefore=netWorth(); o.roomBefore=roomTotal(); o.linesBefore=roomLines().length;
+  o.offered=!!document.getElementById('roomToAccts');
+  document.getElementById('roomToAccts').click(); await w(560);
+  const a=creditAccts()[0]||{};
+  o.made={kind:a.kind, balance:a.balance, limit:a.limit, apr:a.apr, secured:!!a.secured, hist:(a.hist||[]).length};
+  o.nwAfter=netWorth(); o.roomAfter=roomTotal(); o.linesAfter=roomLines().length;
+  o.pricedHits=pricedLines().filter(l=>/Home equity/.test(l.name)).length;
+  o.debtsKept=(state.debts||[]).length;
+  o.offerGone=!document.getElementById('roomToAccts');
+  o.quietWhenAgreed=!document.querySelector('#roomResults .room-drift');
+  creditAccts()[0].balance=-3100; save(); renderRoom(); await w(320);
+  o.drift=document.getElementById('roomResults').innerText;
+  activateTab('goals'); renderAccounts(); await w(400);
+  o.summary=document.getElementById('acctSummary').innerText;
+  return o;
+});
+check('the account kind names a HELOC, not only a card',
+      heloc.kinds.some(x=>/HELOC/.test(x)), JSON.stringify(heloc.kinds));
+check('...and the collateral question names a home',
+      heloc.sec.some(x=>/home/i.test(x)), JSON.stringify(heloc.sec));
+check('a limited line in the planner is offered to the accounts side', heloc.offered===true);
+check('...and one tap carries the limit, the rate and the collateral across',
+      heloc.made.kind==='credit' && heloc.made.limit===50000
+        && heloc.made.apr===3.49 && heloc.made.secured===true, JSON.stringify(heloc.made));
+check('...flipping what is owed negative, which is how that side stores it',
+      heloc.made.balance===-2500 && heloc.made.hist===1, JSON.stringify(heloc.made));
+check('net worth moves by what is owed exactly once, never twice',
+      Math.abs((heloc.nwAfter-heloc.nwBefore)-(-2500))<0.01,
+      JSON.stringify([heloc.nwBefore,heloc.nwAfter]));
+check('...and the room is not counted twice either',
+      heloc.roomAfter===heloc.roomBefore && heloc.linesAfter===heloc.linesBefore,
+      JSON.stringify([heloc.roomBefore,heloc.roomAfter,heloc.linesBefore,heloc.linesAfter]));
+check('...with the rate layer still seeing one line', heloc.pricedHits===1, String(heloc.pricedHits));
+check('the payoff plan keeps its debt, because that was never the duplicate',
+      heloc.debtsKept===1 && heloc.offerGone===true);
+check('two sides that agree say nothing at all', heloc.quietWhenAgreed===true);
+check('...and two that disagree are named, with both figures and neither overwritten',
+      /two different things/.test(heloc.drift) && /\$2,500/.test(heloc.drift)
+        && /\$3,100/.test(heloc.drift) && /will not quietly overwrite/.test(heloc.drift),
+      heloc.drift.slice(0,300));
+check('the accounts summary stops calling a home equity line "the cards"',
+      !/On the cards:/.test(heloc.summary) && /Home equity/.test(heloc.summary),
+      heloc.summary.slice(0,220));
+check('...and says secured room is a different kind of room from a card\'s',
+      /behind something you own/.test(heloc.summary), heloc.summary.slice(0,500));
+
 /* The distinction the panel-gate sweep above is now allowed to skip, asserted
    directly instead: this panel does not care how many debts exist, only whether
    any of them can lend anything back. */
@@ -7302,6 +7370,11 @@ const roomGate = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   const g=()=>document.getElementById('roomPanel').classList.contains('panel-waiting');
   activateTab('debt');
+  /* Room comes from EITHER side, so the accounts have to be cleared too - the
+     block above left a credit account behind and this check went green for the
+     wrong reason until it did. A gate fed by two sources needs both silenced
+     before "no room" means anything. */
+  state.accounts=[{id:'k9',name:'Checking',kind:'checking',balance:1200,updated:'2026-08-01'}];
   state.debts=[{id:'x1',name:'Car loan',balance:9000,apr:6.4,minPayment:220},
                {id:'x2',name:'Student loan',balance:14000,apr:5.2,minPayment:180}];
   save(); renderDebt(); applyPanelGates(); await w(340);
@@ -7309,13 +7382,21 @@ const roomGate = await p.evaluate(async () => {
   state.debts=[{id:'x3',name:'Home equity',balance:0,apr:3.49,minPayment:0,limit:40000}];
   save(); renderDebt(); applyPanelGates(); await w(340);
   const oneUntouchedLine=g();
+  /* and the other door: a card kept on the accounts side, no debts at all */
+  state.debts=[];
+  state.accounts=[{id:'k9',name:'Checking',kind:'checking',balance:1200,updated:'2026-08-01'},
+                  {id:'k8',name:'Rewards Card',kind:'credit',balance:-200,limit:9000,apr:19.9,updated:'2026-08-01'}];
+  save(); renderDebt(); applyPanelGates(); await w(340);
+  const fromAccountsOnly=g();
   const note=(document.querySelector('#roomPanel .pw-note')||{}).textContent||'';
-  return {withDebtsNoRoom, oneUntouchedLine, note};
+  return {withDebtsNoRoom, oneUntouchedLine, fromAccountsOnly, note};
 });
 check('two loans and no line leave the room panel waiting, however much is owed',
       roomGate.withDebtsNoRoom===true);
 check('...while one untouched line and no other debt opens it',
       roomGate.oneUntouchedLine===false);
+check('...and a card kept only on the accounts side opens it just the same',
+      roomGate.fromAccountsOnly===false);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
