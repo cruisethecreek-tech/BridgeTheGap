@@ -1947,6 +1947,48 @@
   .ae-a{display:flex;gap:8px;margin-top:11px}
   .ae-a .btn{flex:1}
   .debtrow.confirming{display:block}
+  /* The limit's own line. It appears only when a limit does, so an ordinary
+     loan row keeps exactly the shape it always had. */
+  .debtrow .dr-room{flex:1 1 100%;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    border-top:1px dashed var(--line);margin-top:2px;padding-top:8px;font-size:12px;color:var(--muted);font-weight:600}
+  .debtrow .dr-r b{color:var(--text)}
+  .debtrow .dr-over{color:var(--accent-2)}
+  .debtrow .dr-sec{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:700}
+  .debtrow .dr-sec select{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 7px;font-size:12px}
+  /* Borrow it or wait for it */
+  .room-head{margin-top:14px;padding:14px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
+  .room-n{font-size:30px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+  .room-k{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .room-util{margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);font-size:13px;line-height:1.55}
+  .room-warn,.room-sec{margin-top:10px;padding:11px 13px;border-radius:12px;background:var(--panel-2);
+    border:1px solid var(--line);border-left:3px solid var(--accent-2);font-size:13px;line-height:1.55}
+  .room-drift{margin-top:10px;padding:13px;border-radius:12px;background:var(--panel-2);
+    border:1px solid var(--line);border-left:3px solid var(--accent-2);font-size:13px;line-height:1.6}
+  .room-drift span{display:block;margin-top:6px;color:var(--muted)}
+  .room-add{margin-top:10px;padding:13px;border-radius:12px;background:var(--panel-2);
+    border:1px solid var(--line);border-left:3px solid var(--accent);font-size:13px;line-height:1.6}
+  .room-add span{display:block;margin-top:6px;color:var(--muted)}
+  .room-add button{margin-top:10px}
+  .room-none{margin-top:12px;padding:13px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);font-size:13px;line-height:1.6}
+  .room-goals{margin-top:16px}
+  .room-lbl{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+  .roomgoal{margin-top:10px}
+  .roomgoal .rg-c{padding:13px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
+  .rg-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .rg-n{font-weight:800;font-size:15px}
+  .rg-g{font-size:13px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+  .rg-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .rg-side{padding:11px;border-radius:12px;border:1px solid var(--line);background:var(--ink)}
+  .rg-side.wait{border-left:3px solid var(--good)}
+  .rg-side.borrow{border-left:3px solid var(--accent-2)}
+  .rg-v{font-size:19px;font-weight:900;font-variant-numeric:tabular-nums;margin-top:2px}
+  .rg-say{margin-top:10px;font-size:13px;line-height:1.6}
+  .rg-never{margin-top:8px;padding:11px;border-radius:12px;background:var(--ink);
+    border:1px solid var(--line);border-left:3px solid var(--accent-2);font-size:13px;line-height:1.6}
+  .room-honest{margin-top:14px;font-size:12px;color:var(--muted);line-height:1.65}
+  /* Two figures side by side stop being comparable the moment either wraps to
+     four lines, which is what 1fr 1fr does on a 320px phone. */
+  @media(max-width:400px){ .rg-two{grid-template-columns:1fr} }
   .ac-kindnote,.ac-credit-note{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);
     border-left:3px solid var(--accent);border-radius:11px;padding:11px 13px;font-size:12.5px;line-height:1.6}
   .ac-kindnote span,.ac-credit-note span{display:block;margin-top:8px;color:var(--muted)}
@@ -2884,6 +2926,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld">Balance $<input type="number" id="debtBal" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:110px"></label>
           <label class="fld">Rate APR %<input type="number" id="debtApr" min="0" step="0.1" placeholder="19.9" style="width:100px"></label>
           <label class="fld">Min pay $<input type="number" id="debtMin" inputmode="decimal" min="0" step="0.01" placeholder="0" style="width:100px"></label>
+          <label class="fld">Limit $<input type="number" id="debtLim" inputmode="decimal" min="0" step="0.01" placeholder="cards &amp; lines only" style="width:130px"></label>
           <button class="btn primary" id="addDebt">Add</button>
         </div>
         <!-- Someone who has never budgeted does not know what APR means or where
@@ -2895,6 +2938,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <li><b>Balance</b> - what you still owe today, not what you borrowed. Top of the statement, or the app for that card or loan.</li>
             <li><b>Rate APR %</b> - the interest they charge you per year. On a card statement it is usually called <i>purchase APR</i> or <i>interest rate</i>, often on the back or the last page. On a loan it is on the agreement.</li>
             <li><b>Min pay $</b> - the smallest payment they will accept without a late fee. On a card statement it is the <i>minimum payment due</i>.</li>
+            <li><b>Limit $</b> - only for a card or a line of credit: the most they will let you owe. Called the <i>credit limit</i> or <i>credit line</i>, usually next to the balance. <b>Leave it blank for a car loan, a mortgage or a student loan</b> - those cannot lend you anything back, and a blank here is how the app knows the difference.</li>
           </ul>
           <p>Do not have the rate to hand? Add the debt anyway with the balance - it still counts what you owe. Come back and fill the rate in when you have the statement, and the numbers sharpen up.</p>
         </details>
@@ -2981,6 +3025,34 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div id="levResults"></div>
       </div>
+
+      <!-- "I would like to have my credit limit included with the debt
+           calculator so it can start tracking ways to leverage vs dreams and
+           goals." Two asks in one sentence and the second is the interesting
+           one. The panel above prices a rate you pay against a return you hope
+           for. A dream returns nothing - a kitchen does not pay a dividend and a
+           holiday never comes back - so there is no break-even to clear and no
+           version where the arithmetic wins. What borrowing buys for a dream is
+           TIME, and nothing else, which is why this is its own screen with its
+           own question rather than a second tab on the leverage tool.
+
+           The comparison holds the monthly amount fixed, which is the only way
+           the two halves are comparable at all. Same money either way: put it
+           aside and you get the thing in N months, or borrow and get it today
+           and pay for longer. The months are what you bought. The interest is
+           the price, and it is stated as a price rather than a loss, because
+           buying time is a real thing people do on purpose. -->
+      <div class="panel" id="roomPanel">
+        <h2>Borrow it or wait for it</h2>
+        <p class="sub">Unused room on a card or a line is the only debt that can fund something tomorrow. This puts it next to what you are actually saving for and prices the same monthly amount both ways - borrowed now, or set aside until it is paid for. It will not tell you which to do. It will tell you exactly what the hurry costs.</p>
+        <div class="row">
+          <div class="ufld"><span class="fl-k">What you could put at a dream<span id="roomPayUnit"></span></span>
+            <span class="fl-in">$<input type="number" id="roomPay" min="0" step="10" inputmode="decimal" placeholder="optional" style="width:130px"></span>
+            <div class="unit-work" id="roomPayW"></div></div>
+        </div>
+        <p class="sub" style="margin-top:6px">Leave it blank and any dream with a <b>date</b> on it prices itself from the pace that date already demands.</p>
+        <div id="roomResults"></div>
+      </div>
     </section>
 
     <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
@@ -2998,11 +3070,11 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <select id="acctKind" style="min-width:120px"></select>
             <select id="acctPurpose" style="min-width:140px"></select>
             <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px" aria-label="What is in it today"></span>
-            <span class="sw-dol hide" id="acctLimWrap">Limit $<input type="number" id="acctLim" min="0" step="any" placeholder="13700" style="width:100px" aria-label="Credit limit"></span>
+            <span class="sw-dol hide" id="acctLimWrap">Limit $<input type="number" id="acctLim" min="0" step="any" placeholder="the most you can owe" style="width:100px" aria-label="Credit limit"></span>
             <span class="sw-dol hide" id="acctAprWrap"><input type="number" id="acctApr" min="0" max="100" step="0.01" placeholder="Rate" style="width:80px" aria-label="Interest rate">%</span>
             <select id="acctSecured" class="hide" style="min-width:160px" aria-label="What is backing this line">
               <option value="">Backed by nothing (a card)</option>
-              <option value="1">Backed by something I own</option>
+              <option value="1">Backed by my home or something I own</option>
             </select>
             <button class="btn sm primary" id="addAcct">＋ Add</button>
             <button class="btn sm ghost" id="acctReorderBtn">Reorder</button>
@@ -3939,7 +4011,7 @@ function defaultState(){
            householdOn:false, nameA:'You', nameB:'Partner', wageB:0,
            spendingMode:false, spendLimit:0, dayToDay:[], rateDraft:null, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
-           debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[],
+           debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[], roomPay:0,
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
 }
@@ -4065,7 +4137,14 @@ function normalizeState(s){
   (s.assets||[]).forEach(a=>{ a.value=num(a.value); a.cost=num(a.cost); });
   (s.liabilities||[]).forEach(l=>{ l.value=num(l.value); });
   (s.goals||[]).forEach(g=>{ g.target=num(g.target); g.saved=num(g.saved); });
-  (s.debts||[]).forEach(d=>{ d.balance=num(d.balance); d.apr=num(d.apr); d.minPayment=num(d.minPayment); });
+  (s.debts||[]).forEach(d=>{ d.balance=num(d.balance); d.apr=num(d.apr); d.minPayment=num(d.minPayment);
+    /* A limit is optional and its ABSENCE is the statement "this is not a line".
+       Coercing a missing one to 0 like the others would be fine arithmetically
+       and wrong semantically - debtLimit reads 0 and not-set the same way, but
+       writing 0 onto every car loan makes the data claim something it should
+       not. Only a real positive number survives. */
+    if(!(num(d.limit)>0)) delete d.limit; else d.limit=num(d.limit); });
+  s.roomPay=num(s.roomPay);
   (s.recurring||[]).forEach(r=>{ r.amount=num(r.amount); if(r.hours!=null) r.hours=num(r.hours); });
   (s.timeLog||[]).forEach(e=>{ e.hours=num(e.hours); });
   s.hourlyWage=num(s.hourlyWage); s.hoursPerWeek=num(s.hoursPerWeek); s.spendLimit=num(s.spendLimit);
@@ -5056,6 +5135,136 @@ function noAprIn(debts){
   return debts.some(d=>(+d.apr||0)<=0)
     ? ` Some of these have no rate set yet, so the interest here is understated.` : '';
 }
+/* ---------- what a line has NOT lent you yet ----------
+   "I would like to have my credit limit included with the debt calculator so it
+   can start tracking ways to leverage vs dreams and goals." Asked with a HELOC
+   at 3.49% on screen and a balance of nothing typed in yet - the exact case the
+   planner had no way to hold. A line at zero costs nothing to keep, so a payoff
+   planner has nothing to say about it, and it was invisible. But it is the one
+   debt on the list that could fund something tomorrow, which makes it the only
+   one worth weighing against a dream.
+
+   A limit is what makes a debt REVOLVING. A car loan cannot lend back what you
+   have repaid; a card and a line can. So the presence of a limit is the
+   declaration - nothing extra to tick - and room, utilisation and everything
+   downstream fall out of it.
+
+   Owed above the limit is left alone rather than clamped to zero room. Being
+   over your limit is a real state people are actually in, and rounding it away
+   to keep the display tidy would be the app choosing neatness over the truth. */
+/* One source for the sub-line, because it is drawn twice: once by the full
+   render and once, in place, on every keystroke in the limit box. Redrawing the
+   whole list on a keystroke would tear out the input the thumb is in - the same
+   fault the account balance box had, and there is no reason to ship it twice. */
+function debtRoomHTML(d){
+  const lim=debtLimit(d); if(!(lim>0)) return '';
+  const room=debtRoom(d), util=debtUtil(d), owed=Math.max(0,+d.balance||0);
+  const over=owed>lim;
+  return `<div class="dr-room">
+      <span class="dr-r">${over
+        ? `<b class="dr-over">${usd(owed-lim)} over the limit</b>`
+        : `<b>${usd(room)}</b> left to draw of ${usd(lim)}`}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}</span>
+      <label class="dr-sec"><span>Backed by</span><select data-debtsec="${d.id}"><option value="">Nothing</option><option value="1"${d.secured?' selected':''}>My home or something I own</option></select></label>
+    </div>`;
+}
+function redrawRoomLine(d){
+  const inp=document.querySelector('#debtList .debtrow input[data-debt="'+d.id+'"][data-k="limit"]');
+  const row=inp&&inp.closest('.debtrow'); if(!row) return;
+  const have=row.querySelector('.dr-room'), want=debtRoomHTML(d);
+  if(!want){ if(have) have.remove(); return; }
+  if(have){ have.outerHTML=want; } else { row.insertAdjacentHTML('beforeend', want); }
+  const sel=row.querySelector('select[data-debtsec]');
+  if(sel) sel.addEventListener('change',()=>{
+    const t=state.debts.find(x=>x.id===sel.dataset.debtsec); if(!t) return;
+    if(sel.value) t.secured=true; else delete t.secured;
+    save(); renderRoom();
+  });
+}
+function debtLimit(d){ const L=+((d||{}).limit); return (isFinite(L)&&L>0)?L:0; }
+function debtRoom(d){ const L=debtLimit(d); return L>0 ? Math.round((L-Math.max(0,+d.balance||0))*100)/100 : null; }
+function debtUtil(d){ const L=debtLimit(d); return L>0 ? Math.round(Math.max(0,+d.balance||0)/L*1000)/10 : null; }
+/* Room lives on two screens - a card added under Build and a line added here -
+   and pricedLines already merges those two worlds by name. Reusing it means a
+   HELOC typed into the planner and the same HELOC kept as an account are one
+   line with one room figure, not two offers to borrow the same money. */
+function roomLines(){ return (typeof pricedLines==='function'?pricedLines():[]).filter(l=>l.revolving && (+l.room||0)>0); }
+function roomTotal(){ return Math.round(roomLines().reduce((s,l)=>s+(+l.room||0),0)*100)/100; }
+function roomUsed(){
+  const ls=(typeof pricedLines==='function'?pricedLines():[]).filter(l=>l.revolving && (+l.room!=null));
+  const lim=ls.reduce((s,l)=>s+Math.max(0,+l.owed||0)+Math.max(0,+l.room||0),0);
+  const owed=ls.reduce((s,l)=>s+Math.max(0,+l.owed||0),0);
+  return lim>0 ? {owed, limit:Math.round(lim*100)/100, pct:Math.round(owed/lim*1000)/10} : null;
+}
+/* The cheapest room is only meaningful once a rate is attached to it. An
+   unpriced line is not cheap money, it is money of unknown price, and calling
+   it the cheapest because 0 sorts first is exactly the lie this app exists to
+   not tell. */
+/* Room is not one pool at one price, and the first draft of this screen quoted
+   the cheapest rate over the TOTAL room - which meant a $10,000 dream funded
+   $3,000 from a 3.49% line and $7,000 from a 23.9% card was priced entirely at
+   3.49%. That is the exact fault the rate signals were built to refuse: a
+   number that is true of part of the money presented as true of all of it.
+
+   So the money is drawn the way a person would actually draw it, cheapest line
+   first, and the rate that comes back is the blend of what was actually taken.
+   With one line it is that line's rate and nothing changes. With two it is the
+   truth instead of the flattering half of it. */
+function drawRoom(amount){
+  const need=Math.max(0,+amount||0);
+  const ls=roomLines().filter(l=>(+l.apr||0)>0).sort((a,b)=>a.apr-b.apr);
+  let left=need, taken=[], cost=0;
+  for(const l of ls){
+    if(left<=0.005) break;
+    const t=Math.min(left, +l.room||0); if(t<=0.005) continue;
+    taken.push({name:l.name, amt:Math.round(t*100)/100, apr:+l.apr, secured:!!l.secured});
+    cost+=t*(+l.apr); left-=t;
+  }
+  const drawn=Math.round((need-left)*100)/100;
+  return { drawn, short:Math.round(left*100)/100, lines:taken,
+           apr: drawn>0 ? Math.round(cost/drawn*100)/100 : 0,
+           secured: taken.some(x=>x.secured) };
+}
+function cheapestRoom(){ return roomLines().filter(l=>(+l.apr||0)>0).sort((a,b)=>a.apr-b.apr)[0]||null; }
+function unpricedRoom(){ return roomLines().filter(l=>!(+l.apr>0)); }
+
+/* ---------- borrow it, or wait for it ----------
+   The comparison nobody runs, because the two halves live in different moods.
+   Hold the MONTHLY AMOUNT fixed and the choice becomes one clean trade: put
+   that money aside and you get the thing in waitMonths; borrow it and you get
+   the thing today and hand over the same amount for longer. The difference in
+   months is what you bought. The interest is what you paid for it.
+
+   That framing is the honest one for a dream specifically, and it is why this
+   is not the leverage panel. Leverage prices a rate you pay against a return
+   you hope for. A kitchen returns nothing. There is no break-even to clear, no
+   guess to argue with, and no version where the arithmetic comes out ahead -
+   borrowing for a dream costs the interest, always, and buys time instead. */
+function borrowOrWait(amount, aprPct, monthly){
+  const A=Math.max(0,+amount||0), r=Math.max(0,+aprPct||0)/100, P=Math.max(0,+monthly||0);
+  if(!(A>0)||!(P>0)) return null;
+  const waitMonths=Math.ceil(A/P), m=r/12, firstInterest=A*m;
+  /* A payment under the first month's interest never arrives anywhere. Same
+     failure the leverage tool flags, and it has to be caught here too, or the
+     loop below spins to its cap and prints a number that means nothing. */
+  if(P<=firstInterest+0.005) return {A, aprPct:+aprPct||0, monthly:P, waitMonths, never:true, monthlyInterest:firstInterest};
+  let bal=A, interest=0, months=0;
+  while(bal>0.005 && months<1200){ const ic=bal*m; interest+=ic; bal=bal+ic-Math.min(P,bal+ic); months++; }
+  interest=Math.round(interest*100)/100;
+  return {A, aprPct:+aprPct||0, monthly:P, waitMonths, borrowMonths:months, interest, never:false,
+          sooner:waitMonths, longer:months-waitMonths,
+          pctOfPrice: A>0 ? Math.round(interest/A*1000)/10 : 0};
+}
+/* What a dream still needs, and how fast it is being fed. A goal with a date
+   already states its own pace - gap divided by the months left - so anyone who
+   set one gets this panel working without typing another number. */
+function goalGap(g){ return Math.max(0, (+g.target||0)-(+g.saved||0)); }
+function goalPace(g){
+  const gap=goalGap(g); if(!(gap>0)||!g.date) return null;
+  const now=new Date(todayStr()+'T00:00:00'), then=new Date(g.date+'T00:00:00');
+  if(!isFinite(+then)) return null;
+  const months=Math.max(1, Math.round((then-now)/(1000*60*60*24*30.44)));
+  return then>now ? Math.round(gap/months*100)/100 : null;
+}
 const DEBT_STRAT_NOTE={ avalanche:"Avalanche hits your highest interest rate first. Costs you the least money overall.", snowball:"Snowball clears your smallest balance first. Costs a bit more, but the quick wins keep you going." };
 /* The Debt planner promises one thing in its own intro: "the fastest, cheapest
    way out - with THE INTEREST priced in hours of your life." So that is the
@@ -5088,18 +5297,40 @@ function renderDebt(){
         <div class="rc-a"><button class="btn sm danger" data-deldebtyes="${d.id}">Remove it</button><button class="btn sm ghost" data-deldebtno="1">Keep it</button></div>
       </div></div>`;
     }
+    /* The second line only exists once a limit does, so a car loan's row is
+       exactly the row it always was. When it does exist it says the two things
+       a limit is for - what is left to draw and how much of the line is used -
+       and asks the one question that changes what borrowing it means. */
+    const lim=debtLimit(d), roomLine=debtRoomHTML(d);
     return `
     <div class="debtrow">
       <span class="dr-name">${escapeHtml(d.name)}</span>
       <label class="dr-f">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.balance||0}" data-debt="${d.id}" data-k="balance"></label>
       <label class="dr-f"><input type="number" min="0" step="0.1" value="${d.apr||0}" data-debt="${d.id}" data-k="apr">%</label>
       <label class="dr-f">min $<input type="number" inputmode="decimal" min="0" step="0.01" value="${d.minPayment||0}" data-debt="${d.id}" data-k="minPayment"></label>
+      <label class="dr-f">limit $<input type="number" inputmode="decimal" min="0" step="0.01" value="${lim||''}" placeholder="none" data-debt="${d.id}" data-k="limit"></label>
       <button class="btn sm danger ghost" data-deldebt="${d.id}">✕</button>
+      ${roomLine}
     </div>`;
   }).join('') : '<div class="empty" style="margin-top:10px">No debts yet. Add what you owe above, or import from your liabilities.</div>';
   box.querySelectorAll('input[data-debt]').forEach(inp=>inp.addEventListener('input',()=>{
     const d=state.debts.find(x=>x.id===inp.dataset.debt); if(!d) return;
-    d[inp.dataset.k]=parseFloat(inp.value)||0; save(); renderDebtResults();
+    const k=inp.dataset.k, v=parseFloat(inp.value)||0;
+    if(k==='limit'){
+      /* Clearing the box has to remove the property, not set it to zero - the
+         absence is what says "this is not a line", and a stored 0 would leave a
+         car loan claiming to be revolving with no room. */
+      if(v>0) d.limit=v; else delete d.limit;
+      save(); renderDebtResults(); renderRoom(); redrawRoomLine(d);
+      return;
+    }
+    d[k]=v; save(); renderDebtResults();
+    if(k==='balance' && debtLimit(d)>0){ renderRoom(); redrawRoomLine(d); }
+  }));
+  box.querySelectorAll('select[data-debtsec]').forEach(sel=>sel.addEventListener('change',()=>{
+    const d=state.debts.find(x=>x.id===sel.dataset.debtsec); if(!d) return;
+    if(sel.value) d.secured=true; else delete d.secured;
+    save(); renderRoom();
   }));
   box.querySelectorAll('button[data-deldebt]').forEach(b=>b.addEventListener('click',()=>{ debtDelId=b.dataset.deldebt; renderDebt(); }));
   box.querySelectorAll('button[data-deldebtno]').forEach(b=>b.addEventListener('click',()=>{ debtDelId=null; renderDebt(); }));
@@ -5124,6 +5355,7 @@ function renderDebt(){
      likely to be asking whether to take one on. */
   renderInvestCompare();
   renderLeverage();
+  renderRoom();
 }
 CHART_REDRAW.debtChart=()=>renderDebtResults();
 function renderDebtResults(){
@@ -5423,6 +5655,170 @@ function renderLeverage(){
     </div>`;
 }
 
+
+function renderRoom(){
+  const box=document.getElementById('roomResults'); if(!box) return;
+  wireUnitField({id:'roomPay', dflt:'month', kinds:['week','biweek','month'],
+    get:()=>+state.roomPay||0,
+    set:v=>{ state.roomPay=Math.round(v*100)/100; save(); renderRoom(); }});
+  const lines=roomLines(), total=roomTotal(), used=roomUsed();
+  if(!lines.length){
+    box.innerHTML=`<div class="sub" style="margin-top:12px">Nothing here yet, because nothing has told the app it is a line. Put a <b>limit</b> on a card or a line of credit above - or on a credit account under <b>Build</b> - and the room left on it appears here, priced against what you are saving for. A car loan or a mortgage has no limit to give; only a card or a line can lend you back what you have repaid.</div>`;
+    return;
+  }
+  const cheap=cheapestRoom(), unpriced=unpricedRoom();
+  const bits=[];
+  /* The room, and immediately what it is not. Saying "you have $47,000
+     available" and stopping there would be the single most dangerous sentence
+     this app could print. */
+  bits.push(`<div class="room-head"><div class="room-n">${money(total)}</div>
+    <div class="room-k">of room you have not drawn${lines.length>1?`, across ${lines.length} lines`:` on ${escapeHtml(lines[0].name)}`}</div>
+    <div class="sub" style="margin-top:6px">This is not money and it is not in your net worth. It costs you nothing while it sits there, and the moment you touch it, it is a debt with a payment on a date somebody else picked.</div></div>`);
+  /* The "start tracking" half of the ask: utilisation, which is the number the
+     scoring models actually watch and the one nobody sees until it has moved. */
+  if(used && used.limit>0){
+    const band = used.pct>=70?'hot':used.pct>=30?'warm':'cool';
+    bits.push(`<div class="room-util"><span class="ac-util ${band}">${used.pct}% used</span> <b>${money(used.owed)}</b> drawn of <b>${money(used.limit)}</b> total limit.`
+      + (used.pct>=70
+          ? ` Past about 70% the lines themselves start to read as stretched, and that is before you have missed anything.`
+          : used.pct>=30
+            ? ` The commonly watched line is 30%, and you are over it. It is folklore with real money behind it - the scoring models do look at this.`
+            : ` Under the 30% most scoring models watch. Worth knowing which side of it a purchase would put you on before you make it.`)
+      + `</div>`);
+  }
+  /* "Now add my HELOC limit to the accounts side too." The two sides are not
+     duplicates and neither is redundant, which is exactly why the trail is an
+     offer with the reason attached rather than a silent copy:
+
+       the planner  - works out the payoff order, the date, the interest
+       the accounts - is what net worth counts, and the only figure in this app
+                      that comes from outside your own typing
+
+     Net worth reads state.accounts and state.liabilities and has never read
+     state.debts, so a line living in both places is counted exactly once. The
+     rate layer dedupes by name, so it stays one line there too. What the person
+     gains is a reading history and a net worth that knows the line exists. */
+  const inAccts=new Set(creditAccts().map(a=>normName(a.name)));
+  const notTracked=(state.debts||[]).filter(d=>debtLimit(d)>0 && !inAccts.has(normName(d.name)));
+  if(notTracked.length){
+    bits.push(`<div class="room-add"><b>${notTracked.map(d=>escapeHtml(d.name)).join(', ')} ${notTracked.length===1?'is':'are'} in this planner but not in your accounts.</b>
+      <span>Those are two different jobs, not two copies. This planner works out the payoff order and what the interest costs. The accounts side is what your <b>net worth</b> counts, and it is the one number in the app that comes from outside your own typing - so a line kept there gets a reading history and shows up in the scoreboard. Net worth has never counted anything in this planner, so adding ${notTracked.length===1?'it':'them'} there counts ${notTracked.length===1?'it':'them'} once, not twice.</span>
+      <button class="btn sm primary" id="roomToAccts">Track ${notTracked.length===1?'it':'them'} under Build too</button></div>`);
+  }
+  /* The cost of letting a line live on both sides, named rather than hidden.
+     They are not double counted - net worth has never read state.debts - but
+     they can DRIFT, and a payoff date worked out from a stale balance is worse
+     than one worked out from no balance, because it looks finished. Nothing is
+     synced automatically: the accounts figure is a reading off a statement and
+     the planner figure is what someone typed, and quietly overwriting either
+     with the other would destroy the one property that makes the accounts side
+     worth anything. So it says which is which and leaves the choice. */
+  const drift=(state.debts||[]).map(d=>{
+    const a=creditAccts().find(x=>normName(x.name)===normName(d.name));
+    if(!a) return null;
+    const here=Math.max(0,+d.balance||0), there=acctOwed(a);
+    return Math.abs(here-there)>0.5 ? {name:d.name, here, there, when:a.updated} : null;
+  }).filter(Boolean);
+  if(drift.length){
+    bits.push(`<div class="room-drift"><b>${drift.map(x=>escapeHtml(x.name)).join(', ')} ${drift.length===1?'says':'say'} two different things.</b>
+      ${drift.map(x=>`<span>${escapeHtml(x.name)}: <b>${money(x.here)}</b> in this planner, <b>${money(x.there)}</b> under Build${x.when?` as of ${x.when}`:''}.</span>`).join('')}
+      <span>Neither is double counted - net worth only ever reads the Build side, and the payoff dates on this screen only ever read the planner. But the payoff date is worked out from the planner's figure, and a date built on a stale balance is worse than no date, because it looks finished. Nothing is synced for you: the Build figure is what you read off a statement and this one is what you typed, and the app will not quietly overwrite either with the other. Retype whichever one has gone out of date.</span></div>`);
+  }
+  if(unpriced.length){
+    bits.push(`<div class="room-warn"><b>${unpriced.map(l=>escapeHtml(l.name)).join(', ')}</b> ${unpriced.length===1?'has':'have'} room but no rate. Room without a rate is money of unknown price, and this screen will not guess at it - put the APR on ${unpriced.length===1?'it':'them'} above and ${unpriced.length===1?'it':'they'} can be priced against a dream like the rest.</div>`);
+  }
+  /* Now the dreams. Unfinished ones only, nearest-first: the one closest to done
+     is the one most likely to be genuinely decided this month. */
+  const goals=(state.goals||[]).filter(g=>goalGap(g)>0).sort((a,b)=>goalGap(a)-goalGap(b));
+  if(!cheap){
+    box.innerHTML=bits.join('');
+    return;
+  }
+  if(!goals.length){
+    bits.push(`<div class="room-none">You have <b>${money(total)}</b> of room and nothing on record you are saving for. That is not a gap in your finances, it is a gap in what this screen can do - it prices the room <b>against something</b>, and with nothing to weigh it against there is only the room. Add a dream under <b>Build</b> - a target and, ideally, a date - and each one gets the same two numbers: what waiting for it takes, and what not waiting costs.${typeof trailBtn==='function'?trailBtn('goals','Add a dream','solid'):''}</div>`);
+    box.innerHTML=bits.join('');
+    return;
+  }
+  const H=effectiveHourly();
+  let anySecured=false;
+  const rows=goals.slice(0,6).map(g=>{
+    const gap=goalGap(g), pace=(+state.roomPay>0)?+state.roomPay:goalPace(g);
+    const head=`<div class="rg-h"><span class="rg-n">${escapeHtml(g.name)}</span><span class="rg-g">${money(gap)} to go</span></div>`;
+    const dr=drawRoom(gap);
+    if(dr.short>0.005){
+      return `<div class="roomgoal"><div class="rg-c">${head}
+        <div class="sub">The room covers <b>${money(dr.drawn)}</b> of it and stops. Borrowing all of it would still leave <b>${money(dr.short)}</b> to find, so this is not a choice between borrowing and waiting - it is a wait either way, with a debt optionally attached to it.</div></div></div>`;
+    }
+    if(!(pace>0)){
+      return `<div class="roomgoal"><div class="rg-c">${head}
+        <div class="sub">The room covers this. What it cannot price yet is the alternative: put a <b>date</b> on this dream, or a monthly amount in the box above, and this says how long saving for it takes and what borrowing it instead would cost.</div></div></div>`;
+    }
+    if(dr.secured) anySecured=true;
+    const m=borrowOrWait(gap, dr.apr, pace);
+    if(!m) return '';
+    /* Where the money would actually come from. With one line this is noise, so
+       it is not printed; with two it is the difference between the rate quoted
+       and the rate paid, which is the whole reason the blend exists. */
+    const from = dr.lines.length>1
+      ? `<div class="rg-from"><b>${dr.apr}% blended</b>, because it does not all come from one place: ${dr.lines.map(x=>`${money(x.amt)} at ${x.apr}% on ${escapeHtml(x.name)}`).join(', ')}. The cheap line runs out and the rest costs what the rest costs.</div>` : '';
+    if(m.never){
+      return `<div class="roomgoal"><div class="rg-c">${head}${from}
+        <div class="rg-never"><b>${money(pace)} a month does not cover the interest on this.</b> At ${dr.apr}% on ${money(gap)} the interest alone runs about ${money(m.monthlyInterest)} a month, so borrowing it and paying that would leave you owing more every month, forever. Saving it takes <b>${debtDur(m.waitMonths)}</b> and costs nothing. On these numbers there is only one option, and it is the slow one.</div></div></div>`;
+    }
+    return `<div class="roomgoal"><div class="rg-c">${head}${from}
+      <div class="rg-two">
+        <div class="rg-side wait"><div class="sp-k">Wait for it</div>
+          <div class="rg-v">${debtDur(m.waitMonths)}</div>
+          <div class="sub" style="margin:2px 0 0">${money(pace)}/mo set aside &middot; costs nothing</div></div>
+        <div class="rg-side borrow"><div class="sp-k">Borrow it today</div>
+          <div class="rg-v">${money(m.interest)}</div>
+          <div class="sub" style="margin:2px 0 0">${money(pace)}/mo for ${debtDur(m.borrowMonths)} at ${dr.apr}%</div></div>
+      </div>
+      <div class="rg-say"><b>${money(m.interest)} buys you ${debtDur(m.sooner)}.</b> The same ${money(pace)} leaves your pocket every month either way - borrowing just starts the clock now and runs it <b>${debtDur(m.longer)}</b> longer. That works out at <b>${m.pctOfPrice}%</b> on top of the price${H>0?`, or ${fmtHours(m.interest/H)} of your life`:''}. ${voice(VOICE.roomBuy,null)}</div></div></div>`;
+  }).join('');
+  bits.push(`<div class="room-goals"><div class="room-lbl">Priced against ${goals.length>6?'your six nearest dreams':goals.length===1?'your dream':'your dreams'}, cheapest room first</div>${rows}</div>`);
+  /* Secured room is not the same act as unsecured room, and the difference is
+     invisible in the rate - which is the whole reason it has to be said in the
+     same breath as the rate. Same rule the rate signals already hold. */
+  if(anySecured || cheap.secured){
+    const sec=roomLines().filter(l=>l.secured).map(l=>escapeHtml(l.name));
+    bits.push(`<div class="room-sec"><b>${sec.join(' and ')} ${sec.length>1?'are':'is'} backed by something you own.</b> That is why the rate is low - not because anyone is being generous, but because there is something they can take. Every figure above is real; what none of them price is the collateral, because there is no interest rate for losing the thing. ${voice(VOICE.roomSecured,null)}</div>`);
+  }
+  /* The buffer check, same as the leverage tool. A dream funded out of a line
+     with no runway behind it is a dream funded out of next year's emergency. */
+  const rw=(typeof freedomRunway==='function')?freedomRunway():null;
+  if(rw!=null && rw<3){
+    bits.push(`<div class="room-sec"><b>You have ${fmtRunway(rw)} of runway behind this.</b> Room on a line is also the thing that catches a boiler or a car. Spending it on a dream is not wrong, it is a choice about which emergency you would rather meet without it.</div>`);
+  }
+  bits.push(`<div class="room-honest"><b>Why this is not the panel above.</b> Leverage prices a rate you pay against a return you hope for, and sometimes that arithmetic comes out ahead. A dream returns nothing - a kitchen pays no dividend, a holiday never comes back - so there is no break-even here to clear and no version where borrowing wins on the money. It cannot. What it buys is time, and time is worth something; it is just worth something you have to price yourself.
+    <br><br>Every figure here assumes the rate holds, ignores fees, annual charges and any promotional period that ends, and assumes you actually keep paying the same amount every month, which is the assumption that breaks most often. ${voice(VOICE.roomWait,null)} This will not tell you whether to do it. That was never something arithmetic could answer.</div>`);
+  box.innerHTML=bits.join('');
+  const toA=document.getElementById('roomToAccts');
+  if(toA) toA.addEventListener('click',()=>{
+    const have=new Set(creditAccts().map(a=>normName(a.name)));
+    const mine=(state.debts||[]).filter(d=>debtLimit(d)>0 && !have.has(normName(d.name)));
+    if(!mine.length) return;
+    state.accounts=state.accounts||[];
+    mine.forEach(d=>{
+      /* Owed is stored negative on this side and typed positive on the other -
+         the one conversion the whole credit model rests on. Carrying it over by
+         hand is exactly where it would get dropped, so it happens here once. */
+      const rec={id:uid(), name:d.name, kind:'credit', purpose:'',
+                 balance:-Math.max(0,+d.balance||0), updated:todayStr(), limit:debtLimit(d)};
+      if((+d.apr||0)>0) rec.apr=+d.apr;
+      if(d.secured) rec.secured=true;
+      acctNote(rec, rec.balance, 'first');
+      state.accounts.push(rec);
+    });
+    save();
+    if(typeof captureSnapshot==='function') captureSnapshot();
+    if(typeof refreshCatSelects==='function') refreshCatSelects();
+    if(typeof renderAccounts==='function') renderAccounts();
+    if(typeof renderNetWorth==='function') renderNetWorth();
+    renderRoom();
+    if(typeof toast==='function') toast(`${mine.map(d=>d.name).join(', ')} now sits under Build as well. What you owe on ${mine.length===1?'it':'them'} comes off your net worth from here, and the payoff plan on this screen is unchanged.`);
+  });
+}
 function budgetFor(month){ return state.budgets[month] || (state.budgets[month]={}); }
 /* Coerced on the way out, not trusted on the way in: a budget value that arrived
    as a string (a hand-edited backup, an older export) would turn every "+" in the
@@ -9920,10 +10316,22 @@ async function refreshSyncState(){
   if(add) add.addEventListener('click',()=>{
     const name=document.getElementById('debtName').value.trim();
     const bal=parseFloat(document.getElementById('debtBal').value)||0;
+    const lim=parseFloat(document.getElementById('debtLim').value)||0;
     if(!name){ alert('Give the debt a name.'); return; }
-    if(bal<=0){ alert('Enter the balance you owe.'); return; }
-    state.debts.push({ id:uid(), name, balance:bal, apr:parseFloat(document.getElementById('debtApr').value)||0, minPayment:parseFloat(document.getElementById('debtMin').value)||0 });
-    ['debtName','debtBal','debtApr','debtMin'].forEach(id=>document.getElementById(id).value='');
+    /* A line with a limit and nothing on it was refused here, which is precisely
+       the case that made the limit worth having: a HELOC at 3.49% sitting at
+       zero is not an empty row, it is the cheapest money this person has access
+       to and the only debt on the list that could fund something tomorrow. A
+       balance of nothing is a real answer as long as the app has been told what
+       the line is. Without a limit it is still not - a $0 car loan is a typo. */
+    if(bal<=0 && !(lim>0)){ alert('Enter the balance you owe - or put in the credit limit, if this is a card or line you have not drawn on.'); return; }
+    const rec={ id:uid(), name, balance:bal, apr:parseFloat(document.getElementById('debtApr').value)||0, minPayment:parseFloat(document.getElementById('debtMin').value)||0 };
+    /* Stored only when it is a real answer. An absent limit means "not a line",
+       which is a different statement from a limit of zero, and the whole
+       revolving/not revolving split downstream reads it that way. */
+    if(lim>0) rec.limit=lim;
+    state.debts.push(rec);
+    ['debtName','debtBal','debtApr','debtMin','debtLim'].forEach(id=>document.getElementById(id).value='');
     save(); renderDebt();
   });
   const imp=document.getElementById('importLiab');
@@ -10576,7 +10984,12 @@ const ACCT_KINDS=[
      every existing signed sum - net worth, the assets/owed split, an expense
      charged to the card, a payment landing on it - comes out right without a
      single one of them learning that credit exists. */
-  {k:'credit',   ic:'', label:'Credit card / line of credit', liquid:false, owed:true},
+  /* Labelled "Credit card / line of credit" until someone with a HELOC asked to
+     have it on this side "too" - having already found the planner. Both halves
+     of that label were correct and neither said the word on their paperwork.
+     A person scanning a dropdown for their product does not translate; they
+     conclude it is not here. */
+  {k:'credit',   ic:'', label:'Credit card, HELOC or line of credit', liquid:false, owed:true},
   {k:'other',    ic:'', label:'Other',    liquid:false}
 ];
 const ACCT_PURPOSES=[
@@ -10723,9 +11136,12 @@ function pricedLines(){
   (state.liabilities||[]).forEach(l=>add({
     id:l.id, name:l.name, owed:+l.value||0, apr:+l.apr||0,
     room:null, secured:false, revolving:false, where:'liability'}));
+  /* A limit typed into the payoff planner makes that debt revolving here too,
+     which is what lets the rate signals see a HELOC someone added on this screen
+     rather than only one kept as an account. Same fact, two doors. */
   (state.debts||[]).forEach(d=>add({
     id:d.id, name:d.name, owed:+d.balance||0, apr:+d.apr||0,
-    room:null, secured:false, revolving:false, where:'debt'}));
+    room:debtRoom(d), secured:!!d.secured, revolving:debtLimit(d)>0, where:'debt'}));
   return [...seen.values()];
 }
 function ratedLines(){ return pricedLines().filter(l=>l.apr>0); }
@@ -11385,7 +11801,7 @@ function renderAccounts(){
         <label class="ae-f${owedNow?' hide':''}" id="aePurpWrap"><span>Its job</span><select id="aePurp">${ACCT_PURPOSES.map(x=>`<option value="${x.k}"${x.k===(a.purpose||'')?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
         <label class="ae-f${owedNow?'':' hide'}" id="aeLimWrap"><span>Limit</span><span class="sw-dol">$<input type="number" id="aeLim" min="0" step="any" value="${acctLimit(a)||''}" placeholder="none set"></span></label>
         <label class="ae-f${owedNow?'':' hide'}" id="aeAprWrap"><span>Rate</span><span class="sw-dol"><input type="number" id="aeApr" min="0" max="100" step="0.01" value="${a.apr!=null?a.apr:''}" placeholder="none set">%</span></label>
-        <label class="ae-f${owedNow?'':' hide'}" id="aeSecWrap"><span>Backed by</span><select id="aeSec"><option value="">Nothing (a card)</option><option value="1"${a.secured?' selected':''}>Something I own</option></select></label>
+        <label class="ae-f${owedNow?'':' hide'}" id="aeSecWrap"><span>Backed by</span><select id="aeSec"><option value="">Nothing (a card)</option><option value="1"${a.secured?' selected':''}>My home or something I own</option></select></label>
         <p class="ae-note">Changing the kind changes how it counts - a card comes off your net worth, savings adds to it. Nothing you have logged against it moves, and every reading it holds stays.</p>
         <div class="ae-a"><button class="btn sm primary" data-acctsave="${a.id}">Save</button><button class="btn sm ghost" data-acctcancel="1">Cancel</button></div>
       </div></div>`;
@@ -11588,8 +12004,24 @@ function renderAccounts(){
        out, because the net is the number net worth actually uses. */
     const room=cards.reduce((s,a)=>s+(acctHeadroom(a)||0),0);
     const priced=cards.filter(a=>+a.apr>0).slice().sort((x,y)=>(+y.apr)-(+x.apr));
-    bits.push(`<div class="ac-line">On the cards: <b>${usd(owe)}</b>${owe>0?` <span class="ac-sub">· net of the bank, <b>${usd(assetAcctTotal()-owe)}</b></span>`:` <span class="ac-sub">· nothing owed</span>`}</div>`);
-    if(room>0) bits.push(`<div class="ac-line">Room you have not spent: <b>${usd(room)}</b>. That is borrowing power, not money - it costs you nothing while it sits there and it is not part of your net worth.</div>`);
+    /* Every line here said "the cards" until a HELOC arrived on this side. A
+       home equity line is not a card, and the difference is not cosmetic: the
+       room on a card is unsecured and the room on a HELOC has your house behind
+       it. Calling both "the cards" makes the two look like the same kind of
+       money, which is the one impression this app must never leave. */
+    const backed=cards.filter(a=>a.secured), plain=cards.filter(a=>!a.secured);
+    const owedWord = backed.length && plain.length ? 'On the cards and lines'
+                   : backed.length ? (backed.length===1?'On '+escapeHtml(backed[0].name):'On the lines')
+                   : 'On the cards';
+    bits.push(`<div class="ac-line">${owedWord}: <b>${usd(owe)}</b>${owe>0?` <span class="ac-sub">· net of the bank, <b>${usd(assetAcctTotal()-owe)}</b></span>`:` <span class="ac-sub">· nothing owed</span>`}</div>`);
+    if(room>0){
+      const secRoom=backed.reduce((t,a)=>t+(acctHeadroom(a)||0),0);
+      bits.push(`<div class="ac-line">Room you have not spent: <b>${usd(room)}</b>. That is borrowing power, not money - it costs you nothing while it sits there and it is not part of your net worth.`
+        + (secRoom>0
+            ? ` <b>${usd(secRoom)}</b> of it sits behind something you own, which is a different kind of room from a card's: cheaper to use, and secured against a thing you would rather keep.`
+            : '')
+        + `${trailBtn('room','Price it against a dream','ghost')}</div>`);
+    }
     /* Two lines at two rates is the whole reason the question gets asked. The
        app can just say which one is expensive rather than leaving it to be
        felt. */
@@ -13965,6 +14397,10 @@ function panelGates(){
     ['vaultPanel',    (state.vault||[]).length>0,            'Vault a tempting purchase from the scan above and it waits here for 24 hours.'],
     ['gate-debtplan', (state.debts||[]).length>0,            'Add a debt above and the payoff order, date and interest appear here.'],
     ['investPanel',   (state.debts||[]).length>0,            'Add a debt above to compare crushing it against investing the difference.'],
+    /* Gated on ROOM, not on debts. Someone with three loans and no line has
+       nothing for this to price, and someone with an untouched HELOC and no
+       other debt is exactly who it was built for. */
+    ['roomPanel',     roomLines().length>0,                   'Put a credit limit on a card or line above - or on a credit account under Build - and the room left on it gets priced against what you are saving for.'],
   ];
 }
 function applyPanelGates(){
@@ -14314,6 +14750,26 @@ const VOICE={
             blunt:'On these numbers investing the difference comes out ahead - guaranteed cost against an expected return.',
             savage:'Investing wins on these numbers. It is an expected return against a guaranteed cost, and expected is doing real work in that sentence.'}},
   /* --- borrowing to build --- */
+  /* The dream banks. Deliberately not a scolding - people buy time on purpose
+     and sometimes it is the right call. What every line has to do is name the
+     price out loud rather than let it stay abstract, because the interest is
+     the only part of this decision that is not a feeling. */
+  roomBuy:{
+    middle:{clean:'That is the price of having it now instead of then.',
+            blunt:'You are not buying the thing twice. You are buying the wait, and that is what it costs.',
+            savage:'The thing costs what it costs. The impatience is the part with a rate on it.'}},
+  roomCheap:{
+    middle:{clean:'Cheap money is still money you owe on a date somebody else picked.',
+            blunt:'A low rate makes it cheaper, not free, and it still turns a want into a contract.',
+            savage:'Low rates are how sensible people end up owing on a kitchen for nine years.'}},
+  roomSecured:{
+    middle:{clean:'That line is cheap because there is something they can take.',
+            blunt:'You would be putting a thing you own behind a thing you want. Know that is the trade.',
+            savage:'It is not a cheaper loan. It is the same loan with your house standing behind it.'}},
+  roomWait:{
+    middle:{clean:'Waiting costs nothing but the waiting.',
+            blunt:'The other option here is free. It is just slower, and slow is not the same as bad.',
+            savage:'You can have it later for nothing, or now for a fee. Nobody advertises the first one.'}},
   levNeg:{
     middle:{clean:'The spread is negative before anything goes wrong. That is the whole answer.',
             blunt:'You are paying more for the money than you expect it to make. That is not leverage, it is a fee.',
@@ -17000,6 +17456,10 @@ const TRAIL={
   skill:    {tab:'goals',    focus:'skillName',    label:'Invest in a skill'},
   debt:     {tab:'debt',     focus:'debtName',     label:'Open the payoff planner'},
   leverage: {tab:'debt',     focus:'levAmt',       label:'Price it as leverage'},
+  /* Two doors into the same fact: a limit typed on the accounts side is the
+     same room the dream panel prices, and the accounts panel is where somebody
+     is standing when they first see the figure. */
+  room:     {tab:'debt',     focus:'roomPay',      label:'Price it against a dream'},
   hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},
   gutcheck: {tab:'impulse',  modal:true,           label:'Run a gut-check'}
 };
