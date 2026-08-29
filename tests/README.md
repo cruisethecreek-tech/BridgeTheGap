@@ -917,6 +917,31 @@ here too, because the group header is what let the row stop naming its kind. At
 came out one letter per line - so the geometry is asserted at 320 and 390, on
 the body's real width and the name's rendered height, not on a character count.
 
+**The credit limit and the room** brought one property worth the whole section.
+The panel prices unused room against what someone is saving for, and the first
+draft quoted the **cheapest line's rate over the total room** - so a $10,000
+dream funded $3,000 from a 3.49% line and $7,000 from a 23.9% card came out
+priced at 3.49%. Every individual number in it was real. The screen was still a
+lie, of the exact shape the rate signals were written to refuse: *true of part
+of the money, presented as true of all of it.* The suite asserts the blend
+arithmetic by hand - cheapest line first, `(3000x3.49 + 7000x23.9)/10000` - and,
+separately, that the answer is **above 17%**, because the failing version would
+have passed any check that only asked whether a rate was printed.
+
+Two more are guarded because a plausible screen would be a dishonest one: both
+halves of the choice have to render (a borrow-or-wait panel that showed only the
+borrow side would be the worst surface in the app), and a payment under the first
+month's interest must print **no payoff date at all** rather than whatever a
+capped loop happens to reach.
+
+The gating check needed narrowing rather than satisfying. A sweep asserted that
+*every* panel in the Debt view reopens once a debt exists - but this panel gates
+on **room**, not on debts, deliberately: two loans and no line have nothing for
+it to price, and one untouched HELOC with no other debt is exactly who asked for
+it. Feeding the fixture a limit would have made the sweep pass and quietly
+deleted the distinction, so the sweep now skips this panel by name and the
+separate gate is asserted directly, in both directions.
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor

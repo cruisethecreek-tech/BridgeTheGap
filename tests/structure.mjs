@@ -154,7 +154,14 @@ const reopened = await p.evaluate(async () => {
   return [...document.querySelectorAll('#view-debt .panel')].map(el=>({
     h:(el.querySelector('h2')||{}).textContent, waiting:el.classList.contains('panel-waiting') }));
 });
-check('adding a debt reopens the payoff panels', reopened.every(x=>!x.waiting),
+/* "Borrow it or wait for it" is in this view but is NOT a payoff panel, and it
+   deliberately gates on something else: unused ROOM on a line. Someone with
+   three loans and no line has nothing for it to price, and someone with an
+   untouched HELOC and no other debt is exactly who it was built for. Sweeping
+   it into "every panel here reopens when a debt exists" would have quietly
+   demanded the wrong gate and lost the distinction. */
+const PAYOFF_PANELS=x=>!/Borrow it or wait/.test(x.h||'');
+check('adding a debt reopens the payoff panels', reopened.filter(PAYOFF_PANELS).every(x=>!x.waiting),
       reopened.map(x=>x.h+(x.waiting?' [still waiting]':'')).join(' | '));
 
 /* ---- 7. every id in the live dom is unique ----
@@ -7199,6 +7206,116 @@ check('...and saying plainly that removing it pays nothing off',
 check('"Keep it" changes nothing', debtDel.keptIt===true);
 check('confirming removes that one and leaves the other alone',
       debtDel.gone===true && debtDel.otherKept===true);
+
+/* ============================================================
+   90. THE LIMIT, AND WHAT THE ROOM IS FOR
+
+   "I would like to have my credit limit included with the debt calculator so it
+   can start tracking ways to leverage vs dreams and goals." Asked with a HELOC
+   at 3.49% on screen and no balance typed - and the planner would not even take
+   the row, because it demanded a balance above zero. A line at zero is not an
+   empty row; it is the cheapest money this person has and the only debt on the
+   list that could fund something tomorrow.
+
+   The properties worth guarding are the ones where a plausible screen would be
+   a dishonest one: the rate quoted has to be the rate on the money actually
+   drawn (not the cheapest line's, when the cheap line runs out partway), both
+   halves of the choice have to be drawn, and a payment under the interest must
+   never print a payoff date.
+   ============================================================ */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  hourlyWage:30, roomPay:500,
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:4000,updated:'2026-08-01'}],
+  goals:[{id:'g1',name:'Kitchen',target:12000,saved:2000,date:'',goalType:'foundation'}],
+  debts:[{id:'d1',name:'Home equity',balance:0,apr:3.49,minPayment:0,limit:50000,secured:true}],
+  debtBudget:0});
+await p.reload(); await p.waitForTimeout(700);
+
+const room = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('debt'); renderDebt(); await w(520);
+  const o={};
+  o.rowRoom=/left to draw/.test(document.getElementById('debtList').innerText);
+  o.limitField=!!document.querySelector('#debtList input[data-debt="d1"][data-k="limit"]');
+  o.securedAsk=!!document.querySelector('#debtList select[data-debtsec="d1"]');
+  o.panelOpen=!document.getElementById('roomPanel').classList.contains('panel-waiting');
+  o.text=document.getElementById('roomResults').innerText;
+  /* the arithmetic, checkable by hand: $10,000 at $500 a month is 20 months of
+     saving, and borrowing it costs whatever the extra months come to */
+  o.m=borrowOrWait(10000, 3.49, 500);
+  o.never=borrowOrWait(20000, 24, 100);
+  /* and the blend, which is the one that would have been quietly wrong */
+  state.debts=[{id:'d1',name:'Home equity',balance:0,apr:3.49,minPayment:0,limit:3000,secured:true},
+               {id:'d2',name:'Visa',balance:0,apr:23.9,minPayment:0,limit:20000}];
+  save();
+  o.draw=drawRoom(10000);
+  renderRoom(); await w(300);
+  o.blendText=document.getElementById('roomResults').innerText;
+  /* clearing a limit has to REMOVE it - a stored 0 would leave a car loan
+     claiming to be a line with no room */
+  state.debts=[{id:'d1',name:'Car loan',balance:9000,apr:6.4,minPayment:220}];
+  save(); renderDebt(); await w(360);
+  o.plainRow=!document.querySelector('#debtList .dr-room');
+  o.gatedAgain=document.getElementById('roomPanel').classList.contains('panel-waiting');
+  return o;
+});
+check('a debt row takes a credit limit, and only a limited row asks what backs it',
+      room.limitField===true && room.securedAsk===true);
+check('...and says what is left to draw on it', room.rowRoom===true);
+check('a line at zero with a limit opens the room panel, where a balance of zero used to be refused',
+      room.panelOpen===true, room.text.slice(0,120));
+check('the room leads the panel and is immediately called not-money',
+      /\$50,000/.test(room.text) && /not money/.test(room.text), room.text.slice(0,200));
+check('...with utilisation tracked, which is the half nobody sees until it moves',
+      /0% used/.test(room.text) && /total limit/.test(room.text), room.text.slice(0,300));
+check('saving $10,000 at $500 a month is 20 months, by hand',
+      room.m.waitMonths===20, String(room.m.waitMonths));
+check('...borrowing the same thing takes longer, and the interest is those extra months',
+      room.m.borrowMonths>room.m.waitMonths
+        && Math.abs(room.m.interest-(room.m.borrowMonths*500-10000))<500, JSON.stringify(room.m));
+check('both halves of the choice are drawn, never only the tempting one',
+      /Wait for it/.test(room.text) && /Borrow it today/.test(room.text), room.text.slice(0,300));
+check('...and the interest is named as what it bought, in hours of a life',
+      /buys you/.test(room.text) && /hrs/.test(room.text), room.text.slice(0,600));
+check('a payment under the interest prints no payoff at all',
+      room.never.never===true && room.never.borrowMonths===undefined, JSON.stringify(room.never));
+/* The fault this catches: $10,000 funded $3,000 from a 3.49% line and $7,000
+   from a 23.9% card, quoted at 3.49%. True of part of the money, presented as
+   true of all of it - the exact thing the rate signals exist to refuse. */
+check('money is drawn cheapest line first, and the rate quoted is the blend of what was taken',
+      room.draw.lines.length===2 && room.draw.lines[0].apr===3.49
+        && Math.abs(room.draw.apr-((3000*3.49+7000*23.9)/10000))<0.02, JSON.stringify(room.draw));
+check('...so a dream bigger than the cheap line is never priced at the cheap line',
+      room.draw.apr>17, String(room.draw.apr));
+check('...and the screen names both lines rather than only the flattering one',
+      /blended/.test(room.blendText) && /Home equity/.test(room.blendText)
+        && /Visa/.test(room.blendText), room.blendText.slice(0,400));
+check('a debt with no limit keeps exactly the row it always had',
+      room.plainRow===true);
+check('...and the panel goes back to waiting, because there is nothing to price',
+      room.gatedAgain===true);
+/* The distinction the panel-gate sweep above is now allowed to skip, asserted
+   directly instead: this panel does not care how many debts exist, only whether
+   any of them can lend anything back. */
+const roomGate = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const g=()=>document.getElementById('roomPanel').classList.contains('panel-waiting');
+  activateTab('debt');
+  state.debts=[{id:'x1',name:'Car loan',balance:9000,apr:6.4,minPayment:220},
+               {id:'x2',name:'Student loan',balance:14000,apr:5.2,minPayment:180}];
+  save(); renderDebt(); applyPanelGates(); await w(340);
+  const withDebtsNoRoom=g();
+  state.debts=[{id:'x3',name:'Home equity',balance:0,apr:3.49,minPayment:0,limit:40000}];
+  save(); renderDebt(); applyPanelGates(); await w(340);
+  const oneUntouchedLine=g();
+  const note=(document.querySelector('#roomPanel .pw-note')||{}).textContent||'';
+  return {withDebtsNoRoom, oneUntouchedLine, note};
+});
+check('two loans and no line leave the room panel waiting, however much is owed',
+      roomGate.withDebtsNoRoom===true);
+check('...while one untouched line and no other debt opens it',
+      roomGate.oneUntouchedLine===false);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
