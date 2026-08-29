@@ -1022,6 +1022,26 @@ that already had one, and the suite failed to parse at all rather than failing a
 check. That is the third identifier collision this file has produced. In a
 single-scope test file of this size, name new bindings for their section.
 
+## The per-view tints, and why they live in the palette suite
+
+Ten rooms in two themes is twenty colour triples, and every way it goes wrong is
+silent: a view with no tint falls back to the accent and looks like another room;
+a tint naming no view colours nothing; a light-theme entry left out puts the dark
+hue on warm paper. None of those throw.
+
+But the reason this is a **palette** test rather than a structure one is the wash
+itself. It sits under every word on the page, so the suite **composites** it -
+panel plus tint at the real alpha, taken from the same constants the stylesheet
+uses - and re-checks every ink against that composite rather than against the
+bare token. 290 pairs. A colour scheme that costs somebody their text is the one
+failure here that actually hurts, and it is invisible to any check that reads
+`--panel` alone.
+
+All five failure modes were verified by breaking them, which is the only way to
+know a suite can fail: two rooms given the same hue, a light entry deleted, the
+wash alpha pushed to 60%, and a tint set to the panel's own colour each produced
+the specific message they should. A check that has never failed is a guess.
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor

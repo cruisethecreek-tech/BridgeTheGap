@@ -85,7 +85,12 @@
   ::selection{background:var(--accent);color:var(--on-accent)}
 
   /* ---------- Hero ---------- */
-  .hero{background:var(--hero-grad);border-bottom:1px solid var(--line);padding:26px 20px 30px}
+  /* The header carries the room's colour too, or the wash below it reads as a
+     band that starts halfway down the screen rather than as the page being a
+     different room. Same alpha, layered over the existing gradient so the
+     header keeps its own shape. */
+  .hero{background:linear-gradient(rgba(var(--view,var(--accent-rgb)),.07),rgba(var(--view,var(--accent-rgb)),.07)),var(--hero-grad);
+    border-bottom:1px solid var(--line);padding:26px 20px 30px;transition:background .3s ease}
   .theme-toggle{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;font-size:16px;width:38px;height:38px;line-height:1;cursor:pointer;flex:none}
 .ft-help{background:none;border:1px solid var(--line);color:var(--muted);border-radius:50%;width:20px;height:20px;font-size:12px;font-weight:900;line-height:1;cursor:pointer;flex:none;padding:0;margin-left:5px}
 .ft-help:hover{color:var(--accent);border-color:var(--accent)}
@@ -519,9 +524,9 @@
   .tab{flex:1;background:none;border:none;color:var(--muted);font-weight:700;font-size:11px;padding:9px 2px 7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;min-width:0}
   .tab .t-ic{font-size:19px;line-height:1;filter:grayscale(.55) opacity(.75);transition:filter .15s ease}
   .tab .t-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-  .tab.on{color:var(--accent)}
+  .tab.on{color:rgb(var(--view,var(--accent-rgb)))}
   .tab.on .t-ic{filter:none}
-  .tab.on::after{content:'';position:absolute;left:50%;transform:translateX(-50%);top:0;width:26px;height:3px;background:var(--accent);border-radius:0 0 3px 3px}
+  .tab.on::after{content:'';position:absolute;left:50%;transform:translateX(-50%);top:0;width:26px;height:3px;background:rgb(var(--view,var(--accent-rgb)));border-radius:0 0 3px 3px}
   .tab-more-btn .t-ic{letter-spacing:1px}
   /* Secondary tabs expand UPWARD out of More, above the bar */
   /* The grab handle. Asked for as "I intuitively want to slide up from the
@@ -934,11 +939,64 @@
   .uimode button{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px}
   .uimode button.on{background:var(--accent);color:var(--on-accent)}
 
+/* ============================================================
+   A COLOUR PER PLACE
+
+   "The website is completely monotone. Would it be better to have each section
+   present a particular colour so people can easily see where they're landing?
+   We can still fit in with the theme that we have set up but each page has its
+   own distinct colour. Almost transparent."
+
+   "Almost transparent" is the whole brief and it is the right instinct. A
+   budgeting app that changes colour boldly between tabs stops looking like one
+   app; what is wanted is the feeling of walking into a different room in the
+   same house. So every tint below is a WASH - low alpha over the existing
+   surfaces - and the only place the hue appears at full strength is the rule
+   above a heading and the bar over the active tab, neither of which carries
+   text.
+
+   The hues are chosen to stay inside the warm-paper family the theme already
+   holds: clay, moss, rust, teal, slate, plum, amber, indigo. Nothing arrives
+   that could not have been printed on this paper.
+
+   Two triples per view, because the palette already inverts by theme and a hue
+   that reads on dark navy is invisible on warm paper. The wash alphas are low
+   enough that no text contrast pair moves - which the palette suite checks, and
+   which is why the wash sits UNDER the panel rather than being mixed into the
+   token. */
+  body[data-view]{--view:var(--accent-rgb)}
+  body[data-view="home"]    {--view:207,167,106}
+  body[data-view="budget"]  {--view:214,138,96}
+  body[data-view="tx"]      {--view:126,176,138}
+  body[data-view="debt"]    {--view:203,112,102}
+  body[data-view="goals"]   {--view:116,170,168}
+  body[data-view="reflect"] {--view:138,158,198}
+  body[data-view="learn"]   {--view:172,142,196}
+  body[data-view="impulse"] {--view:214,176,98}
+  body[data-view="diary"]   {--view:158,150,196}
+  body[data-view="settings"]{--view:150,158,168}
+  :root[data-theme="light"] body[data-view="home"]    {--view:131,90,36}
+  :root[data-theme="light"] body[data-view="budget"]  {--view:168,88,44}
+  :root[data-theme="light"] body[data-view="tx"]      {--view:49,103,67}
+  :root[data-theme="light"] body[data-view="debt"]    {--view:158,62,44}
+  :root[data-theme="light"] body[data-view="goals"]   {--view:34,102,98}
+  :root[data-theme="light"] body[data-view="reflect"] {--view:62,86,138}
+  :root[data-theme="light"] body[data-view="learn"]   {--view:108,64,132}
+  :root[data-theme="light"] body[data-view="impulse"] {--view:146,104,26}
+  :root[data-theme="light"] body[data-view="diary"]   {--view:84,74,140}
+  :root[data-theme="light"] body[data-view="settings"]{--view:92,84,74}
+
   .view{display:none;padding:24px 0}
-  .view.on{display:block;animation:fade .25s ease}
+  /* The wash. Strongest where the eye lands on arrival and gone by the second
+     panel, which is what makes it an ANSWER to "where am I" rather than a
+     colour scheme you have to live inside all the way down the page. */
+  .view.on{display:block;animation:fade .25s ease;transition:background .3s ease;
+    background:linear-gradient(180deg,rgba(var(--view,var(--accent-rgb)),.085) 0,rgba(var(--view,var(--accent-rgb)),.03) 220px,rgba(var(--view,var(--accent-rgb)),0) 460px);
+    background-repeat:no-repeat}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+  .panel{background:linear-gradient(rgba(var(--view,var(--accent-rgb)),.028),rgba(var(--view,var(--accent-rgb)),.028)),var(--panel);
+    border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
   .panel + .panel{margin-top:18px}
   /* ---------- saying less at a glance ----------
      "Everything just feels like a big run-on sentence. The site lacks a
@@ -962,7 +1020,7 @@
   .panel h2{font-size:18px;font-weight:800;margin-bottom:4px;letter-spacing:-.01em}
   .panel>h2::before,
   details.acc>summary .acc-hd::before{content:'';display:block;width:26px;height:3px;border-radius:3px;
-    background:var(--accent);margin:0 0 9px;opacity:.9}
+    background:rgb(var(--view,var(--accent-rgb)));margin:0 0 9px;opacity:.9}
   /* An open accordion is a place you are IN, a closed one is a door. The rule
      says which without needing a second glance at the arrow. */
   details.acc:not([open])>summary .acc-hd::before{opacity:.35;width:16px}
@@ -6127,6 +6185,11 @@ function applyAreaVisibility(){
 }
 const MORE_VIEWS=['impulse','tx','debt','learn','diary','settings'];   // Shield moved into More; its ACTION is the hub's hero row
 let currentTab='home';
+/* Boot lands on Home without going through activateTab, so the attribute the
+   whole colour layer hangs off would not exist until the first tap. Every rule
+   carries a fallback, but the fallback is the gold - which would mean Home
+   opened in one colour and returned to it in another. Stamped at parse. */
+if(typeof document!=='undefined' && document.body) document.body.dataset.view='home';
 /* ---------- the pass that decides what is worth clamping ----------
    Measured, not guessed: a paragraph is only given a "more" if it actually
    overflows two lines at the width it is being read at. A control that reveals
@@ -6202,6 +6265,10 @@ function activateTab(name,fromHistory){
   currentTab=name;
   if(!fromHistory && typeof history!=='undefined' && history.pushState){ history.pushState({t:'tab',name},''); }
   document.body.classList.toggle('on-home', name==='home');
+  /* The whole colour layer hangs off this one attribute. Set here rather than
+     on the view element itself so the bottom bar - which lives outside every
+     view - can read the same variable and agree with the page above it. */
+  document.body.dataset.view=name;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.view===name));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   const v=document.getElementById('view-'+name); if(v) v.classList.add('on');

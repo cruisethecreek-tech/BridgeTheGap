@@ -39,6 +39,74 @@ for (const [name, t] of [['Ledger', light], ['Midnight', dark]]) {
   const v = ratio(t['on-accent'], t['accent']); pairs++;
   if (v < 4.5) fails.push(`${name}: --on-accent on --accent is ${v.toFixed(2)}, below AA`);
 }
+/* ============================================================
+   4. THE PER-VIEW TINTS
+
+   "The website is completely monotone... each page has its own distinct colour.
+   Almost transparent." Ten rooms, two themes, twenty triples - and every one of
+   the ways this goes wrong is silent:
+
+   - a view named here that no view element uses tints nothing, and the tab it
+     was meant for keeps falling back to the gold
+   - a view element with no entry falls back to the gold too, so two rooms look
+     identical and the whole point is gone
+   - a light-theme entry left out means the DARK hue lands on warm paper, where
+     a colour picked to glow on navy either vanishes or shouts
+   - and the wash, however low, sits under every word on the page: if it moves a
+     contrast pair below AA then a colour scheme has cost somebody the text
+
+   The last one is the reason this lives in the palette suite rather than the
+   structure suite. It is composited here rather than trusted: panel + tint at
+   the real alpha, then every ink re-checked against that composite.
+   ============================================================ */
+const triples = (sel) => Object.fromEntries([...s.matchAll(
+  new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + 'body\\[data-view="([a-z]+)"\\]\\s*\\{--view:\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\}', 'g'))]
+  .map(m => [m[1], [+m[2], +m[3], +m[4]]]));
+const tintDark = triples('\n  '), tintLight = triples('  :root[data-theme="light"] ');
+const viewIds = [...new Set([...s.matchAll(/id="view-([a-z]+)"/g)].map(m => m[1]))];
+const hex = ([r,g,b]) => '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+/* what a wash at alpha A over surface S actually is, which is what the eye and
+   the contrast formula both see */
+const over = (rgbT, surfaceHex, alpha) => {
+  const s0 = [0,2,4].map(i => parseInt(surfaceHex.slice(1+i,3+i),16));
+  return hex(s0.map((c,i) => Math.round(c*(1-alpha) + rgbT[i]*alpha)));
+};
+const PANEL_A = 0.028, HERO_A = 0.07;   // must match the two rules in app.html
+
+for (const [name, tint, theme] of [['Ledger', tintLight, light], ['Midnight', tintDark, dark]]) {
+  const keys = Object.keys(tint);
+  if (!keys.length) { fails.push(`${name}: no per-view tints found at all`); continue; }
+  for (const v of viewIds) if (!tint[v]) fails.push(`${name}: view "${v}" exists but has no tint - it falls back to the accent and looks like another room`);
+  for (const k of keys) if (!viewIds.includes(k)) fails.push(`${name}: tint named "${k}" matches no view element - it colours nothing`);
+  /* no two rooms may share a colour, or the cue stops being a cue */
+  const seen = new Map();
+  for (const [k, t] of Object.entries(tint)) {
+    const key = t.join(',');
+    if (seen.has(key)) fails.push(`${name}: "${k}" and "${seen.get(key)}" are the same colour (${key}) - two rooms that look alike`);
+    else seen.set(key, k);
+  }
+  /* the rule above a heading and the active tab label paint the hue at FULL
+     strength on a panel, so it has to be visible there - not AA, it carries no
+     text, but a bar you cannot see is not a signal */
+  for (const [k, t] of Object.entries(tint)) {
+    const v = ratio(hex(t), theme.panel);
+    if (v < 1.6) fails.push(`${name}: the "${k}" rule is ${v.toFixed(2)} against the panel - invisible`);
+  }
+  /* and the wash must cost nobody their text */
+  for (const [k, t] of Object.entries(tint)) {
+    const washedPanel = over(t, theme.panel, PANEL_A);
+    const washedHero  = over(t, theme.bg, HERO_A);
+    for (const fg of INKS) {
+      if (!theme[fg]) continue;
+      const a = ratio(theme[fg], washedPanel); pairs++;
+      if (a < 4.5) fails.push(`${name}/${k}: --${fg} on the washed panel is ${a.toFixed(2)}, below AA`);
+      const b = ratio(theme[fg], washedHero); pairs++;
+      if (b < 4.5) fails.push(`${name}/${k}: --${fg} on the washed header is ${b.toFixed(2)}, below AA`);
+    }
+  }
+}
+console.log(`${viewIds.length} views tinted in both themes, washes composited and re-checked`);
+
 console.log(`${pairs} colour pairs checked across both themes`);
 console.log(`tightest: ${tightest.n} = ${tightest.v.toFixed(2)}`);
 if (fails.length) { console.log('\nFAIL'); fails.forEach(f => console.log('  ' + f)); process.exit(1); }

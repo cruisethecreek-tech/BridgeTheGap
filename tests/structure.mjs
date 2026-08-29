@@ -7850,6 +7850,71 @@ for(const W of [320,390]){
 }
 await p.setViewportSize({width:390,height:1000}); await p.waitForTimeout(300);
 
+/* ============================================================
+   94. A COLOUR PER PLACE
+
+   "The website is completely monotone. Would it be better to have each section
+   present a particular colour so people can easily see where they're landing?
+   We can still fit in with the theme that we have set up but each page has its
+   own distinct colour. Almost transparent."
+
+   The colours themselves are the palette suite's job - it composites the wash
+   over the panel and re-checks every ink against it, and it fails on two rooms
+   sharing a hue, a view with no tint, and a rule too dark to see. What belongs
+   HERE is the wiring: one attribute on the body drives the whole layer, so the
+   thing to prove is that it changes on every tab, that the bottom bar agrees
+   with the page above it, and that it is already correct on the first paint
+   rather than only after the first tap.
+   ============================================================ */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:3000,updated:'2026-08-01'}],
+  debts:[{id:'d1',name:'Visa',balance:2400,apr:23.9,minPayment:75}]});
+await p.reload(); await p.waitForTimeout(800);
+
+const tint = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  /* before a single tap: boot lands on Home without going through activateTab */
+  o.atBoot=document.body.dataset.view;
+  o.bootTint=getComputedStyle(document.body).getPropertyValue('--view').trim();
+  const seen={};
+  for(const v of ['home','budget','tx','debt','goals','reflect','learn','impulse','diary','settings']){
+    activateTab(v); await w(200);
+    const cs=getComputedStyle(document.body);
+    seen[v]={attr:document.body.dataset.view, tint:cs.getPropertyValue('--view').trim()};
+  }
+  o.seen=seen;
+  /* the bottom bar reads the same variable, so it cannot disagree with the page */
+  activateTab('debt'); await w(260);
+  const tab=document.querySelector('#tabs .tab[data-view="debt"]');
+  o.tabColour=tab?getComputedStyle(tab).color:'';
+  o.pageRule=(()=>{ const h=document.querySelector('.view.on .panel>h2');
+    return h?getComputedStyle(h,'::before').backgroundColor:''; })();
+  /* and the wash is on the view itself, so it travels with the page */
+  o.wash=getComputedStyle(document.querySelector('.view.on')).backgroundImage;
+  return o;
+});
+check('the colour layer is already right on the first paint, before any tab is tapped',
+      tint.atBoot==='home' && /\d/.test(tint.bootTint), JSON.stringify([tint.atBoot,tint.bootTint]));
+check('every tab stamps its own name on the body, which is all the layer needs',
+      Object.entries(tint.seen).every(([k,v])=>v.attr===k),
+      JSON.stringify(Object.fromEntries(Object.entries(tint.seen).map(([k,v])=>[k,v.attr]))));
+check('...and every one of the ten resolves to a colour',
+      Object.values(tint.seen).every(v=>/^\d+,\s*\d+,\s*\d+$/.test(v.tint)),
+      JSON.stringify(Object.fromEntries(Object.entries(tint.seen).map(([k,v])=>[k,v.tint]))));
+check('...no two of them the same, or the cue is not a cue',
+      new Set(Object.values(tint.seen).map(v=>v.tint)).size===10,
+      JSON.stringify([...new Set(Object.values(tint.seen).map(v=>v.tint))]));
+/* The bottom bar lives outside every view, which is exactly why it reads the
+   body attribute rather than anything inside the page - it has to agree with a
+   page it is not part of. */
+check('the active tab and the heading rule land on the same colour',
+      tint.tabColour===tint.pageRule && /^rgb/.test(tint.tabColour),
+      JSON.stringify([tint.tabColour,tint.pageRule]));
+check('...and the wash is a gradient on the page itself, so it travels with it',
+      /gradient/.test(tint.wash), tint.wash.slice(0,60));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
