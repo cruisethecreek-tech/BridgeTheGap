@@ -2451,8 +2451,18 @@ check('...but the rule is anchored to the real payday, not the 1st',
 check('pay that already landed posts on the day it landed',
       paid.paid.inc===3200 && paid.paid.dates[0].slice(0,7)===paid.today.slice(0,7)
         && paid.paid.dates[0]<=paid.today, paid.paid.dates.join(','));
+/* This one used to assert "two paydays, $2,953.84". It broke by itself the
+   morning today became a payday - a third date landed and the count was wrong
+   without a line of the app changing. The claim in the name is cadence, so the
+   check is cadence now: fourteen days apart, nothing posted into the future,
+   and the money equal to the per-payday amount times however many landed. */
+const bwD=paid.biweekly.dates;
+const bwGap=(a,b)=>Math.round((Date.parse(a+'T00:00:00Z')-Date.parse(b+'T00:00:00Z'))/86400000);
 check('biweekly walks forward at the right cadence, per payday',
-      paid.biweekly.inc===2953.84 && paid.biweekly.dates.length===2, JSON.stringify(paid.biweekly.dates));
+      bwD.length>=2 && bwD.every((d,i)=>i===0||bwGap(d,bwD[i-1])===14)
+        && bwD.every(d=>d<=paid.today)
+        && Math.abs(paid.biweekly.inc-bwD.length*1476.92)<0.005,
+      JSON.stringify(bwD)+' = '+paid.biweekly.inc);
 check('...carrying the per-payday amount, not the monthly one',
       /^1476\.92\|biweekly\|/.test(paid.biweekly.rec[0]), paid.biweekly.rec[0]);
 check('skipping invents nothing and starts next month',
@@ -6936,6 +6946,259 @@ check('...while still separating it from net worth and from the bank',
       /What it is not/.test(workings.txt) && /net worth/.test(workings.txt)
         && /bank balance/.test(workings.txt));
 check('tapping the ? again puts it away', workings.closes===true);
+
+/* ---- 88. the thing you just logged is the thing you are checking ----
+   "Why did Fees go 5th in the list if it was the most recent entry?"
+
+   Because the sort only ever compared dates:
+
+     list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
+
+   Array.sort is stable, so five entries sharing a date kept their position in
+   state.transactions - the order they were TYPED, oldest first. Log five things
+   today and the one you just added sits at the bottom of the five, which is the
+   opposite of what a ledger is for: you open it to check the last thing you did.
+
+   A transaction carries a date and no time, so there is no clock to sort by. Its
+   position in the array is the record of when it was entered, and reading that
+   backwards is the honest answer. The fixture is the user's own screen. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c1',name:'Getting Around'},{id:'c2',name:'Fees'},{id:'c3',name:'Power & Wi-Fi'}],
+  budgets:{'2026-08':{c1:300,c2:100,c3:200}},
+  transactions:[
+    {id:'t1',type:'expense',amount:329,date:'2026-08-28',catId:'c1',note:'Sugarcreek'},
+    {id:'t2',type:'expense',amount:59.25,date:'2026-08-28',catId:'c1',note:'OH BUREAU MOTOR VEHIC'},
+    {id:'t3',type:'expense',amount:12.89,date:'2026-08-28',catId:'c1',note:'Kindle Unltd'},
+    {id:'t4',type:'expense',amount:52.77,date:'2026-08-28',catId:'c1'},
+    {id:'t5',type:'expense',amount:21.49,date:'2026-08-28',catId:'c2'},
+    {id:'t6',type:'expense',amount:60.70,date:'2026-08-27',catId:'c3'},
+    {id:'t7',type:'expense',amount:44.16,date:'2026-08-26',catId:'c1',note:'Franks'}]});
+await p.reload(); await p.waitForTimeout(700);
+const ledOrder = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(500);
+  const first=[...document.querySelectorAll('#txList .tx')].map(x=>x.dataset.txsheet);
+  /* and one logged right now has to land at the top of its day */
+  document.getElementById('txAmt').value='9.99';
+  document.getElementById('txDate').value='2026-08-28';
+  document.getElementById('txCat').value='c2';
+  document.getElementById('txNote').value='Brand new';
+  document.getElementById('addTx').click(); await w(500);
+  const top=document.querySelector('#txList .tx');
+  return {first, topAfter:top?top.innerText.replace(/\n/g,' '):''};
+});
+check('the newest entry of the day leads the ledger, rather than trailing it',
+      ledOrder.first[0]==='t5', JSON.stringify(ledOrder.first));
+check('...with the rest of that day behind it, newest to oldest',
+      JSON.stringify(ledOrder.first.slice(0,5))==='["t5","t4","t3","t2","t1"]',
+      JSON.stringify(ledOrder.first));
+check('...and older days still below it, which the date sort always got right',
+      ledOrder.first[5]==='t6' && ledOrder.first[6]==='t7',
+      JSON.stringify(ledOrder.first));
+check('an entry logged this second appears at the top of its day',
+      /Brand new/.test(ledOrder.topAfter), ledOrder.topAfter);
+
+/* The photo path was named for one kind of paper and takes several. */
+const photoCopy = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(320);
+  if(!document.querySelector('#quickLog .ql-panel')) document.getElementById('quickLogBtn').click();
+  await w(360);
+  return { label:(document.getElementById('qlSnap')||{}).textContent||'' };
+});
+check('the camera is not named for one kind of paper',
+      /photo/i.test(photoCopy.label) && !/notepad/i.test(photoCopy.label), photoCopy.label);
+
+/* ---- 89. an account you can rename, reorder, and a debt you cannot lose ----
+   Three asks off one screen: "editor for these accounts, changing the names or
+   the type of account? reorder ability?" and "debt payoff tracker is too
+   destructive."
+
+   Everything about an account except its balance was write-once. A typo in a
+   name, or picking Other when you meant Savings, could only be fixed by
+   deleting the account - which takes its whole reading history and orphans
+   every entry filed against it. A rename should not cost you a year of
+   readings.
+
+   Reorder is the same engine the plan and the recurring list already use, as a
+   third scope rather than a third copy. The property that matters: only the
+   DISPLAY is ordered. Every total sums the array as it stands, so dragging one
+   account above another cannot move a single figure.
+
+   And the debt delete is the fourth surface to get the too-destructive report,
+   after the recurring list, the category sheet and the entry sheet. Same
+   answer. The question names the balance and the rate, and says the thing a
+   person actually needs to hear: removing it from the planner does not pay
+   anything off. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08',
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  accounts:[{id:'a1',name:'Joint Checking',kind:'checking',balance:2000,updated:'2026-08-01',
+             hist:[{d:'2026-07-01',b:1500,how:'first'},{d:'2026-08-01',b:2000,how:'bank'}]},
+            {id:'a2',name:'Stash',kind:'invest',balance:18000,updated:'2026-08-01'},
+            {id:'a3',name:'Coinbase',kind:'other',balance:14782.70,updated:'2026-08-01'},
+            {id:'a4',name:'Everyday Checking',kind:'checking',balance:640,updated:'2026-08-01'}],
+  transactions:[{id:'t1',type:'expense',amount:50,date:'2026-08-05',catId:'c1',acctId:'a3'}],
+  debts:[{id:'d1',name:'Visa',balance:2400,apr:23.9,minPayment:75},
+         {id:'d2',name:'Car loan',balance:9000,apr:6.4,minPayment:220}],
+  debtBudget:500});
+await p.reload(); await p.waitForTimeout(700);
+
+const acctEd = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); renderAccounts(); await w(420);
+  const o={};
+  o.hasPencil=!!document.querySelector('[data-acctedit="a3"]');
+  document.querySelector('[data-acctedit="a3"]').click(); await w(320);
+  o.prefilled=(document.getElementById('aeName')||{}).value;
+  o.cardFieldsHidden=document.getElementById('aeLimWrap').classList.contains('hide');
+  document.getElementById('aeKind').value='credit';
+  document.getElementById('aeKind').dispatchEvent(new Event('change',{bubbles:true})); await w(220);
+  o.cardFieldsShown=!document.getElementById('aeLimWrap').classList.contains('hide');
+  o.earmarkDropped=document.getElementById('aePurpWrap').classList.contains('hide');
+  document.getElementById('aeName').value='Rewards Card';
+  document.getElementById('aeLim').value='13700';
+  document.getElementById('aeApr').value='13';
+  const nwBefore=netWorth();
+  document.querySelector('[data-acctsave="a3"]').click(); await w(420);
+  const a=state.accounts.find(x=>x.id==='a3');
+  o.name=a.name; o.kind=a.kind; o.limit=a.limit; o.apr=a.apr; o.balance=a.balance;
+  o.nwMoved=Math.round((netWorth()-nwBefore)*100)/100;
+  o.txKept=state.transactions.filter(t=>t.acctId==='a3').length;
+  /* a rename must never cost the readings */
+  document.querySelector('[data-acctedit="a1"]').click(); await w(300);
+  document.getElementById('aeName').value='Main Checking';
+  document.querySelector('[data-acctsave="a1"]').click(); await w(380);
+  const chk=state.accounts.find(x=>x.id==='a1');
+  o.renamed=chk.name; o.readingsKept=(chk.hist||[]).length;
+  return o;
+});
+check('every account row offers an editor, prefilled with what it is called now',
+      acctEd.hasPencil===true && acctEd.prefilled==='Coinbase', acctEd.prefilled);
+check('...showing the card fields only once a card is picked, without saving first',
+      acctEd.cardFieldsHidden===true && acctEd.cardFieldsShown===true);
+check('...and dropping the earmark question, which owed money cannot answer',
+      acctEd.earmarkDropped===true);
+check('the new name, kind, limit and rate all stick',
+      acctEd.name==='Rewards Card' && acctEd.kind==='credit'
+        && acctEd.limit===13700 && acctEd.apr===13, JSON.stringify(acctEd));
+check('turning an account into a card turns the stored balance over with it',
+      acctEd.balance===-14782.7, String(acctEd.balance));
+check('...so net worth moves by twice the balance, which is what changing sides means',
+      Math.abs(acctEd.nwMoved-(-29565.4))<0.02, String(acctEd.nwMoved));
+check('...while everything logged against it stays put', acctEd.txKept===1);
+check('a rename never costs the reading history',
+      acctEd.renamed==='Main Checking' && acctEd.readingsKept===2, JSON.stringify(acctEd));
+
+const acctRo = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  o.hasBtn=!!document.getElementById('acctReorderBtn');
+  o.before=[...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+  const bankBefore=bankTotal(), nwBefore=netWorth();
+  document.getElementById('acctReorderBtn').click(); await w(360);
+  o.grips=document.querySelectorAll('#acctList [data-grip][data-scope="accts"]').length;
+  /* a4 shares the spending group with a1, because a move is now confined to
+     its own group - an account alone under its header has nowhere to go */
+  moveAcct('a4',-1); renderAccounts(); await w(320);
+  o.after=[...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+  o.totalsUnmoved=bankTotal()===bankBefore && netWorth()===nwBefore;
+  document.getElementById('acctReorderBtn').click(); await w(280);
+  o.gripsGone=document.querySelectorAll('#acctList [data-grip]').length===0;
+  o.kept=[...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+  return o;
+});
+check('the accounts list reorders by the same gesture the other two lists use',
+      acctRo.hasBtn===true && acctRo.grips===4, JSON.stringify({b:acctRo.hasBtn,g:acctRo.grips}));
+/* Grouped by kind, chosen over a flat order - and the two turned out not to be
+   exclusive. The headers partition the list; a drag stays inside its own group
+   the same way a subcategory stays inside its parent. */
+const acctGrp = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); renderAccounts(); await w(420);
+  const groups=[...document.querySelectorAll('#acctList .acg')].map(el=>({
+    name:el.querySelector('.acg-n').textContent,
+    total:el.querySelector('.acg-v').textContent,
+    sub:el.querySelector('.acg-s').textContent,
+    lvls:[...new Set([...el.querySelectorAll('[data-row]')].map(r=>r.dataset.lvl))] }));
+  return {groups, rows:document.querySelectorAll('#acctList [data-row]').length,
+          cardSibs:dragSiblings('owe','accts').length,
+          investSibs:dragSiblings('grow','accts').length};
+});
+check('the accounts list is grouped, one header per kind that holds something',
+      acctGrp.groups.length>=2, JSON.stringify(acctGrp.groups.map(x=>x.name)));
+check('...spendable first, owed last',
+      acctGrp.groups[0].name==='Spending money'
+        && acctGrp.groups[acctGrp.groups.length-1].name!=='Spending money',
+      JSON.stringify(acctGrp.groups.map(x=>x.name)));
+check('...with no account lost to a group', acctGrp.rows===4, String(acctGrp.rows));
+check('...each header carrying its own total and its count',
+      acctGrp.groups.every(g=>/^\$/.test(g.total) && /account/.test(g.sub)),
+      JSON.stringify(acctGrp.groups.map(g=>g.name+'='+g.total)));
+check('...and every row tagged with its group, so a drag knows its siblings',
+      acctGrp.groups.every(g=>g.lvls.length===1), JSON.stringify(acctGrp.groups.map(g=>g.lvls)));
+check('...moving one actually moves it',
+      JSON.stringify(acctRo.after)!==JSON.stringify(acctRo.before),
+      JSON.stringify(acctRo.before)+' -> '+JSON.stringify(acctRo.after));
+check('...and not one total on the page moves, because only the display is ordered',
+      acctRo.totalsUnmoved===true);
+check('...and leaving the mode puts the grips away and keeps the order',
+      acctRo.gripsGone===true && JSON.stringify(acctRo.kept)===JSON.stringify(acctRo.after));
+await p.reload(); await p.waitForTimeout(800);
+const acctRoKept = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); await w(420);
+  return [...document.querySelectorAll('#acctList [data-row]')].map(x=>x.dataset.row);
+});
+check('...and the order is still there after a reload',
+      JSON.stringify(acctRoKept)===JSON.stringify(acctRo.after), JSON.stringify(acctRoKept));
+/* Adding the pencil cost the name its width: at 320px the body measured 17px
+   and "Joint Checking" came out one letter per line. The row wraps now, and the
+   kind left the row entirely because the group header above says it. */
+for(const W of [320,390]){
+  await p.setViewportSize({width:W,height:1000});
+  await p.waitForTimeout(340);
+  const m = await p.evaluate(async () => {
+    const w=ms=>new Promise(r=>setTimeout(r,ms));
+    activateTab('goals'); renderAccounts(); await w(320);
+    return [...document.querySelectorAll('.acct-row')].map(r=>({
+      body:Math.round(r.querySelector('.ac-b').getBoundingClientRect().width),
+      nameH:Math.round(r.querySelector('.ac-n').getBoundingClientRect().height) }));
+  });
+  check('at '+W+'px an account name has real width to sit in',
+        m.length>0 && m.every(x=>x.body>=140), JSON.stringify(m));
+  check('...and no name is shredded down the page at '+W+'px',
+        m.every(x=>x.nameH<=64), JSON.stringify(m));
+}
+await p.setViewportSize({width:390,height:1000}); await p.waitForTimeout(300);
+
+const debtDel = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('debt'); await w(520);
+  const o={}, n0=state.debts.length;
+  o.startsAsButton=!!document.querySelector('[data-deldebt="d1"]') && !document.querySelector('.debtrow.confirming');
+  document.querySelector('[data-deldebt="d1"]').click(); await w(320);
+  o.armedNotFired=state.debts.length===n0 && !!document.querySelector('.debtrow.confirming');
+  o.question=document.querySelector('.debtrow.confirming').innerText;
+  document.querySelector('[data-deldebtno]').click(); await w(260);
+  o.keptIt=state.debts.length===n0 && !document.querySelector('.debtrow.confirming');
+  document.querySelector('[data-deldebt="d1"]').click(); await w(260);
+  document.querySelector('[data-deldebtyes="d1"]').click(); await w(380);
+  o.gone=!state.debts.some(x=>x.id==='d1');
+  o.otherKept=state.debts.some(x=>x.id==='d2');
+  return o;
+});
+check('the debt delete starts as a button, not a question',
+      debtDel.startsAsButton===true);
+check('...and one tap arms it rather than removing anything',
+      debtDel.armedNotFired===true);
+check('...with the question naming the balance and the rate that leave the plan',
+      /\$2,400/.test(debtDel.question) && /23\.9%/.test(debtDel.question),
+      debtDel.question.replace(/\n/g,' | '));
+check('...and saying plainly that removing it pays nothing off',
+      /does not pay anything off/.test(debtDel.question));
+check('"Keep it" changes nothing', debtDel.keptIt===true);
+check('confirming removes that one and leaves the other alone',
+      debtDel.gone===true && debtDel.otherKept===true);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

@@ -467,6 +467,38 @@ So both, built as two separate things. A `credit` account kind takes **what is o
 
 The one way this can still double count is a card tracked as an account **and** typed in again under Liabilities. `creditDupes()` matches on the name and says so, rather than leaving somebody to wonder why net worth reads low.
 
+**An account you can rename, reorder, and a debt you cannot lose.** Three asks off one screen: *"editor for these accounts, changing the names or the type of account? reorder ability?"* and *"debt payoff tracker is too destructive."*
+
+**The editor.** Everything about an account except its balance was write-once. A typo in a name, or picking **Other** when you meant **Savings**, could only be fixed by deleting the account - which takes its whole reading history with it and orphans every entry filed against it. A rename should not cost you a year of readings. The pencil opens name, kind, and either the earmark (for an account) or limit / rate / secured (for a card), swapping live as you change the kind.
+
+The one real subtlety: **flipping between an account and a card flips what the stored balance means**, because owed is held negative. So the figure is turned over with it rather than silently changing sign on the net worth line - which is why turning a $14,782 holding into a card moves net worth by *twice* that, and why the suite asserts exactly that number.
+
+**Grouped by kind**, chosen over a flat manual order - and the two turned out not to be exclusive. `ACCT_GROUPS` partitions the list into **Spending money / Savings / Investments / Everything else / Cards & credit lines**, spendable first and owed last, each header carrying **its own total** and its account count. A heading that only labels is a heading you scroll past. The cards group is priced as what is **owed** (a positive figure), since it is the one group whose number points the other way.
+
+Reorder survives inside that: every row carries `data-lvl="<group>"`, so a drag is confined to its own group exactly the way a subcategory can only be reordered among its brothers. A card cannot be dragged into Savings, and nobody meant to. `acctReseat()` permutes only the sort slots that group already held, so reordering Savings cannot shuffle the Investments below it.
+
+**Reorder** is the same engine the plan and the recurring list already use, added as a third `DRAG_SCOPES` entry rather than a third copy of the pointer handling. The property worth keeping: **only the display is ordered.** `acctOrder()` sorts a copy for rendering; every total still sums `state.accounts` as it stands, so dragging Coinbase above Stash cannot move a single figure. Asserted by comparing `bankTotal()` and `netWorth()` either side of a move.
+
+Typing a new balance also stopped throwing while it was in there: the change handler redrew the whole list from inside the event, tearing out the input the browser was still focused on, and Chromium threw mid-`innerHTML`. The number was always saved - the exception landed after `save()` - but a console full of errors is a console nobody reads. It lets go of the box first and draws on the next tick.
+
+One regression the grouping paid for, found by measuring rather than looking: adding the pencil cost the account name its width, and at 320px the row body measured **17px** - "Joint Checking" came out one letter per line. Shaving pixels off the balance input would only have moved the cliff, so the row **wraps** on a narrow phone: the name takes a full line, the amount and its two buttons sit beneath it. And the kind left the row entirely, because the group header above now states it and printing it twice was the reason there was no room. Body width and name height are asserted at 320 and 390.
+
+**The debt delete is the fourth surface to get the too-destructive report** - after the recurring list, the category sheet and the entry sheet. Same answer, and the question names the balance and the rate that leave the plan, plus the thing a person actually needs to hear: *removing it from the planner does not pay anything off.*
+
+**The thing you just logged is the thing you are checking.** Asked as *"why did Fees go 5th in the list if it was the most recent entry?"*
+
+Because the sort only ever compared dates:
+
+```js
+list.sort((a,b)=> (a.date<b.date?1:a.date>b.date?-1:0));
+```
+
+`Array.sort` is **stable**, so five entries sharing a date kept their position in `state.transactions` - the order they were *typed*, oldest first. Log five things today and the one you just added sits at the bottom of the five, which is the opposite of what a ledger is for: you open it to check the last thing you did.
+
+A transaction carries a date and no time, so there is no clock to sort by. Its **position in the array** is the record of when it was entered, and reading that backwards is the honest answer. Sorted by date descending, then by insertion order descending.
+
+**And the camera takes more than a notepad.** It was labelled *"Snap my notepad"* and read like it accepted one thing; it accepts anything with numbers on it. The note now says which inputs read well and which do not - a statement on screen or a printed receipt read well, a **seven-segment pump or till display** and handwriting read badly - because a person who knows that aims the camera better and is not surprised by a poor pass. And on anything it struggles with, the amounts still land with the names left blank, which is the behaviour the previous fix put in.
+
 **A figure that will not show its working.** Sent with *"Logged net (all time)"* circled: *"How did this figure come about? There's no explanation or flip card. It's not teaching you anything about money, it's just stating facts without any data."*
 
 **Half of that was already built and unreachable.** The explanation existed - and was wired to the trend chart's legend, four screens away, rather than to the tile where the question actually gets asked. Every other figure in that strip that needed one carried a `?`; this one, the least self-evident of them, had none. That is its own lesson: a written explanation nobody can reach from the thing it explains is the same as no explanation.
