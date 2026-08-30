@@ -986,6 +986,15 @@
   :root[data-theme="light"] body[data-view="diary"]   {--view:84,74,140}
   :root[data-theme="light"] body[data-view="settings"]{--view:92,84,74}
 
+  .plainsw{display:flex;gap:10px;align-items:flex-start;margin:10px 0 4px;padding:11px 12px;
+    border-radius:12px;background:var(--panel-2);border:1px solid var(--line);
+    font-size:12px;color:var(--muted);line-height:1.55;cursor:pointer}
+  .plainsw input{width:19px;height:19px;flex:none;margin-top:1px;accent-color:var(--accent)}
+  .plainsw b{color:var(--text)}
+  .fl-h{display:none;font-style:normal;font-size:11px;color:var(--muted);font-weight:600;line-height:1.45;margin-top:3px;max-width:230px}
+  .fl-h.on{display:block}
+  .lev-101 p{margin-top:8px}
+  .lev-101 p:first-of-type{margin-top:4px}
   .arrival{background:var(--panel);border:1px solid var(--line);border-left:3px solid rgb(var(--view,var(--accent-rgb)));
     border-radius:16px;padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
   .ar-k{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:rgb(var(--view,var(--accent-rgb)))}
@@ -2132,6 +2141,8 @@
   @media(max-width:430px){ .time-row .tr-b{flex:1 1 100%;justify-content:flex-end} }
   .debtrow .dr-good{color:var(--good)}
   .debtrow .dr-eq{flex:1 1 100%}
+  .debtrow .dr-sum{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px}
+  .debtrow .dr-sum:empty{display:none}
   .debtrow .dr-kind select{background:var(--ink);border:1px solid var(--line);color:var(--text);
     border-radius:8px;padding:6px 7px;font-size:12px;max-width:132px}
   .debtrow .dr-sec{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:700}
@@ -3218,19 +3229,38 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div class="panel" id="levPanel">
         <h2>Borrowing to build</h2>
         <p class="sub">A rate you pay against a return you hope for. The interest is a contract; the return is a guess - and this only ever does the arithmetic on both. It will not tell you whether to do it, because it cannot know, and anything that claims otherwise is selling you something.</p>
+        <!-- "How would my 13 year old understand this?" Fair, and the honest
+             answer was: they would not. Neither would most adults. Every label
+             on this panel was a term of art - return, held for, rate you pay
+             per year - and the headline announced a percentage, which is the
+             one shape of number nobody feels.
+
+             Not solved by dumbing the arithmetic down. Solved by saying the
+             same arithmetic in words a person already owns, and by putting the
+             answer in DOLLARS, because "$975 a year" lands where "3.9%" does
+             not. Both versions are the same maths; only one of them can be
+             argued with by somebody who has not done this before. -->
+        <details class="fieldhelp lev-101">
+          <summary>What does borrowing to build even mean?</summary>
+          <p><b>The whole idea in four sentences.</b> Say you borrow $100 and they charge you 5% a year. In a year you owe them $105 - the extra $5 is the rent on money that was never yours.</p>
+          <p>Now: you spent that $100 on something. If it is worth $110 a year later, you sell it, pay back the $105, and you are <b>up $5</b>. If it is still worth $100, you pay back $105 and you are <b>down $5</b> - even though the thing did not lose a penny.</p>
+          <p><b>That is the catch, and it is the only one.</b> Borrowing does not make a good idea better or a bad idea worse. It makes whatever happens <i>bigger</i>, in both directions. The $5 fee gets paid either way, which is why it has to make more than the fee just to leave you where you started.</p>
+          <p>Everything below is that, with your numbers instead of $100.</p>
+        </details>
+        <label class="plainsw"><input type="checkbox" id="levPlain"><span><b>Say it in plain words.</b> Swaps the labels below for ordinary English and gives every answer in dollars instead of percentages. The arithmetic does not change.</span></label>
         <div class="row">
-          <label class="fld">Amount borrowed<span class="fl-in">$<input type="number" id="levAmt" min="0" step="100" inputmode="decimal" placeholder="e.g. 40000" style="width:130px"></span></label>
-          <label class="fld">Rate you pay %/yr<input type="number" id="levApr" min="0" max="100" step="0.1" placeholder="6.5" style="width:110px"></label>
-          <label class="fld">You expect it to return %/yr<input type="number" id="levRet" min="-100" max="200" step="0.5" placeholder="9" style="width:130px"></label>
-          <label class="fld">Held for<select id="levYears"><option value="3">3 yrs</option><option value="5">5 yrs</option><option value="10">10 yrs</option><option value="20">20 yrs</option></select></label>
+          <label class="fld"><span class="fl-t" data-plain="levAmt">Amount borrowed</span><span class="fl-in">$<input type="number" id="levAmt" min="0" step="100" inputmode="decimal" placeholder="e.g. 40000" style="width:130px"></span><i class="fl-h" data-plainh="levAmt"></i></label>
+          <label class="fld"><span class="fl-t" data-plain="levApr">Rate you pay %/yr</span><input type="number" id="levApr" min="0" max="100" step="0.1" placeholder="6.5" style="width:110px"><i class="fl-h" data-plainh="levApr"></i></label>
+          <label class="fld"><span class="fl-t" data-plain="levRet">You expect it to return %/yr</span><input type="number" id="levRet" min="-100" max="200" step="0.5" placeholder="9" style="width:130px"><i class="fl-h" data-plainh="levRet"></i></label>
+          <label class="fld"><span class="fl-t" data-plain="levYears">Held for</span><select id="levYears"><option value="3">3 yrs</option><option value="5">5 yrs</option><option value="10">10 yrs</option><option value="20">20 yrs</option></select><i class="fl-h" data-plainh="levYears"></i></label>
         </div>
         <div class="row" style="margin-top:10px">
-          <div class="ufld"><span class="fl-k">Payment you must make<span id="levPayUnit"></span></span>
+          <div class="ufld"><span class="fl-k"><span class="fl-t" data-plain="levPay">Payment you must make</span><span id="levPayUnit"></span></span>
             <span class="fl-in">$<input type="number" id="levPay" min="0" step="10" inputmode="decimal" placeholder="optional" style="width:120px"></span>
-            <div class="unit-work" id="levPayW"></div></div>
-          <div class="ufld"><span class="fl-k">Cash it actually hands you<span id="levCashUnit"></span></span>
+            <div class="unit-work" id="levPayW"></div><i class="fl-h" data-plainh="levPay"></i></div>
+          <div class="ufld"><span class="fl-k"><span class="fl-t" data-plain="levCash">Cash it actually hands you</span><span id="levCashUnit"></span></span>
             <span class="fl-in">$<input type="number" id="levCash" min="0" step="10" inputmode="decimal" placeholder="optional" style="width:120px"></span>
-            <div class="unit-work" id="levCashW"></div></div>
+            <div class="unit-work" id="levCashW"></div><i class="fl-h" data-plainh="levCash"></i></div>
         </div>
         <div id="levResults"></div>
       </div>
@@ -5469,11 +5499,8 @@ function debtRoomHTML(d){
      value existed, which meant a limit could be set exactly once and never
      corrected. A number you typed has to stay typeable. */
   let out='<div class="dr-room">';
-  if(wantsRoom || lim>0){
-    const room=debtRoom(d), util=debtUtil(d), over=lim>0&&owed>lim;
+  if(wantsRoom || lim>0)
     out += `<label class="dr-f">limit $<input type="number" inputmode="decimal" min="0" step="0.01" value="${lim||''}" placeholder="none" data-debt="${d.id}" data-k="limit"></label>`;
-    if(lim>0) out += `<span class="dr-r">${over?`<b class="dr-over">${usd(owed-lim)} over the limit</b>`:`<b>${usd(room)}</b> left to draw`}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}</span>`;
-  }
   /* The number that answers "is this an asset or a liability". Asked inline
      rather than in an editor, because it is the one figure here that moves on
      its own - a car is worth less every month and nobody goes looking for a
@@ -5481,25 +5508,47 @@ function debtRoomHTML(d){
   if(wantsWorth || worth>0){
     const lbl=(k&&k.worthLabel)||'Worth';
     out += `<label class="dr-f">${escapeHtml(lbl)} $<input type="number" inputmode="decimal" min="0" step="0.01" value="${worth||''}" placeholder="today's value" data-debt="${d.id}" data-k="worth"></label>`;
-    if(worth>0) out += `<span class="dr-r dr-eq">${debtUnderwater(d)
-          ? `<b class="dr-over">${usd(-debtEquity(d))} underwater</b>`
-          : `<b class="dr-good">${usd(debtEquity(d))} equity</b>`}${debtLTV(d)!=null?` <span class="ac-util ${debtLTV(d)>=100?'hot':debtLTV(d)>=80?'warm':'cool'}">${debtLTV(d)}% of its value</span>`:''}</span>`;
   }
+  out += `<div class="dr-sum" data-drsum="${d.id}">${debtSumHTML(d)}</div>`;
   out += `<label class="dr-sec"><span>Backed by</span><select data-debtsec="${d.id}"><option value="">Nothing</option><option value="1"${d.secured?' selected':''}>My home or something I own</option></select></label>`;
   return out+'</div>';
 }
+/* Everything DERIVED, and nothing you can type in. Kept apart from the fields
+   above because it is redrawn on every keystroke and the fields must not be -
+   replacing an input while a thumb is in it is the exact fault the account
+   balance box already had once. */
+function debtSumHTML(d){
+  const lim=debtLimit(d), worth=debtWorth(d), owed=Math.max(0,+d.balance||0);
+  let out='';
+  if(lim>0){
+    const room=debtRoom(d), util=debtUtil(d), over=owed>lim;
+    out += `<span class="dr-r">${over?`<b class="dr-over">${usd(owed-lim)} over the limit</b>`:`<b>${usd(room)}</b> left to draw`}${util!=null?` <span class="ac-util ${util>=30?(util>=70?'hot':'warm'):'cool'}">${util}% used</span>`:''}</span>`;
+  }
+  if(worth>0){
+    const ltv=debtLTV(d);
+    out += `<span class="dr-r dr-eq">${debtUnderwater(d)
+        ? `<b class="dr-over">${usd(-debtEquity(d))} underwater</b>`
+        : `<b class="dr-good">${usd(debtEquity(d))} equity</b>`}${ltv!=null?` <span class="ac-util ${ltv>=100?'hot':ltv>=80?'warm':'cool'}">${ltv}% of its value</span>`:''}</span>`;
+  }
+  return out;
+}
+/* "This number didn't change when this number changed." A mortgage balance went
+   80,000 -> 40,000 and the equity beside it kept reporting the old figure,
+   because this looked the row up by its LIMIT field - which a mortgage does not
+   have. Written when limits were the only extra field there was, and never
+   revisited when values arrived.
+
+   Two fixes in one: found by ANY field belonging to that debt, and only the
+   derived summary is rewritten. The inputs are left alone, so a redraw on every
+   keystroke cannot take the box out from under a thumb. */
 function redrawRoomLine(d){
-  const inp=document.querySelector('#debtList .debtrow input[data-debt="'+d.id+'"][data-k="limit"]');
+  const inp=document.querySelector('#debtList .debtrow input[data-debt="'+d.id+'"]');
   const row=inp&&inp.closest('.debtrow'); if(!row) return;
-  const have=row.querySelector('.dr-room'), want=debtRoomHTML(d);
-  if(!want){ if(have) have.remove(); return; }
-  if(have){ have.outerHTML=want; } else { row.insertAdjacentHTML('beforeend', want); }
-  const sel=row.querySelector('select[data-debtsec]');
-  if(sel) sel.addEventListener('change',()=>{
-    const t=state.debts.find(x=>x.id===sel.dataset.debtsec); if(!t) return;
-    if(sel.value) t.secured=true; else delete t.secured;
-    save(); renderRoom();
-  });
+  const sum=row.querySelector('[data-drsum="'+d.id+'"]');
+  if(sum){ sum.innerHTML=debtSumHTML(d); return; }
+  /* No line at all yet - a kind was just given one. That is a different row,
+     so the full render owns it. */
+  renderDebt();
 }
 /* ============================================================
    WHAT KIND OF DEBT THIS IS
@@ -5692,7 +5741,10 @@ function renderDebt(){
       return;
     }
     d[k]=v; save(); renderDebtResults();
-    if(k==='balance' && (debtLimit(d)>0 || debtWorth(d)>0)){ renderRoom(); redrawRoomLine(d); }
+    /* Any of these can move what the summary says: the balance against a limit
+       or a value, and the rate through the signals below. Narrowing this to
+       'balance' is what let the equity go stale in the first place. */
+    if(debtLimit(d)>0 || debtWorth(d)>0){ renderRoom(); redrawRoomLine(d); }
   }));
   box.querySelectorAll('select[data-debtkind]').forEach(sel=>sel.addEventListener('change',()=>{
     const d=state.debts.find(x=>x.id===sel.dataset.debtkind); if(!d) return;
@@ -5944,8 +5996,52 @@ function leverageMath(amount, aprPct, retPct, years, payMonthly, cashMonthly){
   };
 }
 function levVerdict(m){ return m.spread<=0 ? 'neg' : m.spread<2 ? 'thin' : 'wide'; }
+/* The same fields, in words somebody already owns. Not a second calculator and
+   not a simpler one - the arithmetic underneath is identical. What changes is
+   whether a person who has never borrowed to buy anything can tell what is
+   being asked of them. */
+const LEV_PLAIN={
+  levAmt:  {t:'Money you would borrow',            h:'It is not yours. All of it has to go back.'},
+  levApr:  {t:'What they charge you for it',       h:'Their fee, every year, for as long as you owe it.'},
+  levRet:  {t:'What you think it will make you',   h:'A guess. Nobody can promise this one, including whoever sold it to you.'},
+  levYears:{t:'How long you would keep it',        h:''},
+  levPay:  {t:'What you have to pay them',         h:'This leaves your pocket whether the thing works out or not.'},
+  levCash: {t:'What the thing pays you back',      h:'Money it actually hands you. Often nothing at first.'}
+};
+const LEV_SHARP={
+  levAmt:'Amount borrowed', levApr:'Rate you pay %/yr', levRet:'You expect it to return %/yr',
+  levYears:'Held for', levPay:'Payment you must make', levCash:'Cash it actually hands you'
+};
+function levPlainOn(){ return !!state.plainWords; }
+function applyLevPlain(){
+  const on=levPlainOn();
+  document.querySelectorAll('[data-plain]').forEach(el=>{
+    const k=el.dataset.plain;
+    el.textContent = on ? (LEV_PLAIN[k]?LEV_PLAIN[k].t:el.textContent) : (LEV_SHARP[k]||el.textContent);
+  });
+  document.querySelectorAll('[data-plainh]').forEach(el=>{
+    const k=el.dataset.plainh, h=on&&LEV_PLAIN[k]?LEV_PLAIN[k].h:'';
+    el.textContent=h; el.classList.toggle('on', !!h);
+  });
+  const cb=document.getElementById('levPlain');
+  if(cb && document.activeElement!==cb) cb.checked=on;
+  /* Somebody who has just asked for plain words is telling you they do not have
+     the concept yet, so the four-sentence version opens for them rather than
+     waiting behind another tap. It stays a closed door for everyone else,
+     because a panel that dumps its 101 on a person who knows this already is
+     the density problem this app has been fixing all week. */
+  const story=document.querySelector('#levPanel .lev-101');
+  if(story && on && !story.dataset.opened){ story.open=true; story.dataset.opened='1'; }
+}
 function renderLeverage(){
   const box=document.getElementById('levResults'); if(!box) return;
+  applyLevPlain();
+  const plainCb=document.getElementById('levPlain');
+  if(plainCb && !plainCb.dataset.wired){
+    plainCb.dataset.wired='1';
+    plainCb.addEventListener('change',()=>{ state.plainWords=plainCb.checked; save(); renderLeverage(); });
+  }
+  const PLAIN=levPlainOn();
   const L=state.lev||(state.lev={});
   /* Same rule as everywhere else in the workbook: people enter money in the
      rhythm they actually feel it. A HELOC payment is monthly, rent from the
@@ -5971,33 +6067,52 @@ function renderLeverage(){
   const m=leverageMath(A, apr, hasRet?+L.ret:0, +L.years||5, +L.pay||0, +L.cash||0);
   const v=hasRet?levVerdict(m):'thin', H=effectiveHourly();
   const yrs=m.years;
-  const head = `It has to return <b>${(Math.round(m.breakEven*100)/100)}%</b> a year, every year, just to break even.`;
-  const spreadLine = !hasRet
+  /* A percentage is the one shape of number nobody feels. The dollars are the
+     same fact and they land immediately, so they are shown to everyone - and in
+     plain mode they are the whole headline, with the percentage demoted to the
+     line underneath where it belongs. */
+  const beRate=Math.round(m.breakEven*100)/100;
+  const beCash=Math.round(m.A*m.breakEven/100*100)/100;
+  const head = PLAIN
+    ? `It has to make you about <b>${money(beCash)}</b> a year, every year, or you end up behind.`
+    : `It has to return <b>${beRate}%</b> a year, every year, just to break even.${beCash>0?` That is about <b>${money(beCash)}</b> a year on ${money(m.A)}.`:''}`;
+  const spreadLine = PLAIN
+    ? (!hasRet
+        ? `That is the bar. It is the only number here that is not a guess, because the fee is written into a contract. Put what you honestly think the thing will make you in the box above and this prices both sides - what you keep if you are right, and what it costs you if you are wrong.`
+        : m.spread<=0
+          ? `You think it will make <b>${m.retPct}%</b>, which is about <b>${money(m.A*m.retPct/100)}</b> a year. That is less than the ${money(beCash)} it has to make, so on your own numbers you lose money even if nothing goes wrong. ${voice(VOICE.levNeg,null)}`
+          : m.spread<2
+            ? `You think it will make about <b>${money(m.A*m.retPct/100)}</b> a year against the <b>${money(beCash)}</b> it has to make. That is close - one bad year and it is the wrong side of the line, and the fee still gets paid. ${voice(VOICE.levThin,null)}`
+            : `You think it will make about <b>${money(m.A*m.retPct/100)}</b> a year against the <b>${money(beCash)}</b> it has to make. On your guess, the numbers work. ${voice(VOICE.levWide,null)}`)
+    : !hasRet
     ? `That is the bar, and it is the only number here that is not a guess. Put what you actually expect the thing to return in the field above and this prices the gap both ways - what you make if you are right, and what it costs you if you are not.`
     : m.spread<=0
       ? `You expect <b>${m.retPct}%</b>. That is ${Math.abs(Math.round(m.spread*100)/100)} points <b>under</b> the line, so on your own numbers this loses money before anything goes wrong. ${voice(VOICE.levNeg,null)}`
       : m.spread<2
         ? `You expect <b>${m.retPct}%</b> - clear by <b>${Math.round(m.spread*100)/100}</b> points. That is a thin margin to carry a contract on. ${voice(VOICE.levThin,null)}`
         : `You expect <b>${m.retPct}%</b> - clear by <b>${Math.round(m.spread*100)/100}</b> points. The arithmetic works, on the guess. ${voice(VOICE.levWide,null)}`;
-  const metrics=[
-    ['Break-even return', (Math.round(m.breakEven*100)/100)+'%/yr'],
+  const metrics = PLAIN ? [
+    ['What it must make, a year', money(beCash)],
+    ['Total fee over '+yrs+' yrs', money(m.interest)]
+  ] : [
+    ['Break-even return', beRate+'%/yr'],
     ['Interest over '+yrs+' yrs', money(m.interest)]
   ];
-  if(hasRet) metrics.push(['If it returns '+m.retPct+'%', (m.net>=0?'+':'')+money(m.net)]);
-  metrics.push(['If it returns nothing', '-'+money(m.flatLoss)]);
-  if(H>0) metrics.push(['Interest, in your hours', fmtHours(m.interest/H)]);
+  if(hasRet) metrics.push([PLAIN?'If your guess is right':'If it returns '+m.retPct+'%', (m.net>=0?'+':'')+money(m.net)]);
+  metrics.push([PLAIN?'If it makes nothing':'If it returns nothing', '-'+money(m.flatLoss)]);
+  if(H>0) metrics.push([PLAIN?'The fee, in hours you worked':'Interest, in your hours', fmtHours(m.interest/H)]);
   if(m.payoffMonths) metrics.push(['Paid off in', debtDur(m.payoffMonths)]);
   /* The two cards are not optional and they are not ordered by which is nicer.
      Whatever the spread says, both get drawn, because the only reason to borrow
      is that it multiplies the outcome and the only reason not to is the same
      sentence. */
   const two=`<div class="lev-two">
-      ${hasRet?`<div class="lev-card ${m.net>=0?'up':'down'}"><div class="sp-k">If it returns ${m.retPct}%</div>
+      ${hasRet?`<div class="lev-card ${m.net>=0?'up':'down'}"><div class="sp-k">${PLAIN?'If your guess is right':'If it returns '+m.retPct+'%'}</div>
         <div class="lev-n">${(m.net>=0?'+':'')+money(m.net)}</div>
-        <div class="sub" style="margin:2px 0 0">${money(m.posValue)} position, less ${money(m.interest)} of interest</div></div>`:''}
-      <div class="lev-card down"><div class="sp-k">If it returns nothing</div>
+        <div class="sub" style="margin:2px 0 0">${PLAIN?`worth ${money(m.posValue)} by then, minus ${money(m.interest)} of fees`:`${money(m.posValue)} position, less ${money(m.interest)} of interest`}</div></div>`:''}
+      <div class="lev-card down"><div class="sp-k">${PLAIN?'If it makes nothing':'If it returns nothing'}</div>
         <div class="lev-n">-${money(m.flatLoss)}</div>
-        <div class="sub" style="margin:2px 0 0">the interest is owed either way; a 20% drop makes it -${money(m.dropLoss)}</div></div>
+        <div class="sub" style="margin:2px 0 0">${PLAIN?`you still owe the fee; if the thing also drops a fifth, it is -${money(m.dropLoss)}`:`the interest is owed either way; a 20% drop makes it -${money(m.dropLoss)}`}</div></div>
     </div>`;
   let gap='';
   if(m.pay>0){
@@ -6027,7 +6142,9 @@ function renderLeverage(){
       <div class="metrics">${metrics.map(x=>`<div class="metric"><div class="k">${escapeHtml(x[0])}</div><div class="v">${escapeHtml(String(x[1]))}</div></div>`).join('')}</div>
       ${m.underwater||gap?gap:''}
       ${buffer}
-      <div class="lev-honest">${m.amortised?`<b>Because you are paying it down,</b> the interest total is lower than a carried balance would cost, and the break-even drops with it. What that does not change is where the money came from: the payments left your income on schedule, and they left it whether or not the thing you bought was up that month. <br><br>`:''}<b>The asymmetry, said plainly:</b> the interest is a contract and the return is a guess. The lender's number is enforceable and yours is not, which is why the break-even is the headline and the expected return is only ever the second line. This ignores taxes, fees and the possibility that a line gets called or repriced, it assumes the rate holds for the whole ${yrs} years, and it will not tell you whether to do it. That was never something arithmetic could answer.</div>
+      <div class="lev-honest">${PLAIN?`<b>The one sentence that matters:</b> the fee is a promise you made. The profit is a hope you have. Only one of those can be taken to court, and it is not the hope. That is why the number this page leads with is what the thing MUST make, never what you hope it makes.<br><br>This ignores tax, fees, and the chance they change the rate on you, and it assumes you keep it for the whole ${yrs} years. It will not tell you whether to do it - no sum can - and anyone who says otherwise is selling you something.<br><br>` : ''}${m.amortised?(PLAIN
+        ? `<b>Because you are paying it back as you go,</b> the fee adds up to less than it would if you just sat on the whole loan - so the bar it has to clear is lower too. What that does not change is where the money came from: those payments left your pay packet on time, every time, whether or not the thing was doing well that month.<br><br>`
+        : `<b>Because you are paying it down,</b> the interest total is lower than a carried balance would cost, and the break-even drops with it. What that does not change is where the money came from: the payments left your income on schedule, and they left it whether or not the thing you bought was up that month. <br><br>`):''}${PLAIN?'':'<b>The asymmetry, said plainly:</b>'}${PLAIN?'':' the interest is a contract and the return is a guess. The lender\'s number is enforceable and yours is not, which is why the break-even is the headline and the expected return is only ever the second line. This ignores taxes, fees and the possibility that a line gets called or repriced, it assumes the rate holds for the whole '+yrs+' years, and it will not tell you whether to do it. That was never something arithmetic could answer.'}</div>
     </div>`;
 }
 
@@ -13464,7 +13581,7 @@ const FIELD_WHY={
       out+=`<b>What moves it:</b> add the assets you actually own, and mark honestly which ones pay you and which cost you - most people have never separated the two. Then either grow the paying side or cut what you owe. Nothing here can be set by hand, and that is deliberate: a tier you could type in would tell you nothing.`;
       return out; } },
 
-  levBreak:{ t:'How the break-even is worked out', b:()=>{
+  levBreak:{ t:()=>levPlainOn()?'How that number was worked out':'How the break-even is worked out', b:()=>{
       const L=state.lev||{}, m=leverageMath(+L.amt||0, +L.apr||0, +L.ret||0, +L.years||5, +L.pay||0, +L.cash||0);
       if(!(m.A>0)) return 'Put an amount and a rate in and this shows its working.';
       let out=`Borrowing <b>${money(m.A)}</b> at <b>${m.aprPct}%</b> for <b>${m.years}</b> years costs <b>${money(m.interest)}</b> in interest`;
@@ -13586,7 +13703,7 @@ document.addEventListener('click',e=>{
   if(open){ open.remove(); b.classList.remove('on'); return; }
   const d=document.createElement('div');
   d.className='why-note'; d.dataset.forwhy=k;
-  d.innerHTML=`<div class="wn-t">${escapeHtml(w.t)}</div><div class="wn-b">${typeof w.b==='function'?w.b():w.b}</div>`;
+  d.innerHTML=`<div class="wn-t">${escapeHtml(typeof w.t==='function'?w.t():w.t)}</div><div class="wn-b">${typeof w.b==='function'?w.b():w.b}</div>`;
   parent.insertBefore(d, after.nextSibling);
   b.classList.add('on');
 });

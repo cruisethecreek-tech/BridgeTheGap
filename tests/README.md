@@ -1085,6 +1085,34 @@ the app surfaces on the next boot.
 The general rule this leaves: **a catch that returns a default is a catch that
 can delete data.** Anywhere one exists, ask what it is discarding.
 
+## Measuring readability instead of claiming it
+
+*"How would my 13 year old understand this?"* is not a check you can write by
+asserting a feeling, so section 97 asserts the **vocabulary**: nothing over nine
+letters survives in plain mode. That is a crude line and a real one - three words
+crossed it while the copy was being written (*enforceable*, *break-even*,
+*asymmetry*), and all three were in the text before anything measured it.
+
+A scratch script also scored Flesch-Kincaid on both modes (3.8 → 2.2). It is not
+in the gate, because the formula is badly behaved on text this full of dollar
+amounts, and a number that moves for the wrong reasons is worse than no number.
+The word-length rule survived because it is blunt enough to be honest.
+
+The other half of that section is the rule no rewording may break: both outcome
+cards still render, and the panel still refuses to say whether to borrow. **A
+readability pass is exactly when a safety property gets quietly dropped**, so it
+is asserted in the same block that checks the words.
+
+## The fourth identifier collision
+
+`const plain` collided with an existing `plain` and the suite failed to *parse*.
+That is the fourth time this file has done it, and the rule was written down two
+commits earlier: **name new bindings for their section.** Renaming with a regex
+then broke it a second way - `\bplain\b` matched inside the selector string
+`[data-plain]`, so the query silently returned nothing and one check failed with
+an empty array. Renaming identifiers by regex touches strings too; the boundary
+that saved `data-plainh` is the same one that ate `data-plain`.
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor
