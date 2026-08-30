@@ -1113,6 +1113,30 @@ then broke it a second way - `\bplain\b` matched inside the selector string
 an empty array. Renaming identifiers by regex touches strings too; the boundary
 that saved `data-plainh` is the same one that ate `data-plain`.
 
+## Splitting a claim list instead of relaxing it
+
+The welcome screen has a gate of thirteen claims it must make - asserted as
+ideas rather than sentences, so a rewrite cannot quietly drop one. Giving the
+screen a short version broke it, correctly: six of the thirteen moved behind a
+tap.
+
+The wrong fix is to point the check at the expanded text and move on, which
+keeps it green while deleting what it was for. The right one is to decide which
+claims may be optional. **Disclosure may not** - what this thing is, what it is
+not, that it cannot want it for you, that it will not flatter you, and the
+privacy promise, because those function as terms somebody agrees to before
+starting. **Elaboration may**, since that is what a light version is.
+
+So there are two readings of the card now: `shortText` for what a person is
+actually shown, and `text` for everything the screen holds once the long version
+is open. Seven claims are checked against the first, all thirteen against the
+second. A shortening that ate a disclosure would still fail.
+
+One regex needed widening on the way, and only because the copy got clearer:
+`can't want this for you` was written out in full as `cannot`, which the old
+pattern did not match. **A pattern built around a contraction breaks when the
+writing stops contracting.**
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor

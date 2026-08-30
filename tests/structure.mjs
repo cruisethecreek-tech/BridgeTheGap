@@ -3354,7 +3354,17 @@ const wel = await p.evaluate(() => ({
   logHidden:document.getElementById('intakeLog').style.display==='none',
   bubbles:document.querySelectorAll('#intakeLog .bub').length,
   barHidden:document.querySelector('.intake-prog').style.visibility==='hidden',
-  text:document.getElementById('iaWelcome').innerText,
+  /* Two readings now, because the card has a short version and a long one and
+     they answer different questions: `shortText` is what a person is actually
+     shown, `text` is everything the screen holds once the long version is
+     open. The claim list below is split along exactly that line. */
+  shortText:document.getElementById('iaWelcome').innerText,
+  text:(()=>{ const c=document.querySelector('.iaw-card');
+    const was=c&&c.classList.contains('long');
+    if(c) c.classList.add('long');
+    const t=document.getElementById('iaWelcome').innerText;
+    if(c&&!was) c.classList.remove('long');
+    return t; })(),
   cta:(document.getElementById('iaWelGo')||{}).innerText||''
 }));
 check('a first run meets the gate before it meets a single question',
@@ -3387,12 +3397,26 @@ const GATE=[
   ['I am watching', /watching/i],
   ['you can do better', /do better/i],
   ['it is not real', /\bnot real\b/i],
-  ['it cannot want it for you', /can(not|'|\u2019)?t want this for you/i],
+  /* "cannot" spelled out did not match a pattern built for "can't" - the short
+     version writes it in full, which is the same claim in more letters. */
+  ['it cannot want it for you', /can(?:not|n?['\u2019]?t)? want this for you/i],
   ['easier things exist, and they cost you too', /easier[\s\S]{0,120}(time and .*money|money)/i],
   ['the effort is entirely yours', /effort is yours|all of it/i],
   ['and it will not flatter the record', /flatter/i]
 ];
+/* Six of the thirteen moved into the long version when the card gained a short
+   one, and that is a real change worth splitting rather than relaxing. What may
+   never be optional is the DISCLOSURE - what this thing is, what it is not, and
+   that it will not flatter you - because those function as terms somebody is
+   agreeing to before they start. The rest is elaboration, and elaboration
+   being a choice is the entire point of a light version. */
+const GATE_SHORT=['where you are is not a verdict','the distance is the point',
+  'in and out is how it closes','accountability, not budgeting','it is not real',
+  'it cannot want it for you','and it will not flatter the record'];
 const missing=GATE.filter(([,rx])=>!rx.test(wel.text)).map(([n])=>n);
+const missingUpFront=GATE.filter(([n,rx])=>GATE_SHORT.includes(n) && !rx.test(wel.shortText)).map(([n])=>n);
+check('the disclosure is in the short version, where it cannot be missed',
+      missingUpFront.length===0, missingUpFront.join(' | '));
 check('the gate still says all thirteen things it was built to say',
       missing.length===0, missing.join(', '));
 check('...and the button asks for work rather than promising a result',
@@ -8143,6 +8167,97 @@ check('pw97 mode still never prints an upside without its downside',
 check('...and still refuses to say whether to do it',
       /will not tell you whether to do it/.test(pw97.plainTxt));
 check('the choice is remembered', pw97.stored===true);
+
+/* ============================================================
+   98. A LIGHT VERSION OF THE WAY IN
+
+   "The starting line intro needs a light version. Same with the intake chat."
+
+   Checked first, because "light" could have meant the light theme: it did not.
+   Both already render correctly on paper. What they were was HEAVY - 339 words
+   and eleven paragraphs on the first screen anybody sees, then 1,217 more words
+   of questions, all of it before a single number of their own appears.
+
+   The writing is not the problem; what it says is the reason the app exists.
+   A wall of it is a door some people will not walk through. So there are two of
+   each, the short one leads, and which one leads is the app's OWN brief/full
+   setting - so the intro, the chat and every panel afterwards agree about how
+   much this person wants read to them.
+
+   What a shortening is not allowed to drop is the point of the section: the
+   three claims that have to be made before somebody starts, and the privacy
+   promise. Those are asserted individually, because "it got shorter" is not the
+   property that matters.
+   ============================================================ */
+await seed({...EMPTY, onboarded:false, welcomed:false});
+await p.reload(); await p.waitForTimeout(1100);
+
+const li98 = await p.evaluate(async () => {
+  const wt=ms=>new Promise(r=>setTimeout(r,ms));
+  const el=document.getElementById('iaWelcome');
+  const words=t=>t.split(/\s+/).filter(Boolean).length;
+  const ap=t=>t.replace(/[‘’]/g,"'");
+  const o={shown:el.classList.contains('on'), mode:state.sayMode};
+  const short=el.innerText;
+  o.shortW=words(short);
+  o.notVerdict=/not a verdict/.test(short);
+  o.accountability=/accountability/i.test(short);
+  o.notReal=/I am not real/.test(short);
+  o.privacy=/stays in this browser/.test(short);
+  o.canGo=!!document.getElementById('iaWelGo');
+  document.getElementById('iaWelMore').click(); await wt(320);
+  const long=ap(el.innerText);
+  o.longW=words(long); o.modeAfter=state.sayMode;
+  o.longIntact=/I'm listening/.test(long)&&/I'm watching/.test(long)&&/You can do better/.test(long);
+  document.getElementById('iaWelLess').click(); await wt(280);
+  o.backW=words(el.innerText); o.modeBack=state.sayMode;
+  /* the chat */
+  const a={name:'Pat',income:3200,situation:'ok',register:'middle',tone:'blunt',wage:20,
+           hoursPerWeek:40,extraIncome:[{amount:400,hours:20}],acct:'full'};
+  let full=0, brief=0;
+  INTAKE.forEach(s=>{ full+=words(String(typeof s.bot==='function'?s.bot(a):(s.bot||'')));
+    state.sayMode='brief'; brief+=words(String(iaBotText(s,a))); });
+  o.full=full; o.brief=brief; o.shorts=INTAKE.filter(s=>s.botShort).length;
+  const plain=INTAKE.find(s=>!s.botShort && s.bot);
+  state.sayMode='brief';
+  o.fellThrough=iaBotText(plain,a)===(typeof plain.bot==='function'?plain.bot(a):plain.bot);
+  state.sayMode='full';
+  const heavy=INTAKE.find(s=>s.id==='acct');
+  o.fullIntact=iaBotText(heavy,a)===heavy.bot(a);
+  /* a short form runs mid-chat, on answers that are half given */
+  const bad=[];
+  [{},{income:0},{acct:'spend',income:1200},{payFreq:'hourly',payAmt:19,income:2400}].forEach(pa=>{
+    INTAKE.filter(s=>s.botShort).forEach(s=>{
+      try{ const t=String(typeof s.botShort==='function'?s.botShort(pa):s.botShort);
+        if(/undefined|NaN|null/.test(t)) bad.push(s.id);
+      }catch(e){ bad.push(s.id+' THREW'); } }); });
+  o.bad=[...new Set(bad)];
+  state.sayMode='brief'; save();
+  return o;
+});
+check('the starting line opens on the short version',
+      li98.shown===true && li98.mode==='brief' && li98.shortW<180, String(li98.shortW));
+check('...still saying where you are is not a verdict', li98.notVerdict===true);
+check('...still saying this is accountability rather than budgeting', li98.accountability===true);
+check('...still saying the tool is not a person and cannot want it for you', li98.notReal===true);
+check('...still carrying the privacy promise', li98.privacy===true);
+check('...and still showing the way in', li98.canGo===true);
+check('the long version is one tap away and lost nothing',
+      li98.longIntact===true && li98.longW>li98.shortW*2, JSON.stringify([li98.shortW,li98.longW]));
+/* This is the part that makes it one app rather than one screen: the choice is
+   the same setting every panel on every tab already reads. */
+check('...and choosing is the app-wide brief/full setting, not a peek at this screen',
+      li98.modeAfter==='full' && li98.modeBack==='brief', JSON.stringify([li98.modeAfter,li98.modeBack]));
+check('...reversible from where it was made', li98.backW===li98.shortW, JSON.stringify([li98.backW,li98.shortW]));
+check('the heaviest questions in the chat gained a short form', li98.shorts>=12, String(li98.shorts));
+check('...cutting it by roughly a quarter, without rewriting the light ones',
+      li98.brief<li98.full*0.8 && li98.brief>li98.full*0.6, JSON.stringify([li98.full,li98.brief]));
+check('a question with no short form falls through to the one it has, never blank',
+      li98.fellThrough===true);
+check('...and full mode still speaks every original word', li98.fullIntact===true);
+/* A short form runs against answers that are only half given, which is exactly
+   where a template that assumes a number prints "$NaN" at somebody. */
+check('no short form breaks on a half-answered chat', li98.bad.length===0, li98.bad.join(', '));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
