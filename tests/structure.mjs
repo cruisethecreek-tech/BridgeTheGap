@@ -160,7 +160,12 @@ const reopened = await p.evaluate(async () => {
    untouched HELOC and no other debt is exactly who it was built for. Sweeping
    it into "every panel here reopens when a debt exists" would have quietly
    demanded the wrong gate and lost the distinction. */
-const PAYOFF_PANELS=x=>!/Borrow it or wait/.test(x.h||'');
+/* Two panels in this view are not payoff panels and gate on their own data:
+   "Borrow it or wait for it" on unused room, and "The other direction" on a
+   dream worth saving for. Sweeping either into "every panel here reopens when a
+   debt exists" would demand the wrong gate and quietly delete the distinction,
+   so both are named out and both are asserted separately below. */
+const PAYOFF_PANELS=x=>!/Borrow it or wait|The other direction/.test(x.h||'');
 /* On a day carrying both, what arrived should be read before what left it. */
 function calOccOrderOk(rows){
   const by={};
@@ -7443,6 +7448,28 @@ check('...while one untouched line and no other debt opens it',
       roomGate.oneUntouchedLine===false);
 check('...and a card kept only on the accounts side opens it just the same',
       roomGate.fromAccountsOnly===false);
+/* The savings panel's own gate, in both directions: debts alone are not a
+   reason to show it, and a dream alone is. */
+const saveGate = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const g=()=>document.getElementById('savePanel').classList.contains('panel-waiting');
+  activateTab('debt');
+  state.goals=[]; state.debts=[{id:'sd',name:'Visa',balance:2400,apr:23.9,minPayment:75}];
+  save(); renderDebt(); applyPanelGates(); await w(340);
+  const debtsOnly=g();
+  state.debts=[]; state.goals=[{id:'sg',name:'New fence',target:2400,saved:200,date:'',goalType:'foundation'}];
+  save(); renderDebt(); applyPanelGates(); await w(340);
+  const dreamOnly=g();
+  /* a dream already reached is not something to save for */
+  state.goals=[{id:'sg',name:'Done',target:500,saved:500,date:'',goalType:'foundation'}];
+  save(); renderDebt(); applyPanelGates(); await w(340);
+  return {debtsOnly, dreamOnly, reached:g(), note:(document.querySelector('#savePanel .pw-note')||{}).textContent||''};
+});
+check('debts alone do not open the savings panel, because it is not about debt',
+      saveGate.debtsOnly===true);
+check('...one unmet dream does, with no debt anywhere', saveGate.dreamOnly===false);
+check('...and a dream already reached is not something to save for',
+      saveGate.reached===true && /Name a dream/.test(saveGate.note), saveGate.note);
 
 /* ============================================================
    91. A SILENT SUCCESS LOOKS EXACTLY LIKE A FAILURE
@@ -8258,6 +8285,132 @@ check('...and full mode still speaks every original word', li98.fullIntact===tru
 /* A short form runs against answers that are only half given, which is exactly
    where a template that assumes a number prints "$NaN" at somebody. */
 check('no short form breaks on a half-answered chat', li98.bad.length===0, li98.bad.join(', '));
+
+/* ============================================================
+   99. FIVE FROM ONE INTAKE
+
+   The chat, walked by somebody who had already used it once. Two of these are
+   the same fault in different clothes: the app asking for something it had
+   already been refused, and the app recording something that had not happened.
+   ============================================================ */
+/* welcomed:true because that is who this is: somebody who read the gate, started
+   answering, and left. Without it openIntake shows the welcome card again and
+   the resume offer never appears - which was the fixture failing, not the app. */
+await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:'2026-08', hourlyWage:30,
+  welcomed:true,
+  goals:[{id:'q1',name:'New fence',target:2400,saved:200,date:'2027-03-01',goalType:'foundation'},
+         {id:'q2',name:'Japan trip',target:6000,saved:1500,date:'',goalType:'circulation'},
+         {id:'q3',name:'Cushion',target:1000,saved:0,date:'',goalType:'foundation'}],
+  debts:[{id:'qd',name:'Visa',kind:'card',balance:2400,apr:23.9,minPayment:75,limit:5000}],
+  saveBudget:200,
+  intakeDraft:{ans:{name:'Pat',situation:'ok',income:3200},step:6,at:Date.now()-600000}});
+await p.reload(); await p.waitForTimeout(900);
+
+const five = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={};
+  /* 1. the same question with the sugar removed */
+  const wage=INTAKE.find(s=>s.id==='wage'), shows=a=>!wage.showIf||wage.showIf(a);
+  o.declined=shows({acct:'spend',income:0,incomeAvoid:'avoid'});
+  o.gaveIt=shows({acct:'spend',income:1800});
+  o.fullPath=shows({acct:'full',income:3200});
+  o.skippedSilently=shows({acct:'spend',income:0});
+  o.whyComesFirst=INTAKE.findIndex(s=>s.id==='incomeAvoid')<INTAKE.findIndex(s=>s.id==='wage');
+  /* 2. a way back into an unfinished setup */
+  /* Guarded rather than assumed: a null here used to throw inside the evaluate,
+     which fails the whole file with a stack instead of failing one check with a
+     reason. A probe that cannot report is worse than one that fails. */
+  activateTab('home'); renderNextSteps(); await w(500);
+  const first=document.querySelector('.nextstep');
+  o.card=first?first.innerText:'(no next-step card rendered)';
+  o.act=first?first.dataset.act:'';
+  o.draftAtRender=!!state.intakeDraft;
+  o.stepCount=document.querySelectorAll('.nextstep').length;
+  if(first){
+    first.click(); await w(760);
+    o.opened=document.getElementById('intake').classList.contains('on');
+    o.offered=/partway through/.test(document.getElementById('intakeLog').innerText);
+    const rs=document.getElementById('iaResume');
+    if(rs){ rs.click(); await w(700); }
+    o.restored=Object.keys(iaAns).length;
+  }
+  /* 3. one function that pins the newest question to the bottom.
+     The overlay has to be on for any of this to have a layout - a display:none
+     flex column strands nothing because nothing has height. */
+  document.getElementById('intake').classList.add('on');
+  const log=document.getElementById('intakeLog');
+  log.style.display=''; document.getElementById('intakeDock').style.display=''; await w(80);
+  log.innerHTML=''; for(let i=0;i<30;i++){ const d=document.createElement('div');
+    d.className='bub bot'; d.textContent='line '+i; log.appendChild(d); }
+  log.scrollTop=0;
+  o.atTop=Math.round(log.scrollHeight-log.scrollTop-log.clientHeight);
+  iaScrollDown(); await w(150);
+  o.pinned=Math.round(log.scrollHeight-log.scrollTop-log.clientHeight);
+  document.getElementById('intake').classList.remove('on');
+  /* 4. the packs, on both paths */
+  const pk=INTAKE.find(s=>s.id==='packs');
+  o.packs={is:!!pk, input:pk&&pk.input, spend:!pk.showIf||pk.showIf({acct:'spend'}),
+           full:!pk.showIf||pk.showIf({acct:'full'}),
+           offered:CAT_PACKS.filter(x=>x.k!=='essentials').length,
+           noEssentials:!CAT_PACKS.filter(x=>x.k!=='essentials').some(x=>x.k==='essentials')};
+  state.categories=[]; save();
+  ['travel','health'].forEach(k=>{ try{ addPack(k); }catch(e){} });
+  o.packs.applied=state.categories.length;
+  /* 5. the other direction */
+  o.sim=simulateGoals(state.goals,200,'soonest');
+  o.dated=(simulateGoals(state.goals,200,'dated').seq[0]||{}).name;
+  activateTab('debt'); renderDebt(); await w(520);
+  o.saveTxt=document.getElementById('savePanel').innerText;
+  o.rows=(document.querySelector('#savePanel .save-rows')||{}).innerText||'';
+  o.head=(document.querySelector('#savePanel .save-head')||{}).innerText||'';
+  state.debts=[]; save(); renderSave(); await w(320);
+  o.noDebtTxt=document.getElementById('savePanel').innerText;
+  return o;
+});
+check('somebody who declined income is not asked for it again per hour',
+      five.declined===false, JSON.stringify(five.declined));
+check('...while anyone who gave a figure still gets the rate question',
+      five.gaveIt===true && five.fullPath===true);
+check('...and a silent skip, with no reason given, is still asked once',
+      five.skippedSilently===true);
+check('...which only works because the question about why comes first',
+      five.whyComesFirst===true);
+check('an unfinished setup says so on Home, ahead of everything else',
+      /Finish setting up/.test(five.card) && /3 answers in/.test(five.card),
+      `draft:${five.draftAtRender} cards:${five.stepCount} | ${five.card.replace(/\n/g,' / ')}`);
+check('...and that card is the door, with no trip through Settings',
+      five.act==='intake' && five.opened===true && five.offered===true);
+check('...carrying on restores what was already answered', five.restored>=3, String(five.restored));
+/* The mechanism I expected - a growing dock stranding the question - does not
+   reproduce in Chromium, which anchors a bottom-pinned scroller. So what is
+   asserted is the property the report asked for rather than a bug I cannot
+   show: one function, and the newest question ends up at the bottom. */
+check('one function pins the newest question to the bottom from anywhere',
+      five.atTop>200 && five.pinned===0, JSON.stringify([five.atTop,five.pinned]));
+check('the intake offers the category packs',
+      five.packs.is===true && five.packs.input==='packs');
+check('...on the spend path too, which is the one that ends emptiest',
+      five.packs.spend===true && five.packs.full===true);
+check('...without re-offering the essentials the walls step already funded',
+      five.packs.noEssentials===true && five.packs.offered>=7, String(five.packs.offered));
+check('...and taking one actually puts categories on the plan',
+      five.packs.applied>3, String(five.packs.applied));
+/* By hand: 1,000 then 2,200 then 4,500 at 200 a month, one at a time. */
+check('a dream is worked out the way a debt is, one at a time in order',
+      five.sim.seq[0].hit===5 && five.sim.seq[1].hit===16 && five.sim.seq[2].hit===39,
+      JSON.stringify(five.sim.seq.map(g=>g.name+'@'+g.hit)));
+check('...with no interest anywhere in the working, because none is owed on it',
+      !/interest|%|apr/i.test(five.rows+' '+five.head), five.rows.slice(0,120));
+check('...ordered by the date you promised, when you ask for that',
+      five.dated==='New fence', five.dated);
+check('...and flagged when a dream lands after the date it was promised',
+      /after 2027-03-01/.test(five.saveTxt), five.saveTxt.slice(0,300));
+check('the same money is priced against the debt it is not paying',
+      /The same \$200 on your debt instead/.test(five.saveTxt) && /23\.9%/.test(five.saveTxt)
+        && /\$573\.60/.test(five.saveTxt), five.saveTxt.slice(-400));
+check('...and it refuses to choose between them', /will not pick for you/.test(five.saveTxt));
+check('with nothing owed it does not manufacture a comparison',
+      !/on your debt instead/.test(five.noDebtTxt), five.noDebtTxt.slice(-160));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

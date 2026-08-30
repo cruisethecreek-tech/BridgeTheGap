@@ -2153,6 +2153,21 @@
   .debtrow .dr-sec{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:700}
   .debtrow .dr-sec select{background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 7px;font-size:12px}
   /* Borrow it or wait for it */
+  .save-head{margin-top:14px;padding:14px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
+  .sh-n{font-size:28px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
+  .sh-k{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .save-rows{margin-top:10px}
+  .sgoal{display:flex;align-items:baseline;gap:10px;padding:10px 12px;border-radius:12px;
+    background:var(--panel-2);border:1px solid var(--line);margin-top:8px;flex-wrap:wrap}
+  .sgoal.never{border-left:3px solid var(--accent-2)}
+  .sg-n{flex:1;min-width:0;font-weight:700;font-size:14px}
+  .sg-n b{color:var(--accent);margin-right:6px}
+  .sg-v{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+  .sg-v i{display:block;font-style:normal;font-size:10px;font-weight:700;color:var(--muted)}
+  .sg-v i.late{color:var(--accent-2)} .sg-v i.ok{color:var(--good)}
+  .sg-a{flex:none;font-size:13px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+  .save-vs{margin-top:12px;padding:13px;border-radius:12px;background:var(--panel-2);
+    border:1px solid var(--line);border-left:3px solid var(--accent);font-size:13px;line-height:1.6}
   .room-head{margin-top:14px;padding:14px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
   .room-n{font-size:30px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.05}
   .room-k{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px}
@@ -3286,6 +3301,40 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            and pay for longer. The months are what you bought. The interest is
            the price, and it is stated as a price rather than a loss, because
            buying time is a real thing people do on purpose. -->
+      <!-- "That payoff calculator should also be based off of goals and dreams -
+           say if you want to save money for a trip or a new fence. Or is that
+           not true debt until it's already spent? It should be a debt/saving
+           calculator."
+
+           The second sentence answers the first, and it is right: a fence you
+           have not bought is not a debt. It is a thing you are aiming at, and
+           the arithmetic that gets you there is the SAME arithmetic run the
+           other way - a balance, an amount a month, and a date it lands. The
+           planner already owned that engine and only ever pointed it at money
+           somebody owed.
+
+           So the dreams get the same treatment they would if they were debts,
+           and the honest difference is stated rather than hidden: a debt costs
+           you interest for existing, a savings goal costs you nothing but time.
+           Which is exactly why the two are worked out side by side here - the
+           question people actually have is not "how long to pay this off" or
+           "how long to save for this", it is which of the two their next
+           hundred dollars should go to. -->
+      <div class="panel" id="savePanel">
+        <h2>The other direction</h2>
+        <p class="sub">A trip, a fence, a cushion. None of it is debt - you have not spent anything yet - so nothing here charges you interest. What it costs is time, and this says how much of it, against the same money the plan above wants for your debts.</p>
+        <div class="row">
+          <div class="ufld"><span class="fl-k">Toward your dreams<span id="saveBudgetUnit"></span></span>
+            <span class="fl-in">$<input type="number" id="saveBudget" min="0" step="10" inputmode="decimal" placeholder="e.g. 200" style="width:130px"></span>
+            <div class="unit-work" id="saveBudgetW"></div></div>
+          <div class="uimode" id="saveOrder" style="margin-top:12px">
+            <button data-so="soonest">Nearest first</button>
+            <button data-so="dated">By the date you set</button>
+          </div>
+        </div>
+        <div id="saveResults"></div>
+      </div>
+
       <div class="panel" id="roomPanel">
         <h2>Borrow it or wait for it</h2>
         <p class="sub">Unused room on a card or a line is the only debt that can fund something tomorrow. This puts it next to what you are actually saving for and prices the same monthly amount both ways - borrowed now, or set aside until it is paid for. It will not tell you which to do. It will tell you exactly what the hurry costs.</p>
@@ -4321,6 +4370,7 @@ function defaultState(){
            spendingMode:false, spendLimit:0, dayToDay:[], rateDraft:null, sweptDays:{}, wageAuto:false, msNoteDismissed:'', trackChallenge:null, trackStart:'', hoursPerWeek:0,
            comfortMenu:[], timeLog:[], timeCats:[], subSweep:null, deepenSkipped:[], deepenSkipMonth:'', accounts:[],
            debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[], roomPay:0, calConfirm:false,
+           saveBudget:0, saveOrder:'soonest',
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
 }
@@ -4473,6 +4523,8 @@ function normalizeState(s){
     if(!(num(d.worth)>0)) delete d.worth; else d.worth=num(d.worth);
     if(d.kind && !DEBT_KINDS.some(x=>x.k===d.kind)) delete d.kind; });
   s.roomPay=num(s.roomPay);
+  s.saveBudget=num(s.saveBudget);
+  if(['soonest','dated'].indexOf(s.saveOrder)<0) s.saveOrder='soonest';
   /* The week's categories, seeded once. The five original lanes keep their exact
      ids so every hour already logged lands where it always did, and Sleep joins
      them because a time budget that ignores a third of the week is a toy. */
@@ -5815,6 +5867,7 @@ function renderDebt(){
      likely to be asking whether to take one on. */
   renderInvestCompare();
   renderLeverage();
+  renderSave();
   renderRoom();
 }
 CHART_REDRAW.debtChart=()=>renderDebtResults();
@@ -6181,6 +6234,87 @@ function renderLeverage(){
 }
 
 
+/* ---------- the same engine, aimed the other way ----------
+   Snowball for dreams. One goal at a time gets everything, because splitting
+   $200 across four dreams is how none of them arrive and everybody quits - the
+   identical reason the debt side sequences rather than spreads.
+
+   No interest anywhere in here, and that is the point rather than an omission:
+   money you have not borrowed does not charge you for the wait. */
+function simulateGoals(goals, monthly, order){
+  const gs=goals.map(g=>({id:g.id, name:g.name, need:Math.max(0,(+g.target||0)-(+g.saved||0)),
+                          date:g.date||'', hit:null}))
+                .filter(g=>g.need>0);
+  if(!gs.length) return {none:true};
+  if(!(monthly>0)) return {noMoney:true, total:gs.reduce((s,g)=>s+g.need,0), count:gs.length};
+  /* "By the date you set" puts anything with a deadline first, soonest first,
+     and everything undated behind it - a dream with a date on it is a promise
+     to somebody, usually yourself. */
+  const seq=gs.slice().sort(order==='dated'
+    ? (a,b)=>(a.date?0:1)-(b.date?0:1) || (a.date<b.date?-1:a.date>b.date?1:0) || a.need-b.need
+    : (a,b)=>a.need-b.need);
+  let month=0, pot=0;
+  const guard=1200;
+  while(seq.some(g=>g.hit==null) && month<guard){
+    month++; pot+=monthly;
+    for(const g of seq){
+      if(g.hit!=null) continue;
+      if(pot+0.005>=g.need){ pot-=g.need; g.hit=month; } else break;   // one at a time, in order
+    }
+  }
+  const done=seq.filter(g=>g.hit!=null);
+  return { seq, months: done.length===seq.length ? Math.max(...seq.map(g=>g.hit)) : null,
+           total:gs.reduce((s,g)=>s+g.need,0), count:gs.length, stalled:done.length<seq.length };
+}
+/* What a month of this money is worth on each side. The comparison people
+   actually want is not "when is the debt gone" or "when is the trip paid for",
+   it is which of the two the next hundred dollars should go to - so the two
+   are put next to each other, with the one fact that separates them. */
+function saveVsDebt(monthly){
+  const debts=(state.debts||[]).filter(d=>(+d.balance||0)>0);
+  const worstApr=debts.reduce((m,d)=>Math.max(m,+d.apr||0),0);
+  const owed=debts.reduce((s,d)=>s+(+d.balance||0),0);
+  return { owed, worstApr, yearly: yearlyInterest(monthly*12, worstApr),
+           costOfWaiting: worstApr>0 ? Math.round(monthly*12*worstApr/100*100)/100 : 0 };
+}
+function renderSave(){
+  const box=document.getElementById('saveResults'); if(!box) return;
+  wireUnitField({id:'saveBudget', dflt:'month', kinds:['week','biweek','month'],
+    get:()=>+state.saveBudget||0,
+    set:v=>{ state.saveBudget=Math.round(v*100)/100; save(); renderSave(); }});
+  const order=state.saveOrder||'soonest';
+  document.querySelectorAll('#saveOrder button').forEach(b=>b.classList.toggle('on',b.dataset.so===order));
+  const monthly=+state.saveBudget||0;
+  const r=simulateGoals(state.goals||[], monthly, order);
+  if(r.none){
+    box.innerHTML=`<div class="sub" style="margin-top:12px">Nothing to aim at yet. Name a dream under <b>Build</b> - a fence, a trip, three months of cover - and this works out when it lands, the same way the panel above works out when a debt leaves.${typeof trailBtn==='function'?trailBtn('goals','Name one','ghost'):''}</div>`;
+    return;
+  }
+  if(r.noMoney){
+    box.innerHTML=`<div class="sub" style="margin-top:12px">You are ${money(r.total)} away across ${r.count} dream${r.count===1?'':'s'}. Put a monthly figure in above and this turns that into dates - and into which one arrives first.</div>`;
+    return;
+  }
+  const H=effectiveHourly(), cmp=saveVsDebt(monthly);
+  const rows=r.seq.map((g,i)=>{
+    const late = g.date && g.hit!=null && shiftMonth(state.activeMonth||thisMonth(), g.hit) > g.date.slice(0,7);
+    return `<div class="sgoal${g.hit==null?' never':''}">
+      <span class="sg-n"><b>${i+1}</b> ${escapeHtml(g.name)}</span>
+      <span class="sg-v">${g.hit==null?'not on this pace':debtDur(g.hit)}${g.date?`<i class="${late?'late':'ok'}">${late?'after':'before'} ${escapeHtml(g.date)}</i>`:''}</span>
+      <span class="sg-a">${money(g.need)}</span>
+    </div>`;
+  }).join('');
+  box.innerHTML=`<div class="save-head">
+      <div class="sh-n">${r.months?debtDur(r.months):'-'}</div>
+      <div class="sh-k">${r.stalled?'some of these never arrive on this pace':`until all ${r.count} of them are yours`}</div>
+      <div class="sub" style="margin-top:6px">${money(r.total)} to go, at ${money(monthly)} a month. One at a time, in the order below - splitting it across all of them is how none of them arrive.</div>
+    </div>
+    <div class="save-rows">${rows}</div>
+    ${cmp.owed>0?`<div class="save-vs"><b>The same ${money(monthly)} on your debt instead.</b>
+      You are carrying ${money(cmp.owed)}${cmp.worstApr>0?` and the dearest of it runs <b>${cmp.worstApr}%</b>`:''}. ${cmp.worstApr>0
+        ? `A year of this money aimed at a dream rather than that balance costs about <b>${money(cmp.costOfWaiting)}</b> in interest you would otherwise not have paid${H>0?` - ${fmtHours(cmp.costOfWaiting/H)} of your life`:''}.`
+        : `None of it has a rate on it yet, so the app cannot price the choice - add the rates above and it can.`}
+      <br><br>That is the whole difference between the two panels: <b>a debt charges you for existing and a dream does not.</b> It is not an argument for either one. A person with no cushion who kills every debt first meets the next flat tyre with a credit card, and a person who saves for a trip at 24% is paying the bank for the privilege. This app will not pick for you - it will not let you pick without the number.</div>`:''}`;
+}
 function renderRoom(){
   const box=document.getElementById('roomResults'); if(!box) return;
   wireUnitField({id:'roomPay', dflt:'month', kinds:['week','biweek','month'],
@@ -11085,6 +11219,10 @@ async function refreshSyncState(){
     if(!n) alert('No new liabilities to import (they may already be here, or you have none with a balance).');
     else alert('Imported '+n+' debt'+(n>1?'s':'')+'. Add each one’s rate and minimum payment for an accurate plan.');
   });
+  const sord=document.getElementById('saveOrder');
+  if(sord && !sord.dataset.wired){ sord.dataset.wired='1';
+    sord.addEventListener('click',e=>{ const b=e.target.closest('button[data-so]'); if(!b) return;
+      state.saveOrder=b.dataset.so; save(); renderSave(); }); }
   const strat=document.getElementById('debtStrategy');
   if(strat) strat.addEventListener('click',e=>{ const b=e.target.closest('button[data-s]'); if(!b) return; state.debtStrategy=b.dataset.s; save(); renderDebt(); });
   const ir=document.getElementById('investReturn');
@@ -15541,6 +15679,8 @@ function panelGates(){
     /* Gated on ROOM, not on debts. Someone with three loans and no line has
        nothing for this to price, and someone with an untouched HELOC and no
        other debt is exactly who it was built for. */
+    ['savePanel',     (state.goals||[]).some(g=>(+g.target||0)>(+g.saved||0)),
+                                                            'Name a dream under Build - a trip, a fence, a cushion - and this works out when it lands.'],
     ['roomPanel',     roomLines().length>0,                   'Put a credit limit on a card or line above - or on a credit account under Build - and the room left on it gets priced against what you are saving for.'],
   ];
 }
@@ -16911,13 +17051,16 @@ const INTAKE=[
   {id:'acct',
     /* The one place the long version genuinely earns its length is the honesty
        about cost, so the short form keeps both numbers and drops the speech. */
-    botShort:a=>{ const nm=a.name?', '+a.name:''; return `Two ways in${nm}. **Just track my spending** is about **6 minutes** and 17 questions. **The whole budget** is about **10 minutes** and 24 questions, and you finish with a real budget rather than a blank page. Which one?`; }, sum:'Setup type', bot:a=>{
+    botShort:a=>{ const nm=a.name?', '+a.name:''; return `Two ways in${nm}. **Just track my spending** is about **6 minutes** and 18 questions. **The whole budget** is about **10 minutes** and 25 questions, and you finish with a real budget rather than a blank page. Which one?`; }, sum:'Setup type', bot:a=>{
     const surv=a.situation==='survive'||a.situation==='treading';
     const nm=a.name?', '+a.name:'';
     const light=surv
       ? `Given where you're at, I'd start light: keep your own spending honest against a daily allowance, small wins you can feel, no full-budget homework.`
       : `**Just track my spending** - keep your spending honest against a daily allowance, and see every dollar that leaves.`;
-    const cost=`That's about **6 minutes** and 17 questions. The whole budget is about **10 minutes** and 24 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
+    /* These counts are checked against the real path by intake_cost.mjs, exactly
+       so that adding a question forces whoever added it to update what the
+       screen promises. The packs step is the eighteenth and the twenty-fifth. */
+    const cost=`That's about **6 minutes** and 18 questions. The whole budget is about **10 minutes** and 25 questions, and you walk out with a finished zero-based budget instead of a blank page.`;
     switch(iaTone(a)){
       case 'savage':
         return `Two ways in${nm}. Real numbers, no pitch. ${light} ${cost} Neither one is padded. And if six minutes is too much to spend on the thing that decides where your life actually goes, stop here - you won't do the hard part either, and I'd rather you keep the six minutes. Still in? Pick one.`;
@@ -16957,6 +17100,20 @@ const INTAKE=[
       {label:'I just want to watch spending', value:'watch', reply:"Fair. It might also be the highest-leverage thing you could do. Spending is the part you actually control, minute to minute."}
     ]},
   {id:'wage',
+    /* "It asks if you want to track your income; once you say no it still asks
+       how much you make per hour - that is a double question asking about
+       income with the sugar removed."
+
+       Exactly right, and the sugar is the part that makes it worse: somebody
+       who has just declined is asked the same thing in a form they might not
+       recognise as the same thing. The step had no showIf at all, so it ran for
+       everybody including the person who had said no twice - once by leaving
+       income blank, once by answering WHY they left it blank.
+
+       A rate is genuinely useful, and it is not worth taking a no back to get
+       it. Hours-of-life simply waits until it is offered somewhere they went
+       looking for it. */
+    showIf:a=>!(a.acct==='spend' && !(+a.income>0) && a.incomeAvoid),
     botShort:a=> (a.payFreq==='hourly' && +a.payAmt>0)
       ? `You said ${usd(+a.payAmt)} an hour, so that is the rate behind every "hours of your life" figure. Change it if that was before tax. ★`
       : a.income>0
@@ -17223,6 +17380,12 @@ const INTAKE=[
       return `That's ${usd0(known)} a month, mapped.${savedTxt}${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
+  /* Before the comfort question and after the money is mapped, so it lands when
+     somebody can already see the shape of their month - and on BOTH paths,
+     because the spend path finishes with the fewest categories of anybody. */
+  {id:'packs', input:'packs', optional:true, sum:'Category packs',
+    bot:a=>`Last practical one${a.name?', '+a.name:''}. Most of what leaves a bank account is the same handful of things for everybody - so rather than starting you on a blank page, tap any of these and I will put the categories on your plan with no amounts against them. A category with $0 on it is a question you have not answered yet, not a promise you have made. Skip the lot if you would rather build it yourself.`,
+    botShort:'Rather than a blank page: tap any of these and I will put their categories on your plan with no amounts against them. Skip the lot if you would rather build it yourself.'},
   {id:'comfort',
     botShort:a=>`Most spending is about a feeling, not the thing. Tap what actually helps when money is not the answer - I will show it back to you inside every gut-check.`, sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
     why:"Because a lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button you can reach. If you name what else helps while you're calm, I can hand the list back to you when the urge is loud and you can't think of a single thing.",
@@ -17616,7 +17779,32 @@ function renderReview(s){
   dock.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>iaEditStep(+b.dataset.rev));
   const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
 }
+/* "Intake does not scroll to the bottom when a new question is asked - you have
+   to manually scroll down." The log DID scroll, in iaBotSay, immediately after
+   the text landed. Then done() ran, the dock rendered underneath, and the dock
+   is a flex sibling - so a taller dock takes height off the log, and a scroller
+   that shrinks does not keep its position at the bottom. scrollTop stays where
+   it was and the question you were just asked slides out of sight, by exactly
+   the amount the answer controls grew.
+
+   So the scroll happens LAST, after the dock exists, on the next frame when
+   layout has settled - and again on a resize, because the phone keyboard
+   opening is the same shrink by another name. */
+function iaScrollDown(){
+  const log=document.getElementById('intakeLog'); if(!log) return;
+  const go=()=>{ log.scrollTop=log.scrollHeight; };
+  go();
+  requestAnimationFrame(()=>{ go(); requestAnimationFrame(go); });
+}
+window.addEventListener('resize',()=>{
+  const ov=document.getElementById('intake');
+  if(ov && ov.classList.contains('on')) iaScrollDown();
+});
 function renderIntakeDock(s){
+  /* One exit, so no branch of this function can forget - and the scroll is
+     queued rather than run inline, because the dock it depends on is built by
+     the lines below this one. */
+  requestAnimationFrame(iaScrollDown);
   const dock=document.getElementById('intakeDock');
   if(s.input==='start'){
     dock.innerHTML=`<div class="intake-chips"><button class="go" id="iaGo">${escapeHtml(s.cta)}</button></div>`
@@ -17637,6 +17825,7 @@ function renderIntakeDock(s){
   if(s.input==='leak'){ leakFinder(s); return; }
   if(s.input==='reflect'){ renderReflect(s); return; }
   if(s.input==='comfort'){ renderComfortStep(s); return; }
+  if(s.input==='packs'){ renderPacksStep(s); return; }
   if(s.input==='photo'){ renderBudgetPhoto(s); return; }
   if(s.input==='gate'){
     dock.innerHTML=`<div class="gatepick">${s.options.map((o,i)=>`<button data-i="${i}"><span class="gp-t">${escapeHtml(o.label)}</span>${o.sample?`<span class="gp-s">${escapeHtml(o.sample)}</span>`:''}</button>`).join('')}</div><button class="intake-skip" id="iaSkipGate">I'll set it up myself</button>`;
@@ -17842,6 +18031,49 @@ function runIntakeHelper(s){
 /* Comfort list, asked during setup instead of hidden in Settings. Chips only - the
    whole point is that it costs two taps, so it does not add drag to an intake people
    already struggle to finish. Free-text entry still lives on the Settings card. */
+/* "Introduce the category packs in the intake, also for those who chose
+   spending." The packs have been on Plan since they were built, behind a button
+   somebody has to already know about - so a brand new budget starts as a blank
+   page next to a feature whose whole job is that it does not have to.
+
+   Offered rather than applied. Nothing is ticked when this opens, the essentials
+   are not among the choices (the walls step has already funded those, and
+   offering them again would add a second Roof), and skipping is one tap. What it
+   buys is a Plan tab that has the shape of this person's life on it before they
+   have typed a single category name.
+
+   Shown to the spend path too, which is the half of the ask that mattered: that
+   path ends with the fewest categories of anybody, and is the one most likely to
+   be abandoned at a blank screen. */
+function renderPacksStep(s){
+  const dock=document.getElementById('intakeDock');
+  const offer=CAT_PACKS.filter(p=>p.k!=='essentials');
+  const picked=new Set(iaAns.packs||[]);
+  const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
+  const draw=()=>{
+    const n=picked.size;
+    const cats=offer.filter(p=>picked.has(p.k)).reduce((t,p)=>t+p.cats.length,0);
+    dock.innerHTML=`<div class="intake-chips">${offer.map(p=>`<button data-pk="${p.k}" class="${picked.has(p.k)?'picked':''}">${picked.has(p.k)?'✓':'+ '}${p.icon} ${escapeHtml(p.name)}</button>`).join('')}</div>`
+      +`<div class="intake-chips" style="margin-top:10px"><button class="go" id="iaPkDone">${n?`Add ${n} pack${n===1?'':'s'} - ${cats} categories →`:'Continue →'}</button></div>`
+      +`<div class="intake-underrow">${n?'':'<button class="intake-skip" id="iaPkSkip">None of these</button>'}${back}</div>`;
+    dock.querySelectorAll('button[data-pk]').forEach(b=>b.onclick=()=>{
+      const k=b.dataset.pk;
+      picked.has(k) ? picked.delete(k) : picked.add(k);
+      iaAns.packs=offer.filter(p=>picked.has(p.k)).map(p=>p.k);   // pack order, not tap order
+      draw();
+    });
+    document.getElementById('iaPkDone').onclick=()=>{
+      const list=iaAns.packs||[];
+      iaBub(list.length?offer.filter(p=>list.indexOf(p.k)>-1).map(p=>p.name).join(', '):'None for now','me');
+      if(list.length) iaBub(`Good. Those land on Plan with a name and no number - a category with $0 against it is a question, not a promise, and you can delete any of them in one tap.`,'bot');
+      iaAdvance();
+    };
+    const sk=document.getElementById('iaPkSkip');
+    if(sk) sk.onclick=()=>{ iaAns.packs=[]; iaBub('None for now','me'); iaAdvance(); };
+    const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
+  };
+  draw();
+}
 function renderComfortStep(s){
   const dock=document.getElementById('intakeDock');
   const picked=new Set((iaAns.comfort||[]).map(x=>x.toLowerCase()));
@@ -18367,6 +18599,12 @@ function commitIntake(){
   }
   Object.keys(bAdd).forEach(id=>{ budgetFor(M)[id]=bAdd[id]; });
   // Union, not overwrite: re-running setup must not wipe entries added later in Settings.
+  /* The packs land here rather than at the moment they were tapped, so backing
+     out of setup leaves no categories behind - the same rule every other answer
+     in this chat already follows. addPack is the exact function the Plan tab
+     uses, and it already refuses to add a pack whose categories exist, so a
+     wall funded above cannot come back as a duplicate. */
+  (a.packs||[]).forEach(k=>{ try{ addPack(k); }catch(e){} });
   (a.comfort||[]).forEach(v=>{ state.comfortMenu=state.comfortMenu||[];
     if(v && !state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); });
   state.intake={name:a.name||'',why:a.why||'',
@@ -18392,7 +18630,25 @@ function commitIntake(){
 // "Setup chat" left the global footer for Settings > Setup & data ("Re-run setup
 // chat"), so this listener has nothing to bind to; intakeBtn2 carries it now.
 (function(){ const b=document.getElementById('intakeBtn'); if(b) b.addEventListener('click',openIntake); })();
-document.getElementById('intakeX').addEventListener('click',()=>{ state.onboarded=true; save(); iaHideWelcome(); dismissOverlay(); });
+/* "When you leave it, it doesn't give you any prompt to finish your intake - the
+   only way to actually do it is to go into settings, which it never teaches
+   you." Both halves were true, and the second was worse than being lost: this
+   handler set onboarded=true, so the app recorded somebody as SET UP the moment
+   they backed out of question three. There was nothing to prompt about, as far
+   as it knew.
+
+   The draft was already being written on every step and already had a resume
+   offer waiting - it just needed a door. onboarded still flips, because the app
+   has to be usable and refusing to let somebody out is not the fix. What
+   changes is that an unfinished draft now says so, on Home, until it is either
+   finished or dropped. */
+document.getElementById('intakeX').addEventListener('click',()=>{
+  const partway=!iaCommitted && !!state.intakeDraft;
+  state.onboarded=true; save(); iaHideWelcome(); dismissOverlay();
+  if(typeof renderHome==='function') renderHome();
+  if(partway && typeof toast==='function')
+    toast('Saved where you got to. Home has a card to pick it back up - nothing you answered is lost.');
+});
 
 /* ---------- boot ---------- */
 function boot(){
@@ -18661,6 +18917,15 @@ function renderNextSteps(){
   const survival = said && !outgrown;
   const hasCushion = state.goals.some(g=>/cushion|emergency|buffer|rainy|safety/i.test(g.name));
   const steps=[];
+  /* Ahead of everything, and deliberately: a half-finished setup is the reason
+     the rest of this list is guessing. It carries its own count so it reads as
+     a thing to RESUME rather than a thing to redo. */
+  const draft=state.intakeDraft;
+  if(draft){
+    const answered=Object.keys(draft.ans||{}).filter(k=>k!=='hoursPerWeek').length;
+    steps.push(['',`Finish setting up${answered?` - ${answered} answer${answered===1?'':'s'} in`:''}`,
+      'You left partway through and nothing you said was lost. Everything below is working off half a picture until this is done.','intake']);
+  }
   if(income<=0) steps.push(['','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
   /* The all-clear line below is nearly unreachable - the giving step fires for
      almost everyone - so the voice belongs on the step people actually see. The
@@ -18772,6 +19037,9 @@ function runNextStep(act){
   if(!act) return;
   if(act.indexOf('wall:')===0){ const c=act.slice(5); c?goToWall(c):activateTab('budget'); return; }
   if(act.indexOf('tab:')===0){ activateTab(act.slice(4)); return; }
+  /* openIntake already offers the draft back - it just had no door on any
+     screen a person was standing on. */
+  if(act==='intake'){ openIntake(); return; }
   goTrail(act);
 }
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });

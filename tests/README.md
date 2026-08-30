@@ -1137,6 +1137,30 @@ One regex needed widening on the way, and only because the copy got clearer:
 pattern did not match. **A pattern built around a contraction breaks when the
 writing stops contracting.**
 
+## Not asserting a bug you cannot reproduce
+
+A report said the intake never scrolls to the new question. The mechanism looked
+obvious on inspection - the log scrolls, then the dock renders underneath and
+takes height off it - and the first version of the check asserted exactly that:
+grow the dock, watch the question strand.
+
+**It did not strand.** Chromium anchors a bottom-pinned scroller, so the
+hypothesised failure is handled by the browser. The check was rewritten to
+assert the property the report actually asked for - one function, and the newest
+question ends up at the bottom from anywhere - and both the suite comment and the
+Feature Map say the reproduction failed. A green check that claims to guard a
+bug nobody has seen is worse than no check: it makes the next person believe the
+question is closed.
+
+## A probe that cannot report is worse than one that fails
+
+The same section threw inside `page.evaluate` on a null `.nextstep`, which fails
+the **whole file** with a stack trace instead of failing one check with a reason.
+Guarded, it printed `draft:true cards:3` and the actual card text - and the fault
+turned out to be the fixture: it never set `welcomed`, so opening the intake
+showed the welcome gate rather than the resume offer. **Diagnostics in the
+failure detail are how a fixture bug tells you it is a fixture bug.**
+
 ### A test can go stale on its own
 
 One check in this suite was pinned to *"two paydays, $2,953.84"* from an anchor

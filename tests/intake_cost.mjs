@@ -19,8 +19,11 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
    an estimate and get a wider band; the question count is countable and is not
    allowed to drift more than one. */
 const CLAIMS = {
-  spend: { minutes:6,  questions:17, chip:'Just track my spending · ~6 min' },
-  full:  { minutes:10, questions:24, chip:'Build my whole budget · ~10 min' },
+  /* 18 and 25 since the category packs joined both paths. The counts move with
+     the app on purpose - the point of this file is that the SCREEN's promise and
+     the real path cannot drift apart, not that either number is fixed. */
+  spend: { minutes:6,  questions:18, chip:'Just track my spending · ~6 min' },
+  full:  { minutes:10, questions:25, chip:'Build my whole budget · ~10 min' },
 };
 const MINUTE_BAND = 0.25;    // the modelled time may exceed the claim by at most this - under-stating is the dishonest direction
 const OVERSTATE_MAX = 2;     // ...and a wildly padded claim scares people off a path they could afford
@@ -402,8 +405,13 @@ check('...savage, which literally says "stop here", says it on the button', exit
 
 /* ---- 5. the stance is actually in the conversation ---- */
 for(const {t,text} of measured.says){
-  check(`${t}: names the real minutes`, /\*\*6 minutes\*\*/.test(text) && /\*\*10 minutes\*\*/.test(text));
-  check(`${t}: names the question counts`, /17 questions/.test(text) && /24 questions/.test(text));
+  check(`${t}: names the real minutes`,
+        new RegExp('\\*\\*'+CLAIMS.spend.minutes+' minutes\\*\\*').test(text)
+          && new RegExp('\\*\\*'+CLAIMS.full.minutes+' minutes\\*\\*').test(text));
+  check(`${t}: names the question counts`,
+        new RegExp(CLAIMS.spend.questions+' questions').test(text)
+          && new RegExp(CLAIMS.full.questions+' questions').test(text),
+        text.slice(0,160));
   check(`${t}: says the quiet part rather than apologising for asking`,
         /isn't your app|keep the six minutes|not going to pretend otherwise/.test(text));
 }
