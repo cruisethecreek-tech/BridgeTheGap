@@ -1173,6 +1173,36 @@ none of them are in the future, and the money equals the per-payday amount times
 however many landed - which is what "walks forward at the right cadence"
 actually means.
 
+## A caption is an assertion
+
+Section 100 came from a photo and four words: *"This doesn't look right."* Both
+cards of the invest comparison read as a minus and both were captioned **net
+worth in 5 yrs**. Every existing check on that panel passed, and every one of
+them was right to: the gap between the two cards was exact to the cent, the
+winner was crowned correctly, the tie guard held. The suite had 12 assertions
+about that panel and not one of them read the caption.
+
+`investCompare` returns `invest - debtLeft` over the debts listed on the screen.
+It has never seen an account balance and it cannot see the house behind a HELOC.
+The number was right; **the four words underneath it were a claim the function
+had no way to support**, and they turned a partial figure into an accusation
+about a person's whole life.
+
+What is guarded now is the labelling, not the figure:
+- no caption anywhere in the panel says *net worth in N yrs*
+- both cards print the two halves that make them, and the halves reconcile to
+  the number on the card (`invested - still owed = net`)
+- the reporter's own shape stays **negative on both sides** - inventing a
+  positive by folding assets in would be the same lie facing the other way
+- the scope line names what is left out, including *your home behind Heloc*
+- the gap is asserted to be identical with and without net worth added to both
+  branches, which is the reason the comparison was still trustworthy
+
+The general lesson, and the reason it is worth a section: **a caption is an
+assertion, and it deserves a check like any other.** Assertions in this suite
+overwhelmingly read numbers. This one read six words of prose sitting under a
+number, and that is where the fault was.
+
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
   every failure found by real people so far had correct arithmetic underneath.
