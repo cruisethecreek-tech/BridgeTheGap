@@ -1924,6 +1924,11 @@
   .ia-welcome{display:none;flex:1;overflow-y:auto;padding:22px 16px calc(26px + env(safe-area-inset-bottom))}
   .ia-welcome.on{display:block}
   .iaw-card{max-width:560px;margin:0 auto;text-align:center}
+  .iaw-long{display:none}
+  .iaw-card.long .iaw-long{display:block}
+  .iaw-card.long .iaw-short{display:none}
+  .iaw-more{background:none;border:none;color:var(--accent);font:inherit;font-weight:800;font-size:13px;
+    padding:12px 0 0;cursor:pointer}
   .iaw-eye{display:inline-block;font-size:11.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
     color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
   .iaw-t{font-size:30px;line-height:1.15;letter-spacing:-.7px;margin:14px 0 0;font-weight:900}
@@ -3826,9 +3831,34 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
          deliberate too - the old card said "I am not real" and "I cannot", which
          is the register of a legal notice; this one is spoken. -->
     <div class="ia-welcome" id="iaWelcome" role="dialog" aria-labelledby="iaWelTitle" aria-modal="true">
+      <!-- "The starting line intro needs a light version." 339 words and eleven
+           paragraphs, on the first screen a person ever sees, before they have
+           agreed to anything. The writing is not the problem - what it says is
+           the reason this app exists - but a wall of it is a door that some
+           people will simply not walk through.
+
+           So there are two, and the short one leads. It keeps the three things
+           that actually have to be said before somebody starts: where you are
+           is not a verdict, this is accountability rather than budgeting, and
+           the tool is not a person and cannot want it for you. Everything else
+           is elaboration, and elaboration is a choice.
+
+           Which one leads is the app's existing brief/full setting, so this and
+           every panel on every tab agree about how much somebody wants read to
+           them. Nothing is deleted and nothing is buried - the long version is
+           one tap, on the same screen. -->
       <div class="iaw-card">
         <span class="iaw-eye">Starting line</span>
         <h1 class="iaw-t" id="iaWelTitle">Everybody starts somewhere.</h1>
+        <div id="iaWelShort" class="iaw-short">
+          <p class="iaw-lead">Nothing in the account or plenty, debt or savings - it does not matter. This is where you are, and that is not a verdict.</p>
+          <p class="iaw-beat">What matters is the distance.</p>
+          <p class="iaw-lead">Between here and next month, and here and ten years. It closes one way: <b>what comes in, what goes out, and what you decide to do about it.</b></p>
+          <p class="iaw-lead">You can call this a budgeting app. It is an <b>accountability</b> app. I keep an honest record and I will not flatter it.</p>
+          <p class="iaw-lead"><b>I am not real.</b> I am arithmetic, some questions you would rather avoid, and a better memory than yours. I cannot want this for you - that part is yours, all of it.</p>
+          <button class="iaw-more" id="iaWelMore" type="button">Read the long version &#9662;</button>
+        </div>
+        <div id="iaWelLong" class="iaw-long">
         <p class="iaw-lead">It doesn&rsquo;t matter whether there&rsquo;s nothing in your account or plenty. It doesn&rsquo;t matter whether you&rsquo;re starting with debt, savings, a paycheck, or a mess you would rather not look at.</p>
         <p class="iaw-beat">This is where you are.</p>
         <p class="iaw-lead">And that&rsquo;s not a verdict. It&rsquo;s not a judgment. It&rsquo;s just your starting line.</p>
@@ -3846,6 +3876,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <p>That part is yours. All of it. I can think of a million things easier than holding yourself accountable, and most people are doing one of them right now - which costs them their time and their money both.</p>
           <p>If you genuinely want the thing you say you want, nobody in here is going to do it for you, and nothing in here will pretend otherwise.</p>
           <p>What I will do is keep an honest record. And I won&rsquo;t flatter it.</p>
+        </div>
+        <button class="iaw-more" id="iaWelLess" type="button">Show the short version &#9652;</button>
         </div>
         <button class="btn primary iaw-go" id="iaWelGo">I&rsquo;m ready to work &rarr;</button>
         <p class="iaw-fine">Everything you enter stays in this browser. Nothing is uploaded, nothing is sold, and there is no account to create.</p>
@@ -16797,7 +16829,8 @@ const INTAKE=[
     {label:'Loose', sample:"That ad found you on purpose - the algorithm clocked your weak spot.", value:'genz'},
     {label:'Plain', sample:"That ad found you. Somebody paid to put it in front of you.", value:'middle'},
     {label:'Measured', sample:"That advertisement was placed deliberately, to find your weak spot.", value:'mature'}]},
-  {id:'tone', sum:'How you want to be held', input:'choice', key:'tone',
+  {id:'tone',
+    botShort:'How do you want to be held accountable? Pick what you will actually listen to, not what sounds impressive. Changeable any time. ★', sum:'How you want to be held', input:'choice', key:'tone',
     bot:"And how do you want to be held accountable? This is the voice I'll use from here on. Every question, every gut-check, every time you're about to blow it. Pick what you'll actually listen to, not what sounds impressive. You can change it anytime in Settings. ★",
     options:[{label:'Forgiving - keep it kind',value:'clean'},{label:'Blunt - be straight',value:'blunt'},{label:'Savage - no mercy',value:'savage'}]},
   /* situation comes BEFORE the intro so the tone floor (survival -> clean) is
@@ -16812,7 +16845,8 @@ const INTAKE=[
       {label:'Stable but stuck', value:'stuck', reply:"Stuck is its own kind of tiring. You've got the footing though, so now it's about aiming it somewhere on purpose."},
       {label:'Stable, ready to build', value:'build', reply:"Good place to be. Let's put that steadiness to work."}
     ]},
-  {id:'intro', bot:a=>{
+  {id:'intro',
+    botShort:'Accountability is the ABILITY to hold yourself accountable. I cannot do it for you - what I can do is help you see clearly enough to decide. Ready?', bot:a=>{
       /* "Great." landed one bubble after someone answered "Treading water" and
          was told "Exhausting, that one." Nothing about that is great, and an
          affirmation keyed to the GENERATION dial while blind to what was just
@@ -16855,7 +16889,8 @@ const INTAKE=[
       {label:'Did it a while, life happened', value:'lapsed', reply:"Then you already know it works when you work it. Life happens. What you need is something light enough to survive a bad week, not another system that needs you perfect."},
       {label:'I budget now', value:'current', reply:"You're ahead of most people then. We'll sharpen what you've got rather than start you over."}
     ]},
-  {id:'budgetPhoto', input:'photo', key:'photoFilled', optional:true,
+  {id:'budgetPhoto',
+    botShort:'You have written it down somewhere before. Photograph it and I will read it here on your phone - it never leaves the device.', input:'photo', key:'photoFilled', optional:true,
     showIf:a=>!!a.budgetPast && a.budgetPast!=='never',
     bot:a=>{ const had = a.budgetPast==='current' ? "You've got one going right now"
              : a.budgetPast==='lapsed' ? "You had one going for a while"
@@ -16873,7 +16908,10 @@ const INTAKE=[
      drowning gets the honest number without being told to leave. Not committing
      and not being able to are different things, and only one of them is a
      reason to go. */
-  {id:'acct', sum:'Setup type', bot:a=>{
+  {id:'acct',
+    /* The one place the long version genuinely earns its length is the honesty
+       about cost, so the short form keeps both numbers and drops the speech. */
+    botShort:a=>{ const nm=a.name?', '+a.name:''; return `Two ways in${nm}. **Just track my spending** is about **6 minutes** and 17 questions. **The whole budget** is about **10 minutes** and 24 questions, and you finish with a real budget rather than a blank page. Which one?`; }, sum:'Setup type', bot:a=>{
     const surv=a.situation==='survive'||a.situation==='treading';
     const nm=a.name?', '+a.name:'';
     const light=surv
@@ -16899,7 +16937,8 @@ const INTAKE=[
         bye:"That's completely fine. Nothing is lost - the app works without any of this, and the setup chat is waiting in Settings whenever the time is better."};
     }},
     options:[{label:'Just track my spending · ~6 min',value:'spend'},{label:'Build my whole budget · ~10 min',value:'full'}]},
-  {id:'income', bot:a=> a.acct==='spend'
+  {id:'income',
+    botShort:a=>`${a.name?a.name+', w':'W'}hat lands in your account in a normal month, after tax? Rough is fine - or tap a pay cycle below and I will work the month out for you. ★`, bot:a=> a.acct==='spend'
       ? `Want to track any income too, ${a.name||'friend'} - your paycheck, allowance, side gigs? Optional. Skip if you just want to watch spending.`
       : `${a.name?a.name+', ':''}what's your take-home pay in a normal month - the money that actually lands in your account after taxes? A rough number's fine. Paid weekly, every two weeks, or by the hour? Tap below and I'll work the month out for you - most people get that conversion wrong, and it costs them a month and a half of income a year. ★`,
     input:'money', key:'income', optional:a=>a.acct==='spend', placeholder:'3200',
@@ -16918,6 +16957,11 @@ const INTAKE=[
       {label:'I just want to watch spending', value:'watch', reply:"Fair. It might also be the highest-leverage thing you could do. Spending is the part you actually control, minute to minute."}
     ]},
   {id:'wage',
+    botShort:a=> (a.payFreq==='hourly' && +a.payAmt>0)
+      ? `You said ${usd(+a.payAmt)} an hour, so that is the rate behind every "hours of your life" figure. Change it if that was before tax. ★`
+      : a.income>0
+        ? `Your take-home **per hour** on your main job - it powers every "hours of your life" figure. On ${usd(a.income)} a month${a.hoursPerWeek>0?` at ${a.hoursPerWeek} hours a week`:''} that is about **${usd(estHourlyFromMonthly(a.income,a.hoursPerWeek))}/hr**. Sound right? ★`
+        : `Roughly what do you make an hour, take-home? It is what lets me price a purchase in hours of your life. Not sure? Tap "Help me work it out". ★`,
     bot:a=> (a.payFreq==='hourly' && +a.payAmt>0)
       /* They already told the cadence picker their hourly rate. Asking again as
          though we never heard it is how an app teaches people it isn't
@@ -17013,7 +17057,8 @@ const INTAKE=[
      anything not yet due, so once the anchor is real the app stops guessing
      entirely. Optional, because someone starting a new job genuinely has no
      answer, and a made-up date is worse than none. */
-  {id:'payDay', input:'date', key:'payDay', optional:true, showIf:a=>+a.income>0,
+  {id:'payDay',
+    botShort:a=>`**When did you last actually get paid?** I will not guess it - a guessed payday shows you money you have not been handed.`, input:'date', key:'payDay', optional:true, showIf:a=>+a.income>0,
     sum:'Last payday',
     bot:a=>{
       const f=payFreqMeta(a.payFreq);
@@ -17029,7 +17074,11 @@ const INTAKE=[
       {label:'Yes, set up the couples view', value:'yes', reply:"I'll switch on Household mode and estimate their wage from that income. Names and numbers are all editable in Settings."},
       {label:'Just count it as income', value:'no', reply:"It's in your budget total either way. You can flip the couples view on later."}
     ]},
-  {id:'trueRate', input:'continue', showIf:a=>a.acct!=='spend' && a.wage>0 && (a.extraIncome||[]).some(x=>+x.hours>0),
+  {id:'trueRate',
+    /* Same figure the long version works out, from the same function - a short
+       form that recomputed it its own way is two answers waiting to disagree. */
+    botShort:a=>{ const mr=+a.wage||0, br=intakeBlendedHourly(a);
+      return `Your main job runs about ${usd(mr)}/hr, but the side work is hours of your life too. Blend every hour you sell and your real rate is **${usd(br)}/hr**${br<mr-0.005?' - lower, so everything now costs a little more of your life':''}. That is the number behind every "hours of your life" figure.`; }, input:'continue', showIf:a=>a.acct!=='spend' && a.wage>0 && (a.extraIncome||[]).some(x=>+x.hours>0),
     bot:a=>{ const mr=+a.wage||0, br=intakeBlendedHourly(a), sh=Math.round(intakeWorkHours(a));
       const sideAmt=(a.extraIncome||[]).filter(x=>+x.hours>0).reduce((s,x)=>s+(+x.amount||0),0);
       const down = br < mr - 0.005;
@@ -17069,7 +17118,8 @@ const INTAKE=[
         ? "Car payments are the biggest silent freedom-killer there is. We're going to make that shit impossible to ignore."
         : "Car payments are one of the biggest silent freedom-killers. We'll make it impossible to ignore."}
     ]},
-  {id:'expenses', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend' && !a.photoFilled,
+  {id:'expenses',
+    botShort:'Now the rest of where the money goes each month. Tap what applies and I will ask the amount. This is what builds your budget.', input:'loop', loopKey:'expenses', bulk:true, namePlaceholder:'Name it (e.g. Gym, Storage, Tithe)', showIf:a=>a.acct!=='spend' && !a.photoFilled,
     bot:"Now the rest of where your money actually goes each month. Tap what applies and I'll ask the amount, or hit \"Add several at once\" to fill them in together. Add as many as are real, then Done. This is what builds your budget.",
     chips:[{label:'Subscriptions',name:'Subscriptions'},{label:'Insurance',name:'Insurance'},{label:'Health',name:'Health'},{label:'Childcare',name:'Childcare'},{label:'Debt payment',name:'Debt payment'},{label:'Fun money',name:'Fun money'},{label:'Personal care',name:'Personal care'},{label:'Pets',name:'Pets'},{label:'Savings',name:'Savings'},{label:'✎Something else',custom:true}],
     amountPrompt:n=>`Roughly how much for ${n.toLowerCase()} a month?`,
@@ -17128,7 +17178,9 @@ const INTAKE=[
     bot:a=> iaTone(a)==='savage'
       ? "Alright - let's follow the money. Tap in the ones that are real for you: how often, and about how much each time. Don't bullshit the numbers - this only works if it's the truth."
       : "Alright - let's follow it. Tap in the ones that are real for you: how often, and about how much each time. Be honest - this only works if it's the truth."},
-  {id:'blindSpend', input:'continue', showIf:a=>a.acct==='spend' && a.deepDive==='deep' && (a.leaks||[]).length,
+  {id:'blindSpend',
+    botShort:a=>{ const inc=+a.income||0, mapped=intakeAssignedTotal(a); const rest=Math.max(0,inc-mapped);
+      return `So: about **${usd0(inc)}** comes in and we have mapped **${usd0(mapped)}** of it. The other **${usd0(rest)}** is not waste - it is groceries, fuel, the kids, the things this screen never asked about. Track a month and you will know what it really is.`; }, input:'continue', showIf:a=>a.acct==='spend' && a.deepDive==='deep' && (a.leaks||[]).length,
     /* This verdict used to compute income minus (bills + habits) and call the
        remainder money you "couldn't name", "bleeding out while nobody watched".
        Two things were wrong with that.
@@ -17171,7 +17223,8 @@ const INTAKE=[
       return `That's ${usd0(known)} a month, mapped.${savedTxt}${lifeTxt} Every one is now a choice you'll see coming, instead of a mystery at the end of the month.`; }},
   {id:'spendLimit', bot:a=>{ const habits=(a.leaks||[]).filter(x=>!x.fixed).reduce((s,x)=>s+(+x.monthly||0),0);
       return habits>0 ? `Your day-to-day spending mapped to about ${usd(habits)} a month. Want a monthly limit to hold under that? I'll show a progress bar - spent vs. left. Skip for pure tracking.` : `Want a monthly spending limit to hold yourself to? I'll show a progress bar - what you've spent and what's left. Skip for pure tracking, no limit.`; }, input:'money', key:'spendLimit', optional:true, showIf:a=>a.acct==='spend', placeholder:'300', hint:'Dollars per month. Leave it blank to skip the limit.', sum:'Monthly spending limit'},
-  {id:'comfort', sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
+  {id:'comfort',
+    botShort:a=>`Most spending is about a feeling, not the thing. Tap what actually helps when money is not the answer - I will show it back to you inside every gut-check.`, sum:'Free comfort list', input:'comfort', key:'comfort', optional:true,
     why:"Because a lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button you can reach. If you name what else helps while you're calm, I can hand the list back to you when the urge is loud and you can't think of a single thing.",
     bot:a=>{ const t=iaTone(a);
       if(t==='savage') return `One more${a.name?', '+a.name:''}, and it's the one that saves you money at 11pm. Buying is a feeling with a checkout button. So tell me now, while you're calm: what ELSE actually works on you? Tap anything real. I'll shove this list in your face the second you're about to blow $140 on nothing.`;
@@ -17180,7 +17233,8 @@ const INTAKE=[
   {id:'why', bot:a=> iaTone(a)==='savage'
       ? "Last thing, and it's the one that matters most: why does getting this right matter to you, RIGHT NOW? Don't give me the polite answer - give me the real one. Swear if you need to, I can take it. I'm going to hold onto this and read it back to you at the exact moment you're about to blow it."
       : "Last thing, and it's the one that matters most: why does getting this right matter to you, right now? Say it however it comes out. I'll hold onto it - and remind you at the moments it matters.", input:'text', key:'why', optional:true, placeholder:'In your own words…', sum:'Why this matters'},
-  {id:'done', bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
+  {id:'done',
+    botShort:a=>`That is everything${a.name?', '+a.name:''}. I will set up your budget, your Cover First and your dream - all of it changeable. The tool is ready; the rest is you showing up.`, bot:a=>{ const surv=a.situation==='survive'||a.situation==='treading';
       const base = a.acct==='spend' ? `That's it${a.name?', '+a.name:''}. I'll set you up to track your spending and gut-check every buy - no four walls, no budgeting math. Just clarity.` : `That's everything${a.name?', '+a.name:''}. I'll set up your budget, your Cover First, and your dream - you can change any of it anytime.`;
       const close = surv ? ` Remember - one small win this week. That's all I'm asking. The tool's ready when you are.`
         : (iaTone(a)==='savage' ? ` The tool's ready. Now show the hell up - that's the only part I can't do for you.` : ` The tool's ready. The rest is just you showing up - and I already think you will.`);
@@ -17332,6 +17386,17 @@ function iaShowWelcome(){
   /* A progress bar above a page with no questions on it is a bar measuring
      nothing. */
   const pr=document.querySelector('.intake-prog'); if(pr) pr.style.visibility='hidden';
+  /* Which version leads is the app's own brief/full setting, so the intro and
+     every panel afterwards agree about how much this person wants read to them.
+     Switching here is a real choice and is remembered, not a peek. */
+  const card=w.querySelector('.iaw-card');
+  if(card){
+    const sync=()=>card.classList.toggle('long', !sayBrief());
+    sync();
+    const more=document.getElementById('iaWelMore'), less=document.getElementById('iaWelLess');
+    if(more) more.onclick=()=>{ state.sayMode='full'; save(); sync(); w.scrollTop=0; };
+    if(less) less.onclick=()=>{ state.sayMode='brief'; save(); sync(); w.scrollTop=0; };
+  }
   w.scrollTop=0;
   const go=document.getElementById('iaWelGo');
   if(go) go.onclick=()=>{ state.welcomed=true; save(); iaHideWelcome(); if(!iaResumeOffer()) runIntakeStep(); };
@@ -17457,13 +17522,32 @@ function iaBotSay(text, done){
     if(done) done();
   }, wait);
 }
+/* "Same with the intake chat." 1,217 words of it across 39 questions, median 29
+   a question and the worst of them near a hundred - all of it before anybody
+   has seen a single number of their own.
+
+   The heavy steps get a short form and the app's existing brief/full setting
+   decides which one is spoken, so the intro, the chat and every panel afterwards
+   agree about how much this person wants read to them. Steps without a short
+   form fall through to the only text they have, which is how a 12-word question
+   avoids being rewritten into a 12-word question.
+
+   What the short forms are not allowed to drop: the reason a question is being
+   asked at all, and any number the answer depends on. A question shortened into
+   an order is a worse question, not a lighter one. */
+function iaBotText(s, a){
+  const ans=a||iaAns;
+  if(typeof sayBrief==='function' && sayBrief() && s.botShort)
+    return typeof s.botShort==='function' ? s.botShort(ans) : s.botShort;
+  return typeof s.bot==='function' ? s.bot(ans) : s.bot;
+}
 function runIntakeStep(){
   iaForceInput=false;
   const idx=nextIntakeIndex(iaStep); if(idx<0) return;
   iaStep=idx; const s=INTAKE[idx];
   const dock=document.getElementById('intakeDock'); if(dock) dock.innerHTML='';
   document.getElementById('intakeBar').style.width=iaProgress(idx)+'%';
-  iaBotSay(typeof s.bot==='function'?s.bot(iaAns):s.bot, ()=>{ if(INTAKE[iaStep]===s) renderIntakeDock(s); });
+  iaBotSay(iaBotText(s), ()=>{ if(INTAKE[iaStep]===s) renderIntakeDock(s); });
 }
 /* Editing from the review screen: re-ask ONE question, appending to the
    transcript (never rewriting it), then land straight back on the review. If
