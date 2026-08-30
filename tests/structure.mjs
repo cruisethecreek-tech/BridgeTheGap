@@ -8412,6 +8412,75 @@ check('...and it refuses to choose between them', /will not pick for you/.test(f
 check('with nothing owed it does not manufacture a comparison',
       !/on your debt instead/.test(five.noDebtTxt), five.noDebtTxt.slice(-160));
 
+/* ---- 100. "This doesn't look right" ----
+   Sent from a real phone as a photo of the invest-vs-crush panel with four
+   words attached. Both cards read as a minus - minus $17,809 one side, minus
+   $14,452 the other - and both were labelled "net worth in 5 yrs". The gap
+   between them was exact to the cent, so the arithmetic was never the fault.
+   The fault was that the model only ever knew the debts on that screen and the
+   money aimed at them: no bank balance, and no house behind the HELOC. It took
+   a person with a home and savings and printed a number that said they were
+   worth less than nothing.
+   The guarded property is not the figure. It is that the app never calls a
+   partial number by a whole number's name, and never shows a minus sign
+   without the two halves that made it. ---- */
+const IVN={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:24,
+  accounts:[{id:'a',name:'Chequing',kind:'checking',purpose:'',balance:6000,updated:ISO_TODAY,src:'user'}],
+  debts:[{id:'h',name:'Heloc',kind:'line',balance:18000,apr:3.49,minPayment:120,limit:25000}],
+  debtBudget:220, investReturn:10, investYears:5};
+await seed(IVN); await p.reload(); await p.waitForTimeout(900);
+const look = await p.evaluate(async () => {
+  activateTab('debt'); await new Promise(r=>setTimeout(r,600));
+  /* "-$7,027.38" - the sign sits OUTSIDE the dollar sign, so a pattern that
+     lets -? float ahead of \$ swallows it and hands back a positive number.
+     Caught by this very section printing 0-7027.38=7027.38 as a failure. */
+  const num=t=>{ const c=String(t).replace(/,/g,'').match(/(-?)\s*\$?\s*(-?[\d.]+)/);
+                 return c ? (c[1]==='-'?-1:1)*Math.abs(parseFloat(c[2])) : NaN; };
+  const cards=[...document.querySelectorAll('.iv-card')].map(c=>({
+    label:(c.querySelector('.sp-k')||{}).textContent||'',
+    net:num((c.querySelector('.iv-net')||{}).textContent||''),
+    neg:/^\s*-/.test(((c.querySelector('.iv-net')||{}).textContent||'').trim()),
+    sub:(c.querySelector('.sub')||{}).textContent||'',
+    work:(c.querySelector('.iv-work')||{textContent:''}).textContent.replace(/\s+/g,' ').trim(),
+    parts:[...c.querySelectorAll('.iv-work b')].map(b=>num(b.textContent)) }));
+  const scope=(document.querySelector('.iv-scope')||{textContent:''}).textContent.replace(/\s+/g,' ').trim();
+  const c=investCompare(state.debts,state.debtBudget,10,60);
+  return { cards, scope, worth:netWorth(), bank:bankTotal(),
+    panel:(document.getElementById('investPanel')||{innerText:''}).innerText,
+    /* the gap is the only figure a decision hangs on, and it must survive
+       everything the model leaves out, because those sit on both sides */
+    gap:Math.round((c.investFirst.net-c.crush.net)*100)/100,
+    gapWithAssets:Math.round(((c.investFirst.net+netWorth())-(c.crush.net+netWorth()))*100)/100 };
+});
+check('the invest panel no longer calls a partial figure your net worth',
+      look.cards.length===2 && !/net worth in/i.test(look.panel), look.panel.slice(0,140));
+check('...each card says what its number is actually the end of',
+      look.cards.every(c=>/left of this one decision after 5 yrs/.test(c.sub)),
+      look.cards.map(c=>c.sub).join(' | '));
+check('...and shows the two halves that made it, so a minus explains itself',
+      look.cards.every(c=>/invested/.test(c.work) && /still owed/.test(c.work) && c.parts.length===2),
+      look.cards.map(c=>c.work).join(' | '));
+check('...that reconcile: invested minus still owed is the number on the card',
+      look.cards.every(c=>Math.abs((c.parts[0]-c.parts[1])-c.net)<1),
+      look.cards.map(c=>`${c.parts[0]}-${c.parts[1]}=${c.net}`).join(' | '));
+/* the reporter's own shape: a HELOC big enough that five years of minimums
+   leaves it standing, so both cards are negative. They must stay negative -
+   inventing a positive by folding in assets would be the same lie facing the
+   other way - and the screen must explain the sign. */
+check('the shape from the report still comes out negative on both sides',
+      look.cards.every(c=>c.neg===true), look.cards.map(c=>c.net).join(' | '));
+check('...and the panel names, on screen, what is not counted in it',
+      /bank balance is not in there/i.test(look.scope), look.scope.slice(0,120));
+check('...including the home behind a HELOC, which no debt figure can see',
+      /your home behind Heloc/i.test(look.scope), look.scope.slice(0,220));
+check('...and says plainly that a minus here is not your net worth',
+      /not your net worth/i.test(look.scope) && new RegExp('\\$6,000').test(look.scope),
+      look.scope.slice(-200));
+check('...while pointing at the gap, the one figure the decision hangs on',
+      /gap between the two cards/i.test(look.scope));
+check('the gap is untouched by everything the model leaves out',
+      look.gap===look.gapWithAssets && look.worth===6000, `${look.gap} vs ${look.gapWithAssets}`);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

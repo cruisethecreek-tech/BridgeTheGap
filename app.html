@@ -852,6 +852,10 @@
   .iv-card.win{border-color:var(--good);background:rgba(53,201,154,.07)}
   .iv-net{font-weight:900;font-size:23px;letter-spacing:-.4px;margin-top:4px}
   .iv-card.win .iv-net{color:var(--good)}
+  .iv-work{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
+  .iv-work b{color:var(--text);font-weight:700}
+  .iv-scope{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.6}
+  .iv-scope b{color:var(--text)}
   .iv-verdict{margin-top:14px;font-size:15px;font-weight:600;line-height:1.5}
   .iv-verdict b{color:var(--accent)}
   .iv-flags{margin-top:14px;display:flex;flex-direction:column;gap:8px}
@@ -6005,11 +6009,27 @@ function renderInvestCompare(){
   const flipsOnRate=((lo5.investFirst.net-lo5.crush.net)>0)!==((hi10.investFirst.net-hi10.crush.net)>0);
   const tooClose = flipsOnRate || Math.abs(diff) < Math.max(crushNet,invNet)*0.02;
   const flags=debts.map(d=>({name:d.name, apr:+d.apr||0, invest:(+d.apr||0)<ret}));
+  /* Reported from a real phone with one word: "this doesn't look right." Both
+     cards read as a minus and both were labelled NET WORTH, and they were not
+     net worth - the model only ever knew the debts listed on this screen and
+     the money aimed at them. It never saw a bank balance, and it never saw the
+     house behind a HELOC or the car behind a car loan. So a person with a home
+     and savings was shown minus seventeen thousand dollars and told that was
+     what they were worth.
+     The arithmetic was right; the label was a lie and the working was hidden.
+     Both branches carry the same unseen assets, so the GAP between them - the
+     only figure a decision hangs on - was always sound. The fix is to name what
+     the figure actually is and print the two halves that make it, so a minus
+     sign explains itself instead of accusing someone. */
+  const backed=debts.filter(d=>debtSecuredOn(d));
+  const backedThings=[...new Set(backed.map(d=>debtSecuredOn(d)))];
+  const ivCard=(label,r,win)=>`<div class="iv-card ${win?'win':''}"><div class="sp-k">${label}</div><div class="iv-net">${actMoney(r.net)}</div><div class="sub" style="margin:2px 0 0">left of this one decision after ${yrs} yrs</div><div class="iv-work"><span><b>${actMoney(r.invest)}</b> invested</span><span><b>${actMoney(r.debtLeft)}</b> still owed</span></div></div>`;
   box.innerHTML=`
     <div class="iv-compare">
-      <div class="iv-card ${!tooClose&&diff<=0?'win':''}"><div class="sp-k">Crush the debt first</div><div class="iv-net">${actMoney(crushNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
-      <div class="iv-card ${!tooClose&&diff>0?'win':''}"><div class="sp-k">Minimums + invest the rest</div><div class="iv-net">${actMoney(invNet)}</div><div class="sub" style="margin:2px 0 0">net worth in ${yrs} yrs</div></div>
+      ${ivCard('Crush the debt first', c.crush, !tooClose&&diff<=0)}
+      ${ivCard('Minimums + invest the rest', c.investFirst, !tooClose&&diff>0)}
     </div>
+    <div class="iv-scope"><b>Read those two numbers carefully:</b> each one is the invested pot minus what is still owed on <b>the debts listed above</b>, and nothing else. Your bank balance is not in there${backedThings.length?`, and neither is ${backedThings.join(' or ')} behind ${backed.map(d=>escapeHtml(d.name)).join(' and ')}`:''}. A minus sign means the debt outlasts the pot over ${yrs} years - it is not your net worth${netWorth()>0?`, which is ${actMoney(netWorth())} today`:''}. What the comparison is actually for is <b>the gap between the two cards</b>, and every dollar left out sits on both sides equally, so the gap holds.</div>
     <div class="iv-verdict">${tooClose ? `At ${ret}%/yr these land within <b>${money(Math.abs(diff))}</b> of each other after ${yrs} years. ${voice(VOICE.ivTie,null)}` : diff>0 ? `At ${ret}%/yr, paying minimums and investing the difference could leave you about <b>${money(diff)}</b> richer in ${yrs} years. ${voice(VOICE.ivInvest,null)}` : diff<-1 ? `Crushing the debt wins by about <b>${money(-diff)}</b> over ${yrs} years. ${voice(VOICE.ivCrush,null)}` : `It's roughly a wash over ${yrs} years. ${voice(VOICE.ivTie,null)}`}</div>
     <div class="iv-flags">${flags.map(f=>`<div class="iv-flag ${f.invest?'inv':'crush'}"><b>${escapeHtml(f.name)} · ${f.apr}%</b> - ${f.invest?`below ${ret}%, so investing the extra likely beats rushing this one`:`beats ${ret}%; crushing it is a guaranteed ${f.apr}% return`}</div>`).join('')}</div>
     ${(()=>{
