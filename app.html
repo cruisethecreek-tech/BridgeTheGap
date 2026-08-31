@@ -852,6 +852,37 @@
   .iv-card.win{border-color:var(--good);background:rgba(53,201,154,.07)}
   .iv-net{font-weight:900;font-size:23px;letter-spacing:-.4px;margin-top:4px}
   .iv-card.win .iv-net{color:var(--good)}
+  /* ---- reading a statement ---- */
+  .scan-take{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .scan-pages{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .scan-pg{position:relative;width:66px;height:88px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:var(--panel-2)}
+  .scan-pg img{width:100%;height:100%;object-fit:cover;display:block}
+  .scan-pg .scan-n{position:absolute;left:0;top:0;background:rgba(0,0,0,.62);color:#fff;font-size:10.5px;font-weight:800;padding:1px 5px;border-bottom-right-radius:7px}
+  .scan-pg .scan-x{position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.62);color:#fff;font-size:12px;line-height:1;cursor:pointer}
+  .scan-pg.done{border-color:var(--good)}
+  .scan-go{margin-top:12px}
+  .scan-note{margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .scan-note b{color:var(--text)}
+  .scan-reads{display:block;margin-top:6px;opacity:.85}
+  .scan-head{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .scan-tot{font-weight:900;font-size:26px;letter-spacing:-.5px}
+  .scan-sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .scan-grp{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+  .scan-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:baseline;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+  .scan-row .sg-n{font-weight:700;font-size:14px}
+  .scan-row .sg-a{font-weight:800;font-size:15px;white-space:nowrap}
+  .scan-row .sg-w{grid-column:1/-1;font-size:12px;color:var(--muted)}
+  .scan-row .sg-bar{grid-column:1/-1;height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:2px}
+  .scan-row .sg-bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+  .scan-row .sg-bar i.sg-keep{background:var(--good)}
+  .scan-row.top{border-color:var(--accent)}
+  .scan-drip{margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.6}
+  .scan-drip b{color:var(--text)}
+  .scan-caveat{margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.55;background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+  .scan-caveat b{color:var(--text)}
+  .scan-acts{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .scan-raw{margin-top:10px;font-size:12px;color:var(--muted)}
+  .scan-raw pre{white-space:pre-wrap;word-break:break-word;max-height:220px;overflow:auto;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px;font-size:11px;margin:6px 0 0}
   .iv-work{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
   .iv-work b{color:var(--text);font-weight:700}
   .iv-scope{margin-top:12px;font-size:13px;color:var(--muted);line-height:1.6}
@@ -3055,6 +3086,41 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="logWin"></div>
       </div>
 
+      <!-- Asked for directly: "instead of taking actual screenshots is a scan
+           feature possible where I can say open up my bank statement and quickly
+           skim all the transactions. Even if it wasn't completely uploaded into
+           the track portion (though would be nice of the app if it could at
+           least analyze my spending habits and notice where I'm spending too
+           much, to report back in reflect)".
+
+           Two asks, and the second one is the real one. The reader already
+           existed but it took ONE photo at a time and its only destination was
+           the quick log - so reading a four page statement meant four separate
+           passes, and every one of them ended in a pile of rows to check before
+           anything at all came back. Somebody who just wants to know where the
+           money went had to do a data entry job first.
+
+           So this is a READING, not an import. Hold up as many pages as you
+           like, read them in one pass, and the answer comes back as an answer:
+           what went out, grouped, with the drip counted. Nothing touches the
+           ledger unless it is pushed through the quick log by hand afterwards,
+           which is a button and not a default - OCR output and typed-in truth
+           must never be added together and printed as one number. -->
+      <div class="panel" id="scanPanel">
+        <h2>Read a statement</h2>
+        <p class="sub">Hold up your bank statement - on screen or on paper - and take a shot of each page. Everything is read <b>on this device</b>: no upload, no account linking, nothing leaves the browser. You get back where the money actually went, and nothing lands in your ledger unless you send it there yourself.</p>
+        <div class="scan-take">
+          <button class="btn primary" id="scanSnap">Take a page</button>
+          <button class="btn ghost" id="scanPick">Pick from photos</button>
+          <input type="file" id="scanCam" accept="image/*" capture="environment" class="hide">
+          <input type="file" id="scanFiles" accept="image/*" multiple class="hide">
+        </div>
+        <div class="scan-pages" id="scanPages"></div>
+        <div class="scan-go" id="scanGo"></div>
+        <div class="scan-note" id="scanNote"></div>
+        <div id="scanOut"></div>
+      </div>
+
       <div class="panel" id="gate-csv">
         <h2>Import from a bank CSV</h2>
         <p class="sub">Drop in a statement export and skip the manual typing. It is parsed entirely on your device - nothing is uploaded, nothing leaves the browser.</p>
@@ -4376,7 +4442,8 @@ function defaultState(){
            debts:[], debtBudget:0, debtStrategy:'avalanche', areasOff:[], roomPay:0, calConfirm:false,
            saveBudget:0, saveOrder:'soonest',
            investReturn:7, investYears:10, lev:{}, theme:'auto',
-           autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null };
+           autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null,
+           scans:[] };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -4392,6 +4459,10 @@ function normalizeState(s){
      one clamp is cheaper than a defensive read at every place stages are drawn. */
   s.stageReached=Math.min(3, Math.max(1, Math.round(+s.stageReached||1)));
   s.rateDraft=null;
+  /* A reading is a photograph of a moment, not a ledger, and an unbounded pile
+     of them would grow state forever for no gain. The last three, newest first. */
+  if(!Array.isArray(s.scans)) s.scans=[];
+  s.scans=s.scans.filter(x=>x&&typeof x==='object').slice(0,3);
   /* Checked against a literal, not against PLAN_VIEWS. normalizeState runs
      inside load(), which runs at `let state = load()` - long before a const
      declared further down the file exists. Referencing it here throws on the
@@ -6784,6 +6855,10 @@ function activateTab(name,fromHistory){
   if(name==='home') renderHome();
   if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
   if(name==='debt') renderDebt();
+  /* Same lesson Tripwires taught: a render function no surface calls is a panel
+     that does not exist. The scan panel holds live object URLs and a result that
+     must survive tab hops, so it redraws on arrival rather than at boot only. */
+  if(name==='tx' && typeof renderScan==='function') renderScan();
   /* "Tripwires has no actionable button." It had four, and none of them had
      ever been drawn. renderTripwires was wired ONLY into the sync-pull path and
      into add/remove - the two handlers on controls that could not exist until
@@ -9602,7 +9677,12 @@ function qlRow(){ return `<div class="ql-row">
    row for review, nothing logs without the user's eyes on it.
    qlGen is a render epoch: an OCR pass that outlives its panel must not write into
    a rebuilt (or closed) DOM. */
-let qlPhotoURL=null, qlPhotoFile=null, tessLoading=null, qlGen=0, qlGuessSaid=false;   // say what the guessing is once, not once per row
+let qlPhotoURL=null, qlPhotoFile=null, tessLoading=null, qlGen=0, qlGuessSaid=false;
+/* Rows handed in from OUTSIDE the panel - today only the statement reader. It
+   is a seed rather than a call into the panel's internals because wireRow and
+   guessRow are closures over one render, and a third copy of the fill loop is
+   how the two existing copies would have drifted apart. Consumed once. */
+let qlSeed=null, qlSeedNote='';   // say what the guessing is once, not once per row
 function loadTesseract(){
   if(window.Tesseract) return Promise.resolve(window.Tesseract);
   if(tessLoading) return tessLoading;
@@ -9760,6 +9840,319 @@ function qlParseNotepad(raw){
   });
   return out;
 }
+/* ================= READING A STATEMENT =================
+   The quick log's reader takes one photo and ends in a pile of editable rows.
+   That is right for a shopping list and wrong for a statement: four pages meant
+   four passes, and the payoff was data entry rather than an answer. Asked for
+   directly - skim the whole thing, and even if none of it reaches Track, say
+   where the money is going.
+
+   So this path never writes to the ledger. It produces a READING: pages in,
+   records out, grouped and counted. Pushing any of it into Track is a separate
+   button that hands the rows to the quick log, where they get the same review
+   every other imported row gets. The reason is the rule the invest panel
+   already learned the hard way - a figure read off a photograph and a figure
+   the user typed have different confidence, and adding them together produces a
+   number that claims more than either half can support. */
+
+/* Buckets that do NOT depend on the user having any categories yet, which is
+   the whole point: somebody can install this app, scan last month, and get an
+   answer before they have built a single budget line. Ordered, first match
+   wins, so the specific sits above the generic word inside it - the same rule
+   the category faces run on. */
+const SCAN_GROUPS=[
+  {g:'Put away',      emoji:'🌱', keep:true, w:PUT_AWAY_WORDS},
+  {g:'Rent or mortgage', emoji:'🏠', w:['rent','mortgage','landlord','property mgmt','realty','housing']},
+  {g:'Debt payments', emoji:'💳', w:['loan pmt','loan payment','card payment','cardmember','creditcard','credit card pmt','student loan','navient','nelnet','sallie','autopay loan','collections']},
+  {g:'Utilities',     emoji:'💡', w:['electric','hydro','power co','energy','gas co','water','sewer','utility','utilities','waste','trash']},
+  {g:'Phone and internet', emoji:'📶', w:['verizon','at&t','att ','t-mobile','tmobile','sprint','rogers','bell','telus','comcast','xfinity','spectrum','cox','internet','broadband','wireless','mobile']},
+  {g:'Insurance',     emoji:'🛡️', w:['insurance','geico','allstate','statefarm','state farm','progressive','aetna','cigna','anthem','premium']},
+  {g:'Groceries',     emoji:'🛒', w:['grocery','groceries','supermarket','walmart','aldi','kroger','meijer','safeway','costco','publix','wegmans','trader joe','whole foods','sobeys','loblaw','no frills','food basics','heb','winco','food lion','giant eagle','shoprite','iga']},
+  {g:'Takeout and delivery', emoji:'🥡', w:['doordash','ubereats','uber eats','grubhub','skipthedishes','postmates','seamless','takeout','delivery','pizza','dominos','papa john','wingstop']},
+  {g:'Eating out',    emoji:'🍽️', w:['mcdonald','burger','wendy','taco','kfc','chipotle','subway sand','popeyes','chick-fil','arby','five guys','restaurant','grill','diner','bistro','cantina','sushi','ramen','steakhouse','deli','bakery','tst*','sq *']},
+  {g:'Coffee',        emoji:'☕', w:['starbucks','dunkin','coffee','latte','espresso','cafe','caribou','peets','tim horton','dutch bros']},
+  {g:'Drinks and bars', emoji:'🍺', w:['liquor','beer','wine','brewery','brewing','pub','tavern','bar &','cocktail','lcbo','abc fine','total wine','spirits']},
+  {g:'Smokes and vape', emoji:'🚬', w:['tobacco','cigarette','vape','smoke shop','juul','zyn','nicotine']},
+  {g:'Gas and fuel',  emoji:'⛽', w:['shell','chevron','exxon','mobil','bp ','sunoco','marathon','speedway','circle k','wawa','sheetz','petro','esso','husky','fuel','gas station','pilot travel','loves travel']},
+  {g:'Getting around', emoji:'🚗', w:['uber','lyft','taxi','transit','metro','subway fare','parking','toll','ipass','ezpass','e-zpass','bus ','amtrak','via rail','car wash','jiffy lube','autozone','oreilly','tire','mechanic','dmv','bureau motor vehic']},
+  {g:'Subscriptions', emoji:'🔁', w:['netflix','spotify','hulu','disney','max.com','hbo','paramount','peacock','apple.com/bill','itunes','google storage','youtube','audible','kindle unltd','kindle unlimited','prime video','amazon prime','patreon','substack','dropbox','icloud','adobe','microsoft 365','onedrive','chatgpt','openai','claude','canva','subscription','membership']},
+  {g:'Online shopping', emoji:'📦', w:['amazon','amzn','ebay','shein','temu','etsy','wish.com','aliexpress','wayfair','chewy','paypal *','shopify']},
+  {g:'Shopping',      emoji:'🛍️', w:['target','tj maxx','marshalls','ross store','nordstrom','macy','kohl','old navy','gap ','h&m','zara','nike','lululemon','best buy','home depot','lowes','ikea','dollar general','dollar tree','dollarama','five below','michaels','hobby lobby']},
+  {g:'Health',        emoji:'🩺', w:['pharmacy','cvs','walgreens','rite aid','shoppers drug','prescription','doctor','dental','dentist','clinic','hospital','medical','optometr','vision','labcorp','quest diag','therapy','urgent care']},
+  {g:'Fitness',       emoji:'💪', w:['gym','fitness','planet fit','crossfit','yoga','peloton','anytime fit','la fitness','goodlife']},
+  {g:'Personal care', emoji:'💈', w:['salon','barber','haircut','nails','spa ','massage','sephora','ulta','beauty']},
+  {g:'Kids',          emoji:'🧸', w:['daycare','childcare','babysit','diaper','school lunch','tuition','pta','kids club','toys r']},
+  {g:'Pets',          emoji:'🐾', w:['vet ','veterinar','petco','petsmart','pet food','chewy','grooming']},
+  {g:'Fees and interest', emoji:'⚠️', w:['overdraft','nsf','service charge','monthly fee','maintenance fee','atm fee','interest charge','finance charge','late fee','foreign transaction','annual fee','wire fee','returned item']},
+  {g:'Cash out',      emoji:'🏧', w:['atm withdrawal','cash withdrawal','atm ','cash advance','withdrawal']},
+  {g:'Giving',        emoji:'🤲', w:['church','tithe','donation','charity','gofundme','red cross','united way','goodwill']}
+];
+/* A record the vocabulary cannot place is NOT quietly dropped and it is NOT
+   guessed at. It goes in its own bucket, and the reading says how much of the
+   total is sitting in it - because "37% of your money went somewhere I could
+   not name" is a fact about the reading's own reliability, and hiding it would
+   make every other percentage on the screen look more certain than it is. */
+const SCAN_OTHER={g:'Not recognised', emoji:'❓', other:true};
+/* Matched on WORD BOUNDARIES, not on bare substring, and the first draft is
+   why: `includes('etf')` filed NETFLIX.COM under Put away, because n-ETF-lix
+   contains it. A subscription reported as retirement saving is not a cosmetic
+   miss - it moves money out of the column the app is trying to grow and into
+   the one it is trying to shrink, and it does it silently. Three-letter tickers
+   sitting in a vocabulary list next to real merchant names make that failure the
+   default rather than the exception.
+   A keyword with a space or a symbol in it stays a plain phrase match, because
+   that is what those were written to be ("index fund", "sq *", "bar &"). */
+const scanNorm = t => ' '+String(t||'').toLowerCase().replace(/[^a-z0-9&*. ]+/g,' ').replace(/\s+/g,' ').trim()+' ';
+const SCAN_RX=new Map();
+function scanMatch(t, w){
+  const k=scanNorm(w).trim();
+  if(!k) return false;
+  if(/[ &*]/.test(k)) return t.includes(k);           // a phrase, matched as written
+  let rx=SCAN_RX.get(k);
+  if(!rx){ rx=new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)'); SCAN_RX.set(k,rx); }
+  return rx.test(t);
+}
+function scanGroupOf(desc){
+  const t=scanNorm(desc);
+  if(t.trim().length<2) return SCAN_OTHER;
+  for(const G of SCAN_GROUPS){ if(G.w.some(w=>scanMatch(t,w))) return G; }
+  return SCAN_OTHER;
+}
+/* Two shots of the same page overlap, and a phone panning down a statement will
+   catch the same three rows twice as often as not. Without this the drip count
+   - the whole reason the feature is worth having - would be inflated by exactly
+   how carefully somebody photographed their statement, which is the worst kind
+   of wrong number: it moves with something that has nothing to do with money.
+   Keyed on the normalised name AND the amount, so two genuinely separate $4.15
+   coffees on different days both survive only if the reader saw them as
+   separate records on separate lines - which, on one page, it did. */
+function scanKey(r){ return String(r.what||'').toLowerCase().replace(/[^a-z0-9]+/g,'')+'|'+(Math.round((+r.amt||0)*100)); }
+function scanMerge(pages){
+  const seen=new Map(), out=[];
+  (pages||[]).forEach((rows,pi)=>{
+    const local=new Map();
+    (rows||[]).forEach(r=>{
+      const k=scanKey(r);
+      /* Within ONE page a repeat is a real repeat: a statement genuinely lists
+         the same coffee shop at the same price twice. Across pages it is the
+         overlap. So a duplicate is only dropped when it was first seen on an
+         EARLIER page and this page has not already claimed that many of them. */
+      const mine=(local.get(k)||0)+1; local.set(k,mine);
+      const before=seen.get(k)||0;
+      if(mine<=before) return;                 // this page is re-showing what a previous page already gave
+      out.push({...r, page:pi+1});
+    });
+    local.forEach((n,k)=>seen.set(k, Math.max(seen.get(k)||0, n)));
+  });
+  return out;
+}
+/* The reading itself. Deliberately NOT a net worth, not a month, not a budget -
+   it is "what these pages say", and every figure on it is traceable to a record
+   the user can see listed. */
+function scanRead(records){
+  const rows=(records||[]).filter(r=>(+r.amt||0)>0);
+  const income=rows.filter(r=>r.kind==='income'), out=rows.filter(r=>r.kind!=='income');
+  const inAmt=Math.round(income.reduce((s,r)=>s+(+r.amt||0),0)*100)/100;
+  /* A transfer into savings is not money that went out, and a headline that
+     counts it as such reports somebody's best month as their worst. The app
+     already refuses to do this everywhere else - Put away stands beside Spent
+     this month on Track rather than inside it - and the same rule has to hold
+     here or the reading contradicts the tab it is sitting on. Every percentage
+     below divides by what was actually SPENT, so the biggest bucket is the
+     biggest thing you bought, not an artefact of how much you saved. */
+  const kept=out.filter(r=>scanGroupOf(r.what).keep);
+  const spend=out.filter(r=>!scanGroupOf(r.what).keep);
+  const spent=Math.round(spend.reduce((s,r)=>s+(+r.amt||0),0)*100)/100;
+  const putAway=Math.round(kept.reduce((s,r)=>s+(+r.amt||0),0)*100)/100;
+  const buckets=new Map();
+  out.forEach(r=>{
+    const G=scanGroupOf(r.what);
+    const b=buckets.get(G.g)||{g:G.g, emoji:G.emoji, keep:!!G.keep, other:!!G.other, amt:0, n:0, names:new Map()};
+    b.amt=Math.round((b.amt+(+r.amt||0))*100)/100; b.n++;
+    const nm=String(r.what||'').trim()||'(no name read)';
+    b.names.set(nm,(b.names.get(nm)||0)+(+r.amt||0));
+    buckets.set(G.g,b);
+  });
+  const groups=[...buckets.values()].sort((a,b)=>b.amt-a.amt);
+  const spendGroups=groups.filter(g=>!g.keep);
+  const unknown=groups.find(g=>g.other);
+  /* The drip: the thing a statement is physically incapable of showing you,
+     because it spreads it over four pages. Many small charges to one place,
+     which nobody adds up by eye and everybody underestimates. */
+  const drips=spendGroups.filter(g=>!g.other && g.n>=4)
+    .map(g=>({...g, avg:Math.round(g.amt/g.n*100)/100}))
+    .sort((a,b)=>b.amt-a.amt);
+  return { spent, putAway, inAmt, count:rows.length, outCount:out.length, spendCount:spend.length,
+           keptCount:kept.length, inCount:income.length,
+           groups, spendGroups, drips,
+           unnamed:rows.filter(r=>r.unnamed).length,
+           unknownAmt:unknown?unknown.amt:0,
+           unknownPct: spent>0 && unknown ? Math.round(unknown.amt/spent*1000)/10 : 0,
+           top: spendGroups.find(g=>!g.other)||null,
+           topPct: spent>0 && spendGroups.find(g=>!g.other) ? Math.round(spendGroups.find(g=>!g.other).amt/spent*1000)/10 : 0 };
+}
+/* ---------- the scan surface ----------
+   scanGen is a render epoch, same contract as qlGen: a read that outlives its
+   panel must not write into a rebuilt DOM. */
+let scanPages=[], scanGen=0, scanResult=null;
+function scanReset(){
+  scanPages.forEach(p=>{ try{ URL.revokeObjectURL(p.url); }catch(e){} });
+  scanPages=[]; scanResult=null; scanGen++;
+}
+function scanAdd(files){
+  const fs=[...(files||[])].filter(f=>f && /^image\//.test(f.type||''));
+  if(!fs.length) return;
+  /* Twelve pages of Tesseract on a phone is minutes of work and a real chance
+     of the tab being killed for memory. A statement that long is a CSV export
+     job, and the panel above says so. */
+  const room=Math.max(0, 12-scanPages.length);
+  fs.slice(0,room).forEach(f=>scanPages.push({file:f, url:URL.createObjectURL(f), rows:null, text:'', read:false}));
+  renderScanPages();
+  if(fs.length>room) scanSay(`That is as many as I will read in one pass (<b>12</b>). For a statement longer than that, the <b>CSV import</b> below is the right tool - it is exact, where this is a reading.`);
+}
+function scanSay(html){ const n=document.getElementById('scanNote'); if(n) n.innerHTML=html; }
+function renderScanPages(){
+  const box=document.getElementById('scanPages'); if(!box) return;
+  box.innerHTML=scanPages.map((p,i)=>`<div class="scan-pg${p.read?' done':''}"><img src="${p.url}" alt="Page ${i+1}"><span class="scan-n">${i+1}</span><button class="scan-x" data-scanx="${i}" title="Drop this page" aria-label="Drop page ${i+1}">✕</button></div>`).join('');
+  box.querySelectorAll('[data-scanx]').forEach(b=>b.addEventListener('click',()=>{
+    const i=+b.dataset.scanx; const pg=scanPages[i]; if(!pg) return;
+    try{ URL.revokeObjectURL(pg.url); }catch(e){}
+    scanPages.splice(i,1); scanResult=null; renderScanPages(); renderScanGo(); const o=document.getElementById('scanOut'); if(o) o.innerHTML='';
+  }));
+  renderScanGo();
+}
+function renderScanGo(){
+  const go=document.getElementById('scanGo'); if(!go) return;
+  if(!scanPages.length){ go.innerHTML=''; scanSay('Shoot each page of the statement. Reads best from a <b>screen or a printout</b> - a phone photo of a phone screen is exactly what this was built for. Reads worst: anything blurry, and handwriting.'); return; }
+  const n=scanPages.length;
+  go.innerHTML=`<button class="btn primary" id="scanRun">Read ${n} page${n>1?'s':''}</button>
+    <button class="btn ghost" id="scanClear">Start over</button>`;
+  document.getElementById('scanRun').addEventListener('click',runScan);
+  document.getElementById('scanClear').addEventListener('click',()=>{ scanReset(); renderScanPages(); const o=document.getElementById('scanOut'); if(o) o.innerHTML=''; });
+}
+async function runScan(){
+  const gen=++scanGen;
+  const btn=document.getElementById('scanRun'); if(btn) btn.disabled=true;
+  scanSay('Fetching the on-device reader (a few MB now, plus a ~15 MB language pack the first time)... your pages never leave this phone.');
+  try{
+    const T=await loadTesseract();
+    if(gen!==scanGen) return;
+    for(let i=0;i<scanPages.length;i++){
+      const pg=scanPages[i];
+      scanSay(`Reading page <b>${i+1}</b> of <b>${scanPages.length}</b>, right here on the device...`);
+      const r=await T.recognize(pg.file,'eng',{logger:m=>{
+        if(gen===scanGen && m.status==='recognizing text')
+          scanSay(`Reading page <b>${i+1}</b> of <b>${scanPages.length}</b>... ${Math.round((m.progress||0)*100)}%`);
+      }});
+      if(gen!==scanGen) return;
+      pg.text=String((r&&r.data&&r.data.text)||'');
+      pg.rows=qlParseOcr(pg.text);
+      pg.read=true;
+      renderScanPages();
+    }
+    if(gen!==scanGen) return;
+    const merged=scanMerge(scanPages.map(p=>p.rows||[]));
+    const dropped=scanPages.reduce((s,p)=>s+((p.rows||[]).length),0)-merged.length;
+    scanResult={ records:merged, read:scanRead(merged), pages:scanPages.length, dropped,
+                 text:scanPages.map((p,i)=>`--- page ${i+1} ---\n`+p.text).join('\n\n'), at:todayStr() };
+    renderScanOut();
+  }catch(e){
+    if(gen===scanGen) scanSay("Couldn't fetch the reader (offline, maybe). Nothing was lost - your pages are still here, try again when you have a connection. The <b>CSV import</b> below needs no reader at all.");
+  }
+  if(btn) btn.disabled=false;
+}
+function scanSaveReading(){
+  if(!scanResult) return;
+  const R=scanResult.read;
+  /* The RECORDS are not kept - only the shape of them. A reading is a summary,
+     and warehousing somebody's merchant-by-merchant history in localStorage to
+     redraw a paragraph in Reflect is a bigger promise than this feature needs
+     to make. */
+  const keep={ at:scanResult.at, pages:scanResult.pages, spent:R.spent, putAway:R.putAway, inAmt:R.inAmt,
+    outCount:R.spendCount, unknownPct:R.unknownPct,
+    groups:R.spendGroups.filter(g=>!g.other).slice(0,6).map(g=>({g:g.g, emoji:g.emoji, amt:g.amt, n:g.n})),
+    drips:R.drips.slice(0,3).map(g=>({g:g.g, emoji:g.emoji, amt:g.amt, n:g.n, avg:g.avg})) };
+  state.scans=[keep, ...(state.scans||[])].slice(0,3);
+  save();
+  if(typeof renderReport==='function') renderReport();
+}
+function latestScan(){ return (state.scans||[])[0]||null; }
+function renderScanOut(){
+  const box=document.getElementById('scanOut'); if(!box) return;
+  if(!scanResult){ box.innerHTML=''; return; }
+  const R=scanResult.read;
+  if(!R.count){
+    scanSay('');
+    box.innerHTML=`<div class="scan-head"><div class="scan-tot">Nothing readable</div>
+      <div class="scan-sub">${scanResult.pages} page${scanResult.pages>1?'s':''} went through the reader and no amounts came off them. That is a photo problem, not a you problem - most often glare, or a shot taken at an angle. Try again straight on, filling the frame with the rows.</div></div>
+      <details class="scan-raw"><summary>Show me what it actually read</summary><pre>${escapeHtml(scanResult.text.slice(0,4000))}</pre></details>`;
+    return;
+  }
+  scanSay('');
+  const hrs=n=>{ const w=+state.hourlyWage||0; return w>0?` - <b>${(n/w).toFixed(1)} hrs</b> of your life`:''; };
+  const pct=a=>R.spent>0?Math.round(a/R.spent*1000)/10:0;
+  box.innerHTML=`
+    <div class="scan-head">
+      <div class="scan-tot">${usd(R.spent)} spent</div>
+      <div class="scan-sub">across <b>${R.spendCount}</b> charge${R.spendCount===1?'':'s'} on ${scanResult.pages} page${scanResult.pages>1?'s':''}${hrs(R.spent)}.${R.putAway>0?` Another <b>${usd(R.putAway)}</b> moved but <b>stayed yours</b>, so it is not counted as spending here.`:''}${R.inCount?` <b>${usd(R.inAmt)}</b> came in over ${R.inCount} record${R.inCount===1?'':'s'}.`:''}${scanResult.dropped>0?` <b>${scanResult.dropped}</b> repeat${scanResult.dropped===1?'':'s'} from overlapping pages ${scanResult.dropped===1?'was':'were'} dropped.`:''}</div>
+    </div>
+    <div class="scan-grp">${R.groups.map((g,i)=>`
+      <div class="scan-row${i===0&&!g.other&&!g.keep?' top':''}">
+        <span class="sg-n">${g.emoji} ${escapeHtml(g.g)}</span>
+        <span class="sg-a">${usd(g.amt)}</span>
+        <span class="sg-w">${g.n} ${g.keep?`transfer${g.n===1?'':'s'}`:`charge${g.n===1?'':'s'}`}${g.keep?' · <b>this money stayed yours</b>, so it is neither in the total above nor a share of it':` · ${pct(g.amt)}% of what you spent`}${g.n>1?` · ${usd(Math.round(g.amt/g.n*100)/100)} each on average`:''}</span>
+        <span class="sg-bar"><i class="${g.keep?'sg-keep':''}" style="width:${Math.max(2,Math.min(100,pct(g.amt)))}%"></i></span>
+      </div>`).join('')}</div>
+    ${R.drips.length?`<div class="scan-drip"><b>The drip.</b> This is the part a statement physically cannot show you, because it spreads it over ${scanResult.pages} page${scanResult.pages>1?'s':''}: ${R.drips.slice(0,3).map(d=>`<b>${escapeHtml(d.g.toLowerCase())}</b> came to <b>${usd(d.amt)}</b> across <b>${d.n}</b> separate charges, ${usd(d.avg)} at a time`).join('; ')}. Nobody adds those up by eye, which is exactly why they are the easiest money in your life to move.</div>`:''}
+    <div class="scan-caveat"><b>What this is:</b> a reading of ${scanResult.pages} photograph${scanResult.pages>1?'s':''}, not your ledger. It is <b>not</b> in Track, it is not in your net worth, and it has not changed a single figure anywhere else in this app. A reader misreads - ${R.unnamed?`<b>${R.unnamed}</b> amount${R.unnamed===1?'':'s'} came off with no name attached, and `:''}${R.unknownPct>0?`<b>${R.unknownPct}%</b> of it landed in <b>Not recognised</b> because the merchant name meant nothing to me - `:''}check it against the pages before you believe any of it.
+      <details class="scan-raw"><summary>Show me what it actually read</summary><pre>${escapeHtml(scanResult.text.slice(0,6000))}</pre></details>
+    </div>
+    <div class="scan-acts">
+      <button class="btn primary" id="scanKeep">Keep this reading</button>
+      <button class="btn ghost" id="scanPush">Put these ${R.count} in Track</button>
+    </div>`;
+  const keep=document.getElementById('scanKeep');
+  if(keep) keep.addEventListener('click',()=>{
+    scanSaveReading();
+    keep.disabled=true; keep.textContent='Kept - it is in Reflect';
+    scanSay('Kept. It shows up in <b>Reflect</b> as a reading, labelled as one, sitting beside what you have actually logged rather than mixed into it.');
+  });
+  const push=document.getElementById('scanPush');
+  if(push) push.addEventListener('click',scanToQuickLog);
+}
+/* Nothing from a photograph reaches the ledger without eyes on it. This does not
+   write transactions - it fills the quick log, which is the surface that already
+   knows how to review a batch, guess categories, ask which account it came out
+   of, and refuse to commit until somebody presses the button. */
+function scanToQuickLog(){
+  if(!scanResult||!scanResult.records.length) return;
+  const n=scanResult.records.length;
+  qlSeed=scanResult.records.map(r=>({what:r.what, amt:r.amt, kind:r.kind, unnamed:r.unnamed}));
+  qlSeedNote=`<b>${n}</b> record${n===1?'':'s'} from the statement you just read, waiting on your eyes. Fix anything misread, drop what you do not want, then log. <b>Nothing has counted yet</b> - a reader misreads, and this is the step where that gets caught.`;
+  quickLogOpen=true;
+  renderQuickLog();
+  const box=document.getElementById('quickLog');
+  if(box) box.scrollIntoView({behavior:'smooth',block:'start'});
+  scanSay(`Sent <b>${n}</b> up to the quick log at the top of this tab. Check them, then log - nothing has been written yet.`);
+}
+function renderScan(){
+  const box=document.getElementById('scanPanel'); if(!box) return;
+  renderScanPages();
+  if(!scanResult) renderScanOut();
+}
+function wireScan(){
+  const snap=document.getElementById('scanSnap'), pick=document.getElementById('scanPick'),
+        cam=document.getElementById('scanCam'), files=document.getElementById('scanFiles');
+  if(!snap||!pick||!cam||!files) return;
+  /* Camera and gallery need separate inputs: `capture` forces the camera and
+     REMOVES the gallery, so neither input can serve both jobs. Same reason the
+     quick log has two, documented there. */
+  snap.addEventListener('click',()=>cam.click());
+  pick.addEventListener('click',()=>files.click());
+  cam.addEventListener('change',()=>{ scanAdd(cam.files); cam.value=''; });
+  files.addEventListener('change',()=>{ scanAdd(files.files); files.value=''; });
+  renderScanPages();
+}
 function renderQuickLog(){
   const box=document.getElementById('quickLog'); if(!box) return;
   qlGen++;   // invalidate any OCR pass still running against the previous panel
@@ -9812,24 +10205,8 @@ function renderQuickLog(){
       const items=qlParseOcr(r&&r.data&&r.data.text);
       if(!items.length){ note.textContent="Couldn't make out clear lines (handwriting is genuinely hard). The photo's right there - punch the lines in yourself, it takes seconds."; }
       else{
-        let filled=0;
-        const listEl=document.getElementById('qlList'); if(!listEl) return;
-        items.forEach(it=>{
-          let row=[...box.querySelectorAll('.ql-row')].find(el=>!el.querySelector('.ql-what').value && !el.querySelector('.ql-amt').value);
-          if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; listEl.appendChild(row); wireRow(row); }
-          row.querySelector('.ql-what').value=it.what; row.querySelector('.ql-amt').value=it.amt;
-          /* A statement writes debits as negative, so only an explicit plus
-             means money arriving. Set as a guess, not a decision: the dropdown
-             is still yours and a correction still sticks. */
-          if(it.kind==='income'){ const c=row.querySelector('.ql-cat');
-            if(c && [...c.options].some(o=>o.value==='__income') && c.dataset.touched!=='1'){
-              c.value='__income'; c.classList.add('guessed');
-              c.title='Read as money in, from the + on the statement - change it if it is wrong'; } }
-          else if(it.what) guessRow(row);
-          if(it.unnamed){ row.classList.add('ql-unnamed');
-            row.querySelector('.ql-what').placeholder='Name this one from the photo'; }
-          filled++;
-        });
+        const filled=fillFromItems(items,'Name this one from the photo');
+        if(filled<0) return;
         /* "Read 1 line" when four amounts came off the screen is a true
            sentence that tells you nothing useful. It has to count both: what it
            could name, and what it could only price. */
@@ -9870,6 +10247,41 @@ function renderQuickLog(){
     el.querySelector('.ql-del').onclick=()=>{ if(box.querySelectorAll('.ql-row').length>1) el.remove(); };
   };
   box.querySelectorAll('.ql-row').forEach(wireRow);
+  /* One fill loop, two callers: this panel's own reader and the statement
+     reader further down the tab. Extracting it is the point - a third copy is
+     how the first two would have stopped agreeing, and they very nearly did. */
+  function fillFromItems(items, namePlaceholder){
+    const listEl=document.getElementById('qlList'); if(!listEl) return -1;
+    let filled=0;
+    (items||[]).forEach(it=>{
+      let row=[...box.querySelectorAll('.ql-row')].find(el=>!el.querySelector('.ql-what').value && !el.querySelector('.ql-amt').value);
+      if(!row){ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); row=wrap.firstElementChild; listEl.appendChild(row); wireRow(row); }
+      row.querySelector('.ql-what').value=it.what||''; row.querySelector('.ql-amt').value=it.amt;
+      /* A statement writes debits as negative, so only an explicit plus means
+         money arriving. Set as a guess, not a decision: the dropdown is still
+         yours and a correction still sticks. */
+      if(it.kind==='income'){ const c=row.querySelector('.ql-cat');
+        if(c && [...c.options].some(o=>o.value==='__income') && c.dataset.touched!=='1'){
+          c.value='__income'; c.classList.add('guessed');
+          c.title='Read as money in, from the + on the statement - change it if it is wrong'; } }
+      else if(it.what) guessRow(row);
+      if(it.unnamed){ row.classList.add('ql-unnamed');
+        row.querySelector('.ql-what').placeholder=namePlaceholder; }
+      filled++;
+    });
+    return filled;
+  }
+  /* Rows the statement reader handed over. Consumed here, once, so a later
+     re-render of this panel cannot paste them in a second time. */
+  if(qlSeed && qlSeed.length){
+    const seeded=qlSeed, seedNote=qlSeedNote;
+    qlSeed=null; qlSeedNote='';
+    const n=fillFromItems(seeded,'Name this one from the page');
+    if(n>0){
+      const on=document.getElementById('qlOcrNote'); if(on) on.innerHTML=seedNote;
+      qlAskAccount(n);
+    }
+  }
   document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
   /* Asked for after a read came back nine rows of wrong: there was no way to
      throw a bad batch away short of closing the panel, which also loses the
@@ -16296,6 +16708,45 @@ const REPORT_SIGNALS=[
           : (leak>0?`Those ${fmtHours(leak)} are the ones nobody bills you for. `:''))+voice(RP_TONE.timeWeek,null),
         bad: leak>invested };
     }},
+  /* ---- what a statement said, kept apart from what the ledger says ----
+     Asked for directly: "even if it wasn't completely uploaded into the track
+     portion, would be nice if the app could at least analyze my spending habits
+     and notice where I'm spending too much, to report back in reflect."
+
+     The hard part is not the arithmetic, it is the SEPARATION. Every other card
+     on this page is computed from figures the person typed and confirmed. This
+     one is computed from optical character recognition run over a photograph,
+     and the two must never be added together or laid out as though they carry
+     the same weight - a reading and a ledger disagreeing is information, and
+     averaging them destroys it. So the card names itself as a reading in its
+     own title, prints the pages and the date it came from, and every figure on
+     it is traceable to that scan alone.
+
+     It also refuses to say "you spend too much on X", which is the obvious
+     thing to write here and the wrong one. It names the biggest bucket, prices
+     it, counts the charges, and stops - the same observation-then-a-choice
+     contract every other signal on this page runs on. */
+  { k:'scanRead', run(){
+      const sc=latestScan();
+      if(!sc) return {locked:'A statement read - photograph the pages and I will tell you where the money actually went, without any of it touching your ledger.', do:'scan'};
+      if(!(sc.spent>0) || !sc.groups.length) return null;
+      const top=sc.groups[0], H=effectiveHourly();
+      const pct=Math.round(top.amt/sc.spent*1000)/10;
+      const drip=(sc.drips||[])[0];
+      /* Confidence, stated rather than implied. A reading that could not place
+         a third of the money is not a reading anybody should act on, and the
+         card has to say that itself rather than letting the percentages below
+         it look solid. */
+      const shaky=(+sc.unknownPct||0)>=35;
+      return { t:`Your last statement read: ${money(sc.spent)} spent`,
+        body:`Read off <b>${sc.pages}</b> page${sc.pages>1?'s':''} on ${sc.at}, <b>${sc.outCount}</b> charge${sc.outCount===1?'':'s'}.${(+sc.putAway||0)>0?` A further <b>${money(sc.putAway)}</b> moved and stayed yours, which is not counted as spending.`:''} The biggest single place it went was <b>${top.emoji} ${escapeHtml(top.g.toLowerCase())}</b> at <b>${money(top.amt)}</b> across <b>${top.n}</b> charge${top.n===1?'':'s'}.${drip?` The quiet one: <b>${escapeHtml(drip.g.toLowerCase())}</b>, <b>${money(drip.amt)}</b> in <b>${drip.n}</b> separate goes of about ${money(drip.avg)}.`:''}`,
+        work:`${money(top.amt)} ÷ ${money(sc.spent)} = ${pct}% of what you spent${H>0?` · ${fmtHours(top.amt/H)} at your rate`:''}`,
+        nudge: shaky
+          ? `Treat this one gently: <b>${sc.unknownPct}%</b> of it landed in <b>Not recognised</b>, so the split above is softer than it looks. This is a reading of a photograph, not your ledger - nothing here has changed a figure anywhere else in the app.`
+          : `This is a reading of a photograph, not your ledger - none of it has been logged, and none of it has moved a figure anywhere else in the app.${H>0?` For scale, that biggest bucket is <b>${fmtHours(top.amt/H)}</b> of your life.`:''} If it looks wrong, it may well be; if it looks right, it is the same money either way.`,
+        bad:false };
+    }},
+
   { k:'hours', run(){
       const M=state.activeMonth, H=effectiveHourly();
       if(!(H>0)) return {locked:'Your hourly rate - every figure in hours of your life comes from it.', do:'wage'};
@@ -18695,6 +19146,7 @@ function boot(){
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   applyPanelGates();
   ensureDay1(); captureSnapshot(); renderUiMode(); renderSayMode(); applyStage({silent:true});
+  if(typeof wireScan==='function') wireScan();
   applyHousehold(); applySpending();
   if(state.householdOn && typeof refreshSyncState==='function') refreshSyncState();
   initPWA();
@@ -19019,6 +19471,7 @@ const TRAIL={
      somebody the app has just told it no longer believes. */
   diary:    {tab:'diary',    focus:'diaryText',    label:'Write where you are now'},
   hours:    {tab:'tx',       focus:'timeRows',     label:'Log my week in hours'},
+  scan:     {tab:'tx',       focus:'scanPanel',    label:'Read a statement'},
   gutcheck: {tab:'impulse',  modal:true,           label:'Run a gut-check'}
 };
 /* Walk one. The delay is for the tab switch to paint - focusing a field inside a
