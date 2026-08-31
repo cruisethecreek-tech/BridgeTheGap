@@ -2446,9 +2446,18 @@ const paid = await p.evaluate(() => {
                   .map(r=>`${r.amount}|${r.freq||'monthly'}|${r.anchor||'-'}`) };
   };
   const o={today};
-  /* the case from the phone: paid on the 29th, setting up before it */
+  /* the case from the phone: paid on the 29th, setting up before it.
+     On the LAST day of a month there is no such thing as "later this month", so
+     this construction is impossible one day in every thirty-one - which is
+     exactly the day it went red, with no code change. The monthly case still
+     runs whenever a future day-of-month exists, and o.futureExists says whether
+     it did; alongside it, a payday anchored to tomorrow is genuinely in the
+     future on every date in the calendar, so the property itself is asserted
+     every single day rather than most of them. */
   const future=Math.min(dim, d+4);
+  o.futureExists=future>d;
   o.notYet=run({payDay:shiftMonth(M,-1)+'-'+String(future).padStart(2,'0'), payFreq:'monthly'});
+  o.tomorrow=run({payDay:shiftDays(today,1), payFreq:'biweekly', payAmt:1476.92});
   /* paid earlier this month: it posts, on the day it actually landed */
   const past=String(Math.max(1,Math.min(9,d-3))).padStart(2,'0');
   o.paid=run({payDay:M+'-'+past, payFreq:'monthly'});
@@ -2478,8 +2487,11 @@ check('...only when there is income to ask about',
       paid.step.withIncome===true && paid.step.without===false);
 check('...and it can be skipped, because a new job has no answer yet',
       paid.step.optional===true && paid.step.why===true);
-check('a paycheck due later this month posts nothing today',
-      paid.notYet.inc===0 && paid.notYet.dates.length===0, String(paid.notYet.inc));
+check('a payday that has not arrived yet posts nothing',
+      paid.tomorrow.inc===0 && paid.tomorrow.dates.length===0
+        && (paid.futureExists ? (paid.notYet.inc===0 && paid.notYet.dates.length===0) : true)
+        && paid.notYet.dates.every(dt=>dt<=paid.today),
+      `tomorrow:${paid.tomorrow.inc} monthly:${paid.notYet.inc} (later-this-month possible today: ${paid.futureExists})`);
 check('...but the rule is anchored to the real payday, not the 1st',
       /^3200\|monthly\|/.test(paid.notYet.rec[0]) && !/\-01$/.test(paid.notYet.rec[0]), paid.notYet.rec[0]);
 check('pay that already landed posts on the day it landed',
@@ -7636,7 +7648,15 @@ const cal = await p.evaluate(async () => {
   o.marked=document.querySelectorAll('#calGrid .cal-c.has').length;
   o.boxes=document.querySelectorAll('#calList input[data-calland]').length;
   o.nav=document.getElementById('calNav').innerText;
-  o.aheadMarked=document.querySelectorAll('#calList .cal-day.ahead').length;
+  /* The count of future days in a fixture month is a function of what day it is
+     when the suite runs, not of the code. Pinned to 1, this went red on its own
+     the morning the month's last occurrence became today. Third date bomb in
+     this suite - so what is captured is the partition, and the assertion checks
+     it against today rather than against a number. */
+  o.today=todayStr();
+  o.days=[...document.querySelectorAll('#calList .cal-day')].map(d=>({
+    date:d.id.replace('calday-',''),
+    ahead:d.classList.contains('ahead'), now:d.classList.contains('now')}));
   o.note=document.getElementById('calList').innerText;
   /* tick */
   o.txBefore=state.transactions.length;
@@ -7687,7 +7707,11 @@ check('the month is totalled both directions before anything has happened',
 check('...and nothing reads as landed while nothing is logged',
       /0 of 6/.test(cal.nav) && cal.sums.landed===0, cal.nav);
 check('days still to come are set apart from days already gone',
-      cal.aheadMarked===1 && /still to come/.test(cal.note), String(cal.aheadMarked));
+      cal.days.length>0
+        && cal.days.every(d=>d.ahead===(d.date>cal.today) && d.now===(d.date===cal.today))
+        && (cal.days.some(d=>d.ahead) ? /still to come/.test(cal.note) : true)
+        && (cal.days.some(d=>d.now)   ? /\btoday\b/.test(cal.note)   : true),
+      JSON.stringify({today:cal.today, days:cal.days}));
 check('...and an unticked bill in the past is named as information, not a fault',
       /telling you something, not a bug/.test(cal.note), cal.note.slice(-200));
 check('ticking writes one entry, in the same shape the scheduler writes',
@@ -8480,6 +8504,80 @@ check('...while pointing at the gap, the one figure the decision hangs on',
       /gap between the two cards/i.test(look.scope));
 check('the gap is untouched by everything the model leaves out',
       look.gap===look.gapWithAssets && look.worth===6000, `${look.gap} vs ${look.gapWithAssets}`);
+
+/* ---- 101. read the statement, do not swallow it ----
+   Asked for in one message: "instead of taking actual screenshots is a scan
+   feature possible where I can open up my bank statement and quickly skim all
+   the transactions. Even if it wasn't completely uploaded into the track
+   portion (though would be nice if it could at least analyze my spending habits
+   and notice where I'm spending too much, to report back in reflect)."
+
+   The reader already existed and took ONE photo, ending in a pile of rows to
+   check - so the payoff for reading a four page statement was a data entry job.
+   What is guarded here is not the OCR (qlocr owns that) but the SEPARATION: a
+   figure read off a photograph and a figure the user typed carry different
+   confidence, and the moment they are added together the result claims more
+   than either half can support. That is the same fault section 100 came from,
+   one week earlier, and it is the one this feature is most able to reintroduce. ---- */
+const SCANST={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:25,
+  categories:[{id:'c1',name:'Food'}], budgets:{'2026-08':{c1:400}},
+  transactions:[{id:'i1',type:'income',amount:3200,date:'2026-08-01'},
+                {id:'e1',type:'expense',amount:80,catId:'c1',date:'2026-08-04'}],
+  accounts:[{id:'a1',name:'Chequing',kind:'checking',balance:2000,updated:ISO_TODAY}]};
+await seed(SCANST); await p.reload(); await p.waitForTimeout(900);
+const scan = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(600);
+  const before={ nw:netWorth(), tx:state.transactions.length, exp:monthExpense(state.activeMonth) };
+  const recs=[{what:'STARBUCKS',amt:5.25},{what:'STARBUCKS',amt:4.85},{what:'DUNKIN',amt:3.90},
+              {what:'STARBUCKS',amt:6.10},{what:'KROGER',amt:212.44},{what:'GREYSTAR RENT PMT',amt:1450},
+              {what:'NETFLIX.COM',amt:22.99},{what:'TRANSFER TO SAVINGS',amt:300}];
+  scanResult={pages:2, dropped:1, at:'2026-08-30', text:'raw text', records:recs, read:scanRead(recs)};
+  renderScanOut();
+  const panel=document.getElementById('scanPanel');
+  const out={ panelText:panel.innerText,
+    before, after:{ nw:netWorth(), tx:state.transactions.length, exp:monthExpense(state.activeMonth) } };
+  /* keeping it is the only thing that writes, and what it writes is a summary */
+  document.getElementById('scanKeep').click(); await w(250);
+  out.kept={ n:(state.scans||[]).length, tx:state.transactions.length, nw:netWorth(),
+             keys:Object.keys((state.scans||[])[0]||{}),
+             /* a reading is a summary, not a warehouse of somebody's merchants */
+             hasRecords:JSON.stringify((state.scans||[])[0]||{}).includes('GREYSTAR') };
+  out.spent=scanResult.read.spent; out.putAway=scanResult.read.putAway;
+  out.raw=!!panel.querySelector('.scan-raw');
+  return out;
+});
+check('reading a statement changes nothing in the ledger it is read beside',
+      scan.before.tx===scan.after.tx && scan.before.nw===scan.after.nw && scan.before.exp===scan.after.exp,
+      JSON.stringify([scan.before,scan.after]));
+check('...and says so on its own face, in the panel',
+      /not in Track/.test(scan.panelText) && /not in your net worth/.test(scan.panelText)
+        && /has not changed a single figure/.test(scan.panelText), scan.panelText.slice(-300));
+check('...it will always show the raw text it read', scan.raw===true);
+/* by hand: 5.25+4.85+3.90+6.10 = 20.10 coffee, +212.44 +1450 +22.99 = 1705.53.
+   The $300 into savings is money that MOVED, not money that went. */
+check('money put away is never counted as money spent',
+      scan.spent===1705.53 && scan.putAway===300, `${scan.spent} / ${scan.putAway}`);
+check('keeping a reading stores a summary, never the merchant list',
+      scan.kept.n===1 && scan.kept.hasRecords===false, scan.kept.keys.join(','));
+check('...and still writes no transaction', scan.kept.tx===scan.before.tx && scan.kept.nw===scan.before.nw);
+
+/* the payoff the request was actually about: it has to come back in Reflect */
+const scanRep = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('reflect'); await w(750);
+  const cards=[...document.querySelectorAll('.rp-card')].map(c=>c.innerText);
+  const mine=cards.find(t=>/statement read/i.test(t))||'';
+  return { there:!!mine, text:mine, total:cards.length,
+    /* it must not be laid out as though it were one of the ledger's own months */
+    ledgerCards:cards.filter(t=>/kept|on pace/i.test(t)).length };
+});
+check('the reading reports back in Reflect, which is what was asked for',
+      scanRep.there===true, String(scanRep.total)+' cards');
+check('...naming itself a reading of a photograph rather than a month',
+      /reading of a photograph, not your ledger/.test(scanRep.text), scanRep.text.slice(-200));
+check('...sitting beside the ledger cards, not replacing them',
+      scanRep.ledgerCards>=1, String(scanRep.ledgerCards));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

@@ -1173,6 +1173,43 @@ none of them are in the future, and the money equals the per-payday amount times
 however many landed - which is what "walks forward at the right cadence"
 actually means.
 
+## Two numbers with different confidence
+
+Section 101 and the `scan` probe cover reading a bank statement off photographs.
+Almost none of what they assert is about the OCR - `qlocr` already owns that.
+What they guard is the **separation**.
+
+A figure read off a photograph and a figure the user typed do not carry the same
+weight, and the moment they are added together the result claims more than
+either half can support. So the checks are shaped around that one property:
+
+- reading a statement changes **no** transaction, **no** net worth, **no** month
+  total - asserted by snapshotting all three across a full read
+- the panel says so itself, on screen, in the same breath as the figures
+- keeping a reading stores a **summary**, and the assertion is that the stored
+  blob does not contain a merchant name from the fixture
+- in Reflect it appears **beside** the ledger's own cards, naming itself a
+  reading of a photograph, never laid out as one of the ledger's months
+- the raw text is always one tap away
+
+Two arithmetic rules ride along, and both came from looking at the first render
+rather than from the suite:
+
+**Money put away is not money that went out.** The headline counted a $300
+transfer into savings as spending, so the best thing in the statement made the
+month look worse. Now it is shown, marked, and excluded from the total and from
+every percentage.
+
+**`includes('etf')` matches n-etf-lix.** The first pass filed NETFLIX.COM under
+retirement saving. Matching is on word boundaries now; the check asserts both
+directions - the false positive is gone *and* `VANGUARD ETF PURCHASE` still
+lands in Put away, because a fix that only tightens is how a classifier quietly
+stops classifying.
+
+The lesson is the older one, restated: **a suite cannot catch a fault it has no
+reason to look for.** Both of these were found by rendering the panel and
+reading it, at 390px, like a person would.
+
 ## A caption is an assertion
 
 Section 100 came from a photo and four words: *"This doesn't look right."* Both
@@ -1202,6 +1239,24 @@ The general lesson, and the reason it is worth a section: **a caption is an
 assertion, and it deserves a check like any other.** Assertions in this suite
 overwhelmingly read numbers. This one read six words of prose sitting under a
 number, and that is where the fault was.
+
+### The third one, on the last day of a month
+
+It happened again, and the shape was identical. A calendar check asserted
+`aheadMarked === 1` - exactly one day in the fixture month still in the future.
+That was true every day of August except the last one, and on the 31st the
+month's final occurrence stopped being *ahead* and became *today*. No code
+changed; the calendar was right; the number was a fact about the clock.
+
+The rewrite captures the **partition** and checks it against `todayStr()`: every
+listed day is `.ahead` if and only if its date is after today, and `.now` if and
+only if it is today, with the on-screen wording required wherever each case
+actually occurs. That assertion cannot go stale, because it is finally asserting
+what its own name says.
+
+Three date bombs now, all the same mistake: **a count that happens to hold today
+is not the property.** If a check's expected value would change by waiting, it is
+measuring the calendar.
 
 ## What these do NOT cover
 - Whether a person understands what a number means. See `USER-TESTING.md` -
