@@ -1173,6 +1173,85 @@ none of them are in the future, and the money equals the per-payday amount times
 however many landed - which is what "walks forward at the right cadence"
 actually means.
 
+## The suite runs on its own clock
+
+Three date bombs got patched one at a time before the pattern was obvious. Then
+the calendar reached the 1st of a month and **twenty-four more checks went red in
+a single night**, with no app code changed. That is when it stopped being a
+series of unlucky assertions and started being one bug.
+
+The bug: **a fixture pinned to a month, compared against a clock that had moved
+on.** Every fixture in `structure.mjs` is dated August 2026, which was perfectly
+deterministic - right up until August ended. Then `thisMonth()` disagreed with
+every one of them, and everything that compares fixture data against *now*
+failed at once: snapshots with no current month, an account whose readings were
+suddenly last month's, a calendar stepping "forward" into the month it was
+already in.
+
+So the page is now told what month it is. One line at the top of the suite
+installs a shifted `Date` before the app loads, and the fixtures and the app
+finally agree because they are reading the same clock. Time still **flows** -
+only the origin moves - so timers and the app's own `setTimeout` waits behave
+normally.
+
+Two details worth keeping:
+
+- **A subclass, not a Proxy.** Wrapping `Date` in a Proxy stopped the app booting
+  at all: `state` never initialised, because something in `load()` threw on it
+  before the first check ran. `class Shifted extends Date` keeps `instanceof`,
+  the prototype chain and the inherited statics exactly as the platform made
+  them, and moves only the no-argument constructor and `now()`.
+- **Node has to read the same clock.** Fixtures built in Node with `new Date()`
+  disagree with a page that has been told otherwise - the original bug, from the
+  other side. `CLOCK_D` / `CLOCK_M` are the one reading everything derives from.
+
+The date chosen is the **30th**, not mid-month: fixtures reach as far as day 31,
+so an earlier clock would put a third of them in the future and the calendar
+would clamp away the days they select. The 30th leaves day 31 ahead, which the
+"still to come" checks need, and everything below it has happened.
+
+The real gain is not that the red went away. It is that **a date boundary is now
+something you test on purpose.** Pointing the suite at the 1st, the 31st, a leap
+day or a DST switch is one line. Before this, the only way to exercise a month
+boundary was to be working at midnight on the 31st - which is exactly how these
+were found, and is not a test strategy.
+
+Suites whose fixtures already say "now" (`life_units`, `talk_through`, and the
+`rates` / `tracked` / `cal` probes) take the other road instead: they compute
+their months from the live clock. **Either is fine; mixing them inside one
+fixture is what breaks.** A fixture declares its own clock, or it uses the live
+one. Never both.
+
+## The branch nobody walked
+
+The `intake6` probe covers two faults found by watching one person set the app
+up, and both were in code the suite already exercised.
+
+The pay-cadence helper had tests. They walked the **hourly** path, because that
+is the interesting one - it is where the monthly figure gets derived and where
+the conversion could be wrong. The hours question lives on that path, and on
+that path it was asked. On weekly, biweekly, semimonthly, monthly and yearly the
+helper called `finish(f, amt, 0)` and no test noticed, because the number those
+paths exist to produce was correct. The consequence was two layers down: no
+hours on file means `effectiveHourly()` falls back to a 2,080-hour year, so the
+app silently assumed a 40-hour week for everyone who is not paid hourly.
+
+`intake_cost.mjs` counts the questions the intake asks and checks the advertised
+totals. It could not catch this either, because the hours question is inside a
+**helper**, not a step - it never appeared in the count it was missing from.
+
+So the probe walks **every branch of the picker**, asserts the question appears
+on each, and asserts the two halves that differ: it is required on hourly (the
+month cannot be computed without it) and skippable everywhere else. A branch
+that only differs in what it *omits* needs a test that visits all of them.
+
+The packs fault has the same shape as the growth tag one section up: `addPack`
+had accepted a per-category pick list the whole time, and the intake step never
+passed one, so ticking 4 of 11 committed all 11. The probe asserts what lands on
+the plan, not what the step thinks it selected - `o.landed === pack - 1` after
+unticking one - because the step's own state agreeing with itself is exactly
+what a broken hand-off looks like.
+
 ## A capability nobody can reach
 
 The `growthcat` probe covers marking a category as *invested, saved or debt paid

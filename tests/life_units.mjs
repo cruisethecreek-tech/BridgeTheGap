@@ -25,6 +25,18 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 const LIFE = /\b\d[\d,.]*\s*(min|hrs?|hours?|days?|mo|months?)\b/i;
 const DOLLARS = /\$\s?\d/;
 
+/* The fixture was written in August 2026 and pinned there. Every figure inside
+   it is internally consistent, so almost everything kept passing - but the app
+   compares fixture data against the LIVE clock in a few places, and on the 1st
+   of September the "You cover $X" line stopped rendering because the household's
+   income was suddenly last month's. A fixture that means "now" has to say now.
+   Nothing here is dated past the 20th, so no date can fall off the end of a
+   shorter month. */
+const LIVE_M=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
+const LIVE_PREV=(()=>{const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
+const liveMonths=o=>JSON.parse(JSON.stringify(o).split('2026-08').join(LIVE_M).split('2026-07').join(LIVE_PREV));
+
 /* One household rich enough to light up every panel that prints money. */
 const STATE = {
   onboarded:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, chatPace:'instant',
@@ -71,7 +83,7 @@ const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
 const p = await b.newPage({ viewport:{width:420,height:1000} });
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
-await p.evaluate(st=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(st)), STATE);
+await p.evaluate(st=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(st)), liveMonths(STATE));
 await p.reload(); await p.waitForTimeout(1100);
 
 /* the debt planner says three different things depending on what you can pay,
