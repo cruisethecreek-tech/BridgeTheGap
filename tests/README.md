@@ -1173,6 +1173,66 @@ none of them are in the future, and the money equals the per-payday amount times
 however many landed - which is what "walks forward at the right cadence"
 actually means.
 
+## A capability nobody can reach
+
+The `growthcat` probe covers marking a category as *invested, saved or debt paid
+down*. Every piece of the machinery it exercises **already worked** and had
+already been tested: the invest transaction type, the growth tag, the breakdown
+exclusion, `catUsed` adding invested to spent. Section 14 of this repo's history
+is literally "growth lane: invest transaction type end to end."
+
+What no test asked was **how a person gets the tag onto a category**, and the
+answer was: by accident. Pick a name out of a pack that happens to carry one, or
+type a word like "investing" during the intake. Type *Acorns* and you got a
+purchase. The feature was complete and unreachable, which is the same thing as
+absent - the third time this repo has hit that exact shape (`renderTripwires`
+never called; the sovereignty audit explained nowhere you could see it).
+
+Chasing it turned up two real defects that the end-to-end tests could not have
+caught, because they only ever tested the lane starting from Track:
+
+- ticking *repeat* on a plan row hard-coded `type:'expense'`, so a tagged
+  category's own automation posted it as spending every month
+- unticking matched by type, so a growth rule kept running after the box cleared
+- `postRecurring`'s invest branch never carried `catId`, so the money could not
+  be attributed back and the row read *$1,300 assigned, $0 used*, forever
+
+The probe asserts the reachability first and the arithmetic second, in that
+order, because that is the order the fault occurred in. The rule worth keeping:
+**test how the user turns the capability on, not just what it does once it is
+on.** A green suite over an unreachable feature is a suite testing itself.
+
+## The absence of a word was the message
+
+Section 102 and the `monthhome` probe came from four words on a phone: *"why did
+it pull up September's tracking prematurely?"* The suite could not have caught
+it, and it is worth being precise about why.
+
+Every assertion about the month controls checked that they **work**: tap forward,
+the month advances; tap back, it returns; the figures follow. All true, all still
+true. What nothing checked was what the screen **says** while you are somewhere
+other than now - and the answer was `&nbsp;`. The label rendered "This month"
+when the month matched and a literal blank when it did not, so the only signal
+that you were looking at next month was the *disappearance* of a caption most
+people never read in the first place.
+
+That is the same fault as section 100, one turn earlier, in its second form.
+There, a caption asserted something the function could not support. Here, a
+caption said nothing at all and the silence asserted *"this is now"*.
+
+What is guarded now:
+
+- walking forward still moves the whole app (that is the design, not the bug)
+- but every screen it moved **says so**, and the assertion reads the words
+- Track, which has no month control at all, gets a banner and a way home
+- the app **never opens** in a month that has not happened
+- a **past** month is still kept across a reload, because someone may be part
+  way through reconciling it - it just has to be named
+
+The reusable rule: **when a state has two cases, assert what the screen says in
+both.** A check that only ever exercises the happy case will pass forever while
+the other one renders nothing.
+
 ## Two numbers with different confidence
 
 Section 101 and the `scan` probe cover reading a bank statement off photographs.

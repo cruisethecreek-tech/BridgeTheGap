@@ -5392,12 +5392,22 @@ check('...and a pack category is an ordinary category from that second',
    have already made - the app asked them to invent the name themselves.
 
    Two properties carry this. The first is that picking beats typing: a
-   catalogue row brings its growth tag with it, which typing the same letters
-   never could, so "Education fund" arrives already knowing it is money you
-   keep. The second is the other half of that - a name typed by hand is NOT
-   silently tagged, and editing a pick drops the tag it came with, because a
-   category called "Edu fund" inheriting a tag from "Education fund" would be
-   the app deciding something on your behalf.
+   catalogue row brings its growth tag with it, so "Education fund" arrives
+   already knowing it is money you keep.
+
+   The second used to read "a typed name is never tagged, and editing a pick
+   drops the tag". That rule is gone, deliberately, and this check was rewritten
+   rather than relaxed. It was written when a pack pick was the ONLY way a
+   category could learn it was not spending - which is exactly the fault the
+   Acorns report exposed: type the name of the app your money went into and you
+   got a purchase, with nothing offering an alternative. A typed name is read
+   now, and tagged if it plainly reads as putting money away.
+
+   What has to survive is the thing that rule was protecting: a tag must never
+   be INHERITED from a pick whose name you have since changed into something
+   that does not warrant it. "Sinking fund for the roof" keeping `save` is
+   right - it is a sinking fund. "Roof repairs" keeping it would be the app
+   deciding something on your behalf, and that is what is asserted below.
 
    The ranking is asserted as an invariant rather than a hand-guessed order.
    Two earlier versions of that check named specific rows and were wrong about
@@ -5438,12 +5448,26 @@ const cat = await p.evaluate(async () => {
   el.value='Education fund 2'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
   document.getElementById('addCat').click(); await wait(200);
   o.typedTag=(state.categories.find(c=>c.name==='Education fund 2')||{}).growth;
-  /* editing a pick drops the tag with it */
+  /* editing a pick into something that STILL reads as putting money away keeps
+     the tag - but from the name, not inherited from the pick */
   el.value='sinking'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
   host.querySelector('.cs-hit').click(); await wait(150);
   el.value='Sinking fund for the roof'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
   document.getElementById('addCat').click(); await wait(200);
   o.editedTag=(state.categories.find(c=>c.name==='Sinking fund for the roof')||{}).growth;
+  /* and editing it into something that does NOT is the case the old rule was
+     really protecting: the tag must not ride along on a name that no longer
+     earns it */
+  el.value='sinking'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
+  host.querySelector('.cs-hit').click(); await wait(150);
+  el.value='Roof repairs'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
+  document.getElementById('addCat').click(); await wait(200);
+  o.editedAwayTag=(state.categories.find(c=>c.name==='Roof repairs')||{}).growth;
+  /* the whole point of the change: the name of the app the money went into */
+  el.value='Acorns'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(150);
+  document.getElementById('addCat').click(); await wait(200);
+  o.acornsTag=(state.categories.find(c=>c.name==='Acorns')||{}).growth;
+  o.acornsSaid=(document.querySelector('.toast')||{textContent:''}).textContent;
   /* search only helps if you know the word - browsing is the way in if you do not */
   el.value='zzzq'; el.dispatchEvent(new Event('input',{bubbles:true})); await wait(200);
   o.noMatchOffersBrowse=!!host.querySelector('[data-browsepacks]');
@@ -5477,10 +5501,17 @@ check('...picking one fills the field and closes the list',
 check('...and adds it like any other category', cat.added===true);
 check('picking beats typing: the growth tag rides along',
       cat.pickedTag==='save', String(cat.pickedTag));
-check('...while a name typed by hand is never silently tagged',
-      !cat.typedTag, String(cat.typedTag));
-check('...and editing a pick drops the tag it came with',
-      !cat.editedTag, String(cat.editedTag));
+check('...while a name that does not read as putting money away is left alone',
+      !cat.typedTag && !cat.editedAwayTag, `${cat.typedTag} / ${cat.editedAwayTag}`);
+check('...a name that still does keeps it, from the name rather than the pick',
+      cat.editedTag==='save', String(cat.editedTag));
+/* the report this came from: nobody types "investment", they type the name of
+   the app the money went into, and that used to produce a purchase */
+check('...and typing the name of the thing you invest with is read, not filed as spending',
+      cat.acornsTag==='invest', String(cat.acornsTag));
+check('...out loud, because a tag applied in silence is one nobody can correct',
+      /invested, not spent/i.test(cat.acornsSaid) && /change/i.test(cat.acornsSaid),
+      cat.acornsSaid.slice(0,140));
 check('a search with no match still offers a way in, and does not scold you',
       cat.noMatchOffersBrowse===true && /fine|own thing/i.test(cat.noMatchCopy),
       cat.noMatchCopy);
@@ -8578,6 +8609,78 @@ check('...naming itself a reading of a photograph rather than a month',
       /reading of a photograph, not your ledger/.test(scanRep.text), scanRep.text.slice(-200));
 check('...sitting beside the ledger cards, not replacing them',
       scanRep.ledgerCards>=1, String(scanRep.ledgerCards));
+
+/* ---- 102. the month you are in, and the month you walked to ----
+   Reported from a phone: "it's August 31st, why did it pull up September's
+   tracking prematurely?" Nothing was premature. `state.activeMonth` is GLOBAL -
+   Plan, Track and Reflect all read it - so one tap of the planning calendar's
+   forward arrow, a control added so somebody could plan ahead, relocated the
+   whole app. And activeMonth is SAVED, so closing the tab and coming back the
+   next day still landed in September.
+
+   Track was the worst of it: it has no month control at all, so it rendered an
+   empty next month - "Income $0, Spent $0" - with nothing naming the month and
+   no way back. The month label said "This month" when it matched and rendered
+   `&nbsp;` when it did not, which means the ABSENCE OF A WORD was carrying the
+   whole message. ---- */
+const MHM=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
+const MONTHH={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:25, activeMonth:MHM,
+  categories:[{id:'rent',name:'Rent'}], budgets:{[MHM]:{rent:1400}},
+  transactions:[{id:'t1',type:'income',amount:3200,date:MHM+'-02'},
+                {id:'t2',type:'expense',amount:1400,catId:'rent',date:MHM+'-03'}],
+  accounts:[{id:'a1',name:'Chequing',kind:'checking',balance:2000,updated:ISO_TODAY}]};
+await seed(MONTHH); await p.reload(); await p.waitForTimeout(900);
+const mh = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await w(600);
+  document.getElementById('mNext').click(); await w(550);
+  const o={ moved:state.activeMonth, now:thisMonth(),
+    planLabel:document.getElementById('mLabel').innerText.replace(/\s+/g,' ') };
+  activateTab('tx'); await w(600);
+  o.trackNote=(document.getElementById('txMonthNote')||{innerText:''}).innerText.replace(/\s+/g,' ');
+  o.trackBack=!!document.getElementById('txBack');
+  o.trackSum=(document.getElementById('txSummary')||{innerText:''}).innerText.replace(/\s+/g,' ');
+  /* the one tap home, from the tab with no month control */
+  document.getElementById('txBack').click(); await w(550);
+  o.home=state.activeMonth;
+  o.noteGone=(document.getElementById('txMonthNote')||{innerText:''}).innerText.trim()==='';
+  return o;
+});
+check('walking the plan forward moves the whole app, which is the design',
+      mh.moved>mh.now, mh.moved);
+check('...and every screen it moved says so, rather than rendering a blank',
+      /planning ahead/i.test(mh.planLabel) && /has not happened yet/.test(mh.trackNote),
+      mh.planLabel+' | '+mh.trackNote.slice(0,90));
+check('...so an empty Track reads as "not yet", not as "you have logged nothing"',
+      /Income \$0/.test(mh.trackSum) && mh.trackNote.length>0, mh.trackSum.slice(0,80));
+check('...with one tap home from the tab that has no month control at all',
+      mh.trackBack===true && mh.home===mh.now, mh.home);
+check('...and the sign goes away when there is nothing left to explain', mh.noteGone===true);
+
+/* the reported fault itself: it must not survive to the next day */
+await p.evaluate(m => { state.activeMonth=m; save(); },
+                 (()=>{let [y,mm]=MHM.split('-').map(Number); mm++; if(mm>12){mm=1;y++;} return `${y}-${String(mm).padStart(2,'0')}`;})());
+await p.reload(); await p.waitForTimeout(900);
+const mhBack = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('tx'); await w(600);
+  const o={ opened:state.activeMonth, now:thisMonth(),
+    stored:JSON.parse(localStorage.getItem('unfiltered_budget_v2')).activeMonth,
+    sum:(document.getElementById('txSummary')||{innerText:''}).innerText.replace(/\s+/g,' ') };
+  /* a PAST month is somewhere a person may genuinely be working, so it is kept -
+     it just has to say so, which is the half that was actually missing */
+  state.activeMonth=shiftMonth(thisMonth(),-1); save();
+  renderTx(); await w(400);
+  o.pastNote=(document.getElementById('txMonthNote')||{innerText:''}).innerText.replace(/\s+/g,' ');
+  return o;
+});
+check('the app never OPENS in a month that has not happened',
+      mhBack.opened===mhBack.now && mhBack.stored===mhBack.now,
+      mhBack.opened+' stored='+mhBack.stored);
+check('...so Track opens on real figures rather than an empty next month',
+      /\$3,200/.test(mhBack.sum), mhBack.sum.slice(0,80));
+check('a finished month is kept, and named, rather than snapped away from',
+      /already finished/.test(mhBack.pastNote), mhBack.pastNote.slice(0,140));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

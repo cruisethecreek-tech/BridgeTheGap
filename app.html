@@ -1120,6 +1120,13 @@
   .monthnav button:hover{border-color:var(--accent)}
   .monthnav .m{font-size:20px;font-weight:900;letter-spacing:-.3px;min-width:190px;text-align:center}
   .monthnav .m small{display:block;font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;font-weight:700}
+  .m-back{display:inline-block;background:var(--panel-2);border:1px solid var(--accent);color:var(--accent);
+    border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;cursor:pointer}
+  .m-back:hover{background:var(--accent);color:var(--ink)}
+  .tx-month{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--accent);
+    border-radius:12px;padding:11px 13px;margin-bottom:14px;font-size:13px;line-height:1.5}
+  .tx-month b{color:var(--text)}
+  .tx-month .txm-t{flex:1;min-width:180px;color:var(--muted)}
 
   /* ---------- Stats ---------- */
   .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
@@ -1264,6 +1271,14 @@
     overflow-wrap:break-word;min-width:0;flex:1 1 auto}
   .subrow .sub-assign{display:flex;align-items:center;gap:5px;min-width:0}
   .growth-tag.mini{font-size:9.5px;padding:1px 5px;letter-spacing:.2px}
+  .cs-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .csk{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--text);border-radius:11px;padding:10px 11px;cursor:pointer}
+  .csk b{font-size:13px;font-weight:800}
+  .csk span{font-size:11px;color:var(--muted);line-height:1.35}
+  .csk.on{border-color:var(--accent);background:rgba(var(--accent-rgb),.12)}
+  .csk.on b{color:var(--accent)}
+  @media(max-width:360px){ .cs-kind{grid-template-columns:1fr} }
   .rep-dot{font-size:12px;color:var(--muted);flex:none}
   /* Spinners off. On a phone they are untappable decoration, and they reserve
      real width inside the box - enough that "144.85" lost its last digit in a
@@ -3140,6 +3155,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div class="panel">
+        <!-- Track has no month control at all, which is fine while it is showing
+             this month and indefensible the moment something else moves it. -->
+        <div id="txMonthNote"></div>
         <div id="blindspotBar"></div>
         <div class="summary" id="txSummary"></div>
         <div id="bankNote"></div>
@@ -4757,6 +4775,45 @@ function lifeLabel(field,dollarLabel){
   const r=L[state.register]||L.middle; return r[baseInt()]||r.blunt;   // situation floors the tone here too
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ---------- which month am I looking at, and why ----------
+   Reported from a phone on the 31st of August: "why did it pull up September's
+   tracking prematurely?" Nothing was premature. One tap of the planning
+   calendar's forward arrow - the control added so somebody could plan ahead -
+   moves state.activeMonth, and activeMonth is GLOBAL. Plan, Track and Reflect
+   all read it, so looking at next month's plan silently relocates the whole
+   app, and because activeMonth is saved, closing the tab and coming back the
+   next day still lands you in September.
+
+   Track was the worst of it: it has no month control of any kind, so it
+   rendered an empty September - "Income $0, Spent $0" - with nothing on screen
+   naming the month and no way back. A month label that says "This month" when
+   it matches and renders a BLANK when it does not is the silent state this app
+   refuses everywhere else: the absence of a word was carrying the whole
+   message.
+
+   Two rules come out of it. Looking ahead is a thing you do inside a session,
+   never the state you are greeted with - so the app will not OPEN in a month
+   that has not happened. And wherever a figure belongs to some month other than
+   this one, the screen says so and offers one tap back. */
+function monthAway(){
+  const M=state.activeMonth, T=thisMonth();
+  if(!M||M===T) return null;
+  return { ahead:M>T, month:M, now:T, label:fmtMonth(M), nowLabel:fmtMonthShort(T) };
+}
+function fmtMonthShort(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleString(undefined,{month:'long'}); }
+/* One button, one behaviour, wherever it is drawn. */
+function backToThisMonthHTML(id){
+  const a=monthAway(); if(!a) return '';
+  return `<button type="button" class="m-back" id="${id}">${a.ahead?'Planning ahead':'Looking back'} · back to ${escapeHtml(a.nowLabel)}</button>`;
+}
+function wireBackToThisMonth(id){
+  const b=document.getElementById(id); if(!b) return;
+  b.addEventListener('click',()=>{
+    state.activeMonth=thisMonth(); save();
+    renderBudget(); renderTx(); if(typeof renderRecurring==='function') renderRecurring();
+    if(typeof renderReflectTab==='function') renderReflectTab();
+  });
+}
 function shiftMonth(key,delta){ let [y,m]=key.split('-').map(Number); m+=delta; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return `${y}-${String(m).padStart(2,'0')}`; }
 function fmtMonth(key){ const [y,m]=key.split('-').map(Number); return new Date(y,m-1,1).toLocaleString(undefined,{month:'long',year:'numeric'}); }
 function monthOf(dateStr){ return (dateStr||'').slice(0,7); }
@@ -7379,11 +7436,18 @@ document.getElementById('mNext').addEventListener('click',()=>{ state.activeMont
 /* ---------- categories ---------- */
 document.getElementById('addCat').addEventListener('click',()=>{
   const el=document.getElementById('catName'); const name=el.value.trim(); if(!name) return;
-  const row={id:uid(),name}; const g=pickedGrowth(el); if(g) row.growth=g;
+  /* A pack pick carries its own tag. A name somebody TYPED carried nothing, and
+     that is how "Acorns" became a purchase - the vocabulary for putting money
+     away existed and the add form never consulted it. Guessed, said out loud,
+     and changeable in one tap, which is the same contract the emoji and the OCR
+     guesses run on. */
+  const row={id:uid(),name}; const g=pickedGrowth(el)||growthKindFor(name); if(g) row.growth=g;
   state.categories.push(row); el.value='';
   delete el.dataset.growth; delete el.dataset.picked;
   const h=document.getElementById('catNameHits'); if(h) h.innerHTML='';
   save(); renderBudget(); renderTxForm();
+  if(g && !pickedGrowth(el) && typeof toast==='function')
+    toast(`"${name}" filed as ${GROWTH_TAG[g].toLowerCase()} - it gets a job on the plan, but it will not be counted as spending. Open it to change that.`);
 });
 document.getElementById('catName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('addCat').click(); });
 /* ---------- category packs ------------------------------------------------
@@ -7941,7 +8005,10 @@ function wireRepeat(box){
   box.querySelectorAll('[data-repeat]').forEach(cb=>cb.addEventListener('change',()=>{
     const id=cb.dataset.repeat, M=state.activeMonth;
     if(!cb.checked){
-      state.recurring=(state.recurring||[]).filter(r=>!(r.type==='expense'&&r.catId===id));
+      /* Matched on the CATEGORY, not on the type. A growth category's rule is an
+         invest, so a filter keyed to 'expense' left it running after the tick
+         was cleared - the box said off and the money kept posting. */
+      state.recurring=(state.recurring||[]).filter(r=>!(r.catId===id && r.type!=='income'));
       save(); planRefresh(); renderRecurring(); renderTx();
       if(typeof toast==='function') toast('Stopped repeating. Anything already posted stays.');
       return;
@@ -7965,7 +8032,13 @@ function wireRepeat(box){
        duplicate anything, and the date control beside it moves it in one tap. */
     const first=M+'-01';
     const anchor = todayStr()>first ? shiftMonth(M,1)+'-01' : first;
-    const rec={id:uid(), type:'expense', amount:amt, catId:id, freq:'monthly', anchor, day:1, src:'row'};
+    /* A monthly contribution to an investment is not a bill, and posting it as
+       one undoes the whole growth lane: the category says "invested, not spent"
+       while the entry it writes every month says expense. The rule takes its
+       type from the category it belongs to. */
+    const rtype=growthRecType(state.categories.find(x=>x.id===id));
+    const rec={id:uid(), type:rtype, amount:amt, catId:id, freq:'monthly', anchor, day:1, src:'row'};
+    if(rtype==='invest') rec.ikind='holds';
     state.recurring.push(rec);
     save(); planRefresh(); renderRecurring(); renderTx();
     if(typeof toast==='function') toast(`${catName(id)} repeats monthly at ${money(amt)}. First one lands ${fmtDayShort(anchor)} - change the date beside it if that is wrong.`);
@@ -8609,7 +8682,9 @@ function wallGuideHTML(c,M){
 }
 function renderBudget(){
   if(typeof refreshCatSelects==='function') setTimeout(refreshCatSelects,0);
-  document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth) + (state.activeMonth===thisMonth()?'<small>This month</small>':'<small>&nbsp;</small>');
+  document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth)
+    + (state.activeMonth===thisMonth() ? '<small>This month</small>' : `<small>${backToThisMonthHTML('mBack')}</small>`);
+  wireBackToThisMonth('mBack');
   const M=state.activeMonth;
   const income=monthIncome(M);
   const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
@@ -8977,6 +9052,33 @@ function renderCatSheet(){
      eleven of them on screen at once, none of them explained. One category, one
      switch, with the sentence that says what ticking it actually does. */
   const r=recForCat(c.id);
+  /* "How do I plan for money I invested? It's not an expense, adding it to
+     income makes no sense, and I can't put it in Build. Should I have an Acorns
+     EXPENSE category, and if so it feels like a negative thing?"
+
+     It feels negative because it was being called negative. The app has known
+     since the growth lane shipped that investing is not spending - a tagged
+     category posts as an invest, reaches net worth, and is kept out of the
+     spending breakdown - but the ONLY way to get that tag was to pick a name
+     out of a pack, or to have typed a word like "investing" during intake. Type
+     "Acorns" and you got a purchase, with nothing anywhere on the screen
+     offering to say otherwise.
+
+     So the tag becomes a thing you can set, on any category, at any time. Four
+     buttons rather than a checkbox, because "not spending" is three different
+     claims and they read differently everywhere else in the app. */
+  const GK=[['','Spending','money that leaves and does not come back'],
+            ['invest','Invested','it stays yours and can grow'],
+            ['save','Saved','it stays yours, parked'],
+            ['debt','Debt paid down','it buys back what you owe']];
+  const kindSec=`<div class="cs-sec"><div class="cs-h">What kind of money is this</div>
+    <div class="cs-card">
+      <div class="cs-kind">${GK.map(([k,label,why])=>`<button type="button" class="csk${(c.growth||'')===k?' on':''}" data-growthset="${k}"><b>${label}</b><span>${why}</span></button>`).join('')}</div>
+      <p class="cs-note" style="margin:10px 0 0">${c.growth
+        ? `Assigned like anything else on the Plan - zero-based means putting money away gets a job too - but logged as <b>${escapeHtml(GROWTH_TAG[c.growth].toLowerCase())}</b>. It never counts as spending, it never appears in the spending breakdown, and ${c.growth==='invest'?'it reaches your net worth through <b>Invested capital</b>':'the money is still yours'}.`
+        : `Ordinary spending: it counts against the month, and it shows up in the breakdown and the report as money gone. If this is a contribution to an investment or a savings pot, say so above and the app will stop calling it a purchase.`}</p>
+    </div></div>`;
+
   const target=`<div class="cs-sec"><div class="cs-h">Repeats</div>
     <div class="cs-card">
       ${isGroup?`<p class="cs-note" style="margin:0">A pool does not repeat - its subcategories do. Open one of them below to set it.</p>`
@@ -9056,7 +9158,21 @@ function renderCatSheet(){
          <button class="btn sm danger ghost" data-del="${c.id}">Delete ${escapeHtml(c.name)}</button>`}
   </div>`;
 
-  body.innerHTML=rename+balance+target+subs+whereLives+history+wallGuideHTML(c,M)+danger;
+  body.innerHTML=rename+balance+kindSec+target+subs+whereLives+history+wallGuideHTML(c,M)+danger;
+  /* Changing the kind rewrites what a repeat rule POSTS, so the rule has to be
+     retyped with it or the tag and the automation would disagree - which is the
+     exact contradiction this whole section exists to remove. */
+  body.querySelectorAll('[data-growthset]').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset.growthset||'';
+    if((c.growth||'')===k) return;
+    if(k) c.growth=k; else delete c.growth;
+    const r=recForCat(c.id);
+    if(r){ r.type=growthRecType(c); if(r.type==='invest'){ r.ikind=r.ikind||'holds'; delete r.catId2; } }
+    save(); renderBudget(); renderTx(); renderRecurring(); renderCatSheet();
+    if(typeof toast==='function') toast(k
+      ? `${c.name} is ${GROWTH_TAG[k].toLowerCase()}${r?' - and what it posts each month changed with it':''}. It will not be counted as spending.`
+      : `${c.name} counts as spending again.`);
+  }));
   if(!isGroup){
     /* Speaks monthly through get/set like every other unit field, so whatever
        rhythm is on screen the stored number stays the month - the invariant the
@@ -9580,10 +9696,17 @@ function qlWords(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,'
    these would otherwise score against a spending category and quietly file a
    Roth contribution as shopping - the one misfiling that turns a good month into
    an accusation. */
+/* Asked from a phone: "last month I invested 1300... should I have an acorns
+   expense category, and if so it feels like a negative thing?" It does, and it
+   would be wrong. The list below knew the WORDS for putting money away and none
+   of the NAMES people actually type - and nobody types "investment", they type
+   the name of the app the money went into. So "Acorns" read as a purchase. */
 const PUT_AWAY_WORDS=['savings','saving','saved','save','invest','invested','investing','investment',
   'roth','ira','401k','403b','tsp','hsa','brokerage','index fund','etf','vanguard','fidelity','schwab',
   'emergency fund','rainy day','sinking fund','nest egg','stash','put away','set aside','transfer to savings',
-  'stocks','bonds','crypto','retirement','pension','529'];
+  'stocks','bonds','crypto','retirement','pension','529',
+  'acorns','wealthfront','betterment','robinhood','wealthsimple','questrade','sofi invest','m1 finance',
+  'etrade','e*trade','webull','coinbase','mutual fund','dividend','tfsa','rrsp','resp','annuity','treasury'];
 function looksPutAway(q){
   return PUT_AWAY_WORDS.some(w=> w.includes(' ') ? q.includes(w) : new RegExp('\\b'+w+'\\b').test(q));
 }
@@ -10564,6 +10687,20 @@ function renderTimeLog(){
 function renderTx(){
   renderTxForm();
   renderTimeLog();
+  /* Track's figures are month-scoped and Track has no month control, so when
+     something else has moved the month this is the only thing on the screen
+     that can say so. Silent was the bug: an empty September read as "you have
+     logged nothing", which is a very different sentence from "you are looking
+     at next month". */
+  (function(){
+    const box=document.getElementById('txMonthNote'); if(!box) return;
+    const a=monthAway();
+    if(!a || txAllMonths){ box.innerHTML=''; return; }
+    box.innerHTML=`<div class="tx-month"><span class="txm-t">These are <b>${escapeHtml(a.label)}</b> figures${a.ahead
+        ? ', a month that has not happened yet - so an empty screen here means nothing has been logged <i>because it cannot have been</i>.'
+        : ", a month that is already finished - anything you log here lands in it, not today."}</span>${backToThisMonthHTML('txBack')}</div>`;
+    wireBackToThisMonth('txBack');
+  })();
   const bsBar=document.getElementById('blindspotBar');
   if(bsBar){ const bs=blindspotShield(); bsBar.innerHTML = bs.count>0 ? `<div class="blindspot"><span class="bs-ic"></span><div><div class="bs-k">Zero-Blindspot Shield</div><div class="bs-v">${bs.count} on the record · ${bs.streak}-day logging streak </div><div class="bs-note">Nothing hidden. Every logged dollar is one that can't ambush you.</div></div></div>` : ''; }
   const M=state.activeMonth;
@@ -15813,8 +15950,16 @@ function postRecurring(month, force){
          somewhere real. */
       const raid=(r.acctId && (state.accounts||[]).some(a=>a.id===r.acctId)) ? r.acctId : defaultAcctId();
       if(r.type==='income'){ const tx={id:uid(),type:'income',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id}; if(r.owner) tx.owner=r.owner; if(raid) tx.acctId=raid; state.transactions.push(tx); }
-      else if(r.type==='invest'){ const ik=r.ikind||'holds';
+        else if(r.type==='invest'){ const ik=r.ikind||'holds';
+        /* catId, which this branch never carried. The invest lane grew up on
+           Track, where an invest has a source and no category - but a rule born
+           from a PLAN row belongs to a category, and without the id nothing
+           could attribute the money back to it. A $1,300 monthly contribution
+           showed $1,300 assigned and $0 used, every month, forever: the row the
+           user is trying to fund reads as never funded. catUsed already adds
+           invested to spent; it just had nothing to add. */
         const tx={id:uid(),type:'invest',amount:r.amount,source:r.source,date,note:recTxNote(r),recId:r.id,ikind:ik};
+        if(r.catId) tx.catId=r.catId;
         if(raid) tx.acctId=raid;
         if(r.destAcctId && (state.accounts||[]).some(a=>a.id===r.destAcctId)) tx.destAcctId=r.destAcctId;
         state.transactions.push(tx);
@@ -17146,7 +17291,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
   }
 
   const M=state.activeMonth;
-  const monthBar = `<div class="rf-period"><button class="rf-arrow" id="rfPrev" title="Previous month">‹</button><span class="rf-m">${escapeHtml(fmtMonth(M))}${M===thisMonth()?' <small>this month</small>':''}</span><button class="rf-arrow" id="rfNext" title="Next month">›</button></div>`;
+  const monthBar = `<div class="rf-period"><button class="rf-arrow" id="rfPrev" title="Previous month">‹</button><span class="rf-m">${escapeHtml(fmtMonth(M))}${M===thisMonth()?' <small>this month</small>':` <small>${backToThisMonthHTML('rfBack')}</small>`}</span><button class="rf-arrow" id="rfNext" title="Next month">›</button></div>`;
 
   if(rfTab==='report'){
     bar.innerHTML=monthBar+`<p class="sub rf-lead">What your own numbers say about ${escapeHtml(fmtMonth(M))}, and what your situation says whatever month you are looking at. Every line shows the arithmetic behind it, nothing appears until there is enough to be sure of, and nothing here will tell you what to do - it prices both sides and hands it back.</p>`;
@@ -17183,6 +17328,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
     renderCharts();
   }
 
+  wireBackToThisMonth('rfBack');
   const prev=document.getElementById('rfPrev'), next=document.getElementById('rfNext');
   if(prev) prev.onclick=()=>{ state.activeMonth=shiftMonth(state.activeMonth,-1); save(); renderBudget(); renderReflectTab(); };
   if(next) next.onclick=()=>{ state.activeMonth=shiftMonth(state.activeMonth,1); save(); renderBudget(); renderReflectTab(); };
@@ -19124,6 +19270,12 @@ document.getElementById('intakeX').addEventListener('click',()=>{
 /* ---------- boot ---------- */
 function boot(){
   applyTheme();
+  /* A month you walked forward into is a place you went, not a place you live.
+     Opening on it shows an empty Track and a plan with no spending against it,
+     and nothing on the screen explains why - so the app comes home on boot.
+     Only forward: a PAST month still has real figures in it and somebody may
+     genuinely be part way through reconciling one, and the label now says so. */
+  if(state.activeMonth && state.activeMonth>thisMonth()){ state.activeMonth=thisMonth(); save(); }
   ensureTrackStart();   // existing installs: origin = earliest transaction, else today
   renderIntensity(); renderRegister(); newQuote();
   // last month first (in full), then this month up to today - nothing slips through
@@ -19713,13 +19865,35 @@ function catEmoji(c){
   if(typeof c.emoji==='string') return c.emoji;
   return guessCatEmoji(c.name, c.growth);
 }
+/* Which of the three kinds of not-spending a name reads as. Order matters: a
+   thing can be both saved and invested by vocabulary ("retirement savings"), and
+   INVEST is the more specific claim, so it wins. Returns '' for anything it
+   cannot place, because a wrong tag here is worse than none - it would tell
+   somebody their groceries were building wealth. */
+const GROWTH_SAVE_WORDS=['saving','savings','save','saved','emergency fund','rainy day','sinking fund',
+  'nest egg','set aside','put away','transfer to savings','buffer','cushion','high yield','hysa'];
+const GROWTH_DEBT_WORDS=['debt','payoff','pay off','pay down','paydown','snowball','avalanche',
+  'extra payment','extra principal','principal'];
 function growthKindFor(name){
-  const n=String(name||'').toLowerCase();
-  if(n.includes('invest')||n.includes('retirement')) return 'invest';
-  if(n.includes('saving')) return 'save';
-  if(n.includes('debt')) return 'debt';
+  const n=String(name||'').toLowerCase().trim();
+  if(!n) return '';
+  const has=w=> w.includes(' ')||w.includes('*') ? n.includes(w)
+                 : new RegExp('(^|[^a-z0-9])'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z0-9]|$)').test(n);
+  if(GROWTH_DEBT_WORDS.some(has)) return 'debt';
+  /* "Retirement savings" is both, by vocabulary, and the first draft answered
+     SAVE because the save word was checked as a veto rather than as a fallback.
+     Invest is the more specific claim, so it is asked first: the put-away list
+     minus the words that mean parked money is the list that means invested. */
+  if(PUT_AWAY_WORDS.filter(w=>!GROWTH_SAVE_WORDS.includes(w)).some(has)) return 'invest';
+  if(GROWTH_SAVE_WORDS.some(has)) return 'save';
   return '';
 }
+/* What a rule against this category should WRITE each month. 'save' and 'debt'
+   stay expenses on purpose: the invest lane creates an asset behind the money
+   (Invested capital), and money moved to a savings pot or thrown at a balance
+   has no asset to create - the accounts and the debt list already hold those.
+   The tag still keeps all three out of the spending breakdown. */
+function growthRecType(c){ return (c&&c.growth==='invest') ? 'invest' : 'expense'; }
 const GROWTH_TAG={invest:'Invested, not spent', save:'Saved, not spent', debt:'Debt paid down'};
 /* The Plan row has one line and no room for "Invested, not spent" beside a name,
    an amount and a pill. A coloured dot would have fitted and said nothing - and
