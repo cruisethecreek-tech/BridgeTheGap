@@ -1271,6 +1271,30 @@
     overflow-wrap:break-word;min-width:0;flex:1 1 auto}
   .subrow .sub-assign{display:flex;align-items:center;gap:5px;min-width:0}
   .growth-tag.mini{font-size:9.5px;padding:1px 5px;letter-spacing:.2px}
+  .intake-chips .pk-n{font-style:normal;opacity:.6;font-size:11px;font-weight:800;margin-left:2px}
+  .ia-pkopen{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  .ia-pkh{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .ia-pkh b{font-size:14px}
+  .ia-pka{display:flex;gap:6px}
+  .ia-pka button{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;
+    padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer}
+  .ia-pka button:hover{border-color:var(--accent);color:var(--accent)}
+  .ia-pkw{margin:5px 0 9px;font-size:12px;color:var(--muted);line-height:1.45}
+  .ia-pklist{display:flex;flex-direction:column;gap:6px;max-height:270px;overflow-y:auto}
+  .ia-pkc{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--ink);border:1px solid var(--line);
+    color:var(--text);border-radius:9px;padding:8px 10px;cursor:pointer}
+  .ia-pkc .pkc-t{font-size:13px;font-weight:700}
+  .ia-pkc .pkc-w{font-size:11px;color:var(--muted);line-height:1.4}
+  .ia-pkc.on{border-color:var(--accent);background:rgba(var(--accent-rgb),.12)}
+  .ia-pkc.on .pkc-t{color:var(--accent)}
+  .rw-cull{display:inline-flex;align-items:center;margin-right:8px;flex:none}
+  .rw-cull input{width:19px;height:19px;accent-color:var(--bad);cursor:pointer}
+  body.culling .rw-nm{opacity:.72}
+  .cull-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    background:var(--panel-2);border:1px solid var(--bad);border-radius:12px;padding:11px 13px;margin-bottom:12px}
+  .cull-bar .cb-t{flex:1;min-width:190px;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .cull-bar .cb-t b{color:var(--text)}
+  .cull-bar .cb-a{display:flex;gap:7px;flex:none}
   .cs-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .csk{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel-2);border:1px solid var(--line);
     color:var(--text);border-radius:11px;padding:10px 11px;cursor:pointer}
@@ -2951,7 +2975,15 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="btn ghost" id="copyBtn" title="Copy last month's assigned amounts">Copy last month</button>
           <button class="btn ghost" id="mergeBtn" title="Merge duplicate essentials into one">Tidy duplicates</button>
           <button class="btn ghost" id="reorderBtn" title="Put your categories in the order you actually think about them">Reorder</button>
+          <!-- "She chose all of the categories then found herself deleting
+               everything inside of it... a mass delete should be a choice, so
+               she doesn't later have to go into each, scroll to the bottom to
+               delete." The intake fix stops the flood; this clears one that
+               already happened, which is the state every existing install is
+               in. -->
+          <button class="btn ghost" id="cullBtn" title="Remove several categories at once">Remove several</button>
         </div>
+        <div id="cullBar"></div>
         <div id="newMonthBanner"></div>
         <div id="dupBanner"></div>
         <div id="cats"></div>
@@ -7699,6 +7731,27 @@ function packPlan(k){
    `pick` is a list of category names. Omitted means everything not already on
    the plan, which is exactly what the button used to do - so the old one-tap
    behaviour survives as the default rather than being taken away. */
+/* Removing categories, in one place. It was inline in the sheet's delete
+   handler, which was fine while the sheet was the only way to remove one - and
+   a bulk remove that reimplemented "and their subtrees, and their assignments,
+   and leave the transactions alone" would be a second copy of rules that have
+   to agree. Transactions are deliberately kept: deleting a category never
+   deletes money, it only makes the history Uncategorized. */
+function removeCats(ids){
+  const toRemove=new Set();
+  (ids||[]).forEach(id=>{ toRemove.add(id); descendantsOf(id).forEach(k=>toRemove.add(k.id)); });
+  if(!toRemove.size) return {removed:0, orphaned:0};
+  const orphaned=state.transactions.filter(t=>toRemove.has(t.catId)).length;
+  state.categories=state.categories.filter(c=>!toRemove.has(c.id));
+  state.dayToDay=(state.dayToDay||[]).filter(x=>!toRemove.has(x));   // a watch list of ghosts watches nothing
+  Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
+  /* A rule that posts into a category that no longer exists would keep writing
+     Uncategorized entries every month, forever, with nothing on screen to stop
+     it - the sheet's own delete had this hole too. */
+  state.recurring=(state.recurring||[]).filter(r=>!(r.catId && toRemove.has(r.catId)));
+  save();
+  return {removed:toRemove.size, orphaned};
+}
 function addPack(k, pick){
   const plan=packPlan(k); if(!plan || !plan.add.length) return 0;
   const p=plan.pack;
@@ -7851,6 +7904,48 @@ function setReorder(on){
   if(catReorder && typeof toast==='function') toast('Drag anything by its ⠿ grip. Subs stay inside their group.');
 }
 document.getElementById('reorderBtn').addEventListener('click',()=>setReorder(!catReorder));
+/* ---------- removing several at once ----------
+   "She chose all of the categories then found herself deleting everything
+   inside of it and only keeping one option. A mass delete should be a choice,
+   so she doesn't later have to go into each, scroll to the bottom to delete."
+
+   The per category delete was never wrong, it was just the ONLY route: open the
+   sheet, scroll past balance, kind, repeats, subcategories and history, arm it,
+   confirm. Eleven times. This is the same delete - literally the same function -
+   pointed at a list. */
+let catCull=false, catCullPick=new Set();
+function setCull(on){
+  catCull=on; if(!on) catCullPick.clear();
+  const b=document.getElementById('cullBtn');
+  if(b){ b.textContent=on?'Done removing':'Remove several'; b.classList.toggle('primary',on); }
+  document.body.classList.toggle('culling',on);
+  if(on) collapsedCats.clear();      // you cannot pick what you cannot see
+  renderBudget();
+  if(on && typeof toast==='function') toast('Tick anything you do not want, then remove them in one go. Your logged history is never deleted.');
+}
+function renderCullBar(){
+  const host=document.getElementById('cullBar'); if(!host) return;
+  if(!catCull){ host.innerHTML=''; return; }
+  const n=catCullPick.size;
+  /* Counted with subtrees, because ticking a group takes its children and a bar
+     that says "2" while five disappear is the app misleading you at exactly the
+     moment it matters most. */
+  const all=new Set(); catCullPick.forEach(id=>{ all.add(id); descendantsOf(id).forEach(k=>all.add(k.id)); });
+  const hits=state.transactions.filter(t=>all.has(t.catId)).length;
+  host.innerHTML=`<div class="cull-bar">
+    <span class="cb-t">${n?`<b>${all.size}</b> categor${all.size===1?'y':'ies'} to remove${all.size>n?` (${n} ticked, the rest are inside them)`:''}${hits?` · <b>${hits}</b> logged entr${hits===1?'y':'ies'} will stay on Track as Uncategorized`:' · nothing is logged against them'}`:'Tick the ones you do not want. Nothing is removed until you press the button.'}</span>
+    <span class="cb-a">${n?`<button class="btn sm danger" id="cullGo">Remove ${all.size}</button>`:''}<button class="btn sm ghost" id="cullOff">${n?'Cancel':'Done'}</button></span></div>`;
+  const go=document.getElementById('cullGo');
+  if(go) go.onclick=()=>{
+    const r=removeCats([...catCullPick]);
+    catCullPick.clear(); setCull(false); renderTx();
+    if(typeof toast==='function') toast(r.orphaned
+      ? `${r.removed} categor${r.removed===1?'y':'ies'} removed. The ${r.orphaned} entr${r.orphaned===1?'y':'ies'} logged against them ${r.orphaned===1?'is':'are'} still on Track, now Uncategorized.`
+      : `${r.removed} categor${r.removed===1?'y':'ies'} removed. Nothing was logged against them.`);
+  };
+  const off=document.getElementById('cullOff'); if(off) off.onclick=()=>setCull(false);
+}
+(function(){ const b=document.getElementById('cullBtn'); if(b) b.addEventListener('click',()=>setCull(!catCull)); })();
 /* The recurring list gets the same mode, not a different one. Two lists on the
    same screen that reorder by two different gestures is a worse answer than
    either gesture on its own. */
@@ -8751,7 +8846,11 @@ function renderBudget(){
          does not already carry. It is there to be recognised at a glance, and
          a glance is not how that reader works. */
       const face=catEmoji(c);
-      const nameHTML = `<button class="rw-nm" data-catsheet="${c.id}" title="${escapeHtml(c.name)}">${face?`<span class="rw-e" aria-hidden="true">${escapeHtml(face)}</span>`:''}<span class="rw-t">${escapeHtml(c.name)}</span>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag mini" title="${escapeHtml(GROWTH_TAG[c.growth]||'Not spending')}">${escapeHtml(GROWTH_TAG_SHORT[c.growth]||'not spent')}</span>`:''}${recForCat(c.id)?'<span class="rep-dot" title="This repeats">&#8635;</span>':''}</button>`;
+      /* In cull mode the name stops opening the sheet and becomes the tick -
+         a row that does two different things depending on where your thumb
+         lands is how somebody removes a category they meant to inspect. */
+      const cullBox = catCull ? `<label class="rw-cull"><input type="checkbox" data-cull="${c.id}"${catCullPick.has(c.id)?' checked':''} aria-label="Remove ${escapeHtml(c.name)}"></label>` : '';
+      const nameHTML = cullBox + `<button class="rw-nm" data-catsheet="${c.id}"${catCull?' disabled':''} title="${escapeHtml(c.name)}">${face?`<span class="rw-e" aria-hidden="true">${escapeHtml(face)}</span>`:''}<span class="rw-t">${escapeHtml(c.name)}</span>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag mini" title="${escapeHtml(GROWTH_TAG[c.growth]||'Not spending')}">${escapeHtml(GROWTH_TAG_SHORT[c.growth]||'not spent')}</span>`:''}${recForCat(c.id)?'<span class="rep-dot" title="This repeats">&#8635;</span>':''}</button>`;
       if(isGroup){
         return `<div class="cat grp${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
           <div class="cat-top">
@@ -8897,19 +8996,20 @@ function wirePlan(box, isMain){
        from would delete the wrong thing on a second tap. */
     if(catDelArm!==id) return;
     const name=catName(id);
-    const toRemove=new Set([id,...descendantsOf(id).map(k=>k.id)]);   // the whole subtree goes, all three levels
-    const orphaned=state.transactions.filter(t=>toRemove.has(t.catId)).length;
-    state.categories=state.categories.filter(c=>!toRemove.has(c.id));
-    state.dayToDay=(state.dayToDay||[]).filter(x=>!toRemove.has(x));   // a watch list of ghosts watches nothing
-    Object.keys(state.budgets).forEach(m=>{ if(state.budgets[m]) toRemove.forEach(rid=>delete state.budgets[m][rid]); });
-    // keep transactions for history; they become "Uncategorized"
+    const r=removeCats([id]);
     catDelArm=null;
     if(catSheetId===id && typeof closeCatSheet==='function') closeCatSheet();
-    save(); planRefresh(); renderTx();
-    if(typeof toast==='function') toast(orphaned
-      ? `${name} deleted. The ${orphaned} entr${orphaned===1?'y it held is':'ies it held are'} still on Track, now Uncategorized.`
+    planRefresh(); renderTx();
+    if(typeof toast==='function') toast(r.orphaned
+      ? `${name} deleted. The ${r.orphaned} entr${r.orphaned===1?'y it held is':'ies it held are'} still on Track, now Uncategorized.`
       : `${name} deleted. Nothing was logged against it.`);
   }));
+  box.querySelectorAll('input[data-cull]').forEach(cb=>cb.addEventListener('change',()=>{
+    const id=cb.dataset.cull;
+    cb.checked ? catCullPick.add(id) : catCullPick.delete(id);
+    renderCullBar();
+  }));
+  renderCullBar();
   wireReorder(box); wireRepeat(box);
   box.querySelectorAll('button[data-rebal]').forEach(btn=>btn.addEventListener('click',()=>autoRebalance(btn.dataset.rebal)));
   box.querySelectorAll('button[data-toggle]').forEach(btn=>btn.addEventListener('click',()=>{ const id=btn.dataset.toggle; if(collapsedCats.has(id)) collapsedCats.delete(id); else collapsedCats.add(id); planRefresh(); }));
@@ -9116,8 +9216,8 @@ function renderCatSheet(){
       }).join('')}<div class="cs-hkey"><span><i class="hb-a"></i>assigned</span><span><i class="hb-s"></i>${c.growth?'put away':'spent'}</span></div></div>`
       :`<p class="cs-note">No months with anything in them yet. Assign something and log against it, and this fills itself in.</p>`}
     ${txs.length?`<div class="cs-txs">${txs.map(t=>`<div class="cs-tx"><span class="cs-txd">${fmtDayShort(t.date)}</span><span class="cs-txn">${escapeHtml(t.note||catName(t.catId)||c.name)}</span><span class="cs-txv">${money(t.amount)}</span></div>`).join('')}
-        ${trailBtn('logspend','Log another','ghost')}</div>`
-      :`<div class="cs-txs"><p class="cs-note">Nothing logged against it.${trailBtn('logspend','Log one','ghost')}</p></div>`}
+        ${trailBtn('logspend','Log another','ghost',c.id)}</div>`
+      :`<div class="cs-txs"><p class="cs-note">Nothing logged against it.${trailBtn('logspend','Log one','ghost',c.id)}</p></div>`}
   </div>`;
 
   /* Where it lives. Options are computed from what is actually legal - never
@@ -18558,17 +18658,23 @@ function renderIntakeDock(s){
    behave the same way, including the part that matters: Back retracts the
    question it abandoned, so the log never keeps an orphan asking something
    nobody is going to answer. */
-function iaNumberPrompt(ask,ph,label,onOK,backFn,max){
+/* `skip` is {label, fn}: a question the flow can proceed without. It exists
+   because the hours question below is REQUIRED on the hourly path (the monthly
+   figure is derived from it) and merely valuable on every other one - and a
+   prompt with no way past it is how an optional question becomes a wall. */
+function iaNumberPrompt(ask,ph,label,onOK,backFn,max,skip){
   const dock=document.getElementById('intakeDock');
   iaBub(ask,'bot');
   const qb=document.getElementById('intakeLog').lastElementChild;
-  dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(ph||'')}"><button class="intake-send" id="iaHelpGo">${escapeHtml(label)}</button></div><div class="intake-underrow"><button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
+  dock.innerHTML=`<div class="inrow"><input id="iaHelpInput" type="number" inputmode="decimal" min="0" step="any" placeholder="${escapeHtml(ph||'')}"><button class="intake-send" id="iaHelpGo">${escapeHtml(label)}</button></div><div class="intake-underrow">${skip?`<button class="intake-skip" id="iaHelpSkip">${escapeHtml(skip.label)}</button>`:''}<button class="intake-skip" id="iaHelpBack">← Back</button></div>`;
   const inp=document.getElementById('iaHelpInput'); setTimeout(()=>inp.focus(),60);
   let done=false;
   const go=()=>{ if(done) return; const n=parseFloat(inp.value); if(isNaN(n)||n<=0||(max&&n>max)){ inp.focus(); return; } done=true; onOK(n); };
   document.getElementById('iaHelpGo').onclick=go;
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
   document.getElementById('iaHelpBack').onclick=()=>{ if(qb&&qb.parentNode) qb.remove(); backFn(); };
+  const sk=document.getElementById('iaHelpSkip');
+  if(sk) sk.onclick=()=>{ if(done) return; done=true; skip.fn(); };
 }
 /* Drop the last n bubbles - used when a Back restarts a branch, so the restart
    does not stack a second copy of the same exchange underneath the first. */
@@ -18595,12 +18701,32 @@ function runPayHelper(s){
   const askAmount=(f,back)=>{
     iaNumberPrompt(f.ask, f.ph, f.k==='hourly'?'Next':'Work it out', amt=>{
       iaBub(usd(amt)+(f.k==='hourly'?' an hour':''),'me');
-      if(f.k!=='hourly') return finish(f,amt,0);
+      askHours(f, amt, ()=>{ iaRewind(2); askAmount(f,back); });
+    }, back);
+  };
+  /* Reported from a real intake: "she chose biweekly but it didn't ask her how
+     many hours she worked." It did not, and only the HOURLY branch ever had -
+     every other cadence called finish(f, amt, 0) and moved on. The monthly
+     figure does not need the hours, so nothing looked broken; what needs them is
+     every "hours of your life" figure in the app, and with none on file the rate
+     falls back to a standard 2,080-hour year. In other words the app quietly
+     assumed she works 40 hours a week - the one thing its own copy says it
+     should never do ("guessing your hours is the one thing this app shouldn't
+     do"). Asked on every path now: required where the arithmetic depends on it,
+     skippable where it does not, and honest about what skipping costs. */
+  const askHours=(f,amt,back)=>{
+    if(f.k==='hourly'){
       iaNumberPrompt("And how many hours a week do you actually work? The real ones - the early start, the late night, the weekend that wasn't. Most people work more than they'd say.",
         'e.g. 38', 'Work it out',
-        hpw=>{ iaBub(hpw+' hrs/week','me'); finish(f,amt,hpw); },
-        ()=>{ iaRewind(2); askAmount(f,back); }, 120);
-    }, back);
+        hpw=>{ iaBub(hpw+' hrs/week','me'); finish(f,amt,hpw); }, back, 120);
+      return;
+    }
+    iaNumberPrompt("One more and it is not about the money: how many hours a week do you actually work? The real ones - the early start, the late night, the weekend that wasn't. I do not need it for the budget, I need it to price things in HOURS OF YOUR LIFE, and if I guess I will guess 40.",
+      'e.g. 38', 'That is my week',
+      hpw=>{ iaBub(hpw+' hrs/week','me'); finish(f,amt,hpw); }, back, 120,
+      { label:'Rather not say', fn:()=>{ iaBub('Rather not say','me');
+          iaBub("Fine. I will work on a standard 40-hour week until you tell me otherwise, and it is one field in Settings whenever you want it right.",'bot');
+          finish(f,amt,0); } });
   };
   const finish=(f,amt,hpw)=>{
     const monthly=Math.round(payToMonthly(f.k,amt,hpw)*100)/100;
@@ -18665,28 +18791,86 @@ function runIntakeHelper(s){
 function renderPacksStep(s){
   const dock=document.getElementById('intakeDock');
   const offer=CAT_PACKS.filter(p=>p.k!=='essentials');
+  /* Reported from a real intake: "there was no drop down that told her what was
+     in each category. She chose all of them then found herself deleting
+     everything inside and only keeping one option."
+
+     Exactly what the screen invited. A chip said "Getting around" and a counter
+     said how many categories were behind it, and the contents were invisible
+     until they were already on her Plan - so the only way to find out what a
+     pack held was to take it. Then the undo was per category, buried at the
+     bottom of each one's sheet.
+
+     addPack has ALWAYS taken a pick list; this step just never passed one. So
+     the pack opens, every category in it is listed with the line somebody wrote
+     to explain it, and each one is a tap. Taking the pack still takes all of it,
+     because that is the fast path and most people want it - the difference is
+     that you can now see what you are agreeing to before you agree to it. */
   const picked=new Set(iaAns.packs||[]);
+  const chosen=iaAns.packPick||(iaAns.packPick={});   // {packKey: [category names]}
+  let open=null;
+  const namesOf=p=>p.cats.map(c=>c.n);
+  const takenIn=p=>(chosen[p.k]||[]).length;
+  const totalTaken=()=>offer.reduce((t,p)=>t+(picked.has(p.k)?takenIn(p):0),0);
+  const setPack=(p,on)=>{
+    if(on){ picked.add(p.k); chosen[p.k]=namesOf(p); }
+    else { picked.delete(p.k); delete chosen[p.k]; }
+    iaAns.packs=offer.filter(x=>picked.has(x.k)).map(x=>x.k);   // pack order, not tap order
+  };
   const back = iaCanBack() ? '<button class="intake-skip" id="iaBack">← Back</button>' : '';
   const draw=()=>{
-    const n=picked.size;
-    const cats=offer.filter(p=>picked.has(p.k)).reduce((t,p)=>t+p.cats.length,0);
-    dock.innerHTML=`<div class="intake-chips">${offer.map(p=>`<button data-pk="${p.k}" class="${picked.has(p.k)?'picked':''}">${picked.has(p.k)?'✓':'+ '}${p.icon} ${escapeHtml(p.name)}</button>`).join('')}</div>`
-      +`<div class="intake-chips" style="margin-top:10px"><button class="go" id="iaPkDone">${n?`Add ${n} pack${n===1?'':'s'} - ${cats} categories →`:'Continue →'}</button></div>`
+    const n=totalTaken();
+    const chips=offer.map(p=>{
+      const on=picked.has(p.k), take=takenIn(p), all=p.cats.length;
+      const part=on&&take<all;
+      return `<button data-pk="${p.k}" class="${on?'picked':''}">${on?'✓':'+ '}${p.icon} ${escapeHtml(p.name)} <i class="pk-n">${on?(part?`${take}/${all}`:all):all}</i></button>`;
+    }).join('');
+    const P=open?offer.find(x=>x.k===open):null;
+    const panel = P ? `<div class="ia-pkopen">
+        <div class="ia-pkh"><b>${P.icon} ${escapeHtml(P.name)}</b>
+          <span class="ia-pka"><button data-pkall="${P.k}">All ${P.cats.length}</button><button data-pknone="${P.k}">None</button></span></div>
+        <p class="ia-pkw">${escapeHtml(P.hook||'')}</p>
+        <div class="ia-pklist">${P.cats.map(c=>{
+          const on=(chosen[P.k]||[]).indexOf(c.n)>-1;
+          return `<button class="ia-pkc ${on?'on':''}" data-pkc="${escapeHtml(c.n)}"><span class="pkc-t">${on?'✓':'+'} ${escapeHtml(c.n)}</span><span class="pkc-w">${escapeHtml(c.w||'')}</span></button>`;
+        }).join('')}</div>
+      </div>` : '';
+    dock.innerHTML=`<div class="intake-chips">${chips}</div>${panel}`
+      +`<div class="intake-chips" style="margin-top:10px"><button class="go" id="iaPkDone">${n?`Add ${n} categor${n===1?'y':'ies'} →`:'Continue →'}</button></div>`
       +`<div class="intake-underrow">${n?'':'<button class="intake-skip" id="iaPkSkip">None of these</button>'}${back}</div>`;
+    /* Tapping a pack OPENS it. Taking it is the button inside, or the tick on the
+       chip once it is open - because a chip that both selects and expands makes
+       "let me look first" impossible, which is the whole complaint. */
     dock.querySelectorAll('button[data-pk]').forEach(b=>b.onclick=()=>{
-      const k=b.dataset.pk;
-      picked.has(k) ? picked.delete(k) : picked.add(k);
-      iaAns.packs=offer.filter(p=>picked.has(p.k)).map(p=>p.k);   // pack order, not tap order
+      const k=b.dataset.pk, p=offer.find(x=>x.k===k);
+      if(open===k){ setPack(p, !picked.has(k)); }        // already looking at it: the tap is the decision
+      else { open=k; if(!picked.has(k)) setPack(p,true); }  // opening takes it, so one tap is still the fast path
+      draw();
+    });
+    const all=dock.querySelector('[data-pkall]'); if(all) all.onclick=()=>{ const p=offer.find(x=>x.k===all.dataset.pkall); setPack(p,true); draw(); };
+    const none=dock.querySelector('[data-pknone]'); if(none) none.onclick=()=>{ const p=offer.find(x=>x.k===none.dataset.pknone); setPack(p,false); open=p.k; draw(); };
+    dock.querySelectorAll('[data-pkc]').forEach(b=>b.onclick=()=>{
+      const p=offer.find(x=>x.k===open); if(!p) return;
+      const nm=b.dataset.pkc, cur=new Set(chosen[p.k]||[]);
+      cur.has(nm) ? cur.delete(nm) : cur.add(nm);
+      chosen[p.k]=namesOf(p).filter(x=>cur.has(x));       // pack order, not tap order
+      /* Emptying a pack by hand is the same statement as not taking it. */
+      if(!chosen[p.k].length) setPack(p,false); else picked.add(p.k);
+      iaAns.packs=offer.filter(x=>picked.has(x.k)).map(x=>x.k);
       draw();
     });
     document.getElementById('iaPkDone').onclick=()=>{
       const list=iaAns.packs||[];
-      iaBub(list.length?offer.filter(p=>list.indexOf(p.k)>-1).map(p=>p.name).join(', '):'None for now','me');
-      if(list.length) iaBub(`Good. Those land on Plan with a name and no number - a category with $0 against it is a question, not a promise, and you can delete any of them in one tap.`,'bot');
+      const took=totalTaken();
+      iaBub(list.length
+        ? offer.filter(p=>list.indexOf(p.k)>-1).map(p=>{ const t=takenIn(p), a=p.cats.length;
+            return p.name+(t<a?` (${t} of ${a})`:''); }).join(', ')
+        : 'None for now','me');
+      if(list.length) iaBub(`Good - <b>${took}</b> categor${took===1?'y':'ies'}. They land on Plan with a name and no number, and a category with $0 against it is a question, not a promise. Nothing you did not tick was added.`,'bot');
       iaAdvance();
     };
     const sk=document.getElementById('iaPkSkip');
-    if(sk) sk.onclick=()=>{ iaAns.packs=[]; iaBub('None for now','me'); iaAdvance(); };
+    if(sk) sk.onclick=()=>{ iaAns.packs=[]; iaAns.packPick={}; iaBub('None for now','me'); iaAdvance(); };
     const bk=document.getElementById('iaBack'); if(bk) bk.onclick=iaBack;
   };
   draw();
@@ -19221,7 +19405,9 @@ function commitIntake(){
      in this chat already follows. addPack is the exact function the Plan tab
      uses, and it already refuses to add a pack whose categories exist, so a
      wall funded above cannot come back as a duplicate. */
-  (a.packs||[]).forEach(k=>{ try{ addPack(k); }catch(e){} });
+  /* The pick list, which addPack has always accepted and the intake never sent -
+     so ticking 4 of a pack's 11 used to commit all 11. */
+  (a.packs||[]).forEach(k=>{ try{ addPack(k, (a.packPick||{})[k]); }catch(e){} });
   (a.comfort||[]).forEach(v=>{ state.comfortMenu=state.comfortMenu||[];
     if(v && !state.comfortMenu.some(x=>x.toLowerCase()===v.toLowerCase())) state.comfortMenu.push(v); });
   state.intake={name:a.name||'',why:a.why||'',
@@ -19638,8 +19824,22 @@ function trailFocus(focusId){
     else { el.classList.add('cat-flash'); setTimeout(()=>el.classList.remove('cat-flash'),1600); }
   },150);
 }
-function goTrail(k){
+/* Reported from a phone, from inside a category's own sheet: "log against it
+   pulls up the number pad but doesn't record anything." It did exactly what it
+   was told - switch to Track, focus the amount - and it never closed the SHEET
+   sitting on top of Track. So the field took focus behind an overlay, the phone
+   raised its number pad for a box nobody could see, and every keystroke went
+   somewhere invisible. A trail that walks you somewhere has to leave where you
+   were standing; every one of these buttons can be pressed from inside a sheet,
+   so this belongs here rather than at any one call site. */
+function trailCloseSheets(){
+  if(typeof closeCatSheet==='function') closeCatSheet();
+  if(typeof closeTxSheet==='function') closeTxSheet();
+  document.querySelectorAll('.modal-overlay.on').forEach(el=>el.classList.remove('on'));
+}
+function goTrail(k, opts){
   const t=TRAIL[k]; if(!t) return;
+  trailCloseSheets();
   /* An area someone switched off in Settings must not be walked into by a
      breadcrumb - that would hand back the exact feature they said they did not
      want. The panels that offer these already hide with their area; this is the
@@ -19647,16 +19847,27 @@ function goTrail(k){
   if(typeof areaOff==='function' && areaOff(t.tab)) return;
   activateTab(t.tab);
   if(t.modal){ setTimeout(()=>{ if(typeof openModal==='function') openModal(); },160); return; }
+  /* Walking to the log form FROM a category means logging against that category.
+     Arriving with the picker on whatever happened to be selected is how a vet
+     bill gets filed under Rent - and the person has no reason to check, because
+     they came from the right place. */
+  if(opts && opts.catId) setTimeout(()=>{
+    const sel=document.getElementById('txCat');
+    if(sel && [...sel.options].some(o=>o.value===opts.catId)){
+      sel.value=opts.catId; sel.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  },140);
   trailFocus(t.focus);
 }
 /* The button itself, so every trail on every surface looks and reads the same.
    Label defaults to the destination's own name - a caller only overrides it when
    the sentence above it has already said what the button is for. */
-function trailBtn(k,label,cls){
+function trailBtn(k,label,cls,catId){
   const t=TRAIL[k]; if(!t) return '';
-  return `<button class="trail-btn${cls?' '+cls:''}" data-trail="${k}">${escapeHtml(label||t.label)} →</button>`;
+  return `<button class="trail-btn${cls?' '+cls:''}" data-trail="${k}"${catId?` data-trailcat="${escapeHtml(catId)}"`:''}>${escapeHtml(label||t.label)} →</button>`;
 }
-document.addEventListener('click',e=>{ const b=e.target.closest('[data-trail]'); if(b) goTrail(b.dataset.trail); });
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-trail]');
+  if(b) goTrail(b.dataset.trail, b.dataset.trailcat?{catId:b.dataset.trailcat}:null); });
 /* deep-link a "Do this next" card to the exact spot + focus */
 function runNextStep(act){
   if(!act) return;

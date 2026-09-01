@@ -89,8 +89,20 @@ await seed([{id:'a',date:'2025-09-01',name:'Boiler',amount:600,cause:'broke',cov
 await p.reload(); await p.waitForTimeout(800);
 const longWin = await walk('Laptop screen', 300, 'broke', 'none');
 check('a year of it is called a real pattern', /real pattern, not bad luck/.test(longWin.pat), longWin.pat.slice(-70));
-const quoted = (longWin.pat.match(/\$(\d+)\/mo/)||[])[1];
-check('the quoted rate is the hand figure ($1,380 over 12 months = $115)', quoted==='115', longWin.pat);
+/* Pinned to "$1,380 over 12 months = $115" and it went red on its own the
+   morning the window became 13 months - the anchor event is dated a fixed
+   September and the window runs to today, so the divisor grows by one every
+   time a month turns over. The property is that the rate the sentence QUOTES is
+   the total it names divided by the window it names, which is the arithmetic
+   the check was really about. */
+const lw=longWin.pat.match(/(\d+) like it over (\d+) months?, \$([\d,]+) in total - about \$(\d+)\/mo/);
+check('the quoted rate is the total divided by the window it names',
+      !!lw && Math.round(parseFloat(lw[3].replace(/,/g,''))/(+lw[2]))===+lw[4], longWin.pat);
+check('...over the three events the fixture actually holds, $1,380 of them',
+      !!lw && lw[1]==='3' && lw[3]==='1,380', longWin.pat);
+/* Still needed below: what the button funds must equal what the screen quoted,
+   and that has to follow the live figure rather than a remembered one. */
+const quoted = lw ? lw[4] : '';
 
 /* ---- 5. what the verdict quotes is what the button funds ---- */
 await p.click('#tkFund'); await p.waitForTimeout(600);

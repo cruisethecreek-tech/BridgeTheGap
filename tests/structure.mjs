@@ -24,8 +24,52 @@ import { writeFileSync, readFileSync } from 'node:fs';
 const results=[]; const check=(name,ok,detail='')=>results.push({ok,name,detail});
 const VIEWS=['home','budget','tx','impulse','debt','goals','reflect','learn','diary','settings'];
 
+/* ---------- the clock this suite runs in ----------
+   Almost every fixture below is dated August 2026. That was deterministic right
+   up until the calendar reached September, when twenty-four checks went red in
+   one night without a line of app code changing: fixtures pinned to a month,
+   compared against a clock that had moved on. Three separate date bombs had
+   already been patched one at a time before it became obvious they were all the
+   same bug wearing different clothes.
+
+   So the page gets a clock. The fixtures declare the month they mean and the
+   browser is told the same thing, which is the only arrangement where a fixture
+   and the app can agree. Time still FLOWS - only the origin moves - so timers,
+   animations and the app's own setTimeout waits behave normally.
+
+   The important consequence, and the reason this is better than shifting every
+   fixture forward: a date boundary is now something you can TEST rather than
+   something that happens to you. Pointing this at the 1st, the 31st, or a leap
+   day is one line, instead of waiting for the calendar to do it and calling the
+   fallout a regression. Mid-month is the default because that is where the
+   fixtures live and where nothing is a boundary. */
+/* The 30th, not mid-month: the fixtures below reach as far as day 31, so an
+   earlier clock would put a third of them in the future and the calendar would
+   clamp away the days they select. The 30th leaves day 31 in the future, which
+   the "still to come" checks need, while everything up to it has happened. */
+const CLOCK = new Date('2026-08-30T10:30:00').getTime();
+/* Node has to read the same clock, or a fixture built here disagrees with the
+   page it is handed to - which is the original bug, reintroduced from the other
+   side. Everything below that used to say `new Date()` in NODE says this. */
+const CLOCK_D=(()=>{ const d=new Date(CLOCK);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+const CLOCK_M=CLOCK_D.slice(0,7);
 const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
 const p = await b.newPage({ viewport:{width:390,height:1000} });
+/* A subclass rather than a Proxy: the first attempt wrapped Date in a Proxy and
+   the app would not boot at all - `state` never initialised, because something
+   inside load() threw on it before the first line of the suite ran. Extending
+   Date keeps instanceof, the prototype chain and the inherited statics (parse,
+   UTC) exactly as the platform made them, and only the no-argument constructor
+   and now() are moved. */
+await p.addInitScript(target => {
+  const Real = Date, offset = target - Real.now();
+  class Shifted extends Real {
+    constructor(...args){ if(args.length===0) super(Real.now()+offset); else super(...args); }
+    static now(){ return Real.now()+offset; }
+  }
+  window.Date = Shifted;
+}, CLOCK);
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(500);
 
@@ -1794,31 +1838,45 @@ const callog = await p.evaluate(async () => {
   state=JSON.parse(JSON.stringify(defaultState()));
   state.onboarded=true; state.spendingMode=true; state.spendLimit=1500;
   state.hourlyWage=22; state.trueRateSkipped=true;
-  state.activeMonth=thisMonth(); state.trackStart=thisMonth()+'-01';
+  /* Tracking starts two months back so the calendar can be walked into a
+     finished month - on the 1st of a month, that is the only month holding a
+     day that is not today. */
+  state.activeMonth=thisMonth(); state.trackStart=shiftMonth(thisMonth(),-2)+'-01';
   save(); applySpending(); renderHome();
   const cal=()=>document.getElementById('rewardCalBox');
   const btns=()=>[...cal().querySelectorAll('[data-callog]')].map(b=>({d:b.dataset.callog,t:b.textContent.trim()}));
   const onCal=btns();
   const zeroNote=/only counts if it is true/.test(cal().innerText);
-  /* a day that is not today has to carry its own date, or logging Saturday's
-     coffee onto Monday quietly breaks the streak the calendar just drew */
-  const cells=[...cal().querySelectorAll('.cal-cell[data-day]')];
-  cells[0].click(); await new Promise(r=>setTimeout(r,60));
-  const past=btns();
-  const wantDate=thisMonth()+'-'+String(cells[0].dataset.day).padStart(2,'0');
-  /* today already has its button in the pace strip - the day card must not add a second */
+  /* today already has its button in the pace strip - the day card must not add a
+     second. Done first, and on the CURRENT month, because that is the only
+     month that has a today. */
   const cells2=[...cal().querySelectorAll('.cal-cell[data-day]')];
   cells2[cells2.length-1].click(); await new Promise(r=>setTimeout(r,60));
   const todaySel=btns();
+  /* A day that is not today has to carry its own date, or logging Saturday's
+     coffee onto Monday quietly breaks the streak the calendar just drew.
+
+     On the FIRST of a month the current calendar has exactly one day on it -
+     today - so there is no day-that-is-not-today to tap, and this section used
+     to crash outright on `#calDay [data-callog]` being null. It is the same
+     property in a finished month, where every day is a day that is not today,
+     so that is where it is exercised when today happens to be the 1st. The
+     assertion never weakens; only the month it runs in moves. */
+  const backMonth = new Date().getDate()>1 ? thisMonth() : shiftMonth(thisMonth(),-1);
+  if(backMonth!==state.activeMonth){ state.activeMonth=backMonth; save(); renderRewardCalendar();
+    await new Promise(r=>setTimeout(r,80)); }
+  const cells=[...cal().querySelectorAll('.cal-cell[data-day]')];
+  cells[0].click(); await new Promise(r=>setTimeout(r,60));
+  const past=btns();
+  const wantDate=backMonth+'-'+String(cells[0].dataset.day).padStart(2,'0');
   /* and the back-date button has to actually land on that day */
-  const cells3=[...cal().querySelectorAll('.cal-cell[data-day]')];
-  cells3[0].click(); await new Promise(r=>setTimeout(r,60));
   document.querySelector('#calDay [data-callog]').click();
   await new Promise(r=>setTimeout(r,260));
   const landed={tab:(document.querySelector('.view.on')||{}).id, date:(document.getElementById('qlDate')||{}).value};
   /* the emptiest version of the screen - no limit, so no calendar - was also
      the one with no way out of being empty */
   quickLogOpen=false; renderQuickLog();
+  state.activeMonth=thisMonth(); save();
   state.spendLimit=0; save(); renderRewardCalendar();
   const noLimit=btns().length;
   /* a month that is not the current one must not offer to log "today" into it */
@@ -1835,8 +1893,7 @@ check('the reward calendar carries the one action the mode is for',
       callog.onCal.map(b=>b.t).join(' | '));
 check('...and an unlogged zero says so rather than reading as a clean week', callog.zeroNote===true);
 check('tapping an earlier day offers to log to THAT day',
-      callog.past.length===2 && callog.past[1].d===callog.wantDate,
-      callog.past.map(b=>b.t).join(' | '));
+      callog.past.some(b=>b.d===callog.wantDate), callog.past.map(b=>b.t).join(' | '));
 check('...and the button that opens carries the date with it',
       callog.landed.tab==='view-tx' && callog.landed.date===callog.wantDate,
       `${callog.landed.tab} @ ${callog.landed.date}`);
@@ -3846,10 +3903,16 @@ check('the bill is still shown on the day, and said to be unscored',
    Plan, adding a category and starting the entry again - and the likelier
    outcome is the expense never gets logged at all. The quick-log rows had
    solved this; the affordance just never reached the other three pickers. */
-await seed({...EMPTY, activeMonth:'2026-08', uiMode:'all', stageReached:3, guidesOff:true,
+/* Logging a transaction jumps the active month to the month it is dated in.
+   With the fixture pinned to August and the clock in September, the entry this
+   section adds landed in September, took the month with it, and the row it goes
+   on to open was no longer on screen - the section crashed rather than failed.
+   The fixture means "this month", so it says this month. */
+const NEWCAT_D=CLOCK_D, NEWCAT_M=CLOCK_M;
+await seed({...EMPTY, activeMonth:NEWCAT_M, uiMode:'all', stageReached:3, guidesOff:true,
   categories:[{id:'roof',name:'Roof'},{id:'food',name:'Food'}],
-  budgets:{'2026-08':{roof:1200,food:600}},
-  transactions:[{id:'x',type:'expense',amount:41.10,catId:'food',date:'2026-08-20',note:'Vet visit'}]});
+  budgets:{[NEWCAT_M]:{roof:1200,food:600}},
+  transactions:[{id:'x',type:'expense',amount:41.10,catId:'food',date:NEWCAT_D,note:'Vet visit'}]});
 await p.reload(); await p.waitForTimeout(700);
 const newCat = await p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -8032,7 +8095,7 @@ check('...and the wash is a gradient on the page itself, so it travels with it',
    literal date stops counting the moment the calendar moves past it. Taken from
    the machine's own clock instead - this file has already grown two date bombs
    and does not need a third. */
-const ISO_TODAY=(()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+const ISO_TODAY=CLOCK_D;
 /* ============================================================
    95. LOAD MUST NEVER DELETE A BUDGET TO FIX ITSELF
 
@@ -8623,7 +8686,7 @@ check('...sitting beside the ledger cards, not replacing them',
    no way back. The month label said "This month" when it matched and rendered
    `&nbsp;` when it did not, which means the ABSENCE OF A WORD was carrying the
    whole message. ---- */
-const MHM=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
+const MHM=CLOCK_M;
 const MONTHH={...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, hourlyWage:25, activeMonth:MHM,
   categories:[{id:'rent',name:'Rent'}], budgets:{[MHM]:{rent:1400}},
   transactions:[{id:'t1',type:'income',amount:3200,date:MHM+'-02'},
