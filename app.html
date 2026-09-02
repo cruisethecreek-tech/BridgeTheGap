@@ -1324,10 +1324,20 @@
   .sync-lock{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(var(--accent-2-rgb),.10);
     border:1px solid var(--accent-2);border-radius:12px;padding:11px 13px;margin-bottom:14px;font-size:12.5px;line-height:1.5}
   .sync-lock .sl-t{flex:1;min-width:190px;color:var(--muted)}
+  .sync-lock .sl-form{display:flex;gap:7px;flex:none;align-items:center}
+  .sync-lock .sl-in{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;
+    padding:8px 10px;font-size:13px;width:150px}
+  .sync-lock .sl-in:focus{border-color:var(--accent);outline:none}
+  .sync-lock .sl-err{width:100%;font-size:12px;color:var(--bad);line-height:1.45}
+  .sync-lock .sl-err:empty{display:none}
   .sync-lock .sl-t b{color:var(--text)}
   .buildline{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
-  .buildline b{color:var(--accent);word-break:break-all}
+  /* anywhere, not break-all: break-all chops ordinary words mid-letter, and the
+     layout suite caught it splitting "place" across two lines at 320px. A stamp
+     exists to be read out loud, so it must break at the hyphens and spaces it
+     already has, and only break a word when there is genuinely nowhere else. */
+  .buildline b{color:var(--accent);overflow-wrap:anywhere;word-break:normal}
   .buildline .bl-n{display:block;margin-top:6px;font-family:inherit;font-size:11.5px;color:var(--muted);
     font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
   .cs-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -7181,7 +7191,12 @@ function activateTab(name,fromHistory){
      that is new on each arrival. Leaving for anywhere else drops it. */
   if(typeof renderArrival==='function') renderArrival(name);
   if(name==='home') renderHome();
-  if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving(); }
+  /* refreshSyncState was called at boot and nowhere else, so arriving here
+     showed whatever the panel last drew - including no unlock box at all. The
+     Tripwires lesson again: a render function no surface calls is a panel that
+     does not exist. */
+  if(name==='goals'){ renderAccounts(); renderNetWorth(); renderGoals(); renderNetwork(); renderSkills(); renderGiving();
+    if(typeof refreshSyncState==='function') refreshSyncState(); }
   if(name==='debt') renderDebt();
   /* Same lesson Tripwires taught: a render function no surface calls is a panel
      that does not exist. The scan panel holds live object URLs and a result that
@@ -12165,7 +12180,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-02 · sync-optin-fix';
+const BUILD_STAMP='2026-09-02 · unlock-in-place';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -20156,17 +20171,46 @@ function setOpening(M,v){
 function syncLockedHTML(){
   if(!state.syncOptIn || !state.householdOn) return '';
   if(syncActive && syncPass) return '';
-  return `<div class="sync-lock"><span class="sl-t"><b>This budget is not syncing.</b> Household Sync is set up on this device but locked - the passphrase is asked for again every time the app reopens, on purpose, because it is the key that no server holds. Until it is entered, nothing you change here reaches ${escapeHtml(state.meIs==='b'?(state.nameA||'your partner'):(state.nameB||'your partner'))}, and nothing of theirs reaches you.</span><button class="btn sm primary" data-syncunlockgo="1">Unlock sync</button></div>`;
+  const them=escapeHtml(state.meIs==='b'?(state.nameA||'your partner'):(state.nameB||'your partner'));
+  /* The first version of this walked you to the Household panel on another tab.
+     Reported straight back: "every time I press unlock sync it navigates to the
+     Build tab, but when I go back to Plan I have to press it again." Two faults
+     in one tap - the panel it walked to was not refreshed on arrival, so the
+     box was often not there at all; and even when it was, fixing a thing on
+     Plan should not require leaving Plan.
+     The passphrase field lives in the warning now. You unlock where you are
+     standing, and the warning it was attached to disappears underneath you. */
+  return `<div class="sync-lock"><span class="sl-t"><b>This budget is not syncing.</b> Household Sync is set up on this device but locked - the passphrase is asked for again every time the app reopens, on purpose, because it is the key that no server holds. Until it is entered, nothing you change here reaches ${them}, and nothing of theirs reaches you.</span>
+    <span class="sl-form"><input type="password" class="sl-in" data-syncpassin="1" placeholder="Sync Passphrase" autocomplete="current-password"><button class="btn sm primary" data-syncunlockgo="1">Unlock</button></span>
+    <span class="sl-err" data-syncunlockerr="1"></span></div>`;
 }
-document.addEventListener('click',e=>{
-  if(!e.target.closest('[data-syncunlockgo]')) return;
-  activateTab('goals');
-  setTimeout(()=>{
-    const p=document.getElementById('syncPanel');
-    if(p){ let n=p; while(n){ if(n.tagName==='DETAILS') n.open=true; n=n.parentElement; }
-      p.scrollIntoView({behavior:'smooth',block:'center'}); }
-    const i=document.getElementById('syncPassIn'); if(i) setTimeout(()=>{ try{ i.focus(); }catch(_){ } },320);
-  },220);
+/* One handler for every copy of the banner, wherever it is drawn. */
+document.addEventListener('click',async e=>{
+  const btn=e.target.closest('[data-syncunlockgo]'); if(!btn) return;
+  const wrap=btn.closest('.sync-lock'); if(!wrap) return;
+  const inp=wrap.querySelector('[data-syncpassin]'), errEl=wrap.querySelector('[data-syncunlockerr]');
+  const p=(inp&&inp.value)||'';
+  const say=h=>{ if(errEl) errEl.innerHTML=h; };
+  if(!p){ say('Enter the passphrase you both agreed on. It is not the account password.'); if(inp) inp.focus(); return; }
+  btn.disabled=true; say('Unlocking…');
+  try{
+    const got=await pullFromVault(p);
+    if(got===false){ say('Signed in, but there is no vault on that account yet. Whoever set it up needs to do that first.'); btn.disabled=false; return; }
+    syncPass=p; syncActive=true; syncPassRemember(p); syncPollStart();
+    syncNote='Unlocked and synced.'; if(typeof syncUI!=='undefined') syncUI.view='active';
+    if(typeof renderSync==='function') renderSync();
+    if(typeof renderBudget==='function') renderBudget();
+    if(typeof renderTx==='function') renderTx();
+    if(typeof toast==='function') toast('Syncing again. Anything they changed while this was locked is coming down now.');
+  }catch(err){ say(syncPlainErr(err)); btn.disabled=false; }
+});
+/* Enter, because a password field that ignores it is a password field people
+   think is broken. */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const inp=e.target.closest('[data-syncpassin]'); if(!inp) return;
+  e.preventDefault();
+  const b=inp.closest('.sync-lock').querySelector('[data-syncunlockgo]'); if(b) b.click();
 });
 function ltbNoteHTML(income,assigned,ltb,M){
   M=M||state.activeMonth;

@@ -333,6 +333,15 @@ The change log is that same record read forwards: *"Kristi changed account Chequ
 `mergeVault` is deliberately **pure**, which is why the whole correctness story is provable without a network - the `syncmerge` probe asserts the old replace-behaviour loses the coffee, and that the merge keeps both sides. What remains unverified from the build environment is the round trip against the real project; that is still a human's job.
 
 
+**Unlock where you are standing** (the inline form in `syncLockedHTML`, `refreshSyncState` on tab arrival) - reported immediately after the banner shipped: *"every time I press unlock sync it navigates to the Build tab, but when I go back to Plan I have to press it again."* Two faults in one tap.
+
+The button walked to the Household panel, and **`refreshSyncState` was called at boot and nowhere else** - so arriving there showed whatever the panel had last drawn, frequently with no passphrase box in it at all. The Tripwires lesson for the third time: *a render function no surface calls is a panel that does not exist*, and this file's own breadcrumb walked straight into it. Arriving at that tab refreshes it now.
+
+The better half of the fix is that **the journey should not exist**. Fixing something on Plan should not require leaving Plan, so the passphrase field lives inside the warning: type it, press Unlock, and the warning disappears underneath you without the tab ever changing. An empty box says what is wanted rather than navigating; a wrong passphrase explains itself in place and stays locked; Enter submits, because a password field that ignores it reads as broken.
+
+*The layout suite then caught the build stamp beside it: `word-break:break-all` chopped "unlock-in-pla / ce" across two lines at 320px. A stamp exists to be read out loud, and one that breaks mid-word cannot be. `overflow-wrap:anywhere` breaks at the hyphens and spaces first.*
+
+
 **A new flag reads as "no" for everybody already here** (the `syncOptIn` backfill in `load()`, `BUILD_STAMP`) - reported as *"no banner and no Sam's Club"*, which falsified the previous diagnosis and pointed at a regression this file had caused two commits earlier.
 
 `syncOptIn` was added to stop sync fetching the SDK for people who had only turned on Household mode. It gates the session check, the unlock prompt, the passphrase restore **and** the warning banner - and an install that joined a vault *before the field existed* has no such key, so it defaulted to `false`. The app therefore concluded they had never opted in: it showed the **setup menu to somebody already signed in**, synced nothing in either direction, and displayed no warning, because the warning was gated behind the same broken flag. The person on the other phone had no way to diagnose any of it.
