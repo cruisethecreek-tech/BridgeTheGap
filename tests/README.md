@@ -1349,6 +1349,33 @@ The lesson is the older one, restated: **a suite cannot catch a fault it has no
 reason to look for.** Both of these were found by rendering the panel and
 reading it, at 390px, like a person would.
 
+## Proving a bug before proving the fix
+
+The `syncmerge` probe opens by asserting the **old** behaviour:
+
+    ok  the old behaviour is confirmed: replacing loses the coffee entirely
+
+That check will pass forever, because it does not test the app - it reconstructs
+what the previous code did (`state = remote`) and shows the entry vanishing.
+It is there because the fix is a large one, and in a year somebody reading
+`mergeVault` will reasonably ask whether all that machinery was warranted. The
+answer is in the suite rather than in a commit message: **here is the data loss,
+reproduced.**
+
+The rest of the section only works because `mergeVault` is a **pure function** -
+two state objects in, one out. No network, no Supabase, no browser storage. The
+build environment cannot reach the sync backend at all, and it does not need to:
+every claim that matters (both edits survive, the newer wins from either side,
+a tie resolves identically on both phones, a delete is not resurrected, an edit
+after a delete is) is a property of a function that can be called directly.
+
+The lesson is about where to put the hard part. Sync **looks** untestable here,
+and the temptation is to skip it and hope. Pushing the correctness into a pure
+function moved the untestable part down to "does Supabase store and return a
+string", which is the one piece a person can check in two browser profiles in
+under a minute - and which is written up in `USER-TESTING.md` rather than
+pretended about here.
+
 ## A caption is an assertion
 
 Section 100 came from a photo and four words: *"This doesn't look right."* Both
