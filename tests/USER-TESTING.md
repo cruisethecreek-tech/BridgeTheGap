@@ -78,3 +78,35 @@ Three questions only:
 - [ ] At least three of them complete setup and can answer task 7
 - [ ] Tried on a real iPhone AND a real Android, not just a desktop browser
 - [ ] Backup exported, cache cleared, backup restored, numbers identical
+
+## Household Sync - the round trip only a human can run
+
+The build environment refuses outbound HTTPS to `*.supabase.co` and to
+`cdn.jsdelivr.net`, where the Supabase SDK loads from. No sign-up, push or pull
+has ever been executed by the suite, and none can be. Everything below has to be
+done by a person, on a machine with an open network.
+
+**Two separate browser profiles, not two tabs** - the session and the vault
+passphrase are per-profile, and two tabs share both, which would make a broken
+join look like a working one.
+
+1. **Profile A** - Build → Household Sync → *Set up Household Sync* → email and
+   a password → create a Sync Passphrase → expect **Vault Active**.
+2. **Profile B** - same panel → *Link to an existing vault* → the same email,
+   password and passphrase → expect A's budget to appear.
+3. Change a figure in A, reload B, confirm it moved.
+
+Three things are most likely to bite, in this order:
+
+- **Email confirmation is still on.** Supabase requires it by default. `signUp`
+  succeeds, no session is created, and the vault is never written - so step 1
+  looks like it worked and step 2 finds nothing. Authentication → Sign In /
+  Providers → Email → uncheck **Confirm email**.
+- **`user_vaults` was never created.** The SQL lives in the code comment above
+  `SUPABASE_URL`. Without the table, push fails on a table that does not exist.
+- **Key format.** The project uses a `sb_publishable_...` key, which needs a
+  recent `supabase-js`. The CDN URL is unpinned (`@supabase/supabase-js@2`) so it
+  should resolve new enough, but that is an assumption, not a tested fact.
+
+Record the exact error text if it breaks. "It didn't work" cannot be acted on;
+`relation "public.user_vaults" does not exist` can.
