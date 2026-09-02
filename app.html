@@ -4506,7 +4506,7 @@ function defaultState(){
            saveBudget:0, saveOrder:'soonest',
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null,
-           scans:[], opening:{} };
+           scans:[], opening:{}, syncOptIn:false };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -11688,8 +11688,13 @@ function renderBackupNote(){
    Stripe webhook (Supabase Edge Function), checked in the RLS policy - so a
    client-side flag can never unlock sync. UI lock alone is cosmetic.
    ============================================================ */
-const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+/* Live project. Both values are PUBLISHABLE by design and belong in client code
+   - this file is served to the browser, so there is nowhere else they could
+   live. Row Level Security is what protects the data, not the secrecy of these.
+   The sb_publishable_ prefix is Supabase's current key format; the secret key
+   (sb_secret_) bypasses RLS entirely and must never appear in this file. */
+const SUPABASE_URL      = 'https://qyqddhylijvroroooidv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_6OKeUEN0as4xmlQdKpYC2Q_c6uIFmdN';
 const SYNC_SDK_URL      = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 const syncConfigured    = () => isConfigured(SUPABASE_URL) && isConfigured(SUPABASE_ANON_KEY);
 
@@ -11745,8 +11750,14 @@ async function decryptVault(payloadStr, passphrase){
 let syncPass=null, syncActive=false, syncPushTimer=null, syncPulling=false, syncNote='';
 async function sbSignUp(email,pass){ const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.'); const {data,error}=await sb.auth.signUp({email,password:pass}); if(error) throw new Error(error.message); return data; }
 async function sbSignIn(email,pass){ const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.'); const {data,error}=await sb.auth.signInWithPassword({email,password:pass}); if(error) throw new Error(error.message); return data; }
-async function sbSignOut(){ const sb=await getSupabase(); if(sb) try{ await sb.auth.signOut(); }catch(_){} syncPass=null; syncActive=false; }
-async function sbSession(){ const sb=await getSupabase(); if(!sb) return null; try{ const {data}=await sb.auth.getSession(); return data?data.session:null; }catch(_){ return null; } }
+async function sbSignOut(){ let sb=null; try{ sb=await getSupabase(); }catch(_){}
+  if(sb) try{ await sb.auth.signOut(); }catch(_){}
+  syncPass=null; syncActive=false; state.syncOptIn=false; save(); }
+/* Swallows a failed SDK fetch too. This threw an uncaught 'Could not load the
+   sync engine' on boot for anyone offline - a rejected promise with nobody
+   holding it, surfacing as a page error rather than a sentence on screen. */
+async function sbSession(){ let sb=null; try{ sb=await getSupabase(); }catch(_){ return null; }
+  if(!sb) return null; try{ const {data}=await sb.auth.getSession(); return data?data.session:null; }catch(_){ return null; } }
 async function pushToVault(passphrase){
   const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.');
   const sess=await sbSession(); if(!sess) throw new Error('You are not signed in to sync.');
@@ -11853,7 +11864,7 @@ async function hostActivate(){
   if(!k1||k1.length<8){ syncUI.err='Use at least 8 characters for the passphrase.'; renderSync(); return; }
   if(k1!==k2){ syncUI.err="Those two passphrases don't match."; renderSync(); return; }
   syncUI.err='';
-  try{ syncPass=k1; await pushToVault(k1); syncActive=true; syncNote='Vault created and live.'; syncUI.view='active'; renderSync(); }
+  try{ syncPass=k1; await pushToVault(k1); syncActive=true; state.syncOptIn=true; save(); syncNote='Vault created and live.'; syncUI.view='active'; renderSync(); }
   catch(e){ syncPass=null; syncActive=false; syncUI.err=e.message; renderSync(); }
 }
 async function joinVault(){
@@ -11864,13 +11875,23 @@ async function joinVault(){
     await sbSignIn(email,pw);
     const ok=await pullFromVault(key);
     if(!ok){ syncUI.err='Signed in, but that account has no vault yet. Have your partner set it up first.'; renderSync(); return; }
-    syncPass=key; syncActive=true; syncNote='Vault unlocked and synced.'; syncUI.view='active'; renderSync();
+    syncPass=key; syncActive=true; state.syncOptIn=true; save(); syncNote='Vault unlocked and synced.'; syncUI.view='active'; renderSync();
   }catch(e){ try{ await sbSignOut(); }catch(_){} syncUI.err=e.message; renderSync(); }
 }
 /* on open: if a Supabase session already exists but the memory-only passphrase is gone, ask to unlock */
 async function refreshSyncState(){
   if(!syncConfigured() || !state.householdOn){ renderSync(); return; }
   if(syncActive && syncPass){ syncUI.view='active'; renderSync(); return; }
+  /* Turning on Household mode is not opting into Sync. It says "two of us share
+     this budget on this phone" - it says nothing about a server. This checked
+     for a Supabase session on every boot regardless, which fetches the SDK from
+     a CDN, which is a network request made on behalf of somebody who never
+     asked for one. The whole brand promise above is that the free tier fetches
+     NOTHING until sync is explicitly started, and the moment real keys were
+     configured that promise quietly stopped being true.
+     So the network is only touched once somebody has actually created or joined
+     a vault on this device. Until then the menu is drawn from local state. */
+  if(!state.syncOptIn){ syncUI.view='menu'; renderSync(); return; }
   syncUI.view='loading'; renderSync();
   const sess=await sbSession();
   syncUI.view = sess ? 'unlock' : 'menu';
