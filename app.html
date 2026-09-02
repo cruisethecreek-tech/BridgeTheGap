@@ -1305,6 +1305,16 @@
   .recfill .rf-n{width:100%;font-size:11.5px;color:var(--muted);line-height:1.45}
   .ltb-note .ltb-src{color:var(--muted)}
   .sync-err .se-raw{display:block;margin-top:6px;font-size:11px;opacity:.75;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word}
+  .chlog{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .chlog .cl-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px}
+  .cl-row{display:flex;gap:10px;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:12.5px;line-height:1.45;border-bottom:1px solid var(--line)}
+  .cl-row:last-child{border-bottom:0}
+  .cl-row .cl-w{flex:1;color:var(--muted)}
+  .cl-row .cl-w b{color:var(--text)}
+  .cl-row .cl-w i{font-style:normal;color:var(--text)}
+  .cl-row .cl-t{flex:none;font-size:11px;color:var(--muted);opacity:.8}
+  .cl-row.mine .cl-w b{color:var(--accent)}
+  .cl-none{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.5}
   .cs-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .csk{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel-2);border:1px solid var(--line);
     color:var(--text);border-radius:11px;padding:10px 11px;cursor:pointer}
@@ -4507,7 +4517,8 @@ function defaultState(){
            saveBudget:0, saveOrder:'soonest',
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null,
-           scans:[], opening:{}, syncOptIn:false };
+           scans:[], opening:{}, syncOptIn:false,
+           deviceId:'', meIs:'a', changelog:[], graveyard:[], settingsM:{} };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -4526,6 +4537,11 @@ function normalizeState(s){
   /* A reading is a photograph of a moment, not a ledger, and an unbounded pile
      of them would grow state forever for no gain. The last three, newest first. */
   if(!s.opening || typeof s.opening!=='object' || Array.isArray(s.opening)) s.opening={};
+  if(!Array.isArray(s.changelog)) s.changelog=[];
+  if(!Array.isArray(s.graveyard)) s.graveyard=[];
+  if(!s.settingsM || typeof s.settingsM!=='object' || Array.isArray(s.settingsM)) s.settingsM={};
+  if(typeof s.deviceId!=='string') s.deviceId='';
+  if(s.meIs!=='b') s.meIs='a';
   if(!Array.isArray(s.scans)) s.scans=[];
   s.scans=s.scans.filter(x=>x&&typeof x==='object').slice(0,3);
   /* Checked against a literal, not against PLAN_VIEWS. normalizeState runs
@@ -4722,7 +4738,173 @@ function load(){
    future feature can forget - which is exactly how this one was forgotten.
    Cost is a handful of .length reads next to a full JSON.stringify of state,
    so it is noise against what save() already does. */
+/* ================= WHO CHANGED WHAT, AND WHEN =================
+   Asked directly: "why is pressing the sync button necessary, why doesn't it
+   just update in real time? And will there be a change log so we know who
+   changed what and when, so all account balances are always accurate?"
+
+   Both questions have the same answer, and it is not the one the questions
+   expect. Pushing was ALREADY automatic - save() has always scheduled one. What
+   was missing was receiving, and receiving could not be turned on, because
+   pushToVault sent the WHOLE state as one blob and pullFromVault REPLACED the
+   whole local state with it. updated_at was written to the database and never
+   read once. There was no conflict detection of any kind.
+
+   So: Pat logs a coffee at 9:00 and it goes up. Kristi edits a balance at 9:01
+   and HER whole state goes up - a state that never contained Pat's coffee. The
+   vault now holds her copy. When Pat's phone next pulls, local state is replaced
+   and the coffee is gone from the phone too. Silently. Making that automatic
+   would have turned an occasional loss into a constant one.
+
+   The fix and the change log are the same mechanism. Sync a record of what
+   changed rather than a snapshot of everything, and both edits survive, nobody
+   clobbers anybody, and attribution falls out for free.
+
+   Every item in a synced collection carries `_m` = {t, by, d}: when it last
+   changed, which partner changed it, and on which device. Rather than rewrite
+   several hundred mutation sites to stamp it, the stamp is derived by DIFFING
+   against the previous save. One place, no site can forget, and it cannot drift
+   from what actually happened - the same argument that put applyPanelGates in
+   save() rather than at every caller. */
+const SYNC_COLLECTIONS=['transactions','categories','accounts','recurring','debts','goals',
+  'assets','liabilities','impulse','diary','lessons','tripwires','network','skills','giving',
+  'timeLog','timeCats','snapshots','vault','scans'];
+/* Scalars and small objects: merged key by key on the same timestamps, so a
+   setting changed on one phone is not undone by an older copy from the other. */
+const SYNC_SETTINGS=['intensity','activeMonth','hourlyWage','register','freedomMode','enough',
+  'givingPct','uiMode','stageReached','householdOn','nameA','nameB','wageB','spendingMode',
+  'spendLimit','trackStart','hoursPerWeek','debtBudget','debtStrategy','roomPay','calConfirm',
+  'saveBudget','saveOrder','investReturn','investYears','theme','autoBackup','chatPace',
+  'guidesOff','budgets','opening','units','trueRate','sweptDays','seenGuide','areasOff','dayToDay','comfortMenu'];
+const CHANGELOG_MAX=300, GRAVE_MAX=500;
+function deviceId(){
+  if(!state.deviceId){ state.deviceId=Math.random().toString(36).slice(2,10); }
+  return state.deviceId;
+}
+/* Which partner this device belongs to. Household mode has always had an owner
+   on income ('a'/'b'); this says which one is holding the phone, which is what
+   attribution needs and what a role would hang off later. */
+function syncActor(){ return state.meIs==='b' ? 'b' : 'a'; }
+function actorName(who){ return who==='b' ? (state.nameB||'Partner') : (state.nameA||'You'); }
+function nowStamp(){ return {t:new Date().toISOString(), by:syncActor(), d:deviceId()}; }
+/* Deterministic ordering: newest wins, and when two devices write in the same
+   millisecond the device id breaks the tie the same way on both sides - without
+   that, two phones can disagree forever about which copy is current. */
+function stampNewer(a,b){
+  if(!a) return false; if(!b) return true;
+  if(a.t!==b.t) return a.t>b.t;
+  return String(a.d||'')>String(b.d||'');
+}
+/* Returns nothing when the record genuinely has no name, and the log then says
+   "added an entry" rather than "added entry item". The hostile suite caught the
+   first draft doing the latter: falling back to the literal word "item" is
+   inventing an identity for a record, and a log that names things that were
+   never named is a log you cannot trust about the things that were. */
+function itemLabel(kind,it){
+  if(!it) return '';
+  const pick=(kind==='transactions')
+    ? (it.note||it.source||(it.catId?catName(it.catId):''))
+    : (it.name||it.source||it.note||it.label||it.title||'');
+  return String(pick||'').trim();
+}
+/* ---- the diff that does the stamping ---- */
+let syncPrev=null;   // last saved shape, for comparison
+function syncSnapshot(st){
+  const o={c:{},s:{}};
+  SYNC_COLLECTIONS.forEach(k=>{ const m={}; (Array.isArray(st[k])?st[k]:[]).forEach(it=>{
+    if(it&&it.id!=null) m[it.id]=JSON.stringify(stripStamp(it)); }); o.c[k]=m; });
+  SYNC_SETTINGS.forEach(k=>{ o.s[k]=JSON.stringify(st[k]===undefined?null:st[k]); });
+  return o;
+}
+function stripStamp(it){ if(!it||typeof it!=='object') return it; const c={...it}; delete c._m; return c; }
+function logChange(entry){
+  state.changelog=state.changelog||[];
+  state.changelog.unshift(entry);
+  if(state.changelog.length>CHANGELOG_MAX) state.changelog.length=CHANGELOG_MAX;
+}
+/* Runs inside save(), before the write. Stamps what moved, records tombstones
+   for what went, and writes the human-readable log line for each. */
+function stampChanges(){
+  if(!syncPrev){ syncPrev=syncSnapshot(state); return; }
+  const now=nowStamp(); let touched=false;
+  SYNC_COLLECTIONS.forEach(k=>{
+    const arr=Array.isArray(state[k])?state[k]:null; if(!arr) return;
+    const was=syncPrev.c[k]||{}, seen={};
+    arr.forEach(it=>{
+      if(!it||it.id==null) return;
+      seen[it.id]=1;
+      const nowJSON=JSON.stringify(stripStamp(it));
+      if(was[it.id]===undefined){ it._m={...now}; touched=true;
+        logChange({id:uid(), ...now, kind:'add', what:k, label:itemLabel(k,it)||undefined, amount:(+it.amount||+it.balance||0)||undefined}); }
+      else if(was[it.id]!==nowJSON){ it._m={...now}; touched=true;
+        logChange({id:uid(), ...now, kind:'edit', what:k, label:itemLabel(k,it)||undefined, amount:(+it.amount||+it.balance||0)||undefined}); }
+    });
+    /* Gone. Without a tombstone a merge resurrects it from the other phone,
+       which is the one failure people never forgive: a thing they deleted
+       coming back. */
+    Object.keys(was).forEach(id=>{ if(seen[id]) return;
+      state.graveyard=state.graveyard||[];
+      state.graveyard.unshift({id, what:k, _m:{...now}});
+      if(state.graveyard.length>GRAVE_MAX) state.graveyard.length=GRAVE_MAX;
+      let label=''; try{ label=itemLabel(k, JSON.parse(was[id])); }catch(_){}
+      logChange({id:uid(), ...now, kind:'del', what:k, label:label||undefined});
+      touched=true;
+    });
+  });
+  const sm=state.settingsM=state.settingsM||{};
+  SYNC_SETTINGS.forEach(k=>{
+    const v=JSON.stringify(state[k]===undefined?null:state[k]);
+    if(syncPrev.s[k]!==v){ sm[k]={...now}; touched=true; }
+  });
+  if(touched) syncPrev=syncSnapshot(state);
+}
+/* ---- the merge, deliberately pure so it can be proven without a network ---- */
+function mergeVault(local, remote){
+  const out=Object.assign({}, local);
+  /* graveyards first: a delete has to be able to beat an older edit from the
+     other side, and both sides' tombstones matter. */
+  const graves={};
+  [...(remote.graveyard||[]), ...(local.graveyard||[])].forEach(g=>{
+    if(!g||g.id==null) return;
+    const key=g.what+'|'+g.id;
+    if(!graves[key] || stampNewer(g._m, graves[key])) graves[key]=g._m;
+  });
+  out.graveyard=Object.keys(graves).map(k=>({ id:k.split('|').slice(1).join('|'), what:k.split('|')[0], _m:graves[k] }))
+    .sort((a,b)=>(a._m.t<b._m.t?1:-1)).slice(0,GRAVE_MAX);
+  SYNC_COLLECTIONS.forEach(k=>{
+    const L=Array.isArray(local[k])?local[k]:[], R=Array.isArray(remote[k])?remote[k]:[];
+    const by={}; const order=[];
+    const take=it=>{ if(!it||it.id==null) return;
+      if(by[it.id]===undefined){ by[it.id]=it; order.push(it.id); }
+      else if(stampNewer(it._m, by[it.id]._m)) by[it.id]=it; };
+    L.forEach(take); R.forEach(take);
+    out[k]=order.map(id=>by[id]).filter(it=>{
+      const g=graves[k+'|'+it.id];
+      /* An edit made AFTER the delete brings it back on purpose - somebody
+         changed it knowing it was gone. An edit made before does not. */
+      return !g || stampNewer(it._m, g);
+    });
+  });
+  const lm=local.settingsM||{}, rm=remote.settingsM||{}, m={};
+  SYNC_SETTINGS.forEach(k=>{
+    const a=lm[k], b=rm[k];
+    if(stampNewer(b,a)){ out[k]=remote[k]; m[k]=b; }
+    else { out[k]=local[k]; if(a) m[k]=a; }
+  });
+  out.settingsM=m;
+  /* One log, both sides, newest first, deduped by entry id. */
+  const seen={}, log=[];
+  [...(local.changelog||[]), ...(remote.changelog||[])].forEach(e=>{
+    if(!e||!e.id||seen[e.id]) return; seen[e.id]=1; log.push(e); });
+  log.sort((a,b)=> a.t===b.t ? String(b.d||'').localeCompare(String(a.d||'')) : (a.t<b.t?1:-1));
+  out.changelog=log.slice(0,CHANGELOG_MAX);
+  /* never inherited: this device is this device */
+  out.deviceId=local.deviceId; out.meIs=local.meIs; out.syncOptIn=local.syncOptIn;
+  return out;
+}
 function save(){
+  try{ stampChanges(); }catch(e){ /* stamping must never block a save - the
+    budget matters more than its audit trail */ }
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
   if(typeof applyPanelGates==='function') applyPanelGates();
   if(typeof scheduleVaultPush==='function') scheduleVaultPush();
@@ -11749,6 +11931,7 @@ async function decryptVault(payloadStr, passphrase){
    truth: pull replaces local with the decrypted vault; push (debounced, on every
    save) overwrites the vault with local. Last write wins - fine for a couple. */
 let syncPass=null, syncActive=false, syncPushTimer=null, syncPulling=false, syncNote='';
+let syncLastSeen='', syncPollTimer=null;
 /* ---------- server errors, in the app's own voice ----------
    Seen on a real setup attempt: the panel said "Email signups are disabled".
    That is Supabase talking to a developer, printed verbatim to somebody trying
@@ -11792,7 +11975,7 @@ async function sbSignUp(email,pass){ const sb=await getSupabase(); if(!sb) throw
 async function sbSignIn(email,pass){ const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.'); const {data,error}=await sb.auth.signInWithPassword({email,password:pass}); if(error) throw new Error(error.message); return data; }
 async function sbSignOut(){ let sb=null; try{ sb=await getSupabase(); }catch(_){}
   if(sb) try{ await sb.auth.signOut(); }catch(_){}
-  syncPass=null; syncActive=false; state.syncOptIn=false; save(); }
+  syncPass=null; syncActive=false; state.syncOptIn=false; save(); syncPollStop(); }
 /* Swallows a failed SDK fetch too. This threw an uncaught 'Could not load the
    sync engine' on boot for anyone offline - a rejected promise with nobody
    holding it, surfacing as a page error rather than a sentence on screen. */
@@ -11818,12 +12001,65 @@ async function pullFromVault(passphrase){
   try{ remote=await decryptVault(data.encrypted_payload, pass); }
   catch(_){ throw new Error('Invalid Sync Passphrase. We cannot reset this for you. Please try again.'); }
   syncPulling=true;
-  state=normalizeState(Object.assign(defaultState(), remote)); if(!state.activeMonth) state.activeMonth=thisMonth();
+  /* MERGE, not replace. This line used to be an assignment - the whole local
+     state thrown away and the vault's copy put in its place - which is how one
+     partner's afternoon disappeared the moment the other's phone pushed first.
+     Both sides are now reconciled item by item, and the losing copy of any
+     single item is the older one rather than the one that happened to sync
+     second. */
+  const merged=mergeVault(state, Object.assign(defaultState(), remote));
+  state=normalizeState(merged); if(!state.activeMonth) state.activeMonth=thisMonth();
+  syncPrev=null;                                      // re-baseline: a merge is not an edit by this device
   save();                                             // syncPulling guards the auto-push
   syncPulling=false;
+  /* What came back may differ from what the vault held, because our side had
+     things it did not. Push the reconciliation straight back so the other phone
+     sees it without waiting for the next edit. */
+  syncLastSeen='';
+  try{ await pushToVault(pass); }catch(_){ }
   if(typeof renderAll==='function') renderAll();
   return true;
 }
+/* ---------- receiving, which is what the button was standing in for ----------
+   "Why is pressing the sync button necessary, it feels like a hindrance, why
+   doesn't it just update in real time?"
+
+   Sending always was automatic. Receiving could not be, because a pull replaced
+   local state wholesale - so an automatic one would have deleted whichever
+   partner's work had not reached the server yet, over and over. Now that a pull
+   MERGES, receiving is safe, and the button stops being load-bearing.
+
+   updated_at was written to the row from the first day and never once read. It
+   is read now: a tiny query returns one timestamp, and the encrypted payload is
+   only fetched when that timestamp has moved. So the common case - nothing
+   changed - costs one small row read rather than pulling and decrypting a whole
+   budget on a timer. */
+const SYNC_POLL_MS=15000;
+async function vaultStamp(){
+  let sb=null; try{ sb=await getSupabase(); }catch(_){ return null; }
+  if(!sb) return null;
+  const sess=await sbSession(); if(!sess) return null;
+  try{ const {data}=await sb.from('user_vaults').select('updated_at').eq('user_id',sess.user.id).maybeSingle();
+    return data?(data.updated_at||''):''; }catch(_){ return null; }
+}
+async function syncCheck(force){
+  if(!syncActive || !syncPass || syncPulling) return false;
+  const stamp=await vaultStamp();
+  if(stamp===null) return false;                       // unreachable: stay quiet, keep the local copy
+  if(!force && stamp && stamp===syncLastSeen) return false;
+  syncLastSeen=stamp;
+  try{ await pullFromVault(); syncNote='Up to date.'; if(typeof renderSync==='function') renderSync(); return true; }
+  catch(e){ syncNote='Could not take their changes just now.'; if(typeof renderSync==='function') renderSync(); return false; }
+}
+function syncPollStart(){
+  if(syncPollTimer) clearInterval(syncPollTimer);
+  syncPollTimer=setInterval(()=>{ if(!document.hidden) syncCheck(); }, SYNC_POLL_MS);
+}
+function syncPollStop(){ if(syncPollTimer) clearInterval(syncPollTimer); syncPollTimer=null; }
+/* Coming back to the phone is the moment their changes matter most, and it is
+   free - no timer fires while the tab is hidden. */
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) syncCheck(); });
+window.addEventListener('online',()=>syncCheck());
 /* debounced background push, wired into save() */
 function scheduleVaultPush(){
   if(!syncActive || !syncPass || syncPulling) return;
@@ -11834,6 +12070,30 @@ function scheduleVaultPush(){
 
 /* ---------- Sovereign-tier sync UI (Host setup + Joiner + active) ---------- */
 let syncUI={view:'menu', email:'', err:''};
+/* ---------- the change log ----------
+   Asked for as "a change log so we know who changed what and when, so all
+   account balances are always accurate". The second half is why it exists: with
+   two people and one budget, a figure being wrong is far less useful to know
+   than WHEN it went wrong and who was holding the phone. */
+function changeLogHTML(n){
+  const log=(state.changelog||[]).slice(0, n||8);
+  if(!log.length) return `<div class="chlog"><div class="cl-h">Changes</div><p class="cl-none">Nothing has changed since this was set up. Once either of you edits something it is listed here, with who and when.</p></div>`;
+  const when=t=>{ try{ const d=new Date(t), s=(Date.now()-d.getTime())/1000;
+      if(s<90) return 'just now';
+      if(s<3600) return Math.round(s/60)+' min ago';
+      if(s<86400) return Math.round(s/3600)+' hr ago';
+      return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+    }catch(_){ return t; } };
+  const verb={add:'added', edit:'changed', del:'removed'};
+  const WHAT={transactions:'entry', categories:'category', accounts:'account', recurring:'repeat',
+    debts:'debt', goals:'goal', assets:'asset', liabilities:'liability', diary:'diary note', scans:'statement read'};
+  return `<div class="chlog"><div class="cl-h">Changes</div>
+    ${log.map(e=>`<div class="cl-row${e.d===state.deviceId?' mine':''}">
+      <span class="cl-w"><b>${escapeHtml(actorName(e.by))}</b> ${verb[e.kind]||'touched'} ${e.label?`${escapeHtml(WHAT[e.what]||e.what)} <i>${escapeHtml(String(e.label).slice(0,40))}</i>`:`an unnamed ${escapeHtml(WHAT[e.what]||e.what)}`}${e.amount?` · ${money(e.amount)}`:''}</span>
+      <span class="cl-t">${escapeHtml(when(e.t))}</span></div>`).join('')}
+    ${(state.changelog||[]).length>log.length?`<p class="cl-none">${(state.changelog||[]).length-log.length} older change${(state.changelog||[]).length-log.length===1?'':'s'} kept.</p>`:''}
+  </div>`;
+}
 function renderSync(){
   const box=document.getElementById('syncPanel'); if(!box) return;
   if(!state.householdOn){ box.innerHTML=''; return; }
@@ -11847,10 +12107,17 @@ function renderSync(){
   if(v==='loading'){ box.innerHTML=`<div class="sync-head">Household Sync</div><p class="sub">Checking your sync…</p>`; return; }
   if(v==='active'){
     box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag on">Vault active</span></div>
-      <p class="sub" style="margin-top:6px">${escapeHtml(syncNote||'Your encrypted vault is live. Changes sync in the background.')}</p>
+      <p class="sub" style="margin-top:6px">${escapeHtml(syncNote||'Your encrypted vault is live. Your changes go up as you make them, and theirs come down on their own.')}</p>
       <div class="sync-instr"><b>To link your partner's phone:</b> have them open the app → Settings → turn on "We share this budget" → <b>Link to an existing vault</b>, and enter this account's <b>email, password, and Sync Passphrase</b>.</div>
-      <div class="sync-actions"><button class="btn sm" id="syncNow">Sync now</button><button class="btn sm ghost" id="syncOut">Sign out of sync</button></div>${err}`;
-    document.getElementById('syncNow').onclick=async()=>{ syncUI.err=''; try{ await pushToVault(); syncNote='Synced just now.'; renderSync(); }catch(e){ syncUI.err=syncPlainErr(e); renderSync(); } };
+      ${changeLogHTML()}
+      <!-- "Check now" rather than "Sync now": nothing here is waiting on a
+           button any more, and a button that claims to do the syncing implies
+           the syncing does not happen without it. It is for the moment somebody
+           wants to watch it work. -->
+      <div class="sync-actions"><button class="btn sm" id="syncNow">Check for theirs now</button><button class="btn sm ghost" id="syncOut">Sign out of sync</button></div>${err}`;
+    document.getElementById('syncNow').onclick=async()=>{ syncUI.err=''; syncNote='Checking…'; renderSync();
+      try{ const got=await syncCheck(true); await pushToVault(); syncNote=got?'Took their latest changes.':'Nothing new from them - you are up to date.'; renderSync(); }
+      catch(e){ syncUI.err=syncPlainErr(e); renderSync(); } };
     document.getElementById('syncOut').onclick=async()=>{ await sbSignOut(); syncUI={view:'menu',email:'',err:''}; renderSync(); };
     return;
   }
@@ -11859,7 +12126,7 @@ function renderSync(){
       <p class="sub" style="margin-top:6px">You're signed in on this device. Enter your Sync Passphrase to unlock and resume syncing (we keep it in memory only, never stored).</p>
       <div class="sync-form"><input type="password" id="syncPassIn" placeholder="Sync Passphrase"><button class="btn sm primary" id="syncUnlock">Unlock →</button></div>${err}
       <button class="intake-skip" id="syncOut2">Sign out instead</button>`;
-    document.getElementById('syncUnlock').onclick=async()=>{ const p=document.getElementById('syncPassIn').value; if(!p) return; syncUI.err=''; try{ await pullFromVault(p); syncPass=p; syncActive=true; syncNote='Unlocked and synced.'; syncUI.view='active'; renderSync(); }catch(e){ syncUI.err=syncPlainErr(e); renderSync(); } };
+    document.getElementById('syncUnlock').onclick=async()=>{ const p=document.getElementById('syncPassIn').value; if(!p) return; syncUI.err=''; try{ await pullFromVault(p); syncPass=p; syncActive=true; syncPollStart(); syncNote='Unlocked and synced.'; syncUI.view='active'; renderSync(); }catch(e){ syncUI.err=syncPlainErr(e); renderSync(); } };
     document.getElementById('syncOut2').onclick=async()=>{ await sbSignOut(); syncUI={view:'menu',email:'',err:''}; renderSync(); };
     return;
   }
@@ -11904,7 +12171,7 @@ async function hostActivate(){
   if(!k1||k1.length<8){ syncUI.err='Use at least 8 characters for the passphrase.'; renderSync(); return; }
   if(k1!==k2){ syncUI.err="Those two passphrases don't match."; renderSync(); return; }
   syncUI.err='';
-  try{ syncPass=k1; await pushToVault(k1); syncActive=true; state.syncOptIn=true; save(); syncNote='Vault created and live.'; syncUI.view='active'; renderSync(); }
+  try{ syncPass=k1; await pushToVault(k1); syncActive=true; state.syncOptIn=true; save(); syncPollStart(); syncNote='Vault created and live.'; syncUI.view='active'; renderSync(); }
   catch(e){ syncPass=null; syncActive=false; syncUI.err=syncPlainErr(e); renderSync(); }
 }
 async function joinVault(){
@@ -11915,7 +12182,7 @@ async function joinVault(){
     await sbSignIn(email,pw);
     const ok=await pullFromVault(key);
     if(!ok){ syncUI.err='Signed in, but that account has no vault yet. Have your partner set it up first.'; renderSync(); return; }
-    syncPass=key; syncActive=true; state.syncOptIn=true; save(); syncNote='Vault unlocked and synced.'; syncUI.view='active'; renderSync();
+    syncPass=key; syncActive=true; state.syncOptIn=true; save(); syncPollStart(); syncNote='Vault unlocked and synced.'; syncUI.view='active'; renderSync();
   }catch(e){ try{ await sbSignOut(); }catch(_){} syncUI.err=syncPlainErr(e); renderSync(); }
 }
 /* on open: if a Supabase session already exists but the memory-only passphrase is gone, ask to unlock */

@@ -110,3 +110,25 @@ Three things are most likely to bite, in this order:
 
 Record the exact error text if it breaks. "It didn't work" cannot be acted on;
 `relation "public.user_vaults" does not exist` can.
+
+### After the merge change: does one partner still erase the other?
+
+The merge itself is proven by `syncmerge` without a network. What a person still
+has to check is that the vault round-trips at all, and that the two phones
+converge rather than ping-pong.
+
+With both profiles linked and **Vault active** on each:
+
+1. In A, log an expense. In B - *without reloading first* - edit an account
+   balance. Wait about twenty seconds.
+2. Both should end up on both phones: A's expense and B's balance. Before this
+   change, whichever synced second erased the other's work.
+3. Delete something in A. Confirm it does not come back on B, and does not
+   reappear on A after the next check.
+4. Open **Household Sync** on either phone. The **Changes** list should name
+   both of you, with the right times.
+
+If entries duplicate rather than merge, the ids are being regenerated somewhere
+and that is worth reporting. If one side keeps winning, note which phone and
+what its clock says - the tie-break is by timestamp, and a device with a badly
+wrong clock will always look "newer".
