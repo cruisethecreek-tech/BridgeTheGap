@@ -1295,6 +1295,15 @@
   .cull-bar .cb-t{flex:1;min-width:190px;font-size:12.5px;color:var(--muted);line-height:1.5}
   .cull-bar .cb-t b{color:var(--text)}
   .cull-bar .cb-a{display:flex;gap:7px;flex:none}
+  .recfill{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:2px 0 10px}
+  .recfill .rf-k{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);width:100%}
+  .rf-chip{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:999px;
+    padding:7px 12px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .rf-chip i{font-style:normal;font-size:11px;color:var(--muted)}
+  .rf-chip:hover{border-color:var(--accent)}
+  .rf-chip.due{border-color:var(--accent);background:rgba(var(--accent-rgb),.12)}
+  .recfill .rf-n{width:100%;font-size:11.5px;color:var(--muted);line-height:1.45}
+  .ltb-note .ltb-src{color:var(--muted)}
   .cs-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .csk{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel-2);border:1px solid var(--line);
     color:var(--text);border-radius:11px;padding:10px 11px;cursor:pointer}
@@ -3072,6 +3081,10 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button data-t="transfer"><i aria-hidden="true">⇄</i>Move</button>
         </div>
         <div id="xferNote"></div>
+        <!-- "It didn't give me an opportunity to choose one of my already
+             existing recurring payments." The rules were on Plan and the form
+             had never heard of them. -->
+        <div id="recFill"></div>
 
         <div class="row">
           <label class="fld">Amount
@@ -4493,7 +4506,7 @@ function defaultState(){
            saveBudget:0, saveOrder:'soonest',
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null,
-           scans:[] };
+           scans:[], opening:{} };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -4511,6 +4524,7 @@ function normalizeState(s){
   s.rateDraft=null;
   /* A reading is a photograph of a moment, not a ledger, and an unbounded pile
      of them would grow state forever for no gain. The last three, newest first. */
+  if(!s.opening || typeof s.opening!=='object' || Array.isArray(s.opening)) s.opening={};
   if(!Array.isArray(s.scans)) s.scans=[];
   s.scans=s.scans.filter(x=>x&&typeof x==='object').slice(0,3);
   /* Checked against a literal, not against PLAN_VIEWS. normalizeState runs
@@ -8781,7 +8795,10 @@ function renderBudget(){
     + (state.activeMonth===thisMonth() ? '<small>This month</small>' : `<small>${backToThisMonthHTML('mBack')}</small>`);
   wireBackToThisMonth('mBack');
   const M=state.activeMonth;
-  const income=monthIncome(M);
+  /* What may be given a job: income logged this month PLUS whatever was stated
+     as already in the account when it opened. Earning stats still read
+     monthIncome - see openingFor. */
+  const income=monthToBudget(M);
   const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const spent=monthExpense(M);
   const ltb=income-assigned;
@@ -8799,7 +8816,7 @@ function renderBudget(){
     flipStat('Assigned', assigned, '')+
     flipStat(lifeLabel('spent','Spent'), spent, '')+
     flipStat('Left to spend', lts, lts<0?'bad':'good');
-  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb)}${flipHintHTML()}`;
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
 
   const nmEl=document.getElementById('newMonthBanner');
   if(nmEl){
@@ -9354,7 +9371,7 @@ function autoRebalance(catId){
   else if(need>0.005) alert('Rebalanced '+money(moved)+' - pulled everything flexible. Still '+money(need)+' short; trim an essential or add income to finish the job.');
 }
 function refreshBudgetSummary(){
-  const M=state.activeMonth, income=monthIncome(M);
+  const M=state.activeMonth, income=monthToBudget(M);
   const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const spent=monthExpense(M), ltb=income-assigned;
   const stat=document.querySelector('#summary .stat.ltb'); if(!stat) return;
@@ -9491,6 +9508,9 @@ document.getElementById('addTx').addEventListener('click',()=>{
     const hours=parseFloat(document.getElementById('txHours').value)||0;
     const prevIndie=indieTotal();
     const tx={id:uid(),type:'income',amount:amt,source,date,note,srcType}; if(hours>0) tx.hours=hours;
+    /* Marks the occurrence as landed, so the calendar ticks itself and this
+       payday cannot be offered - or logged - a second time. */
+    if(recFillPick && recFillPick.date===date) tx.recId=recFillPick.recId;
     if(srcType==='other'&&srcLabel) tx.srcLabel=srcLabel;
     const aid=txAcctChoice(); if(aid) tx.acctId=aid;
     /* say a shortfall out loud at the moment it is logged - reconcile time is
@@ -9722,6 +9742,58 @@ document.getElementById('allMonthsBtn').addEventListener('click',()=>{
   renderTx();
 });
 
+/* ---------- the paycheck you already told me about ----------
+   Reported on the 1st of a month: "they told me to log my income but it didn't
+   give me an opportunity to choose one of my already existing recurring
+   payments that took place last month."
+
+   The recurring rules held the name, the amount, the cadence and the account -
+   everything the form was asking for - and the form had never heard of them. So
+   the app nagged somebody to type in a paycheck it could already describe, and
+   what they typed had no connection to the rule, which is how a plan ends up
+   with a rule saying one thing and a ledger saying another.
+
+   Only what has NOT landed is offered: an occurrence with a transaction already
+   against it is done, and offering it again is how a month gets paid twice. */
+/* Copying the numbers off a rule is not the same as saying the rule LANDED. A
+   plain entry leaves the occurrence still owing on the calendar and still on
+   offer here, so the same payday could be logged twice - which is the fault the
+   chip existed to prevent. The pick is remembered, and stamped onto the entry
+   only while the date still matches the occurrence it came from: change the
+   date and it is a different event again. */
+let recFillPick=null;
+function recDueThisMonth(){
+  const M=state.activeMonth, today=todayStr(), out=[];
+  (state.recurring||[]).filter(r=>r.type==='income').forEach(r=>{
+    (recOccurrences(r,M)||[]).forEach(date=>{
+      if((state.transactions||[]).some(t=>t.recId===r.id && t.date===date)) return;   // already landed
+      out.push({r, date, due:date<=today});
+    });
+  });
+  return out.sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:0));
+}
+function renderRecFill(){
+  const box=document.getElementById('recFill'); if(!box) return;
+  if(txType!=='income'){ box.innerHTML=''; recFillPick=null; return; }
+  const list=recDueThisMonth().slice(0,4);
+  if(!list.length){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="recfill"><span class="rf-k">Already set up${list.some(x=>x.due)?' - and due':''}:</span>
+    ${list.map((x,i)=>`<button type="button" class="rf-chip${x.due?' due':''}" data-recfill="${i}">${escapeHtml(x.r.source||'Income')} · <b>${money(+x.r.amount||0)}</b><i>${x.due?'due '+fmtDayShort(x.date):fmtDayShort(x.date)}</i></button>`).join('')}
+    <span class="rf-n">Tap one and it fills this form, dated the day it was due. Nothing is logged until you press the button below.</span></div>`;
+  box.querySelectorAll('[data-recfill]').forEach(b=>b.addEventListener('click',()=>{
+    const x=list[+b.dataset.recfill]; if(!x) return;
+    const amt=document.getElementById('txAmt'); if(amt) amt.value=(+x.r.amount||0);
+    const d=document.getElementById('txDate'); if(d) d.value=x.date;
+    const src=document.getElementById('txSrc'); if(src) src.value=x.r.source||'';
+    const pick=document.getElementById('txSrcPick');
+    if(pick && [...pick.options].some(o=>o.value===(x.r.source||''))) pick.value=x.r.source||'';
+    if(x.r.owner){ const ow=document.getElementById('txOwner'); if(ow) ow.value=x.r.owner; }
+    recFillPick={recId:x.r.id, date:x.date};
+    if(typeof txAmtNoteHTML==='function') txAmtNoteHTML();
+    if(amt) amt.focus();
+    if(typeof toast==='function') toast(`Filled from your ${x.r.source||'income'} rule. Change the amount if this one was different, then log it.`);
+  }));
+}
 function renderTxForm(){
   const sel=document.getElementById('txCat');
   sel.innerHTML = state.categories.length ? categoryOptions() : `<option value="">Add a category first</option>`;
@@ -9729,6 +9801,7 @@ function renderTxForm(){
   /* The move note names the destination account, so it has to be redrawn when
      the accounts behind it change - not only when the toggle is pressed. */
   if(typeof xferNote==='function') xferNote();
+  renderRecFill();
 }
 /* Fast batch log - the notebook workflow: jot on paper, then punch a whole day
    in at once. One line each (what + $ + category), a shared date, create a new
@@ -15610,6 +15683,7 @@ function drawOwnerNote(){
   const put=(id,txt)=>{ const b=document.getElementById(id); if(!b) return;
     b.innerHTML=txt; b.classList.toggle('hide',!txt); };
   put('txOwnerNote', txType==='income' ? ownerNoteHTML(((document.getElementById('txOwner')||{}).value)||'a') : '');
+  if(typeof renderRecFill==='function') renderRecFill();
   const rt=(document.getElementById('recType')||{}).value;
   const ro=((document.getElementById('recOwner')||{}).value)||'a';
   /* Only your own hours set your rate - recomputeBlendedWage filters to owner
@@ -19569,17 +19643,75 @@ function renderDataGuard(){
   // every reload is a reminder people learn to swat without reading
   const x=document.getElementById('dgX'); if(x) x.onclick=()=>{ dataGuardOff=true; state.backupNagDay=todayStr(); save(); renderDataGuard(); };
 }
+/* ---------- money that was already there ----------
+   Reported on the 1st of a month: "it didn't move any of my bank balance over
+   that I already had accumulated from last month to cover these bills."
+
+   Zero-based budgeting funds the month from the money you HAVE, and this app
+   was funding it only from money that arrived inside the calendar month. So
+   somebody sitting on last month's wages, whose rent is due on the 3rd and
+   whose next payday is the 4th, opened a plan reading minus four thousand
+   dollars and was told to log a paycheck that has not happened.
+
+   This does NOT roll a leftover forward - that would invent a number, and the
+   objection to it still stands: what the month held is what the month held. It
+   asks the person to STATE what was in the account when the month opened, which
+   is the same thing the accounts surface has always done, and it keeps that
+   figure apart from income for the rest of its life. Money you already had is
+   not money you earned this month: it funds the plan, and it must never touch
+   the keep rate, the year projection, or anything that measures earning. */
+function openingFor(M){ const v=+((state.opening||{})[M]); return (isFinite(v)&&v>0)?Math.round(v*100)/100:0; }
+function monthToBudget(M){ return Math.round((monthIncome(M)+openingFor(M))*100)/100; }
+/* What the app would suggest carrying in: what is in the account now, less what
+   has already been logged as arriving this month, so the two cannot double up. */
+function openingSuggestion(M){
+  if(!(state.accounts||[]).length) return 0;
+  const v=Math.round((bankTotal()-monthIncome(M))*100)/100;
+  return v>0.005 ? v : 0;
+}
+function setOpening(M,v){
+  state.opening=state.opening||{};
+  if(v>0.005) state.opening[M]=Math.round(v*100)/100; else delete state.opening[M];
+  save();
+}
 /* "Left to budget" trips people up when it goes negative, because it does NOT
    mean overspent - nothing has necessarily been spent at all. It means: you have
    given jobs to more dollars than you have logged arriving. Say that plainly,
    with the actual arithmetic, wherever the number appears. */
-function ltbNoteHTML(income,assigned,ltb){
-  if(income<=0 && assigned>0) return `<div class="ltb-note">You've given <b>${money(assigned)}</b> a job but haven't logged any income yet, so it reads as <b>${money(ltb)}</b> left to budget. Nothing is overspent - the plan just doesn't have money behind it yet. Log your paycheck and this flips.${trailBtn('income','Log my paycheck')}</div>`;
-  if(ltb<-0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than has come in. That's not overspending - it's a plan that needs either more income logged or a category trimmed.${trailBtn('income','Log more income')}${trailBtn('plan','Trim a category')}</div>`;
-  if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every logged dollar has a job. That's zero-based, done right.</div>`;
-  if(ltb>0.005) return `<div class="ltb-note">Income logged <b>${money(income)}</b> − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.${trailBtn('assign','Give it a job')}</div>`;
+function ltbNoteHTML(income,assigned,ltb,M){
+  M=M||state.activeMonth;
+  const opening=openingFor(M), earned=monthIncome(M);
+  /* Never one figure standing for two. When money was carried in, the note
+     names both halves and adds them on screen - the same rule the invest panel
+     learned: a total that will not show its parts is asking to be trusted. */
+  const src = opening>0
+    ? `Already in the account <b>${money(opening)}</b> + logged this month <b>${money(earned)}</b> = <b>${money(income)}</b> to budget`
+    : `Income logged <b>${money(income)}</b>`;
+  const carryBtn = (openingSuggestion(M)>0 && opening<=0)
+    ? `<button class="btn sm primary" data-carryin="${M}">Use the ${money(openingSuggestion(M))} already in my account</button>` : '';
+  const clearBtn = opening>0
+    ? `<button class="btn sm ghost" data-carryclear="${M}">That is not right - clear it</button>` : '';
+  /* The reported case: a month that opens before payday, with last month's
+     wages sitting in the account and the rent due on the 3rd. */
+  if(income<=0 && assigned>0) return `<div class="ltb-note">You've given <b>${money(assigned)}</b> a job but nothing is funding it yet, so it reads as <b>${money(ltb)}</b> left to budget. Nothing is overspent - the plan just doesn't have money behind it yet.${
+    openingSuggestion(M)>0 ? ` You do have <b>${money(openingSuggestion(M))}</b> sitting in your account from before this month started, and a plan is allowed to be funded by money you already have.` : ''
+  }${carryBtn}${trailBtn('income','Log my paycheck')}</div>`;
+  if(ltb<-0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than is behind it. That's not overspending - it's a plan that needs either more money accounted for or a category trimmed.${carryBtn}${clearBtn}${trailBtn('income','Log more income')}${trailBtn('plan','Trim a category')}</div>`;
+  if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every dollar has a job. That's zero-based, done right.${opening>0?` <span class="ltb-src">${src}.</span>`:''}${clearBtn}</div>`;
+  if(ltb>0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.${trailBtn('assign','Give it a job')}${clearBtn}</div>`;
   return '';
 }
+/* One handler for both buttons, anywhere they are drawn. */
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-carryin]');
+  if(c){ const M=c.dataset.carryin, v=openingSuggestion(M);
+    setOpening(M,v); renderBudget(); renderHome(); renderTx();
+    if(typeof toast==='function') toast(`${money(v)} carried in as money you already had. It funds the plan and is never counted as income you earned this month - your keep rate and the year ahead do not move.`);
+    return; }
+  const x=e.target.closest('[data-carryclear]');
+  if(x){ setOpening(x.dataset.carryclear,0); renderBudget(); renderHome(); renderTx();
+    if(typeof toast==='function') toast('Cleared. The plan is funded by logged income again.'); }
+});
 function renderHome(){
   renderDataGuard();
   const hc=HOME_COPY[state.register]||HOME_COPY.middle;
@@ -19599,7 +19731,7 @@ function renderHome(){
   // MUST match the Plan tab exactly: count each pool ONCE. Summing every category
   // double-counted any parent that also had subcategories, so Home and Plan
   // disagreed about the same month.
-  const income=monthIncome(M), assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
+  const income=monthToBudget(M), assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const ltb=income-assigned, spent=monthExpense(M);
   const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
@@ -19618,7 +19750,7 @@ function renderHome(){
     plainStat('Skip streak', skipStreak()+' ', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome');
-  if(lkh) lkh.innerHTML=ltbNoteHTML(income,assigned,ltb)+flipHintHTML();
+  if(lkh) lkh.innerHTML=ltbNoteHTML(income,assigned,ltb,M)+flipHintHTML();
   renderWhyCard();
   renderTrueRateCard();
   renderMoneyStoryNote();
@@ -19690,7 +19822,7 @@ function renderMoneyStoryNote(){
 /* guided "do this next" - computes the user's most useful next moves */
 function renderNextSteps(){
   const box=document.getElementById('nextSteps'); if(!box) return;
-  const M=state.activeMonth, income=monthIncome(M);
+  const M=state.activeMonth, income=monthToBudget(M);
   const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const ltb=income-assigned;
   // catAssigned, NOT assignedFor - see wallAssigned(). A wall funded through its
