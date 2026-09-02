@@ -1325,6 +1325,11 @@
     border:1px solid var(--accent-2);border-radius:12px;padding:11px 13px;margin-bottom:14px;font-size:12.5px;line-height:1.5}
   .sync-lock .sl-t{flex:1;min-width:190px;color:var(--muted)}
   .sync-lock .sl-t b{color:var(--text)}
+  .buildline{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+  .buildline b{color:var(--accent);word-break:break-all}
+  .buildline .bl-n{display:block;margin-top:6px;font-family:inherit;font-size:11.5px;color:var(--muted);
+    font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
   .cs-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .csk{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel-2);border:1px solid var(--line);
     color:var(--text);border-radius:11px;padding:10px 11px;cursor:pointer}
@@ -3896,6 +3901,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           </div>
         </div>
       </div>
+      <!-- Two rounds of "is that even the build you are looking at?" went by
+           with no way to answer it, on either side. A version somebody can read
+           off their own phone turns a guess into a fact. -->
+      <div class="panel">
+        <h2>Which version is this</h2>
+        <p class="sub">If something has been fixed and your phone still does the old thing, this is how you tell whether the fix has actually reached you. Read it out when you report something.</p>
+        <div class="buildline" id="buildLine"></div>
+      </div>
     </section>
   </div>
 
@@ -4730,6 +4743,25 @@ function load(){
     const d=defaultState(); d.loadFailed='unreadable'; return d;
   }
   const merged=Object.assign(defaultState(), parsed);
+  /* syncOptIn was added AFTER people had already set sync up, and it gates
+     everything: the session check, the unlock prompt, the passphrase restore and
+     the "not syncing" warning. An install that joined a vault last week has no
+     such key, so it defaulted to false and the app decided they had never opted
+     in - showing the SETUP menu to somebody already signed in, and quietly
+     syncing nothing in either direction. That is a regression this file caused,
+     and one the person on the other phone had no way to diagnose.
+
+     The evidence is already on the device and needs no network: Supabase keeps
+     its session under `sb-<project>-auth-token` in localStorage, and that key
+     only exists if somebody signed in. Backfilled only when the field is truly
+     ABSENT - an explicit false is somebody who signed out, and must be left
+     alone. Any new flag gating existing behaviour needs this question asked of
+     it: what does it read as for the people who are already here? */
+  if(!('syncOptIn' in (parsed||{}))){
+    try{
+      if(Object.keys(localStorage).some(k=>/^sb-.*-auth-token$/.test(k))) merged.syncOptIn=true;
+    }catch(_){ }
+  }
   try{ return normalizeState(merged); }
   catch(e){
     try{ localStorage.setItem(STORE_KEY+'__prenormalize', raw); }catch(_){}
@@ -12124,6 +12156,22 @@ function changeLogHTML(n){
       <span class="cl-t">${escapeHtml(when(e.t))}</span></div>`).join('')}
     ${(state.changelog||[]).length>log.length?`<p class="cl-none">${(state.changelog||[]).length-log.length} older change${(state.changelog||[]).length-log.length===1?'':'s'} kept.</p>`:''}
   </div>`;
+}
+/* The build, readable off the phone it is running on.
+
+   Two rounds of "no banner and no Sam's Club" went by without either side being
+   able to say whether the phone was even running the code being discussed. A
+   deploy is a static file here - there is no build step to inject a hash - so
+   this is set by hand in the same commit as the change it names, and the date
+   plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
+   "has the fix reached me" in a way a version number never does. */
+const BUILD_STAMP='2026-09-02 · sync-optin-fix';
+function renderBuildLine(){
+  const el=document.getElementById('buildLine'); if(!el) return;
+  const known=BUILD_STAMP.indexOf('__')!==0;
+  el.innerHTML=known
+    ? `<b>${escapeHtml(BUILD_STAMP)}</b><span class="bl-n">Say this when you report something and we both stop guessing about which code you are on.</span>`
+    : `<b>working copy</b><span class="bl-n">This build was not stamped, which means it was opened straight from a file rather than deployed.</span>`;
 }
 function renderSync(){
   const box=document.getElementById('syncPanel'); if(!box) return;
@@ -19969,6 +20017,7 @@ function boot(){
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
   applyPanelGates();
   ensureDay1(); captureSnapshot(); renderUiMode(); renderSayMode(); applyStage({silent:true});
+  if(typeof renderBuildLine==='function') renderBuildLine();
   if(typeof wireScan==='function') wireScan();
   applyHousehold(); applySpending();
   if(state.householdOn && typeof refreshSyncState==='function') refreshSyncState();
