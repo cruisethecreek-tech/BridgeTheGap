@@ -1321,6 +1321,10 @@
     padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer}
   .ac-say:hover{border-color:var(--accent);border-style:solid;color:var(--accent)}
   input.ac-asking{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(var(--accent-rgb),.22)}
+  .sync-lock{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(var(--accent-2-rgb),.10);
+    border:1px solid var(--accent-2);border-radius:12px;padding:11px 13px;margin-bottom:14px;font-size:12.5px;line-height:1.5}
+  .sync-lock .sl-t{flex:1;min-width:190px;color:var(--muted)}
+  .sync-lock .sl-t b{color:var(--text)}
   .cs-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .csk{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel-2);border:1px solid var(--line);
     color:var(--text);border-radius:11px;padding:10px 11px;cursor:pointer}
@@ -9005,7 +9009,7 @@ function renderBudget(){
     flipStat('Assigned', assigned, '')+
     flipStat(lifeLabel('spent','Spent'), spent, '')+
     flipStat('Left to spend', lts, lts<0?'bad':'good');
-  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=syncLockedHTML()+`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
 
   const nmEl=document.getElementById('newMonthBanner');
   if(nmEl){
@@ -11057,8 +11061,8 @@ function renderTx(){
   (function(){
     const box=document.getElementById('txMonthNote'); if(!box) return;
     const a=monthAway();
-    if(!a || txAllMonths){ box.innerHTML=''; return; }
-    box.innerHTML=`<div class="tx-month"><span class="txm-t">These are <b>${escapeHtml(a.label)}</b> figures${a.ahead
+    if(!a || txAllMonths){ box.innerHTML=syncLockedHTML(); return; }
+    box.innerHTML=syncLockedHTML()+`<div class="tx-month"><span class="txm-t">These are <b>${escapeHtml(a.label)}</b> figures${a.ahead
         ? ', a month that has not happened yet - so an empty screen here means nothing has been logged <i>because it cannot have been</i>.'
         : ", a month that is already finished - anything you log here lands in it, not today."}</span>${backToThisMonthHTML('txBack')}</div>`;
     wireBackToThisMonth('txBack');
@@ -11936,6 +11940,27 @@ async function decryptVault(payloadStr, passphrase){
    fresh browser session re-asks for it. The vault is the shared household source of
    truth: pull replaces local with the decrypted vault; push (debounced, on every
    save) overwrites the vault with local. Last write wins - fine for a couple. */
+/* ---------- where the passphrase lives, and why it moved ----------
+   It was held in a variable and nowhere else, so every page load started with
+   no key: locked, not polling, and - the part nobody could see - not pushing
+   either. A phone discards its tab constantly, so that was the normal state.
+   Two phones sat diverging, each looking synced.
+
+   sessionStorage is the smallest move that fixes it. Against the threat the
+   original choice was written for - somebody who has the device later, or a
+   server that should never hold the key - it changes nothing: the browser drops
+   it when the browser closes, and Supabase still never sees it, so "even we
+   cannot read your money" is untouched. Against a script running on this page
+   it is no worse than the variable was; both are readable by anything already
+   executing here. What it buys is that reopening the app does not silently
+   stop the sync.
+
+   localStorage would survive a full restart and was deliberately not chosen:
+   that is a key sitting on a device indefinitely, which is exactly the trade
+   the blind vault exists to avoid making on somebody's behalf. */
+const SYNC_PASS_KEY='unfiltered_sync_pass';
+function syncPassRemember(p){ try{ if(p) sessionStorage.setItem(SYNC_PASS_KEY,p); else sessionStorage.removeItem(SYNC_PASS_KEY); }catch(_){ } }
+function syncPassRecall(){ try{ return sessionStorage.getItem(SYNC_PASS_KEY)||''; }catch(_){ return ''; } }
 let syncPass=null, syncActive=false, syncPushTimer=null, syncPulling=false, syncNote='';
 let syncLastSeen='', syncPollTimer=null;
 /* ---------- server errors, in the app's own voice ----------
@@ -11981,7 +12006,7 @@ async function sbSignUp(email,pass){ const sb=await getSupabase(); if(!sb) throw
 async function sbSignIn(email,pass){ const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.'); const {data,error}=await sb.auth.signInWithPassword({email,password:pass}); if(error) throw new Error(error.message); return data; }
 async function sbSignOut(){ let sb=null; try{ sb=await getSupabase(); }catch(_){}
   if(sb) try{ await sb.auth.signOut(); }catch(_){}
-  syncPass=null; syncActive=false; state.syncOptIn=false; save(); syncPollStop(); }
+  syncPass=null; syncActive=false; state.syncOptIn=false; save(); syncPassRemember(''); syncPollStop(); }
 /* Swallows a failed SDK fetch too. This threw an uncaught 'Could not load the
    sync engine' on boot for anyone offline - a rejected promise with nobody
    holding it, surfacing as a page error rather than a sentence on screen. */
@@ -12132,7 +12157,7 @@ function renderSync(){
       <p class="sub" style="margin-top:6px">You're signed in on this device. Enter your Sync Passphrase to unlock and resume syncing (we keep it in memory only, never stored).</p>
       <div class="sync-form"><input type="password" id="syncPassIn" placeholder="Sync Passphrase"><button class="btn sm primary" id="syncUnlock">Unlock →</button></div>${err}
       <button class="intake-skip" id="syncOut2">Sign out instead</button>`;
-    document.getElementById('syncUnlock').onclick=async()=>{ const p=document.getElementById('syncPassIn').value; if(!p) return; syncUI.err=''; try{ await pullFromVault(p); syncPass=p; syncActive=true; syncPollStart(); syncNote='Unlocked and synced.'; syncUI.view='active'; renderSync(); }catch(e){ syncUI.err=syncPlainErr(e); renderSync(); } };
+    document.getElementById('syncUnlock').onclick=async()=>{ const p=document.getElementById('syncPassIn').value; if(!p) return; syncUI.err=''; try{ await pullFromVault(p); syncPass=p; syncActive=true; syncPassRemember(p); syncPollStart(); syncNote='Unlocked and synced.'; syncUI.view='active'; renderSync(); }catch(e){ syncUI.err=syncPlainErr(e); renderSync(); } };
     document.getElementById('syncOut2').onclick=async()=>{ await sbSignOut(); syncUI={view:'menu',email:'',err:''}; renderSync(); };
     return;
   }
@@ -12177,7 +12202,7 @@ async function hostActivate(){
   if(!k1||k1.length<8){ syncUI.err='Use at least 8 characters for the passphrase.'; renderSync(); return; }
   if(k1!==k2){ syncUI.err="Those two passphrases don't match."; renderSync(); return; }
   syncUI.err='';
-  try{ syncPass=k1; await pushToVault(k1); syncActive=true; state.syncOptIn=true; save(); syncPollStart(); syncNote='Vault created and live.'; syncUI.view='active'; renderSync(); }
+  try{ syncPass=k1; await pushToVault(k1); syncActive=true; state.syncOptIn=true; save(); syncPassRemember(k1); syncPollStart(); syncNote='Vault created and live.'; syncUI.view='active'; renderSync(); }
   catch(e){ syncPass=null; syncActive=false; syncUI.err=syncPlainErr(e); renderSync(); }
 }
 async function joinVault(){
@@ -12188,7 +12213,7 @@ async function joinVault(){
     await sbSignIn(email,pw);
     const ok=await pullFromVault(key);
     if(!ok){ syncUI.err='Signed in, but that account has no vault yet. Have your partner set it up first.'; renderSync(); return; }
-    syncPass=key; syncActive=true; state.syncOptIn=true; save(); syncPollStart(); syncNote='Vault unlocked and synced.'; syncUI.view='active'; renderSync();
+    syncPass=key; syncActive=true; state.syncOptIn=true; save(); syncPassRemember(key); syncPollStart(); syncNote='Vault unlocked and synced.'; syncUI.view='active'; renderSync();
   }catch(e){ try{ await sbSignOut(); }catch(_){} syncUI.err=syncPlainErr(e); renderSync(); }
 }
 /* on open: if a Supabase session already exists but the memory-only passphrase is gone, ask to unlock */
@@ -12207,7 +12232,24 @@ async function refreshSyncState(){
   if(!state.syncOptIn){ syncUI.view='menu'; renderSync(); return; }
   syncUI.view='loading'; renderSync();
   const sess=await sbSession();
-  syncUI.view = sess ? 'unlock' : 'menu';
+  if(!sess){ syncUI.view='menu'; renderSync(); return; }
+  /* A remembered passphrase is a claim, not a fact - the vault may have been
+     re-keyed, or this may be a stale string from a different account. It is
+     used by actually opening the vault with it; anything else and it is thrown
+     away rather than left to fail quietly later. */
+  const saved=syncPassRecall();
+  if(saved){
+    try{
+      const okPull=await pullFromVault(saved);
+      if(okPull!==false){ syncPass=saved; syncActive=true; syncPollStart();
+        syncNote='Picked up where you left off.'; syncUI.view='active'; renderSync();
+        if(typeof renderBudget==='function') renderBudget();
+        if(typeof renderTx==='function') renderTx();
+        return; }
+    }catch(_){ }
+    syncPassRemember('');
+  }
+  syncUI.view='unlock';
   renderSync();
 }
 
@@ -20047,6 +20089,36 @@ function setOpening(M,v){
    mean overspent - nothing has necessarily been spent at all. It means: you have
    given jobs to more dollars than you have logged arriving. Say that plainly,
    with the actual arithmetic, wherever the number appears. */
+/* ---------- a vault that is locked is a vault that is doing nothing ----------
+   Reported after a real two-phone test: a category added on one phone never
+   reached the other. It was not the merge. The Sync Passphrase lives in memory
+   only - a deliberate choice, so a stolen device holds no key - and that means
+   every page load starts with syncPass null and syncActive false. Which means
+   syncPollStart() is never called, so nothing is received; and
+   scheduleVaultPush() returns on its first line, so nothing is SENT either.
+
+   A phone discards a tab constantly, so that is the normal state, not the rare
+   one. Both phones sat there diverging, each believing it was synced, and the
+   only thing on screen that knew better was an unlock box inside a panel on
+   another tab. Silence again, in the one place it costs the most: a person
+   reading a budget that has quietly stopped being the shared one.
+
+   This says it where the budget is, not where the setting is. */
+function syncLockedHTML(){
+  if(!state.syncOptIn || !state.householdOn) return '';
+  if(syncActive && syncPass) return '';
+  return `<div class="sync-lock"><span class="sl-t"><b>This budget is not syncing.</b> Household Sync is set up on this device but locked - the passphrase is asked for again every time the app reopens, on purpose, because it is the key that no server holds. Until it is entered, nothing you change here reaches ${escapeHtml(state.meIs==='b'?(state.nameA||'your partner'):(state.nameB||'your partner'))}, and nothing of theirs reaches you.</span><button class="btn sm primary" data-syncunlockgo="1">Unlock sync</button></div>`;
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('[data-syncunlockgo]')) return;
+  activateTab('goals');
+  setTimeout(()=>{
+    const p=document.getElementById('syncPanel');
+    if(p){ let n=p; while(n){ if(n.tagName==='DETAILS') n.open=true; n=n.parentElement; }
+      p.scrollIntoView({behavior:'smooth',block:'center'}); }
+    const i=document.getElementById('syncPassIn'); if(i) setTimeout(()=>{ try{ i.focus(); }catch(_){ } },320);
+  },220);
+});
 function ltbNoteHTML(income,assigned,ltb,M){
   M=M||state.activeMonth;
   const opening=openingFor(M), earned=monthIncome(M);
