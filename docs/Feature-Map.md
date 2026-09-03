@@ -1128,3 +1128,31 @@ Hide the wrong paragraph and an empty state stops saying it is empty, an error s
 The marks and the buttons live in the DOM, so any render that rebuilds a panel's `innerHTML` throws them away and the prose returns - on the panel the reader just touched, which is the worst possible moment for the screen to fill up again. Rather than patch every render (there are dozens, and the next one written would forget), a debounced `MutationObserver` watches the view that is on screen and re-runs the pass. It ignores its own footprints, so it settles instead of chasing its tail.
 
 One measurement lesson worth keeping: the first pixel counts said 2,581px of prose survived Clean, and most of that was already behind a closed accordion. A closed `<details>` still gets a real box and a real `offsetParent` in Chromium - laid out, simply not painted - so the probe was counting text nobody could see. The same trap `clampPass` had already been bitten by, in the tool built to measure it.
+
+## Home answers two questions
+
+Reported with six screenshots of a single tab: *"All of these are still on one screen of the home, isn't this too intense for a user to look at within an app? That's just one screen, there is entirely too much text and should be replaced with a learn option to explore the unnecessary yet useful information - can it just be hidden until revealed by the user via a separate card?"*
+
+Clean mode had already shortened the paragraphs on Home, and it barely helped, because paragraph length was never the problem. **Home carried fifteen top-level sections.** Three of them answered a question somebody opens a budgeting app to ask. The rest were true, useful, and in the way.
+
+So Home now answers exactly two questions - **where do I stand**, and **what do I do next** - and anything on it has to earn a place under one of them.
+
+**Stays:** the hero, any data warning, the stage bar, **Do this next**, the money cards, the left-to-budget explainer with its two fix buttons, and **Cover First** (which is the next action whenever a wall is unfunded).
+
+**Moves** into one card, *More on your money* (`HOME_MORE`, `homeMoreMount`, `renderHomeMore`, `homeMoreSync`): your true hourly wage, Household, Your evolution, Offense vs. Defense, the "Enough" anchor, why you're here, and your money story. One row each, all shut, one open at a time.
+
+Home goes from **3,105px to 1,831px** on the same data - five screens to two - with nothing removed from the app.
+
+Three details that matter more than they look:
+
+- **The panels are moved, not rebuilt.** They keep their ids, their renderers and their handlers, so no other part of the app has to know this happened. `homeMoreMount` relocates the live nodes once at boot.
+- **A panel with nothing to say loses its row.** `renderHomeMore` runs last, after every other renderer, and reads whether each panel actually produced anything this month. An empty panel used to sit on the screen saying nothing; now it does not even get a name in the list. If the open one goes quiet, it closes rather than leaving a highlighted row over nothing.
+- **Toggling never rebuilds the row list.** The first cut re-rendered the chips on every tap, which destroys and recreates the button being pressed: a pointer does not care, but a keyboard loses its place on every open, and the row you just activated stops existing underneath you. Opening and closing only toggles classes now.
+
+### Two bugs this shook out
+
+**A recessed surface used as a text colour.** The new rows rendered as washed-out grey that read as *disabled*. The token declaration says why, in a comment written long before this: `--ink` is *"a recessed surface, NOT the text colour: this token is only ever a background"*. It was being used for the row labels and for the body of the explanation sheet. Both are text; both are `--text` now, and a `contrast` probe measures the rendered ratio in both themes (13.05 and 13.71 for the rows, 14.11 and 12.38 for the sheet) so it cannot come back by eye.
+
+**A page-level handle painted over every modal.** The quick-glance drawer's `☰` is `position:fixed` at the left edge, floating over left-aligned text - which is how *"See the ladder"* came to read *"e the ladder"* in a screenshot. It sits on the right now, in the ragged ends of lines. Moving it exposed something worse that had been latent: at `z-index:120` it outranked the modal scrim (60) **and the full-screen intake (70)**, so it had always been drawn on top of them; at the left edge it happened to land on empty space, and on the right it landed squarely on every sheet's close button. It is `z-index:56` now - above the page, below anything modal.
+
+The check that caught it is worth keeping in mind: it asked whether the handle's box overlapped any element's box, and a centred heading fills the width of its box while its glyphs sit in the middle. `Do this next` reported as a collision no eye would ever see. Both the suite and the probe measure **text rectangles** via `Range.getClientRects()` now, which is the thing actually being asked about.

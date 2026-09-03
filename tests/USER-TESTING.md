@@ -198,3 +198,31 @@ back and go away again, with nothing left behind and no duplicate **?** anywhere
 
 The one screen deliberately left alone is **Learn**: on that tab the reading is
 the point, so the lesson text stays where it is.
+
+### Home: is the right stuff still on it?
+
+Home should now be about two phone screens instead of five. Settings shows
+`2026-09-03 · Home cut down`.
+
+What should still be **on** Home, without tapping anything: the hero, **Do this
+next**, your money cards, the note explaining a negative "left to budget" with
+its two buttons, and **Cover First**.
+
+Everything else is in one card at the bottom, **More on your money**, with a row
+for each: your true hourly wage, Household, Your evolution, Offense vs. Defense,
+the "Enough" anchor, why you're here, your money story.
+
+1. **Scroll Home top to bottom.** It should end at that card. If a panel you use
+   constantly is now behind a row, say which - that is a judgement call and
+   yours to make, not mine.
+2. **Tap a row.** That panel opens underneath, fully working - type in it, press
+   its buttons. Tapping another row swaps to it; tapping the open one shuts it.
+3. **Check the rows are readable**, not washed-out grey. They were, briefly.
+4. **Rows only exist when there is something behind them.** Turn Household off in
+   Settings and its row should disappear from Home entirely, not open onto an
+   empty panel.
+
+Also worth a look, since it moved: the **☰** quick-glance handle is now on the
+**right** edge instead of the left, where it was sitting on top of the first
+letters of lines. Open a few sheets and confirm it is not covering any close
+button, and that it disappears behind the dark backdrop while a sheet is open.

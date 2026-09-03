@@ -8857,6 +8857,107 @@ check('...without being told to clip paragraphs in place, which is Brief\'s job'
       shortNotBrief.cleanBrief===false);
 check('...and Full is the only one that asks for everything', shortNotBrief.fullShort===false);
 
+/* ---- 105. Home answers two questions ----
+   "All of these are still on one screen of the home... entirely too much text
+   and should be replaced with a learn option to explore the unnecessary yet
+   useful information - can it just be hidden until revealed by the user via a
+   separate card?" Fifteen sections lived on Home and three of them answered a
+   question anybody opens a budgeting app to ask. */
+await p.evaluate(()=>{ state.sayMode='clean'; state.householdOn=true; state.hourlyWage=70;
+  state.intake=Object.assign({},state.intake,{why:'I want to feel like I am working for something'});
+  save(); });
+const homeCut = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('home'); await w(700);
+  const v=document.getElementById('view-home');
+  const shown=id=>{ const el=document.getElementById(id); if(!el) return false;
+    const st=getComputedStyle(el); return st.display!=='none' && el.getBoundingClientRect().height>4; };
+  const o={ px:Math.round(v.scrollHeight),
+    core:['nextSteps','homeSnap','wallsGrid'].every(shown),
+    moved:HOME_MORE.filter(m=>{ const el=document.getElementById(m.id); return el&&el.closest('#homeMore'); }).length,
+    openAtRest:HOME_MORE.filter(m=>shown(m.id)).length,
+    rows:document.querySelectorAll('#hmChips .hm-chip').length };
+  const c=document.querySelector('#hmChips .hm-chip'); const id=c?c.dataset.hm:null;
+  if(c){ c.click(); await w(300);
+    o.opened=shown(id);
+    o.onlyOne=HOME_MORE.filter(m=>shown(m.id)).length===1;
+    /* the row must survive its own click - rebuilding the list would drop focus */
+    o.rowSurvives=document.body.contains(c) && c.classList.contains('on');
+    c.click(); await w(250); o.shutsAgain=!shown(id); }
+  return o;
+});
+check('Home fits in about two phone screens, not five', homeCut.px<2400, homeCut.px+'px');
+check('...still showing what you have to act on', homeCut.core===true);
+check('...with the other seven panels moved into one card', homeCut.moved===7, String(homeCut.moved));
+check('...and none of them open until somebody asks', homeCut.openAtRest===0, String(homeCut.openAtRest));
+check('...each one named in a row you can tap', homeCut.rows>=4, String(homeCut.rows));
+check('tapping a row opens exactly that panel', homeCut.opened===true && homeCut.onlyOne===true, JSON.stringify(homeCut));
+check('...without destroying the row you just pressed', homeCut.rowSurvives===true);
+check('...and tapping it again shuts it', homeCut.shutsAgain===true);
+
+/* the fixed handle that was sitting on top of the words */
+const handle = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const g=document.getElementById('glance'); if(g) g.style.display='';
+  await w(200);
+  const tr=document.getElementById('glanceTab').getBoundingClientRect();
+  const over=[];
+      const textHits=(el,tr)=>{
+        for(const n of el.childNodes){
+          if(n.nodeType!==3 || !n.textContent.trim()) continue;
+          const rg=document.createRange(); rg.selectNodeContents(n);
+          for(const r2 of rg.getClientRects()){
+            if(r2.width<1||r2.height<1) continue;
+            if(r2.left<tr.right && r2.right>tr.left && r2.top<tr.bottom && r2.bottom>tr.top) return true;
+          }
+        }
+        return false;
+      };
+  for(const t of ['home','budget','goals','debt']){
+    activateTab(t); await w(400);
+    document.querySelectorAll('.view.on h2,.view.on h3,.view.on p,.view.on button,.view.on b').forEach(el=>{
+      const st=getComputedStyle(el); if(st.display==='none'||st.visibility==='hidden') return;
+      const r2=el.getBoundingClientRect();
+      if(r2.height<4||r2.width<4||!(el.innerText||'').trim()) return;
+      if(textHits(el,tr)) over.push(t+': '+(el.innerText||'').trim().slice(0,30));
+    });
+  }
+  return {side: tr.left>innerWidth/2?'right':'left', over};
+});
+/* Spending mode keeps some of these panels and drops others. The first cut put
+   hide-in-spending on the CARD, which took Household - which spending mode is
+   meant to keep - down with everything else. And the guard meant to prevent that
+   read the flag off document.body, where it never lives, so it was a no-op that
+   looked like a fix. */
+const spendRows = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const was=state.spendingMode;
+  state.spendingMode=true; state.householdOn=true; save();
+  if(typeof applySpending==='function') applySpending();
+  renderAll(); activateTab('home'); await w(600);
+  const has=id=>!!document.querySelector('#hmChips .hm-chip[data-hm="'+id+'"]');
+  const o={ flagSeen:!!document.querySelector('#view-home.spending-mode'),
+            household:has('householdBox'), evolution:has('retroBox') };
+  const c=document.querySelector('#hmChips .hm-chip[data-hm="householdBox"]');
+  if(c){ c.click(); await w(260);
+    /* visible for real - the card carrying hide-in-spending made the panel
+       display:none through an ancestor while its own style said block */
+    const hb=document.getElementById('householdBox');
+    o.opens = hb.offsetParent!==null && hb.getBoundingClientRect().height>20; }
+  state.spendingMode=was; save();
+  if(typeof applySpending==='function') applySpending();
+  renderAll(); await w(300);
+  return o;
+});
+check('spending mode is read off the element that actually carries it', spendRows.flagSeen===true);
+check('...so Household keeps its row there, as spending mode intends', spendRows.household===true);
+check('...and it really opens, rather than opening onto nothing', spendRows.opens===true);
+check('...while a panel spending mode hides gets no row at all', spendRows.evolution===false);
+
+check('the quick-glance handle is on the ragged end of lines, not their start',
+      handle.side==='right', handle.side);
+check('...so it is not sitting on top of any words', handle.over.length===0, handle.over.slice(0,2).join(' | '));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
