@@ -173,7 +173,7 @@ check('a partly-covered event is not described as nothing set aside',
         new surface added to renderAll alone never appeared until something else
         forced a repaint. ---- */
 const panel = await p.evaluate(()=>{
-  activateTab('impulse');
+  activateTab('impulse'); deckShow('impulse',"What you've told me");
   const el=document.getElementById('lessonsPanel');
   return { shown:getComputedStyle(el).display!=='none',
            text:document.getElementById('lessonsBody').innerText,

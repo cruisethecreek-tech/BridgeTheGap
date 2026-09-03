@@ -1116,22 +1116,29 @@
   /* Standing on its own where a tab's opening paragraph used to be. */
   .say-why.say-solo{margin:0 0 14px;width:22px;height:22px;flex-basis:22px;font-size:12px}
 
-  /* ---------- Home's "more" drawer ---------- */
-  .homemore{margin-top:26px;padding:18px 16px 16px;border:1px solid var(--line);
+  /* ---------- the deck: one collapse pattern, every tab ---------- */
+  .deck{margin-top:26px;padding:18px 16px 16px;border:1px solid var(--line);
     border-radius:16px;background:var(--card)}
-  .hm-head{font-weight:900;font-size:16px;letter-spacing:-.01em;margin-bottom:4px}
-  .homemore .hm-sub{color:var(--muted);font-size:12.5px;line-height:1.5;margin:0 0 12px}
-  .hm-chips{display:flex;flex-wrap:wrap;gap:8px}
-  .hm-chip{font:inherit;font-size:13px;font-weight:700;padding:9px 13px;border-radius:999px;
+  .dk-head{font-weight:900;font-size:16px;letter-spacing:-.01em;margin-bottom:4px}
+  .deck .dk-sub{color:var(--muted);font-size:12.5px;line-height:1.5;margin:0 0 12px}
+  .dk-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .dk-chip{font:inherit;font-size:13px;font-weight:700;padding:9px 13px;border-radius:999px;
     border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer;
     transition:border-color .15s,color .15s,background .15s}
-  .hm-chip:hover,.hm-chip:focus-visible{border-color:var(--accent);color:var(--accent)}
-  .hm-chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-  .hm-chip.on::after{content:' ▴';font-size:9px}
-  .hm-chip:not(.on)::after{content:' ▾';font-size:9px;opacity:.5}
+  .dk-chip:hover,.dk-chip:focus-visible{border-color:var(--accent);color:var(--accent)}
+  .dk-chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .dk-chip.on::after{content:' ▴';font-size:9px}
+  .dk-chip:not(.on)::after{content:' ▾';font-size:9px;opacity:.5}
   /* Shut is the default and the point. Only the one that was asked for opens. */
-  .hm-panel{display:none}
-  .hm-panel.hm-on{display:block;margin-top:14px}
+  .dk-panel{display:none}
+  /* Full width, not the card's inner width. Nesting a panel inside the deck's
+     padding made everything in it 32px narrower than it was designed for, which
+     at 320px squeezed the calendar's day cells below a thumb. */
+  .dk-panel.dk-on{display:block;margin:14px -16px 0;padding-left:0;padding-right:0}
+  /* A section that used to be its own <details> is opened by its pill now, so
+     its summary would be a second control for the same thing. */
+  .dk-panel.dk-was-details>summary{display:none}
+  .dk-panel.dk-was-details{border:1px solid var(--line);border-radius:14px;padding:2px 0}
   .panel{position:relative}
   #sayBody .say-para{color:var(--text);font-size:14px;line-height:1.6;margin:0 0 15px}
   #sayBody .say-para:last-child{margin-bottom:0}
@@ -3032,19 +3039,19 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
 
       <div id="dataGuard"></div>
-      <div id="whyCard"></div>
-      <div id="trueRateCard"></div>
-      <div id="moneyStoryCard"></div>
+      <div id="whyCard" data-deck="Why you are here"></div>
+      <div id="trueRateCard" data-deck="Your true hourly wage"></div>
+      <div id="moneyStoryCard" data-deck="Your money story"></div>
       <div id="spendingBox" class="show-in-spending"></div>
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
       <div id="nextSteps" class="hide-in-spending"></div>
       <div class="snapshot hide-in-spending" id="homeSnap"></div>
       <div id="lifeKeyHome" class="hide-in-spending"></div>
-      <div id="householdBox"></div>
-      <div id="retroBox" class="hide-in-spending"></div>
-      <div id="offenseCard" data-stage="2"></div>
-      <div id="enoughCard" data-stage="2"></div>
+      <div id="householdBox" data-deck="Household"></div>
+      <div id="retroBox" class="hide-in-spending" data-deck="Your evolution"></div>
+      <div id="offenseCard" data-stage="2" data-deck="Offense vs. Defense"></div>
+      <div id="enoughCard" data-stage="2" data-deck="The &quot;Enough&quot; anchor"></div>
 
       <div class="walls-head hide-in-spending">
         <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
@@ -3053,15 +3060,6 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
       <div class="walls hide-in-spending" id="wallsGrid"></div>
       <div class="hide-in-spending" style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
-      <!-- Everything that is not "where do I stand" or "what do I do next" gets
-           relocated in here at boot by homeMoreMount(). Empty in the markup on
-           purpose: the panels keep their own ids and their own renderers, they
-           just stop being on the screen until somebody asks for one. -->
-      <div class="homemore" id="homeMore" hidden>
-        <div class="hm-head">More on your money</div>
-        <p class="hm-sub" data-keep="1">Everything else this app works out about you. Nothing is gone - open the one you want.</p>
-        <div class="hm-chips" id="hmChips"></div>
-      </div>
     </section>
 
     <!-- ============ BUDGET ============ -->
@@ -3101,7 +3099,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="cats"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Recurring">
         <h2>Recurring</h2>
         <p class="sub" data-say="1">Set your paycheck and fixed bills once. They post automatically each month, and the entries they create appear on Track like anything else you log. This lives on Plan because deciding what repeats is a plan, not a record.</p>
         <div class="row">
@@ -3151,7 +3149,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            rule's id and that date, which is the same test postRecurring already
            uses to avoid posting twice. So the box is a VIEW of the tracker
            rather than a second record of it, and the two can never disagree. -->
-      <div class="panel" id="calPanel">
+      <div class="panel" id="calPanel" data-deck="The month, laid out">
         <h2>The month, laid out</h2>
         <p class="sub" data-say="1">Every repeat you have set, on the day it actually falls. Tick one when it lands in your account and it is logged on Track; untick it and the entry comes back off. Nothing here changes the rule - it only says what has really happened yet.</p>
         <label class="cal-mode"><input type="checkbox" id="calConfirm"><span><b>Wait for me to tick it.</b> Off, repeats post themselves on the day, the way they always have. On, nothing lands until you say it did - which is the difference between a plan and a record, and the only way the app can show you a paycheck that never arrived.</span></label>
@@ -3160,7 +3158,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="calList"></div>
       </div>
 
-      <div class="panel" id="subSweepPanel">
+      <div class="panel" id="subSweepPanel" data-deck="Membership sweep">
         <h2>Membership sweep</h2>
         <p class="sub" data-say="1">The quiet ones. Small, monthly, automatic - which is exactly why they never get questioned. Tap what you actually pay for, put the real monthly cost in, and see what a year of it costs. Nothing here judges you; a membership you use and love is money well spent. The point is knowing which ones those are.</p>
         <div id="subSweep"></div>
@@ -3269,7 +3267,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            ledger unless it is pushed through the quick log by hand afterwards,
            which is a button and not a default - OCR output and typed-in truth
            must never be added together and printed as one number. -->
-      <div class="panel" id="scanPanel">
+      <div class="panel" id="scanPanel" data-deck="Read a statement">
         <h2>Read a statement</h2>
         <p class="sub" data-say="1">Hold up your bank statement - on screen or on paper - and take a shot of each page. Everything is read <b>on this device</b>: no upload, no account linking, nothing leaves the browser. You get back where the money actually went, and nothing lands in your ledger unless you send it there yourself.</p>
         <div class="scan-take">
@@ -3284,7 +3282,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="scanOut"></div>
       </div>
 
-      <div class="panel" id="gate-csv">
+      <div class="panel" id="gate-csv" data-deck="Import a bank CSV">
         <h2>Import from a bank CSV</h2>
         <p class="sub" data-say="1">Drop in a statement export and skip the manual typing. It is parsed entirely on your device - nothing is uploaded, nothing leaves the browser.</p>
         <div class="import-drop" id="importDrop">
@@ -3295,7 +3293,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="importReview"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Your week in hours">
         <h2>Your week in hours</h2>
         <p class="sub" data-say="1">Money isn't the only thing you invest. Everyone gets the same 168 hours a week - some you sell to work, some you invest in yourself (health, learning, building, people), and some just leak into the screen. Where the hours go decides what the dollars can do next year.</p>
         <div id="timeRows"></div>
@@ -3358,25 +3356,25 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
 
-      <div class="panel" id="tripwirePanel">
+      <div class="panel" id="tripwirePanel" data-deck="Tripwires">
         <h2>Tripwires</h2>
         <p class="sub" data-say="1">A nudge at the door of the shop. Pick the apps that usually get you, and your phone's own automation opens this gut-check the moment you open one - with the shop already named. Never a block. You still decide; you just decide on purpose.</p>
         <div id="tripwireBody"></div>
       </div>
 
-      <div class="panel" id="vaultPanel">
+      <div class="panel" id="vaultPanel" data-deck="24-hour cooling vault">
         <h2>24-Hour Cooling Vault</h2>
         <p class="sub" data-say="1">Not sure? Lock the target in for 24 hours. The urge fades, the trap dies, and the ransom option only unlocks once the timer runs out. Most traps don't survive the wait.</p>
         <div id="vaultList"></div>
       </div>
 
-      <div class="panel" id="lessonsPanel" style="display:none">
+      <div class="panel" id="lessonsPanel" style="display:none" data-deck="What you've told me">
         <h2>What you've told me</h2>
         <p class="sub" data-say="1">The times money left because something <b>happened</b> - not because you were tempted. Kept so the pattern can be seen, and so nothing here gets mistaken for a trap again.</p>
         <div id="lessonsBody"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="War chest & scoreboard">
         <h2>War Chest &amp; Freedom Scoreboard</h2>
         <p class="sub" data-say="1">Every trap you neutralize is money - and hours of your life - that stayed yours. This is the proof.</p>
         <div id="impCelebrate"></div>
@@ -3440,7 +3438,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub" style="margin-top:8px" id="debtStratNote" data-say="1"></p>
         <div id="debtResults"></div>
       </div>
-      <div class="panel" id="investPanel">
+      <div class="panel" id="investPanel" data-deck="Invest instead?">
         <h2>Plot twist: invest instead?</h2>
         <p class="sub" data-say="1">Paying off debt earns a <b>guaranteed</b> return equal to its rate. Investing might earn more - but it's not guaranteed. Here's the honest comparison of aiming that same money at the market instead.</p>
         <div class="row">
@@ -3482,7 +3480,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            warning unreachable, since stage 2 already requires three. A warning
            that can never fire is not a warning. Anyone can open this; what they
            find is arithmetic that says out loud when the numbers do not work. -->
-      <div class="panel" id="levPanel">
+      <div class="panel" id="levPanel" data-deck="Borrowing to build">
         <h2>Borrowing to build</h2>
         <p class="sub" data-say="1">A rate you pay against a return you hope for. The interest is a contract; the return is a guess - and this only ever does the arithmetic on both. It will not tell you whether to do it, because it cannot know, and anything that claims otherwise is selling you something.</p>
         <!-- "How would my 13 year old understand this?" Fair, and the honest
@@ -3556,7 +3554,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            question people actually have is not "how long to pay this off" or
            "how long to save for this", it is which of the two their next
            hundred dollars should go to. -->
-      <div class="panel" id="savePanel">
+      <div class="panel" id="savePanel" data-deck="The other direction">
         <h2>The other direction</h2>
         <p class="sub" data-say="1">A trip, a fence, a cushion. None of it is debt - you have not spent anything yet - so nothing here charges you interest. What it costs is time, and this says how much of it, against the same money the plan above wants for your debts.</p>
         <div class="row">
@@ -3571,7 +3569,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="saveResults"></div>
       </div>
 
-      <div class="panel" id="roomPanel">
+      <div class="panel" id="roomPanel" data-deck="Borrow it or wait?">
         <h2>Borrow it or wait for it</h2>
         <p class="sub" data-say="1">Unused room on a card or a line is the only debt that can fund something tomorrow. This puts it next to what you are actually saving for and prices the same monthly amount both ways - borrowed now, or set aside until it is paid for. It will not tell you which to do. It will tell you exactly what the hurry costs.</p>
         <div class="row">
@@ -3586,9 +3584,9 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
     <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
     <section class="view" id="view-goals">
-      <p class="build-intro" data-say="1">Your wealth layer. Net worth is open below; tap any section to expand it.</p>
+      <p class="build-intro" data-say="1">Your wealth layer: what you own, what you owe, and what you are building towards. Each part opens on its own so you are never reading all of it at once.</p>
 
-      <details class="panel acc" open>
+      <details data-deck="Accounts" class="panel acc" open>
         <summary><span class="acc-hd">Accounts<span class="acc-sub">What you have and what you owe, in your words</span></span></summary>
         <div class="acc-body">
           <p class="sub" data-say="1">Everything else here is built from what you've logged. This is the one place you just state the truth: what is really in each account today, and <b>what is really on each card</b>. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
@@ -3615,7 +3613,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </details>
 
-      <details class="panel acc" data-stage="2" open>
+      <details data-deck="Assets vs. Liabilities" class="panel acc" data-stage="2" open>
         <summary><span class="acc-hd">Assets vs. Liabilities<span class="acc-sub">What you own, honestly - and your net worth</span></span></summary>
         <div class="acc-body">
           <p class="sub" data-say="1"><b style="color:var(--text)">The real definition:</b> an asset puts money IN your pocket. A liability takes money OUT. Not what you were sold - what's actually true. Net worth counts everything you'd walk away with, but only money-making assets are buying your freedom.</p>
@@ -3645,7 +3643,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </details>
 
-      <details class="panel acc" data-stage="2">
+      <details data-deck="Dreams & goals" class="panel acc" data-stage="2">
         <summary><span class="acc-hd">Dreams &amp; goals<span class="acc-sub">Name what you're chasing and watch it get closer</span></span></summary>
         <div class="acc-body">
           <p class="sub" data-say="1">A budget with no dream behind it is just a spreadsheet. Name the thing. Put a number on it. Watch it get closer.</p>
@@ -3668,7 +3666,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </details>
 
-      <details class="panel acc" data-stage="2">
+      <details data-deck="Skill & Capacity Investments" class="panel acc" data-stage="2">
         <summary><span class="acc-hd">Skill &amp; Capacity Investments<span class="acc-sub">Spending that raises your earning ceiling</span></span></summary>
         <div class="acc-body">
           <p class="sub" data-say="1">Courses, certs, tools, events - the spending that raises your <b style="color:var(--text)">earning ceiling</b>. Log the cost and the extra you'd earn per hour, and I'll show the payback. This is offense, not consumption.</p>
@@ -3688,7 +3686,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </details>
 
-      <details class="panel acc" data-stage="2">
+      <details data-deck="Giving & Circulation" class="panel acc" data-stage="2">
         <summary><span class="acc-hd">Giving &amp; Circulation<span class="acc-sub">Money moves on purpose, not by leftover</span></span></summary>
         <div class="acc-body">
           <p class="sub" data-say="1">Money is energy. Hoarding stalls it; giving keeps it moving. Set a target, give on purpose, and watch it circulate. This isn't leftover money - it's a discipline of abundance.</p>
@@ -3707,7 +3705,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </details>
 
-      <details class="panel acc" data-stage="3">
+      <details data-deck="Network Capital" class="panel acc" data-stage="3">
         <summary><span class="acc-hd">Network Capital<span class="acc-sub">The return on who you invest in</span></span></summary>
         <div class="acc-body">
           <p class="sub" data-say="1">The highest-yield asset is often a relationship. Track what you invest in people - a mentor lunch, a conference ticket, a strategic dinner - and rate the <b style="color:var(--text)">Return on Relationship</b> so you can tell social investment from social noise.</p>
@@ -3728,7 +3726,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </details>
 
-      <details class="panel acc" data-stage="3">
+      <details data-deck="Silent Sovereignty Audit" class="panel acc" data-stage="3">
         <summary><span class="acc-hd">Silent Sovereignty Audit<span class="acc-sub">Real wealth is quiet - are you building it?</span></span></summary>
         <div class="acc-body">
           <p class="sub" data-say="1">Fake wealth looks rich and quietly drains you. Real wealth is silent and pays you. Here's which one you're actually building.</p>
@@ -3802,12 +3800,12 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            which holds no money story at all. The answers it is talking about
            were given during setup and have sat in state ever since, read by the
            tone engine and shown to nobody. -->
-      <div class="panel" id="storyPanel">
+      <div class="panel" id="storyPanel" data-deck="Your money story">
         <h2>Your money story</h2>
         <p class="sub" data-say="1">The part of this that is not arithmetic. What you said at the start is here, in your words, and the questions under it are the ones worth coming back to - not once, but whenever the answer changes.</p>
         <div id="storyBody"></div>
       </div>
-      <div class="panel">
+      <div class="panel" data-deck="Your story so far">
         <h2>Your story so far</h2>
         <div id="diaryList"></div>
       </div>
@@ -3815,7 +3813,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
     <!-- ============ SETTINGS ============ -->
     <section class="view" id="view-settings">
-      <div class="panel">
+      <div class="panel" data-deck="Your true hourly wage">
         <h2>Your True Hourly Wage</h2>
         <p class="sub" data-say="1">This one number powers everything: hours-of-life on every purchase, Freedom Mode, and your runway. Set it once.</p>
         <div class="row" style="margin-bottom:14px">
@@ -3837,7 +3835,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </details>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Free comfort list">
         <h2>Free comfort list</h2>
         <p class="sub" data-say="1">A lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button. Write down what actually helps you when money isn't the answer. Do it now, while you're calm; the app shows the list back to you inside every gut-check, exactly when the urge is loudest.</p>
         <div class="row" style="margin-top:12px">
@@ -3847,7 +3845,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="comfortList" style="margin-top:12px"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Just my spending">
         <h2>Just my spending</h2>
         <p class="sub" data-say="1">Not the one who pays the bills? Turn this on to drop the Four Walls and zero-based budgeting entirely. The home screen becomes your spending, your streak, and the gut-check - built for tracking your own purchases (Amazon, coffee, the random stuff), not running the household.</p>
         <label class="hh-toggle"><input type="checkbox" id="spendOn"> Focus on just my spending</label>
@@ -3861,7 +3859,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Household">
         <h2>Household (couples)</h2>
         <p class="sub" data-say="1">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials.</p>
         <label class="hh-toggle"><input type="checkbox" id="hhOn"> We share this budget as a couple</label>
@@ -3876,7 +3874,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Weekly gut-check">
         <h2>Weekly Gut-Check</h2>
         <p class="sub" data-say="1">One blunt money prompt a week. Clarity straight to your inbox - nothing else.</p>
         <form id="subForm" class="subform" novalidate>
@@ -3891,13 +3889,13 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub offerfine" id="offerFine" style="display:none" data-say="1">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Which areas you want">
         <h2>Which areas you want</h2>
         <p class="sub" data-say="1">Turn off anything you do not use and it leaves the menu entirely. Nothing is deleted - whatever you have entered stays exactly where it is and comes straight back if you switch the area on again. Home, Plan, Track and Settings stay put, because an app without them has nothing to do.</p>
         <div id="areaToggles"></div>
       </div>
 
-      <div class="panel" id="supportPanel" style="display:none">
+      <div class="panel" id="supportPanel" style="display:none" data-deck="What this costs">
         <h2>What this costs</h2>
         <p class="sub" data-say="1">Nothing, and there is no locked version. No ads, no subscription, no affiliate links pointing you at where to put your money - that would make this the exact thing it was built to fight. It does not see your numbers, so it could not sell them if it wanted to.</p>
         <p class="sub" id="supportEarned" data-say="1"></p>
@@ -3907,7 +3905,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="sub offerfine" data-say="1">One payment, no account, nothing unlocks - you would be paying for the thing you already have. Entirely optional, and the app never asks twice.</p>
       </div>
 
-      <div class="panel">
+      <div class="panel" data-deck="Setup &amp; data">
         <h2>Setup &amp; data</h2>
         <p class="sub" data-say="1">Everything lives on this device. Nothing leaves it unless you turn on sync - and sync is encrypted before it goes.</p>
         <div class="row">
@@ -3983,7 +3981,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <!-- Two rounds of "is that even the build you are looking at?" went by
            with no way to answer it, on either side. A version somebody can read
            off their own phone turns a guess into a fact. -->
-      <div class="panel">
+      <div class="panel" data-deck="Which version is this">
         <h2>Which version is this</h2>
         <p class="sub" data-say="1">If something has been fixed and your phone still does the old thing, this is how you tell whether the fix has actually reached you. Read it out when you report something.</p>
         <div class="buildline" id="buildLine"></div>
@@ -7285,74 +7283,132 @@ function sayShort(){ return state.sayMode!=='full'; }
    The panels are not rewritten or duplicated. They are MOVED, keeping their own
    ids, their own renderers and their own handlers, so nothing else in the app
    has to know this happened. */
-const HOME_MORE=[
-  {id:'trueRateCard',   label:'Your true hourly wage'},
-  {id:'householdBox',   label:'Household'},
-  {id:'retroBox',       label:'Your evolution'},
-  {id:'offenseCard',    label:'Offense vs. Defense'},
-  {id:'enoughCard',     label:'The "Enough" anchor'},
-  {id:'whyCard',        label:'Why you are here'},
-  {id:'moneyStoryCard', label:'Your money story'}
-];
-let homeMoreOpen=null;
-function homeMoreMount(){
-  const box=document.getElementById('homeMore'); if(!box || box.dataset.mounted==='1') return;
-  box.dataset.mounted='1';
-  HOME_MORE.forEach(m=>{ const el=document.getElementById(m.id);
-    if(el){ el.classList.add('hm-panel'); box.appendChild(el); } });
-}
-/* Which rows deserve to exist: a panel that rendered nothing this month does not
-   get a name in the list, because a row that opens onto nothing is worse than no
-   row at all. */
-function homeMoreLive(){
-  /* Spending mode hides some of these and only some. Putting hide-in-spending on
-     the card itself was the lazy version, and it took Household - which spending
-     mode is meant to keep - down with everything else. Each panel keeps its own
-     rule, and a row is offered only when the panel behind it would really show. */
-  /* The flag lives on the Home view, not on body - reading it off body was
-     always false, which quietly turned this whole guard into a no-op. */
+/* One pattern, every tab. The first cut of this shipped two: big full-width
+   accordion cards on Build and small pills on Home, for exactly the same idea.
+   Reported straight back - "shouldn't it be consistent throughout the entire
+   app, one shows small pills, the other emphasizes its own row for the pill;
+   whatever you choose just make it consistent."
+
+   The pill won because compactness is the entire point: seven accordion cards
+   are about 980px, the same seven as pills are about 150px.
+
+   Which panels collapse is declared in the markup - data-deck="Label" - not in a
+   table here, so a panel added later is one attribute away from behaving like
+   every other one, and there is no id plumbing to keep in sync. */
+const DECK_INTRO={
+  home:'Everything else this app works out about you. Nothing is gone - open the one you want.',
+  goals:'Net worth, what you own and owe, what you are chasing. One at a time.',
+  settings:'Every setting, one at a time.',
+  impulse:'Your tripwires, the cooling vault, and what you have told me.',
+  tx:'Other ways to get what already happened into the app.',
+  debt:'The other questions debt raises.',
+  budget:'Repeats, the calendar, and the membership sweep.',
+  diary:'The parts of this that are not arithmetic.'
+};
+const DECK_HEAD={home:'More on your money', settings:'Settings', goals:'Your wealth layer',
+  impulse:'The rest of the shield', tx:'More ways in', debt:'More on debt',
+  budget:'More on the month', diary:'More'};
+/* Which pill is open, per view - so leaving a tab and coming back does not
+   silently reopen something, and two tabs never fight over one variable. */
+const deckOpen={};
+function deckLabel(el){ return el.dataset.deck||''; }
+/* A pill only exists if the panel behind it would really show. An empty panel
+   used to sit on the screen saying nothing; now it does not even get a name. */
+function deckLive(view){
+  const host=document.getElementById('deck-'+view); if(!host) return [];
   const spend=!!document.querySelector('#view-home.spending-mode');
-  return HOME_MORE.filter(m=>{ const el=document.getElementById(m.id);
-    if(!el || el.hidden || (el.innerHTML||'').trim()==='' || el.classList.contains('stage-locked')) return false;
+  return [...host.querySelectorAll(':scope > [data-deck]')].filter(el=>{
+    if(el.hidden || el.classList.contains('stage-locked')) return false;
     if(spend && el.classList.contains('hide-in-spending')) return false;
     if(!spend && el.classList.contains('show-in-spending')) return false;
-    return true; });
+    const body=el.matches('details')?el.querySelector('.acc-body'):el;
+    return !body || (body.innerHTML||'').trim()!=='';
+  });
 }
-/* Opening and closing only ever toggles classes. The first cut rebuilt the row
-   list on every tap, which destroys and recreates the button being pressed - the
-   pointer does not care, but a keyboard loses its place on every open, and the
-   row you just activated stops existing underneath you. */
-function homeMoreSync(){
-  document.querySelectorAll('#hmChips .hm-chip').forEach(c=>{
-    const on=c.dataset.hm===homeMoreOpen;
+function deckMount(view){
+  const v=document.getElementById('view-'+view); if(!v) return null;
+  let host=document.getElementById('deck-'+view);
+  if(host) return host;
+  const panels=[...v.querySelectorAll('[data-deck]')];
+  if(!panels.length) return null;
+  host=document.createElement('div');
+  host.className='deck'; host.id='deck-'+view;
+  host.innerHTML=`<div class="dk-head">${escapeHtml(DECK_HEAD[view]||'More')}</div>`+
+    (DECK_INTRO[view]?`<p class="dk-sub" data-keep="1">${escapeHtml(DECK_INTRO[view])}</p>`:'')+
+    `<div class="dk-chips"></div>`;
+  v.appendChild(host);
+  panels.forEach(el=>{
+    el.classList.add('dk-panel');
+    /* Build's sections were <details> the reader had to open twice - once for
+       the pill and once for the disclosure. The pill IS the disclosure now, so
+       the summary is hidden and the element is forced open behind it. */
+    if(el.matches('details')){ el.open=true; el.classList.add('dk-was-details'); }
+    host.appendChild(el);
+  });
+  return host;
+}
+/* Open and close only ever toggle classes. Re-rendering the pill list on every
+   tap destroys and recreates the button being pressed: a pointer does not care,
+   but a keyboard loses its place every time. */
+function deckSync(view){
+  const host=document.getElementById('deck-'+view); if(!host) return;
+  const openId=deckOpen[view]||null;
+  host.querySelectorAll('.dk-chip').forEach(c=>{
+    const on=c.dataset.dk===openId;
     c.classList.toggle('on',on); c.setAttribute('aria-expanded',on?'true':'false');
   });
-  HOME_MORE.forEach(m=>{ const el=document.getElementById(m.id);
-    if(el) el.classList.toggle('hm-on', homeMoreOpen===m.id); });
+  host.querySelectorAll(':scope > [data-deck]').forEach(el=>
+    el.classList.toggle('dk-on', deckLabel(el)===openId));
 }
-function renderHomeMore(){
-  const box=document.getElementById('homeMore'), chips=document.getElementById('hmChips');
-  if(!box||!chips) return;
-  homeMoreMount();
-  const live=homeMoreLive();
-  box.hidden=live.length===0;
-  /* If a panel went quiet while it was the open one, close it rather than
-     leaving a row highlighted that no longer has anything behind it. */
-  if(homeMoreOpen && !live.some(m=>m.id===homeMoreOpen)) homeMoreOpen=null;
-  const want=live.map(m=>m.id).join(',');
+function deckPass(view){
+  if(!view) return;
+  const host=deckMount(view); if(!host) return;
+  const live=deckLive(view), chips=host.querySelector('.dk-chips');
+  host.hidden=live.length===0;
+  if(deckOpen[view] && !live.some(el=>deckLabel(el)===deckOpen[view])) deckOpen[view]=null;
+  const want=live.map(deckLabel).join('\u0001');
   if(chips.dataset.set!==want){
     chips.dataset.set=want;
-    chips.innerHTML=live.map(m=>`<button class="hm-chip" type="button" data-hm="${m.id}" aria-expanded="false">${escapeHtml(m.label)}</button>`).join('');
+    chips.innerHTML=live.map(el=>`<button class="dk-chip" type="button" data-dk="${escapeHtml(deckLabel(el))}" aria-expanded="false">${escapeHtml(deckLabel(el))}</button>`).join('');
   }
-  homeMoreSync();
+  deckSync(view);
 }
+/* ---------- anything that walks you somewhere must open the door ----------
+   Collapsing panels broke every deep link that ends in "scroll to this field
+   and put the cursor in it": Freedom Mode walking you to your hourly rate, the
+   payoff planner walking you to a debt, keyboard reorder moving a row. The
+   target was there and correct and inside a shut pill, so the page scrolled to
+   nothing and the focus went to something invisible.
+
+   There are 32 such call sites and the next one written would forget, so this
+   is done once, at the two methods every one of them ends up calling. */
+/* Open a named section from code - what a deep link, a test, or a future
+   "take me to X" shortcut needs. */
+function deckShow(view,label){ deckOpen[view]=label||null; deckSync(view); }
+function deckReveal(el){
+  const panel=(el&&el.closest)?el.closest('.dk-panel'):null;
+  if(!panel || panel.classList.contains('dk-on')) return;
+  const host=panel.closest('.deck'); if(!host) return;
+  const view=host.id.replace(/^deck-/,'');
+  deckOpen[view]=panel.dataset.deck||null;
+  deckSync(view);
+}
+(function(){
+  if(typeof Element==='undefined') return;
+  const si=Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView=function(){ try{ deckReveal(this); }catch(_){ } return si.apply(this,arguments); };
+  const fo=HTMLElement.prototype.focus;
+  HTMLElement.prototype.focus=function(){ try{ deckReveal(this); }catch(_){ } return fo.apply(this,arguments); };
+})();
 document.addEventListener('click',e=>{
-  const c=e.target.closest('[data-hm]'); if(!c) return;
+  const c=e.target.closest('.dk-chip'); if(!c) return;
+  const host=c.closest('.deck'); if(!host) return;
+  const view=host.id.replace(/^deck-/,'');
   /* One at a time. Opening all of them would rebuild the page this replaced. */
-  homeMoreOpen = (homeMoreOpen===c.dataset.hm) ? null : c.dataset.hm;
-  homeMoreSync();
-  if(homeMoreOpen){
-    const el=document.getElementById(homeMoreOpen);
+  deckOpen[view] = (deckOpen[view]===c.dataset.dk) ? null : c.dataset.dk;
+  deckSync(view);
+  if(deckOpen[view]){
+    const el=[...host.querySelectorAll(':scope > [data-deck]')].find(x=>deckLabel(x)===deckOpen[view]);
     if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
 });
@@ -7462,7 +7518,11 @@ function saySheetOpen(key){
 function sayPass(view){
   if(sayBusy) return;
   sayBusy=true;
-  try{ sayPassInner(view); } finally { sayBusy=false; }
+  /* The deck runs first: it moves panels out of the flow, and the prose pass
+     measures what is left. Doing it the other way round measured paragraphs
+     that were about to be relocated anyway. Both are inside the busy flag, so
+     the watcher does not react to either one's own edits. */
+  try{ deckPass(view); sayPassInner(view); } finally { sayBusy=false; }
   sayWatch(view);
 }
 function sayPassInner(view){
@@ -7511,10 +7571,12 @@ function sayPassInner(view){
     btn.onclick=e=>{ e.preventDefault(); e.stopPropagation(); saySheetOpen(key); };
     if(own.head) own.head.appendChild(btn);
     else {
-      /* No heading, so it stands where the paragraph stood - top of the tab,
-         which is where the eye starts anyway. */
-      btn.classList.add('say-solo');
-      els[0].insertAdjacentElement('beforebegin', btn);
+      /* No heading of its own. If the tab has a deck, its heading is the one
+         thing on screen this copy is about, so the mark belongs there - a lone
+         "?" floating above an otherwise empty tab looks like a stray glyph. */
+      const dh=root.querySelector('.deck .dk-head');
+      if(dh) dh.appendChild(btn);
+      else { btn.classList.add('say-solo'); els[0].insertAdjacentElement('beforebegin', btn); }
     }
   });
 }
@@ -12664,7 +12726,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-03 · Home cut down';
+const BUILD_STAMP='2026-09-03 · one pattern everywhere';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -20782,7 +20844,7 @@ function renderHome(){
   if(typeof applyStage==='function') applyStage();
   /* Last, because it reads whether each of those renderers actually produced
      anything - a panel with nothing to say this month does not get a row. */
-  renderHomeMore();
+  deckPass('home');
 }
 /* 2A: Offense vs Defense balance */
 function renderOffenseDefense(){

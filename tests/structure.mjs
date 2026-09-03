@@ -6952,6 +6952,10 @@ await p.evaluate(()=>{ state.sayMode='brief'; save(); });
 const brief = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   const look=async v=>{ activateTab(v); await w(600);
+    /* The long intros moved behind pills. A reader clamping them has one open,
+       so that is the state this measures - open the first section and read it. */
+    const first=document.querySelector('#deck-'+v+' .dk-chip');
+    if(first){ deckShow(v, first.dataset.dk); sayPass(v); await w(320); }
     const root=document.getElementById('view-'+v);
     const subs=[...root.querySelectorAll('.panel .sub, .acc-body .sub')];
     return { clamped:subs.filter(x=>x.classList.contains('clampable')).length,
@@ -6982,8 +6986,16 @@ check('...and an intro short enough to fit never grows a More that reveals nothi
 
 const sayTog = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
-  activateTab('tx'); await w(500);
-  const btn=document.querySelector('#view-tx .sub-more'); if(!btn) return null;
+  /* Pinning this to one tab stopped working the moment that tab's long prose
+     moved behind a pill. What is being tested is the More control itself, not
+     where it happens to live, so it goes and finds one. */
+  let btn=null;
+  for(const t of ['tx','debt','impulse','budget','goals','home','settings','diary']){
+    activateTab(t); await w(420);
+    btn=document.querySelector('#view-'+t+' .sub-more');
+    if(btn) break;
+  }
+  if(!btn) return null;
   const el=btn.previousElementSibling;
   const shut=Math.round(el.getBoundingClientRect().height);
   btn.click(); await w(140);
@@ -6997,34 +7009,45 @@ check('More opens that one paragraph and says Less',
       JSON.stringify(sayTog));
 check('...and closes it again', sayTog.back===sayTog.shut && sayTog.backLabel==='More');
 
-const rules = await p.evaluate(() => {
+/* The accordion's own summary used to carry the open/shut signal. The pill
+   carries it now - same question, asked of the control that answers it. */
+const rules = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
   const h=document.querySelector('#view-tx .panel>h2');
-  const openAcc=[...document.querySelectorAll('#view-goals details.acc')].find(d=>d.open);
-  const shutAcc=[...document.querySelectorAll('#view-goals details.acc')].find(d=>!d.open);
   const bar=el=>{ if(!el) return null; const cs=getComputedStyle(el,'::before');
     return {w:parseFloat(cs.width)||0, h:parseFloat(cs.height)||0, o:parseFloat(cs.opacity)}; };
-  return { panel:bar(h),
-           open:bar(openAcc&&openAcc.querySelector('.acc-hd')),
-           shut:bar(shutAcc&&shutAcc.querySelector('.acc-hd')) };
+  const panel=bar(h);
+  activateTab('goals'); deckShow('goals',null); await w(500);
+  const chips=[...document.querySelectorAll('#deck-goals .dk-chip')];
+  chips[0].click(); await w(260);
+  const paint=c=>{ const cs=getComputedStyle(c); return {bg:cs.backgroundColor, fg:cs.color,
+    aria:c.getAttribute('aria-expanded'), mark:getComputedStyle(c,'::after').content}; };
+  return { panel, open:paint(chips[0]), shut:paint(chips[1]) };
 });
 check('a panel heading carries an accent rule, so one section ends visibly',
       rules.panel && rules.panel.w>=20 && rules.panel.h>=2, JSON.stringify(rules.panel));
-check('...an accordion heading carries one too',
-      rules.open && rules.open.w>=20, JSON.stringify(rules.open));
-check('...and a closed one is dimmer and shorter, so open reads as a place you are in',
-      rules.shut && rules.shut.w<rules.open.w && rules.shut.o<rules.open.o,
-      JSON.stringify({open:rules.open, shut:rules.shut}));
+check('...the open section reads differently from the shut ones beside it',
+      rules.open.bg!==rules.shut.bg && rules.open.fg!==rules.shut.fg,
+      JSON.stringify(rules));
+check('...and says so to a screen reader, not only in colour',
+      rules.open.aria==='true' && rules.shut.aria==='false' && rules.open.mark!==rules.shut.mark,
+      JSON.stringify([rules.open.aria, rules.shut.aria, rules.open.mark, rules.shut.mark]));
 
 const modes = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('settings'); await w(450);
   document.querySelector('#sayMode button[data-say="full"]').click(); await w(300);
-  activateTab('goals'); await w(600);
+  /* Build's prose lives inside sections now, and a shut section is not measured
+     - correctly, since nobody is reading it. Open one and ask there. */
+  const openBuild=async()=>{ activateTab('goals'); await w(500);
+    const c=document.querySelector('#deck-goals .dk-chip');
+    if(c){ deckShow('goals', c.dataset.dk); sayPass('goals'); await w(340); } };
+  await openBuild();
   const full={clamped:document.querySelectorAll('#view-goals .sub.clampable').length,
               body:document.body.classList.contains('say-brief'), stored:state.sayMode};
   activateTab('settings'); await w(400);
   document.querySelector('#sayMode button[data-say="brief"]').click(); await w(300);
-  activateTab('goals'); await w(600);
+  await openBuild();
   return {full, backClamped:document.querySelectorAll('#view-goals .sub.clampable').length,
           fresh:normalizeState({}).sayMode};
 });
@@ -7330,7 +7353,7 @@ for(const W of [320,390]){
   await p.waitForTimeout(340);
   const m = await p.evaluate(async () => {
     const w=ms=>new Promise(r=>setTimeout(r,ms));
-    activateTab('goals'); renderAccounts(); await w(320);
+    activateTab('goals'); deckShow('goals','Accounts'); renderAccounts(); await w(320);
     return [...document.querySelectorAll('.acct-row')].map(r=>({
       body:Math.round(r.querySelector('.ac-b').getBoundingClientRect().width),
       nameH:Math.round(r.querySelector('.ac-n').getBoundingClientRect().height) }));
@@ -7835,7 +7858,7 @@ for(const W of [320,390]){
   await p.waitForTimeout(340);
   const g = await p.evaluate(async () => {
     const w=ms=>new Promise(r=>setTimeout(r,ms));
-    activateTab('budget'); renderRecurring(); await w(400);
+    activateTab('budget'); deckShow('budget','The month, laid out'); renderRecurring(); await w(400);
     const doc=document.documentElement;
     return {over:[...document.querySelectorAll('#calPanel *')]
               .filter(e=>e.getBoundingClientRect().right>doc.clientWidth+1).map(e=>e.className).slice(0,3),
@@ -8270,7 +8293,9 @@ await p.reload(); await p.waitForTimeout(800);
 
 const pw97 = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
-  activateTab('debt'); renderLeverage(); await w(460);
+  /* Borrowing to build is a section you open now, and innerText reads nothing
+     from a shut one - correctly. Open it, the way somebody reading it would. */
+  activateTab('debt'); deckShow('debt','Borrowing to build'); renderLeverage(); await w(460);
   const o={};
   const story=document.querySelector('#levPanel .lev-101');
   o.storyClosed=!!story && !story.open;
@@ -8870,20 +8895,21 @@ const homeCut = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('home'); await w(700);
   const v=document.getElementById('view-home');
-  const shown=id=>{ const el=document.getElementById(id); if(!el) return false;
-    const st=getComputedStyle(el); return st.display!=='none' && el.getBoundingClientRect().height>4; };
+  const vis=el=>{ const st=getComputedStyle(el); return st.display!=='none' && el.getBoundingClientRect().height>4; };
+  const panels=[...v.querySelectorAll('[data-deck]')];
   const o={ px:Math.round(v.scrollHeight),
-    core:['nextSteps','homeSnap','wallsGrid'].every(shown),
-    moved:HOME_MORE.filter(m=>{ const el=document.getElementById(m.id); return el&&el.closest('#homeMore'); }).length,
-    openAtRest:HOME_MORE.filter(m=>shown(m.id)).length,
-    rows:document.querySelectorAll('#hmChips .hm-chip').length };
-  const c=document.querySelector('#hmChips .hm-chip'); const id=c?c.dataset.hm:null;
+    core:['nextSteps','homeSnap','wallsGrid'].every(id=>{const e=document.getElementById(id); return e&&vis(e);}),
+    moved:panels.filter(el=>el.closest('#deck-home')).length,
+    openAtRest:panels.filter(vis).length,
+    rows:v.querySelectorAll('.dk-chip').length };
+  const c=v.querySelector('.dk-chip'); const lbl=c?c.dataset.dk:null;
   if(c){ c.click(); await w(300);
-    o.opened=shown(id);
-    o.onlyOne=HOME_MORE.filter(m=>shown(m.id)).length===1;
+    const el=panels.find(x=>x.dataset.deck===lbl);
+    o.opened=vis(el);
+    o.onlyOne=panels.filter(vis).length===1;
     /* the row must survive its own click - rebuilding the list would drop focus */
     o.rowSurvives=document.body.contains(c) && c.classList.contains('on');
-    c.click(); await w(250); o.shutsAgain=!shown(id); }
+    c.click(); await w(250); o.shutsAgain=!vis(el); }
   return o;
 });
 check('Home fits in about two phone screens, not five', homeCut.px<2400, homeCut.px+'px');
@@ -8894,6 +8920,38 @@ check('...each one named in a row you can tap', homeCut.rows>=4, String(homeCut.
 check('tapping a row opens exactly that panel', homeCut.opened===true && homeCut.onlyOne===true, JSON.stringify(homeCut));
 check('...without destroying the row you just pressed', homeCut.rowSurvives===true);
 check('...and tapping it again shuts it', homeCut.shutsAgain===true);
+
+/* ---- one pattern, everywhere ----
+   The first cut shipped two: full-width accordion cards on Build, small pills on
+   Home, for the same idea. "Whatever you choose just make it consistent
+   throughout the entire app." */
+const decks = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const vis=el=>{ const st=getComputedStyle(el); return st.display!=='none' && el.getBoundingClientRect().height>4; };
+  const out={tabs:{}, strays:[], openAtRest:[]};
+  for(const t of ['home','budget','tx','impulse','debt','goals','diary','settings','reflect','learn']){
+    activateTab(t); await w(500);
+    const v=document.getElementById('view-'+t); if(!v) continue;
+    const panels=[...v.querySelectorAll('[data-deck]')];
+    out.tabs[t]={px:Math.round(v.scrollHeight), pills:v.querySelectorAll('.dk-chip').length,
+                 panels:panels.length, decks:v.querySelectorAll('.deck').length};
+    /* nothing may be collapsed by a second, different mechanism */
+    v.querySelectorAll('details.acc').forEach(d=>{ if(!d.classList.contains('dk-panel')) out.strays.push(t+': '+(d.querySelector('.acc-hd')||{innerText:'?'}).innerText.split('\n')[0]); });
+    panels.filter(vis).forEach(el=>out.openAtRest.push(t+': '+el.dataset.deck));
+  }
+  return out;
+});
+const decked=Object.entries(decks.tabs).filter(([,d])=>d.panels>0);
+check(`every busy tab uses the same collapse pattern (${decked.length} of them)`,
+      decked.length>=7 && decked.every(([,d])=>d.decks===1 && d.pills>0),
+      JSON.stringify(decks.tabs));
+check('...and no tab still collapses things its own way',
+      decks.strays.length===0, decks.strays.slice(0,3).join(' | '));
+check('...with nothing opened until somebody asks, on any tab',
+      decks.openAtRest.length===0, decks.openAtRest.slice(0,3).join(' | '));
+check('the tabs that were four and five screens deep are not any more',
+      decks.tabs.debt.px<2600 && decks.tabs.settings.px<2600 && decks.tabs.goals.px<2600,
+      `debt ${decks.tabs.debt.px} settings ${decks.tabs.settings.px} goals ${decks.tabs.goals.px}`);
 
 /* the fixed handle that was sitting on top of the words */
 const handle = await p.evaluate(async () => {
@@ -8935,10 +8993,10 @@ const spendRows = await p.evaluate(async () => {
   state.spendingMode=true; state.householdOn=true; save();
   if(typeof applySpending==='function') applySpending();
   renderAll(); activateTab('home'); await w(600);
-  const has=id=>!!document.querySelector('#hmChips .hm-chip[data-hm="'+id+'"]');
+  const has=lbl=>!!document.querySelector('#deck-home .dk-chip[data-dk="'+lbl+'"]');
   const o={ flagSeen:!!document.querySelector('#view-home.spending-mode'),
-            household:has('householdBox'), evolution:has('retroBox') };
-  const c=document.querySelector('#hmChips .hm-chip[data-hm="householdBox"]');
+            household:has('Household'), evolution:has('Your evolution') };
+  const c=document.querySelector('#deck-home .dk-chip[data-dk="Household"]');
   if(c){ c.click(); await w(260);
     /* visible for real - the card carrying hide-in-spending made the panel
        display:none through an ancestor while its own style said block */

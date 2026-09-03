@@ -203,7 +203,8 @@ for(const [where,txt] of [['ladder',hard.ladder],['debt-interest',hard.debt]]){
         rule cannot see them: "War Chest 0 min / Life Reclaimed 0 hrs" is the
         same amount twice with no phrase to key off. ---- */
 const pairs = await p.evaluate(() => {
-  activateTab('impulse'); if(typeof renderImpulse==='function') renderImpulse();
+  activateTab('impulse'); deckShow('impulse','War chest & scoreboard');
+  if(typeof renderImpulse==='function') renderImpulse();
   const grab=k=>{ const el=[...document.querySelectorAll('#view-impulse .stat')]
                     .find(s=>(s.innerText||'').startsWith(k)); return el?el.innerText.replace(/\n/g,' ').trim():''; };
   const v=(()=>{ const e=document.querySelector('.vaultitem'); return e?e.innerText.replace(/\n/g,' / '):''; })();
@@ -223,7 +224,7 @@ const named = await p.evaluate(() => {
      rule about how it conjugates, one tap further in - so the test takes that
      tap, and keeps reading what a person would actually see rather than
      reaching past the interface for the string. */
-  const hh=document.querySelector('#hmChips .hm-chip[data-hm="householdBox"]');
+  const hh=document.querySelector('#deck-home .dk-chip[data-dk="Household"]');
   if(hh) hh.click();
   const home=document.getElementById('view-home').innerText;
   activateTab('budget');

@@ -1156,3 +1156,44 @@ Three details that matter more than they look:
 **A page-level handle painted over every modal.** The quick-glance drawer's `☰` is `position:fixed` at the left edge, floating over left-aligned text - which is how *"See the ladder"* came to read *"e the ladder"* in a screenshot. It sits on the right now, in the ragged ends of lines. Moving it exposed something worse that had been latent: at `z-index:120` it outranked the modal scrim (60) **and the full-screen intake (70)**, so it had always been drawn on top of them; at the left edge it happened to land on empty space, and on the right it landed squarely on every sheet's close button. It is `z-index:56` now - above the page, below anything modal.
 
 The check that caught it is worth keeping in mind: it asked whether the handle's box overlapped any element's box, and a centred heading fills the width of its box while its glyphs sit in the middle. `Do this next` reported as a collision no eye would ever see. Both the suite and the probe measure **text rectangles** via `Range.getClientRects()` now, which is the thing actually being asked about.
+
+## One collapse pattern, every tab
+
+Reported after the Home cut, with screenshots of Build beside Home: *"Shouldn't the first two screenshots be consistent with the drop-down feature... one shows small pills, all the other emphasizes its own row for the pill. Whatever you choose just make it consistent throughout the entire app."* And: *"all other images show the Shield section, I thought we agreed to make all other areas collapsible pills to condense."*
+
+Both fair. Home had shipped pills; Build still had full-width accordion cards for exactly the same idea; and Shield, Track, Debt, Plan, Diary and Settings had no collapse at all - the Home pass had only ever touched Home.
+
+**The pill wins,** because compactness is the whole point: seven accordion cards are about 980px, the same seven as pills are about 150px. The accordion's one-line summary is the real loss, and it is paid for in the deck's own intro line and the fact that a section name is a name.
+
+`deck` (`deckMount`, `deckPass`, `deckSync`, `deckShow`, `DECK_HEAD`, `DECK_INTRO`) is one component driven from the markup: a panel carries `data-deck="Label"` and that is the whole contract. No table of ids to keep in sync, and a panel added next year is one attribute away from behaving like every other one. On tab activation the deck relocates its panels into a single card, renders one pill each, and opens one at a time.
+
+| tab | before | after |
+|---|---|---|
+| Debt | 5.0 screens | **1.9** |
+| Settings | 4.5 | **0.5** |
+| Track | 3.5 | **2.0** |
+| Build | 2.9 | **0.5** |
+| Shield | 2.8 | **1.2** |
+| Plan | 2.8 | **1.7** |
+| Diary | 1.7 | **0.8** |
+
+Reflect (one panel with its own internal switcher) and Learn (where the reading *is* the product) are deliberately untouched.
+
+### The regression collapsing always creates
+
+Hiding a panel breaks every deep link that ends in *"scroll to this field and put the cursor in it"* - Freedom Mode walking you to your hourly rate, the payoff planner walking you to a debt, keyboard reorder moving a row. The target is present and correct and inside a shut section, so the page scrolls to nothing and focus lands on something invisible. Three structure checks caught it immediately.
+
+There are 32 such call sites and the next one written would forget, so the fix is at the two methods every one of them ends up calling:
+
+```js
+Element.prototype.scrollIntoView = function(){ deckReveal(this); return si.apply(this,arguments); };
+HTMLElement.prototype.focus      = function(){ deckReveal(this); return fo.apply(this,arguments); };
+```
+
+`deckReveal` walks up to the enclosing `.dk-panel` and opens it, and is a no-op for everything already visible. Same reasoning that put `applyPanelGates` inside `save()` and stamping inside `stampChanges`: **when a rule has to hold at thirty call sites, it does not belong at thirty call sites.**
+
+### Two smaller things the pass turned up
+
+**A card's padding is not a panel's width.** Nesting a panel inside the deck's padded card made everything in it 32px narrower than it was built for, and at 320px that squeezed the calendar's day cells to 27px - below a thumb. Opened sections break out of the horizontal padding.
+
+**A lone question mark on an otherwise empty tab.** On tabs that are now almost entirely deck, the tab-intro's Clean-mode `?` had no heading to attach to and floated alone at the top like a stray glyph. It hangs off the deck's own heading instead. Build's intro copy also still said *"Net worth is open below; tap any section to expand it"*, which described the accordions it no longer has.
