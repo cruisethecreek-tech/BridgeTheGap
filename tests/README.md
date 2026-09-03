@@ -1452,6 +1452,42 @@ luminance ratio of the rendered colour against the rendered background, in both
 themes, and require 4.5. **When a defect is "it looks wrong", the check has to
 be of what was drawn, not of what was written.**
 
+### Seven checks that all said the same thing
+
+Collapsing the panels app-wide broke seven structure checks at once, and they
+split cleanly into two kinds that deserve opposite treatment.
+
+**Three were real bugs.** Freedom Mode walking you to your hourly rate, the
+payoff planner walking you to a debt, keyboard reorder moving a row: all landed
+on a field inside a shut section, so the page scrolled to nothing and focus went
+to something invisible. The suite caught a genuine regression the moment it was
+introduced, which is the entire return on having written them.
+
+**Four were tests reading past the interface.** They measured an account row's
+width, the calendar's cell size, a headline's text - all inside sections a
+person now has to open. The instinct is to reach for the element directly, and
+that is exactly wrong: it would assert that a panel nobody can see is laid out
+correctly. They call `deckShow(view, label)` first, which is the same thing a
+finger does, and then measure what is on screen.
+
+The distinguishing question is worth naming, because it comes up every time the
+UI gains a layer: **is the test failing because the app is broken, or because the
+test was reaching somewhere a person cannot reach?** If a person can get there in
+one tap, the test should take the tap. If a person cannot get there at all, the
+app is broken.
+
+One check had to change its subject rather than its route. "A closed accordion is
+dimmer and shorter than an open one" was about a control that no longer exists;
+the pill carries the open/shut signal now, so it asks whether the open pill reads
+differently from the shut ones beside it - **and whether it says so to a screen
+reader and not only in colour**, which the old check never asked.
+
+And two checks had been quietly pinned to a tab rather than to a subject: they
+looked for a clamped paragraph in `#view-tx` specifically, and broke when that
+tab's long prose moved. They go and find one now. A test that names a location
+when it means a thing will break every time the thing moves, and each of those
+breaks looks like a bug.
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a

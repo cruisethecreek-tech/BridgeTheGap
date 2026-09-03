@@ -226,3 +226,30 @@ Also worth a look, since it moved: the **☰** quick-glance handle is now on the
 **right** edge instead of the left, where it was sitting on top of the first
 letters of lines. Open a few sheets and confirm it is not covering any close
 button, and that it disappears behind the dark backdrop while a sheet is open.
+
+### One pattern everywhere: the pill
+
+Settings shows `2026-09-03 · one pattern everywhere`. Every busy tab now ends in
+one card of pills - Home, Plan, Track, Shield, Debt, Build, Diary and Settings -
+and they all behave identically: tap a pill, that section opens below; tap
+another, it swaps; tap the open one, it shuts.
+
+Two tabs are deliberately left alone: **Reflect** is a single tool with its own
+switcher inside it, and **Learn** is where the reading is the point.
+
+Walk each tab and check:
+
+1. **The tab opens on the thing you came to do.** Shield opens on the scan form,
+   Debt on the payoff planner, Plan on the month. If a tab opens on nothing but
+   a card of pills and you expected to do something immediately, say which.
+2. **Every pill opens something real.** Type in it, press its buttons. Nothing
+   should open onto an empty box.
+3. **Nothing is stuck shut.** Anything that used to walk you somewhere - Freedom
+   Mode sending you to your hourly rate, a payoff step sending you to a debt -
+   should open the section it lands in, not scroll to a blank space. This is the
+   part most likely to have a hole in it, so it is worth trying a few.
+4. **Nothing is squeezed.** Open **Plan -> The month, laid out** and check the
+   calendar cells are still big enough to tap, especially on a small phone.
+
+The pill you have open is filled in and shows a `▴`; the shut ones are outlined
+and show a `▾`.
