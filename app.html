@@ -4556,7 +4556,7 @@ function defaultState(){
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null,
            scans:[], opening:{}, syncOptIn:false,
-           deviceId:'', meIs:'a', changelog:[], graveyard:[], settingsM:{},
+           deviceId:'', meIs:'a', changelog:[], graveyard:[], settingsM:{}, cellM:{},
            syncLastPush:'', syncLastPull:'' };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
@@ -4579,6 +4579,7 @@ function normalizeState(s){
   if(!Array.isArray(s.changelog)) s.changelog=[];
   if(!Array.isArray(s.graveyard)) s.graveyard=[];
   if(!s.settingsM || typeof s.settingsM!=='object' || Array.isArray(s.settingsM)) s.settingsM={};
+  if(!s.cellM || typeof s.cellM!=='object' || Array.isArray(s.cellM)) s.cellM={};
   if(typeof s.deviceId!=='string') s.deviceId='';
   if(s.meIs!=='b') s.meIs='a';
   if(!Array.isArray(s.scans)) s.scans=[];
@@ -4833,7 +4834,40 @@ const SYNC_SETTINGS=['intensity','activeMonth','hourlyWage','register','freedomM
   'givingPct','uiMode','stageReached','householdOn','nameA','nameB','wageB','spendingMode',
   'spendLimit','trackStart','hoursPerWeek','debtBudget','debtStrategy','roomPay','calConfirm',
   'saveBudget','saveOrder','investReturn','investYears','theme','autoBackup','chatPace',
-  'guidesOff','budgets','opening','units','trueRate','sweptDays','seenGuide','areasOff','dayToDay','comfortMenu'];
+  'guidesOff','trueRate','seenGuide','areasOff','dayToDay','comfortMenu'];
+/* ---------- the two maps that cannot be merged whole ----------
+   Everything above is one value, so "whoever touched it last wins" is honest.
+   These two are not. budgets is {month:{category:amount}} and opening is
+   {month:amount} - thousands of separate decisions living in one field. Merging
+   them as a blob means the moment two people assign money in the same month,
+   one of them loses EVERY assignment they made, silently. The category itself
+   still arrives, because categories merge item by item, so the damage shows up
+   as a category that came across with nothing in it - which reads exactly like
+   sync failing to deliver it at all.
+   sweptDays is the same shape and the same stakes - each entry moves a real
+   amount into a goal on a given day - and units is per-field labelling that two
+   people should not be able to undo for each other.
+   The number is the depth of the map, so a cell can be addressed by its path. */
+const SYNC_CELLMAPS={budgets:2, opening:1, sweptDays:1, units:1};
+/* Flatten to {'2026-09|c1': 400}, which is the level a stamp belongs at. */
+function flatCells(obj, depth){
+  const out={};
+  const walk=(o, d, path)=>{
+    if(!o || typeof o!=='object') return;
+    Object.keys(o).forEach(k=>{
+      const p=path?path+'|'+k:k;
+      if(d<=1){ if(o[k]!==undefined && o[k]!==null) out[p]=o[k]; }
+      else walk(o[k], d-1, p);
+    });
+  };
+  walk(obj, depth, '');
+  return out;
+}
+function setCell(obj, path, val){
+  const parts=path.split('|'); let cur=obj;
+  for(let i=0;i<parts.length-1;i++){ if(!cur[parts[i]]||typeof cur[parts[i]]!=='object') cur[parts[i]]={}; cur=cur[parts[i]]; }
+  cur[parts[parts.length-1]]=val;
+}
 const CHANGELOG_MAX=300, GRAVE_MAX=500;
 function deviceId(){
   if(!state.deviceId){ state.deviceId=Math.random().toString(36).slice(2,10); }
@@ -4872,6 +4906,7 @@ function syncSnapshot(st){
   SYNC_COLLECTIONS.forEach(k=>{ const m={}; (Array.isArray(st[k])?st[k]:[]).forEach(it=>{
     if(it&&it.id!=null) m[it.id]=JSON.stringify(stripStamp(it)); }); o.c[k]=m; });
   SYNC_SETTINGS.forEach(k=>{ o.s[k]=JSON.stringify(st[k]===undefined?null:st[k]); });
+  o.m={}; Object.keys(SYNC_CELLMAPS).forEach(k=>{ o.m[k]=flatCells(st[k], SYNC_CELLMAPS[k]); });
   return o;
 }
 function stripStamp(it){ if(!it||typeof it!=='object') return it; const c={...it}; delete c._m; return c; }
@@ -4914,6 +4949,16 @@ function stampChanges(){
     const v=JSON.stringify(state[k]===undefined?null:state[k]);
     if(syncPrev.s[k]!==v){ sm[k]={...now}; touched=true; }
   });
+  /* Per cell, so one person assigning money to groceries cannot wipe out what
+     the other assigned to everything else. Clearing a cell is stamped too -
+     otherwise "I took that assignment back" loses to a stale copy of it. */
+  const cm=state.cellM=state.cellM||{};
+  Object.keys(SYNC_CELLMAPS).forEach(k=>{
+    const cur=flatCells(state[k], SYNC_CELLMAPS[k]), was=(syncPrev.m||{})[k]||{};
+    const same=(x,y)=>x===y||JSON.stringify(x)===JSON.stringify(y);
+    Object.keys(cur).forEach(p=>{ if(!same(was[p],cur[p])){ cm[k+'|'+p]={...now}; touched=true; } });
+    Object.keys(was).forEach(p=>{ if(!(p in cur)){ cm[k+'|'+p]={...now}; touched=true; } });
+  });
   if(touched) syncPrev=syncSnapshot(state);
 }
 /* ---- the merge, deliberately pure so it can be proven without a network ---- */
@@ -4950,6 +4995,30 @@ function mergeVault(local, remote){
     else { out[k]=local[k]; if(a) m[k]=a; }
   });
   out.settingsM=m;
+  /* Cell maps, reconciled one cell at a time. An absent cell is a real value
+     here - it means nothing is assigned - so a newer stamp with no cell behind
+     it correctly clears what the other side still shows. When neither side has
+     ever stamped a cell (it predates syncing), whichever side actually has it
+     wins, so an old budget arriving from the other phone is not thrown away. */
+  const lc=local.cellM||{}, rc=remote.cellM||{}, cm2={};
+  Object.keys(SYNC_CELLMAPS).forEach(k=>{
+    const depth=SYNC_CELLMAPS[k];
+    const L=flatCells(local[k],depth), R=flatCells(remote[k],depth);
+    const paths={}; Object.keys(L).forEach(p=>paths[p]=1); Object.keys(R).forEach(p=>paths[p]=1);
+    const built={};
+    Object.keys(paths).forEach(p=>{
+      const key=k+'|'+p, a=lc[key], b=rc[key];
+      let fromRemote;
+      if(stampNewer(b,a)) fromRemote=true;
+      else if(stampNewer(a,b)) fromRemote=false;
+      else fromRemote=(L[p]===undefined);
+      const val=fromRemote?R[p]:L[p], st=fromRemote?b:a;
+      if(st) cm2[key]=st;
+      if(val!==undefined) setCell(built,p,val);
+    });
+    out[k]=built;
+  });
+  out.cellM=cm2;
   /* One log, both sides, newest first, deduped by entry id. */
   const seen={}, log=[];
   [...(local.changelog||[]), ...(remote.changelog||[])].forEach(e=>{
@@ -12222,7 +12291,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-03 · sync-traffic';
+const BUILD_STAMP='2026-09-03 · per-cell budget merge';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;

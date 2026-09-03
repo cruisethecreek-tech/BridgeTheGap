@@ -132,3 +132,37 @@ If entries duplicate rather than merge, the ids are being regenerated somewhere
 and that is worth reporting. If one side keeps winning, note which phone and
 what its clock says - the tie-break is by timestamp, and a device with a badly
 wrong clock will always look "newer".
+
+### The one that kept getting reported: a category that arrives empty
+
+Three earlier rounds of *"it did not load onto her phone"* were transport
+problems - a locked vault sending nothing. This one was not, and it hides in
+plain sight because the category **does** arrive. Only the money is missing.
+
+Run this with both phones on **Vault active** and the same month open:
+
+1. On A, create a new category and assign it a real amount. Say `Sam's Club`,
+   `$50`.
+2. On B, in the **same month**, change some *other* category's assignment. Any
+   one, any amount. This is the step that used to cause the damage, and it is
+   also the most ordinary thing two people sharing a budget do.
+3. Wait about twenty seconds, or reopen the app on each phone.
+4. On B, `Sam's Club` should be there **with $50 in it**. On A, B's change
+   should be there too, and every other assignment A made should be untouched.
+
+What went wrong before: B's copy of the whole month's budget overwrote A's, so
+`Sam's Club` landed with nothing in it and A silently lost every assignment made
+since the last sync. An empty category looks exactly like a category that never
+arrived, which is why it read as sync being broken four times running.
+
+Worth checking at the same time, since they share the mechanism:
+
+- Clear an assignment to zero on one phone. It must **stay** cleared after the
+  other phone syncs, rather than being restored from the older copy.
+- Set the **carried-in balance** for a month on one phone. It should reach the
+  other without disturbing any other month's.
+
+If a category still arrives empty, say which phone assigned it, which phone is
+missing it, and what **Last sent** reads on the phone that made the change - the
+Household panel prints it. That last line separates "never sent" from "sent and
+lost", and they have opposite fixes.

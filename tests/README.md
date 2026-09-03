@@ -1369,6 +1369,31 @@ every claim that matters (both edits survive, the newer wins from either side,
 a tie resolves identically on both phones, a delete is not resurrected, an edit
 after a delete is) is a property of a function that can be called directly.
 
+### Passing a merge suite while losing the money
+
+`cellmerge` is the sequel, and the lesson in it is sharper than the one above.
+Every property listed in the last paragraph held. The suite was green. And two
+partners assigning money in the same month still destroyed one of their budgets
+completely, every time.
+
+The reason is that the suite tested `mergeVault` on the things `mergeVault`
+treats as items. `budgets` is not an item - it is `{month: {category: amount}}`,
+thousands of independent decisions in a single field, merged whole. A property
+suite written from the merge engine's own vocabulary asks "does the newer copy
+win", and the answer was yes: the newer copy of *the entire budget* won. That is
+the bug, stated as a passing test.
+
+Two habits come out of it, both cheap:
+
+- **Ask what shape each field really is, not what shape the code treats it as.**
+  The bug was visible in the type: a nested map sitting in a list called
+  `SYNC_SETTINGS`, next to `theme` and `hourlyWage`.
+- **Write the check in the reporter's words before writing it in the code's.**
+  The probe's first assertion is `Sam's Club arrives with its $50, not empty`,
+  and it fails on the previous build. Had the check been phrased as `budgets
+  merges correctly`, it would have passed on the broken code, because the field
+  did merge - correctly, and catastrophically.
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a

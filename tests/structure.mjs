@@ -8745,6 +8745,45 @@ check('...so Track opens on real figures rather than an empty next month',
 check('a finished month is kept, and named, rather than snapped away from',
       /already finished/.test(mhBack.pastNote), mhBack.pastNote.slice(0,140));
 
+/* ---- 103. the category arrived, the money did not ----
+   "Passphrase worked but it still did not load Sam's Club into the budget."
+   categories merge item by item, so the category always came across. budgets is
+   {month:{category:amount}} and was merged whole, so the moment both partners
+   assigned in the same month one of them lost every assignment they had made.
+   An empty category is indistinguishable from a missing one, which is why this
+   was reported four times as a transport failure. */
+const cell = await p.evaluate(() => {
+  const S=(t,by)=>({t,by,d:by});
+  const base=()=>({graveyard:[],changelog:[],settingsM:{},cellM:{},categories:[]});
+  const his=Object.assign(base(),{deviceId:'him',
+    categories:[{id:'c1',name:'Groceries',_m:S(100,'him')},{id:'c9',name:"Sam's Club",_m:S(500,'him')}],
+    budgets:{'2026-09':{c1:400,c9:50}},
+    cellM:{'budgets|2026-09|c1':S(100,'him'),'budgets|2026-09|c9':S(500,'him')}});
+  const hers=Object.assign(base(),{deviceId:'her',
+    categories:[{id:'c1',name:'Groceries',_m:S(100,'him')}],
+    budgets:{'2026-09':{c1:420}}, cellM:{'budgets|2026-09|c1':S(900,'her')}});
+  const m=mergeVault(hers,his), m2=mergeVault(his,hers);
+  const cleared=mergeVault(Object.assign(base(),{deviceId:'her',budgets:{'2026-09':{}},
+    cellM:{'budgets|2026-09|c9':S(900,'her')}}), his);
+  const old=mergeVault(Object.assign(base(),{deviceId:'her'}),
+    Object.assign(base(),{deviceId:'him',budgets:{'2026-07':{c1:300}}}));
+  const op=mergeVault(Object.assign(base(),{deviceId:'her',opening:{'2026-08':300},cellM:{'opening|2026-08':S(400,'her')}}),
+    Object.assign(base(),{deviceId:'him',opening:{'2026-09':1200},cellM:{'opening|2026-09':S(500,'him')}}));
+  return { got:(m.categories||[]).some(c=>c.name==="Sam's Club"),
+    money:m.budgets['2026-09'].c9, hers:m.budgets['2026-09'].c1,
+    sym:m2.budgets['2026-09'].c9===50 && m2.budgets['2026-09'].c1===420,
+    cleared:(cleared.budgets['2026-09']||{}).c9,
+    old:(old.budgets['2026-07']||{}).c1,
+    op:op.opening['2026-09']===1200 && op.opening['2026-08']===300 };
+});
+check('the category itself reaches the other phone', cell.got===true, cell.got);
+check("...and it arrives with its money, not empty", cell.money===50, 'assigned='+cell.money);
+check('the other partner\'s newer figure is not trampled to deliver it', cell.hers===420, cell.hers);
+check('both phones land on the same numbers whichever one merges', cell.sym===true, cell.sym);
+check('taking an assignment back beats a stale copy of it', !cell.cleared, cell.cleared);
+check('a budget made before syncing existed still travels', cell.old===300, cell.old);
+check('carried-in opening balances merge per month too', cell.op===true, cell.op);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
