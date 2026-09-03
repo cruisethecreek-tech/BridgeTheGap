@@ -3075,7 +3075,7 @@ const score = await p.evaluate(() => {
   state.accounts[0].updated=shiftDays(todayStr(),-3); save(); renderAccounts();
   o.recent=!document.querySelector('.ac-stale');
   /* and the panel itself has to say why this number is different */
-  o.thesis=/it is the scoreboard/i.test(document.getElementById('view-goals').innerText);
+  o.thesis=/it is the scoreboard/i.test(document.getElementById('view-goals').textContent);
   return o;
 });
 check('two readings of the real balance become a verdict',
@@ -6238,7 +6238,7 @@ const acw = await p.evaluate(async () => {
   if(o.hasWork){
     document.querySelector('.ac-work').open=true; await wait(120);
     o.sum=document.querySelector('.acw-sum').innerText.trim();
-    o.row=document.querySelector('.acct-row').innerText;
+    o.row=document.querySelector('.acct-row').textContent;
     o.parts=[...document.querySelectorAll('.acw-p')].map(x=>x.innerText.replace(/\n/g,' '));
     o.entries=[...document.querySelectorAll('.acw-r')].length;
   }
@@ -6294,7 +6294,7 @@ const acHist = await p.evaluate(async () => {
   renderAccounts(); await wait(200);
   const det=document.querySelector('.ac-hist');
   o.saysSo=det?det.querySelector('summary').innerText:'';
-  if(det){ det.open=true; await wait(120); o.body=det.innerText; }
+  if(det){ det.open=true; await wait(120); o.body=det.textContent; }
   return o;
 });
 check('typing a balance records a reading', acHist.afterTyped===3 && acHist.typedHow==='bank',
@@ -6493,7 +6493,7 @@ const cardDoor = await p.evaluate(async () => {
   activateTab('goals'); await w(300);
   const d=[...document.querySelectorAll('#view-goals details')].find(x=>/Accounts/.test(x.innerText.slice(0,40)));
   if(d) d.open=true; await w(160);
-  const o={head:d?d.querySelector('.acc-sub').textContent:'', body:d?d.innerText:''};
+  const o={head:d?d.querySelector('.acc-sub').textContent:'', body:d?d.textContent:''};
   activateTab('tx'); await w(300);
   document.querySelector('#typeToggle button[data-t="transfer"]').click(); await w(260);
   o.move=document.getElementById('xferNote').innerText;
@@ -6946,6 +6946,9 @@ await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:
                 {id:'e',type:'expense',amount:120,date:'2026-08-05',catId:'c1'}]});
 await p.reload(); await p.waitForTimeout(800);
 
+/* Brief is no longer the default - Clean is - so this section has to ask for the
+   mode it is testing instead of assuming the app boots into it. */
+await p.evaluate(()=>{ state.sayMode='brief'; save(); });
 const brief = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   const look=async v=>{ activateTab(v); await w(600);
@@ -7030,7 +7033,11 @@ check('Full gives every word back, everywhere, and remembers it',
       JSON.stringify(modes.full));
 check('...and switching back to Brief clamps again',
       modes.backClamped>0, String(modes.backClamped));
-check('Brief is what someone new gets', modes.fresh==='brief', modes.fresh);
+/* Clean is what someone new gets now. Brief was the old default and it was the
+   thing being complained about: it clipped every paragraph to two lines and put
+   a More under each, so a dozen panels meant two dozen lines to skip and a dozen
+   buttons to ignore. */
+check('Clean is what someone new gets', modes.fresh==='clean', modes.fresh);
 
 /* ---- 87. a figure that will not show its working ----
    "How did this figure come about? There's no explanation or flip card. It's
@@ -7397,7 +7404,7 @@ const room = await p.evaluate(async () => {
   o.limitField=!!document.querySelector('#debtList input[data-debt="d1"][data-k="limit"]');
   o.securedAsk=!!document.querySelector('#debtList select[data-debtsec="d1"]');
   o.panelOpen=!document.getElementById('roomPanel').classList.contains('panel-waiting');
-  o.text=document.getElementById('roomResults').innerText;
+  o.text=document.getElementById('roomResults').textContent;
   /* the arithmetic, checkable by hand: $10,000 at $500 a month is 20 months of
      saving, and borrowing it costs whatever the extra months come to */
   o.m=borrowOrWait(10000, 3.49, 500);
@@ -8377,11 +8384,11 @@ const li98 = await p.evaluate(async () => {
         if(/undefined|NaN|null/.test(t)) bad.push(s.id);
       }catch(e){ bad.push(s.id+' THREW'); } }); });
   o.bad=[...new Set(bad)];
-  state.sayMode='brief'; save();
+  state.sayMode='clean'; save();
   return o;
 });
 check('the starting line opens on the short version',
-      li98.shown===true && li98.mode==='brief' && li98.shortW<180, String(li98.shortW));
+      li98.shown===true && li98.mode!=='full' && li98.shortW<180, String(li98.shortW));
 check('...still saying where you are is not a verdict', li98.notVerdict===true);
 check('...still saying this is accountability rather than budgeting', li98.accountability===true);
 check('...still saying the tool is not a person and cannot want it for you', li98.notReal===true);
@@ -8392,7 +8399,7 @@ check('the long version is one tap away and lost nothing',
 /* This is the part that makes it one app rather than one screen: the choice is
    the same setting every panel on every tab already reads. */
 check('...and choosing is the app-wide brief/full setting, not a peek at this screen',
-      li98.modeAfter==='full' && li98.modeBack==='brief', JSON.stringify([li98.modeAfter,li98.modeBack]));
+      li98.modeAfter==='full' && li98.modeBack!=='full', JSON.stringify([li98.modeAfter,li98.modeBack]));
 check('...reversible from where it was made', li98.backW===li98.shortW, JSON.stringify([li98.backW,li98.shortW]));
 check('the heaviest questions in the chat gained a short form', li98.shorts>=12, String(li98.shorts));
 check('...cutting it by roughly a quarter, without rewriting the light ones',
@@ -8783,6 +8790,72 @@ check('both phones land on the same numbers whichever one merges', cell.sym===tr
 check('taking an assignment back beats a stale copy of it', !cell.cleared, cell.cleared);
 check('a budget made before syncing existed still travels', cell.old===300, cell.old);
 check('carried-in opening balances merge per month too', cell.op===true, cell.op);
+
+/* ---- 104. the explanation leaves the screen ----
+   "The content is good. It's just too distracting when the interface should be
+   clean. The extra text should be optional to view." Clean takes the prose out
+   of the layout and gives each panel one "?" instead of giving each paragraph
+   its own More. The whole risk is in what may be hidden, so most of this is
+   about what may NOT be. */
+await p.evaluate(()=>{ state.sayMode='clean'; save(); });
+const cln = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('debt'); await w(650);
+  const root=document.querySelector('.view.on');
+  const o={ btns:root.querySelectorAll('.say-why').length,
+            hid:root.querySelectorAll('.say-hid').length,
+            label:(root.querySelector('.say-why')||{getAttribute:()=>''}).getAttribute('aria-label') };
+  /* one panel, one button - the old Brief put a More under every paragraph */
+  o.perPanel=Math.max(0,...[...root.querySelectorAll('.panel')].map(x=>x.querySelectorAll(':scope > h2 .say-why').length));
+  const btn=root.querySelector('.say-why'); if(btn) btn.click(); await w(220);
+  o.sheetOn=document.getElementById('saySheet').classList.contains('on');
+  o.sheetTitle=document.getElementById('saySheetTitle').innerText.trim();
+  o.sheetWords=document.getElementById('sayBody').innerText.trim().split(/\s+/).length;
+  closeTopOverlay(); await w(120);
+  o.closed=!document.getElementById('saySheet').classList.contains('on');
+  /* nothing the app worked out about YOU may be moved off the screen */
+  o.leaked=[];
+  for(const t of ['home','budget','tx','goals','debt','settings','impulse','reflect','diary']){
+    activateTab(t); await w(260);
+    document.querySelectorAll('.view.on .say-hid').forEach(el=>{
+      const txt=(el.textContent||'').trim();
+      if(el.dataset.say!=='1' && /[$%]|\d/.test(txt)) o.leaked.push(t+': '+txt.slice(0,40));
+      if(el.closest('.empty,.err,.error,form,fieldset')) o.leaked.push(t+' [live]: '+txt.slice(0,30));
+    });
+  }
+  /* a panel gated shut is down to a heading and one line - do not add to it */
+  activateTab('goals'); await w(400);
+  o.onGated=[...document.querySelectorAll('.view.on .panel')].some(pn=>{
+    const ctrls=[...pn.querySelectorAll('input,select,button')].filter(c=>!c.classList.contains('say-why'));
+    return ctrls.length && ctrls.every(c=>c.offsetParent===null) && pn.querySelector('.say-why');
+  });
+  return o;
+});
+check('the busiest screen moves its prose behind buttons', cln.btns>0 && cln.hid>0, JSON.stringify([cln.btns,cln.hid]));
+check('...one for the whole panel, not one per paragraph', cln.perPanel<=1, String(cln.perPanel));
+check('...named for the topic, and not ending in two question marks',
+      /^What is .+\?$/.test(cln.label||'') && !/\?\?/.test(cln.label||''), cln.label);
+check('tapping it opens a sheet titled with that panel', cln.sheetOn===true && !!cln.sheetTitle && cln.sheetTitle!=='About this', cln.sheetTitle);
+check('...carrying the words that left the panel', cln.sheetWords>15, String(cln.sheetWords));
+check('...and Back closes the sheet rather than the tab', cln.closed===true);
+check('no figure the app worked out is ever moved off the screen',
+      cln.leaked.length===0, cln.leaked.slice(0,2).join(' | '));
+check('a panel already gated shut is left alone', cln.onGated===false);
+
+/* the short/long question is not the clip-in-place question */
+const shortNotBrief = await p.evaluate(() => {
+  const o={};
+  state.sayMode='clean'; o.cleanShort=sayShort(); o.cleanBrief=sayBrief();
+  state.sayMode='brief'; o.briefShort=sayShort();
+  state.sayMode='full';  o.fullShort=sayShort();
+  state.sayMode='clean'; save();
+  return o;
+});
+check('Clean counts as wanting the short version, the same as Brief',
+      shortNotBrief.cleanShort===true && shortNotBrief.briefShort===true, JSON.stringify(shortNotBrief));
+check('...without being told to clip paragraphs in place, which is Brief\'s job',
+      shortNotBrief.cleanBrief===false);
+check('...and Full is the only one that asks for everything', shortNotBrief.fullShort===false);
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;

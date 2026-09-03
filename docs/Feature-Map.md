@@ -1098,3 +1098,33 @@ plain-language intents instead of a single action.
 - Joins the overlay/back stack (`closeTopOverlay`), so Android Back closes the sheet
   and the FAB label resets. Engine: `intentItems`, `renderIntentSheet`,
   `openIntentSheet`, `setFabOpen`.
+
+## Clean: the explanation leaves the screen
+
+Asked for directly: *"all of the content is too long... There should be an option to push a button to learn more information... The content is good. It's just too distracting when the interface should be clean. The extra text should be optional to view. do this for every single topic within the app."*
+
+Measured before touching anything: **4,101 words across ten tabs, 56% of them explanatory prose**, and 5,646px of prose rendered across a 29,801px app - about thirty-three phone screens of scrolling, one in five of them explanation.
+
+A partial answer already existed and was making it worse. **Brief** (`clampPass`) clipped every `.sub` to two lines and put a **More** under it. On a screen with a dozen panels that is two dozen lines of prose to skip past *plus* a dozen extra buttons to ignore: the reading load went down and the visual load went up. Sixty-one blocks on screen, sixty-one controls attached to them.
+
+**Clean** (`sayPass`, `SAY_PROSE`, `sayIsExplanation`, `sayOwnerOf`, `saySheetOpen`) takes the prose out of the layout entirely and gives the **panel** one affordance rather than giving each paragraph its own: a small **?** beside the heading, opening one reusable sheet titled with that panel's name and holding every word that panel would have said. Modes are now **Clean / Brief / Full**, and Clean is the default. Result: **80% less prose on screen** (5,646px to 1,143px) and an app 18% shorter to scroll, with nothing deleted.
+
+### What may be hidden, which is the whole risk
+
+Hide the wrong paragraph and an empty state stops saying it is empty, an error stops naming what failed, or the only instruction on a form disappears. The rule is stated rather than sensed: **an explanation is prose that would read the same if your numbers were different.** Three guards enforce it, in order:
+
+1. **Structural, and nothing overrides it.** Prose inside a form, an error, a status line, an empty state or a live sample (`SAY_LIVE`) is the interface talking about you. It stays.
+2. **Authored vs rendered** (`data-say="1"`, stamped on 94 blocks). The runtime cannot tell *"you are $700 away across 1 dream"* - live - from *"$1,000 between you and disaster"* - teaching. Both carry a figure. The **source** can: one is interpolated, one is typed. So the decision is made where the difference is still visible: a prose block that is a static literal with no `${}` anywhere in it cannot be reporting the reader's own numbers. Everything else keeps the conservative rule that any figure means it stays.
+3. **Never leave a panel unreadable.** If hiding the prose would leave a panel with no control, no table and no list, the prose *was* the panel. It is left alone.
+
+### Two things the first cut got wrong
+
+**Grouping by the tree instead of by reading order.** `sayOwnerOf` first walked outwards through ancestors looking for a heading, and filed the Four Walls copy under **Do this next** - the first heading an enclosing box happened to own. A reader attributes a paragraph to the last heading they *passed*, so that is what it uses now: scan backwards in document order. Prose that precedes every heading is not a stray - it is the "what is this screen" copy at the top of a tab, and it belongs to the tab, which is what titles it.
+
+**Titling a sheet with the reader's own wage.** `<h2>The job pays $30 an hour</h2>` is a result that happens to be marked up as a heading; using it would have retitled the sheet every time the wage changed. A heading that names a section is short and carries no figure. Accordion heads needed one more turn: they hold their own summary line inside the same element, so `innerText` read as a twelve-word sentence and every one of them was rejected as too long - the name is the first line.
+
+### Keeping it clean after a render
+
+The marks and the buttons live in the DOM, so any render that rebuilds a panel's `innerHTML` throws them away and the prose returns - on the panel the reader just touched, which is the worst possible moment for the screen to fill up again. Rather than patch every render (there are dozens, and the next one written would forget), a debounced `MutationObserver` watches the view that is on screen and re-runs the pass. It ignores its own footprints, so it settles instead of chasing its tail.
+
+One measurement lesson worth keeping: the first pixel counts said 2,581px of prose survived Clean, and most of that was already behind a closed accordion. A closed `<details>` still gets a real box and a real `offsetParent` in Chromium - laid out, simply not painted - so the probe was counting text nobody could see. The same trap `clampPass` had already been bitten by, in the tool built to measure it.

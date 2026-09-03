@@ -166,3 +166,35 @@ If a category still arrives empty, say which phone assigned it, which phone is
 missing it, and what **Last sent** reads on the phone that made the change - the
 Household panel prints it. That last line separates "never sent" from "sent and
 lost", and they have opposite fixes.
+
+### Clean: is anything missing that should not be?
+
+The app now opens in **Clean**: panels show what they do, and the explanation
+sits behind a small **?** next to each heading. Settings shows
+`2026-09-03 · clean screens`, and **Settings -> How much it explains** switches
+between Clean, Brief and Full at any time.
+
+Automated checks prove no calculated figure and no empty state was moved off the
+screen. What they cannot prove is whether a screen still makes sense to someone
+who has not read the manual. That is what this pass is for.
+
+Walk every tab and, on each one, ask only these:
+
+1. **Can you tell what the screen is for without tapping anything?** If a panel
+   is now just a heading and a form with no idea what it does, that panel needed
+   a word or two on it and did not get to keep them. Note which one.
+2. **Is the ? where you expect it?** It should sit beside the heading of the
+   thing it explains, every time, and never anywhere else.
+3. **Does the sheet answer the question you had?** The title should name the
+   panel you asked from, and the text should be the same words that used to sit
+   underneath it - not a summary.
+4. **Did anything you need disappear?** Empty states ("Nothing yet..."),
+   error messages, running totals and anything with a figure in it are supposed
+   to stay on the panel. If one of those went behind a **?**, that is a bug and
+   worth reporting with the tab name.
+
+Then flip to **Full** in Settings and back to **Clean**. Everything should come
+back and go away again, with nothing left behind and no duplicate **?** anywhere.
+
+The one screen deliberately left alone is **Learn**: on that tab the reading is
+the point, so the lesson text stays where it is.

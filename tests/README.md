@@ -1394,6 +1394,39 @@ Two habits come out of it, both cheap:
   merges correctly`, it would have passed on the broken code, because the field
   did merge - correctly, and catastrophically.
 
+### A test that asserts the layout when it meant the copy
+
+Clean mode broke thirteen structure checks, and every one of them was reading
+`innerText` on a panel to prove the panel explains itself. Clean does not delete
+that explanation - it moves it behind a `?` - but `innerText` returns nothing for
+`display:none`, so from the suite's point of view the app had gone silent.
+
+The instinct is to relax the checks. That would have been wrong: those checks
+guard a real promise, that no panel states a figure without saying where it came
+from. What was actually wrong was the *reading*. "Does this panel explain
+itself" is a question about copy, and it had been written as a question about
+layout by accident, because for as long as the two were the same thing nobody had
+to choose. `textContent` asks the copy question; `innerText` asks the layout one.
+Three reads changed, and the guarantee is intact.
+
+Two checks did have to change their claim rather than their reading, and it is
+worth being clear about which:
+
+- `Brief is what someone new gets` became `Clean is what someone new gets`. The
+  old assertion was true and is now false. That is a fact about the app, not a
+  test that needed loosening.
+- The intake's short-copy checks asked whether the mode was literally `brief`.
+  They now ask whether it is *not full*, which is the question they always meant.
+
+That last one caught a live bug rather than a stale test. `sayBrief()` had been
+answering two different questions - "is prose clipped in place?" and "does this
+reader want the short version?" - because with two modes they had the same
+answer. Adding a third mode split them, and every consumer that meant the second
+question silently started getting the first one's answer. The intake would have
+opened on the longest copy in the app for every new user. It is `sayShort()` now,
+and the split is the point: **when a boolean grows a third case, every caller
+that read it as a yes/no has to be asked which question it was really asking.**
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a
