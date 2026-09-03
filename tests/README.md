@@ -1369,6 +1369,64 @@ every claim that matters (both edits survive, the newer wins from either side,
 a tie resolves identically on both phones, a delete is not resurrected, an edit
 after a delete is) is a property of a function that can be called directly.
 
+### Passing a merge suite while losing the money
+
+`cellmerge` is the sequel, and the lesson in it is sharper than the one above.
+Every property listed in the last paragraph held. The suite was green. And two
+partners assigning money in the same month still destroyed one of their budgets
+completely, every time.
+
+The reason is that the suite tested `mergeVault` on the things `mergeVault`
+treats as items. `budgets` is not an item - it is `{month: {category: amount}}`,
+thousands of independent decisions in a single field, merged whole. A property
+suite written from the merge engine's own vocabulary asks "does the newer copy
+win", and the answer was yes: the newer copy of *the entire budget* won. That is
+the bug, stated as a passing test.
+
+Two habits come out of it, both cheap:
+
+- **Ask what shape each field really is, not what shape the code treats it as.**
+  The bug was visible in the type: a nested map sitting in a list called
+  `SYNC_SETTINGS`, next to `theme` and `hourlyWage`.
+- **Write the check in the reporter's words before writing it in the code's.**
+  The probe's first assertion is `Sam's Club arrives with its $50, not empty`,
+  and it fails on the previous build. Had the check been phrased as `budgets
+  merges correctly`, it would have passed on the broken code, because the field
+  did merge - correctly, and catastrophically.
+
+### A test that asserts the layout when it meant the copy
+
+Clean mode broke thirteen structure checks, and every one of them was reading
+`innerText` on a panel to prove the panel explains itself. Clean does not delete
+that explanation - it moves it behind a `?` - but `innerText` returns nothing for
+`display:none`, so from the suite's point of view the app had gone silent.
+
+The instinct is to relax the checks. That would have been wrong: those checks
+guard a real promise, that no panel states a figure without saying where it came
+from. What was actually wrong was the *reading*. "Does this panel explain
+itself" is a question about copy, and it had been written as a question about
+layout by accident, because for as long as the two were the same thing nobody had
+to choose. `textContent` asks the copy question; `innerText` asks the layout one.
+Three reads changed, and the guarantee is intact.
+
+Two checks did have to change their claim rather than their reading, and it is
+worth being clear about which:
+
+- `Brief is what someone new gets` became `Clean is what someone new gets`. The
+  old assertion was true and is now false. That is a fact about the app, not a
+  test that needed loosening.
+- The intake's short-copy checks asked whether the mode was literally `brief`.
+  They now ask whether it is *not full*, which is the question they always meant.
+
+That last one caught a live bug rather than a stale test. `sayBrief()` had been
+answering two different questions - "is prose clipped in place?" and "does this
+reader want the short version?" - because with two modes they had the same
+answer. Adding a third mode split them, and every consumer that meant the second
+question silently started getting the first one's answer. The intake would have
+opened on the longest copy in the app for every new user. It is `sayShort()` now,
+and the split is the point: **when a boolean grows a third case, every caller
+that read it as a yes/no has to be asked which question it was really asking.**
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a

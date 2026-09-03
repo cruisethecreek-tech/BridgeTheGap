@@ -1095,6 +1095,32 @@
   .sub-more::after{content:' ▾';font-size:9px}
   .sub.open + .sub-more::after{content:' ▴'}
 
+  /* ---------- Clean: the explanation leaves the layout ----------
+     Brief clipped every paragraph to two lines and put a More under each one.
+     On a screen with a dozen panels that is two dozen lines of prose to skip
+     past and a dozen extra buttons to ignore - the reading load went down and
+     the visual load went UP. Clean takes the prose out of the flow entirely and
+     gives the PANEL one affordance instead of giving each paragraph its own.
+     Nothing is deleted: every hidden word is in the sheet that button opens. */
+  .say-clean .say-hid{display:none!important}
+  .say-clean .say-hid + .sub-more{display:none!important}
+  .say-why{display:inline-flex;align-items:center;justify-content:center;
+    width:19px;height:19px;flex:0 0 19px;margin-left:7px;padding:0;border-radius:50%;
+    border:1.5px solid var(--line);background:none;color:var(--muted);
+    font:inherit;font-size:11px;font-weight:900;line-height:1;cursor:pointer;
+    vertical-align:middle;transition:color .15s,border-color .15s}
+  .say-why:hover,.say-why:focus-visible{color:var(--accent);border-color:var(--accent)}
+  /* A panel with no heading to sit beside gets it pinned to the corner, which is
+     the same place the eye already looks for it. */
+  .say-why.loose{position:absolute;top:14px;right:14px;margin:0}
+  /* Standing on its own where a tab's opening paragraph used to be. */
+  .say-why.say-solo{margin:0 0 14px;width:22px;height:22px;flex-basis:22px;font-size:12px}
+  .panel{position:relative}
+  #sayBody .say-para{color:var(--ink);font-size:14px;line-height:1.6;margin:0 0 15px}
+  #sayBody .say-para:last-child{margin-bottom:0}
+  #sayBody .say-from{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+
   .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
   label.fld{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
   input[type=text],input[type=number],input[type=date],select{background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px 13px;font-size:15px;min-width:0}
@@ -1305,6 +1331,11 @@
   .recfill .rf-n{width:100%;font-size:11.5px;color:var(--muted);line-height:1.45}
   .ltb-note .ltb-src{color:var(--muted)}
   .sync-err .se-raw{display:block;margin-top:6px;font-size:11px;opacity:.75;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word}
+  .sync-traffic{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--muted)}
+  .sync-traffic b{color:var(--text)}
+  .sync-traffic.none{display:block;background:rgba(var(--accent-2-rgb),.10);border:1px solid var(--accent-2);
+    border-radius:11px;padding:11px 13px;line-height:1.5}
+  .sync-traffic.none b{color:var(--text)}
   .chlog{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
   .chlog .cl-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px}
   .cl-row{display:flex;gap:10px;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:12.5px;line-height:1.45;border-bottom:1px solid var(--line)}
@@ -2969,7 +3000,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div class="home-hero">
         <div class="hh-eye" id="hhEye">Zero-Based Budgeting · No Filter</div>
         <h1 class="hh-title" id="hhTitle">Tell every dollar where to go.</h1>
-        <p class="hh-sub" id="hhSub">Budget to zero, gut-check every purchase, and watch your dreams get funded - in plain, unfiltered English.</p>
+        <p class="hh-sub" id="hhSub" data-say="1">Budget to zero, gut-check every purchase, and watch your dreams get funded - in plain, unfiltered English.</p>
         <div class="hh-cta"><button class="btn primary" data-arrive="bag" id="hhCta">Start budgeting →</button><button class="btn ghost" data-arrive="gutcheck">Run a gut check</button></div>
       </div>
 
@@ -2991,7 +3022,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div class="walls-head hide-in-spending">
         <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
         <h2 class="ph-title">Cover First</h2>
-        <p class="walls-tag" id="wallsTag">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving.</p>
+        <p class="walls-tag" id="wallsTag" data-say="1">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving.</p>
       </div>
       <div class="walls hide-in-spending" id="wallsGrid"></div>
       <div class="hide-in-spending" style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
@@ -3008,7 +3039,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div class="summary" id="summary"></div>
         <div id="lifeKeyPlan"></div>
-        <p class="sub" style="margin:-4px 0 16px">Zero-based budgeting: assign your income down to <b>$0</b>. Income comes from what you log in <b>Transactions</b> - log a paycheck first, then give every dollar a job here.</p>
+        <p class="sub" style="margin:-4px 0 16px" data-say="1">Zero-based budgeting: assign your income down to <b>$0</b>. Income comes from what you log in <b>Transactions</b> - log a paycheck first, then give every dollar a job here.</p>
 
         <div class="row" style="margin-bottom:6px">
           <label class="fld" style="flex:1">New category
@@ -3036,7 +3067,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel">
         <h2>Recurring</h2>
-        <p class="sub">Set your paycheck and fixed bills once. They post automatically each month, and the entries they create appear on Track like anything else you log. This lives on Plan because deciding what repeats is a plan, not a record.</p>
+        <p class="sub" data-say="1">Set your paycheck and fixed bills once. They post automatically each month, and the entries they create appear on Track like anything else you log. This lives on Plan because deciding what repeats is a plan, not a record.</p>
         <div class="row">
           <label class="fld">Type
             <select id="recType"><option value="expense">Expense</option><option value="income">Income</option><option value="invest">Invest</option></select>
@@ -3086,7 +3117,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            rather than a second record of it, and the two can never disagree. -->
       <div class="panel" id="calPanel">
         <h2>The month, laid out</h2>
-        <p class="sub">Every repeat you have set, on the day it actually falls. Tick one when it lands in your account and it is logged on Track; untick it and the entry comes back off. Nothing here changes the rule - it only says what has really happened yet.</p>
+        <p class="sub" data-say="1">Every repeat you have set, on the day it actually falls. Tick one when it lands in your account and it is logged on Track; untick it and the entry comes back off. Nothing here changes the rule - it only says what has really happened yet.</p>
         <label class="cal-mode"><input type="checkbox" id="calConfirm"><span><b>Wait for me to tick it.</b> Off, repeats post themselves on the day, the way they always have. On, nothing lands until you say it did - which is the difference between a plan and a record, and the only way the app can show you a paycheck that never arrived.</span></label>
         <div id="calNav" class="cal-nav"></div>
         <div id="calGrid"></div>
@@ -3095,7 +3126,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel" id="subSweepPanel">
         <h2>Membership sweep</h2>
-        <p class="sub">The quiet ones. Small, monthly, automatic - which is exactly why they never get questioned. Tap what you actually pay for, put the real monthly cost in, and see what a year of it costs. Nothing here judges you; a membership you use and love is money well spent. The point is knowing which ones those are.</p>
+        <p class="sub" data-say="1">The quiet ones. Small, monthly, automatic - which is exactly why they never get questioned. Tap what you actually pay for, put the real monthly cost in, and see what a year of it costs. Nothing here judges you; a membership you use and love is money well spent. The point is knowing which ones those are.</p>
         <div id="subSweep"></div>
       </div>
     </section>
@@ -3105,7 +3136,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div class="tab-intro">Track is money that <b>already happened</b>. The plan it gets measured against lives on <b>Plan</b>.</div>
       <div class="panel">
         <h2>Log money in &amp; money out</h2>
-        <p class="sub">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
+        <p class="sub" data-say="1">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
 
         <button class="btn ghost" id="quickLogBtn" style="margin-bottom:12px">Enter my notes - log several at once</button>
         <div id="quickLog"></div>
@@ -3204,7 +3235,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            must never be added together and printed as one number. -->
       <div class="panel" id="scanPanel">
         <h2>Read a statement</h2>
-        <p class="sub">Hold up your bank statement - on screen or on paper - and take a shot of each page. Everything is read <b>on this device</b>: no upload, no account linking, nothing leaves the browser. You get back where the money actually went, and nothing lands in your ledger unless you send it there yourself.</p>
+        <p class="sub" data-say="1">Hold up your bank statement - on screen or on paper - and take a shot of each page. Everything is read <b>on this device</b>: no upload, no account linking, nothing leaves the browser. You get back where the money actually went, and nothing lands in your ledger unless you send it there yourself.</p>
         <div class="scan-take">
           <button class="btn primary" id="scanSnap">Take a page</button>
           <button class="btn ghost" id="scanPick">Pick from photos</button>
@@ -3219,7 +3250,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel" id="gate-csv">
         <h2>Import from a bank CSV</h2>
-        <p class="sub">Drop in a statement export and skip the manual typing. It is parsed entirely on your device - nothing is uploaded, nothing leaves the browser.</p>
+        <p class="sub" data-say="1">Drop in a statement export and skip the manual typing. It is parsed entirely on your device - nothing is uploaded, nothing leaves the browser.</p>
         <div class="import-drop" id="importDrop">
           <input type="file" id="csvFile" accept=".csv,text/csv,text/plain" hidden>
           <button class="btn primary" id="csvPick">Choose CSV file</button>
@@ -3230,7 +3261,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel">
         <h2>Your week in hours</h2>
-        <p class="sub">Money isn't the only thing you invest. Everyone gets the same 168 hours a week - some you sell to work, some you invest in yourself (health, learning, building, people), and some just leak into the screen. Where the hours go decides what the dollars can do next year.</p>
+        <p class="sub" data-say="1">Money isn't the only thing you invest. Everyone gets the same 168 hours a week - some you sell to work, some you invest in yourself (health, learning, building, people), and some just leak into the screen. Where the hours go decides what the dollars can do next year.</p>
         <div id="timeRows"></div>
         <div id="timeSummary"></div>
       </div>
@@ -3259,7 +3290,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <section class="view" id="view-impulse">
       <div class="panel">
         <h2>Trap Radar - scan the target</h2>
-        <p class="sub">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life. <span class="sub" style="margin:0">Set your wage in <b>Settings</b> for exact hours.</span></p>
+        <p class="sub" data-say="1">Marketing, algorithms, status buys, convenience markups - they're <b style="color:var(--text)">engineered</b> to strip your freedom. Scan what's tempting you and see the trap for what it is, priced in the one thing you can't get back: hours of your life. <span class="sub" style="margin:0">Set your wage in <b>Settings</b> for exact hours.</span></p>
         <div class="tk-entry">
           <span>Not tempted - something <b>happened</b>? A thing broke, someone needed you, a bill landed. That is not a trap, and calling it one helps nobody.</span>
           <button class="btn sm" id="openTalkBtn">Let's talk it through →</button>
@@ -3278,7 +3309,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <button class="btn primary" id="impRun">Scan target</button>
         </div>
         <div id="impTool" class="imp-tool hide">
-          <p class="sub" style="margin:0 0 10px"><b>Then let's find out.</b> A thing that replaces a cost pays for itself or it doesn't, and that is arithmetic rather than an opinion. Leave either blank if it doesn't apply - and if both are blank, this is a want, which is a fine thing to be.</p>
+          <p class="sub" style="margin:0 0 10px" data-say="1"><b>Then let's find out.</b> A thing that replaces a cost pays for itself or it doesn't, and that is arithmetic rather than an opinion. Leave either blank if it doesn't apply - and if both are blank, this is a want, which is a fine thing to be.</p>
           <div class="row">
             <div class="ufld"><span class="fl-k">What you'd otherwise pay<span id="impRepAmtUnit"></span></span>
               <span class="fl-in">$<input type="number" id="impRepAmt" min="0" step="1" inputmode="decimal" placeholder="e.g. 80" style="width:110px"></span></div>
@@ -3293,25 +3324,25 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel" id="tripwirePanel">
         <h2>Tripwires</h2>
-        <p class="sub">A nudge at the door of the shop. Pick the apps that usually get you, and your phone's own automation opens this gut-check the moment you open one - with the shop already named. Never a block. You still decide; you just decide on purpose.</p>
+        <p class="sub" data-say="1">A nudge at the door of the shop. Pick the apps that usually get you, and your phone's own automation opens this gut-check the moment you open one - with the shop already named. Never a block. You still decide; you just decide on purpose.</p>
         <div id="tripwireBody"></div>
       </div>
 
       <div class="panel" id="vaultPanel">
         <h2>24-Hour Cooling Vault</h2>
-        <p class="sub">Not sure? Lock the target in for 24 hours. The urge fades, the trap dies, and the ransom option only unlocks once the timer runs out. Most traps don't survive the wait.</p>
+        <p class="sub" data-say="1">Not sure? Lock the target in for 24 hours. The urge fades, the trap dies, and the ransom option only unlocks once the timer runs out. Most traps don't survive the wait.</p>
         <div id="vaultList"></div>
       </div>
 
       <div class="panel" id="lessonsPanel" style="display:none">
         <h2>What you've told me</h2>
-        <p class="sub">The times money left because something <b>happened</b> - not because you were tempted. Kept so the pattern can be seen, and so nothing here gets mistaken for a trap again.</p>
+        <p class="sub" data-say="1">The times money left because something <b>happened</b> - not because you were tempted. Kept so the pattern can be seen, and so nothing here gets mistaken for a trap again.</p>
         <div id="lessonsBody"></div>
       </div>
 
       <div class="panel">
         <h2>War Chest &amp; Freedom Scoreboard</h2>
-        <p class="sub">Every trap you neutralize is money - and hours of your life - that stayed yours. This is the proof.</p>
+        <p class="sub" data-say="1">Every trap you neutralize is money - and hours of your life - that stayed yours. This is the proof.</p>
         <div id="impCelebrate"></div>
         <div class="scorecards" id="impScore"></div>
         <div id="impHours"></div>
@@ -3324,7 +3355,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <section class="view" id="view-debt">
       <div class="panel">
         <h2>Debt Payoff Planner</h2>
-        <p class="sub">List what you owe, set what you can throw at it each month, and see the fastest, cheapest way out - with the interest priced in hours of your life.</p>
+        <p class="sub" data-say="1">List what you owe, set what you can throw at it each month, and see the fastest, cheapest way out - with the interest priced in hours of your life.</p>
         <div id="debtReflectNote"></div>
         <div class="row">
           <label class="fld">What kind<select id="debtKindSel" style="min-width:160px"></select></label>
@@ -3356,7 +3387,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
       <div class="panel" id="gate-debtplan">
         <h2>Your way out</h2>
-        <p class="sub">Put in what you can throw at debt each month and this shows the payoff date, the interest it costs you, and which order to kill them in. Nothing here changes your budget; it is a projection you can argue with.</p>
+        <p class="sub" data-say="1">Put in what you can throw at debt each month and this shows the payoff date, the interest it costs you, and which order to kill them in. Nothing here changes your budget; it is a projection you can argue with.</p>
         <div class="row">
           <div class="ufld"><span class="fl-k">Total you can pay toward debt<span id="debtBudgetUnit"></span></span>
             <span class="fl-in">$<input type="number" id="debtBudget" min="0" step="10" inputmode="decimal" placeholder="e.g. 900" style="width:130px"></span>
@@ -3365,17 +3396,17 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <!-- The one thing people get wrong here: they type the EXTRA they can find,
              not the total. That makes the payoff date wildly pessimistic and the
              screen look broken. -->
-        <p class="sub" id="debtBudgetHint" style="margin-top:6px">This is the <b>whole</b> amount, minimums included - not extra on top of them.</p>
+        <p class="sub" id="debtBudgetHint" style="margin-top:6px" data-say="1">This is the <b>whole</b> amount, minimums included - not extra on top of them.</p>
         <div class="uimode" id="debtStrategy" style="margin-top:12px">
           <button data-s="avalanche">Avalanche</button>
           <button data-s="snowball">Snowball</button>
         </div>
-        <p class="sub" style="margin-top:8px" id="debtStratNote"></p>
+        <p class="sub" style="margin-top:8px" id="debtStratNote" data-say="1"></p>
         <div id="debtResults"></div>
       </div>
       <div class="panel" id="investPanel">
         <h2>Plot twist: invest instead?</h2>
-        <p class="sub">Paying off debt earns a <b>guaranteed</b> return equal to its rate. Investing might earn more - but it's not guaranteed. Here's the honest comparison of aiming that same money at the market instead.</p>
+        <p class="sub" data-say="1">Paying off debt earns a <b>guaranteed</b> return equal to its rate. Investing might earn more - but it's not guaranteed. Here's the honest comparison of aiming that same money at the market instead.</p>
         <div class="row">
           <label class="fld">Expected market return %/yr<input type="number" id="investReturn" min="0" step="0.5" placeholder="7" style="width:120px"></label>
         </div>
@@ -3386,7 +3417,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
              plainly that the past is not a promise, and shows how much the
              answer even depends on the guess. -->
         <div class="retpick" id="retPick"></div>
-        <p class="sub" id="retNote" style="margin:8px 0 0"></p>
+        <p class="sub" id="retNote" style="margin:8px 0 0" data-say="1"></p>
         <div class="row" style="margin-top:12px">
           <div class="uimode" id="investYears"><button data-y="5">5 yrs</button><button data-y="10">10 yrs</button><button data-y="20">20 yrs</button></div>
         </div>
@@ -3417,7 +3448,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            find is arithmetic that says out loud when the numbers do not work. -->
       <div class="panel" id="levPanel">
         <h2>Borrowing to build</h2>
-        <p class="sub">A rate you pay against a return you hope for. The interest is a contract; the return is a guess - and this only ever does the arithmetic on both. It will not tell you whether to do it, because it cannot know, and anything that claims otherwise is selling you something.</p>
+        <p class="sub" data-say="1">A rate you pay against a return you hope for. The interest is a contract; the return is a guess - and this only ever does the arithmetic on both. It will not tell you whether to do it, because it cannot know, and anything that claims otherwise is selling you something.</p>
         <!-- "How would my 13 year old understand this?" Fair, and the honest
              answer was: they would not. Neither would most adults. Every label
              on this panel was a term of art - return, held for, rate you pay
@@ -3491,7 +3522,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            hundred dollars should go to. -->
       <div class="panel" id="savePanel">
         <h2>The other direction</h2>
-        <p class="sub">A trip, a fence, a cushion. None of it is debt - you have not spent anything yet - so nothing here charges you interest. What it costs is time, and this says how much of it, against the same money the plan above wants for your debts.</p>
+        <p class="sub" data-say="1">A trip, a fence, a cushion. None of it is debt - you have not spent anything yet - so nothing here charges you interest. What it costs is time, and this says how much of it, against the same money the plan above wants for your debts.</p>
         <div class="row">
           <div class="ufld"><span class="fl-k">Toward your dreams<span id="saveBudgetUnit"></span></span>
             <span class="fl-in">$<input type="number" id="saveBudget" min="0" step="10" inputmode="decimal" placeholder="e.g. 200" style="width:130px"></span>
@@ -3506,27 +3537,27 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel" id="roomPanel">
         <h2>Borrow it or wait for it</h2>
-        <p class="sub">Unused room on a card or a line is the only debt that can fund something tomorrow. This puts it next to what you are actually saving for and prices the same monthly amount both ways - borrowed now, or set aside until it is paid for. It will not tell you which to do. It will tell you exactly what the hurry costs.</p>
+        <p class="sub" data-say="1">Unused room on a card or a line is the only debt that can fund something tomorrow. This puts it next to what you are actually saving for and prices the same monthly amount both ways - borrowed now, or set aside until it is paid for. It will not tell you which to do. It will tell you exactly what the hurry costs.</p>
         <div class="row">
           <div class="ufld"><span class="fl-k">What you could put at a dream<span id="roomPayUnit"></span></span>
             <span class="fl-in">$<input type="number" id="roomPay" min="0" step="10" inputmode="decimal" placeholder="optional" style="width:130px"></span>
             <div class="unit-work" id="roomPayW"></div></div>
         </div>
-        <p class="sub" style="margin-top:6px">Leave it blank and any dream with a <b>date</b> on it prices itself from the pace that date already demands.</p>
+        <p class="sub" style="margin-top:6px" data-say="1">Leave it blank and any dream with a <b>date</b> on it prices itself from the pace that date already demands.</p>
         <div id="roomResults"></div>
       </div>
     </section>
 
     <!-- ============ BUILD (net worth, sovereignty, goals, network) ============ -->
     <section class="view" id="view-goals">
-      <p class="build-intro">Your wealth layer. Net worth is open below; tap any section to expand it.</p>
+      <p class="build-intro" data-say="1">Your wealth layer. Net worth is open below; tap any section to expand it.</p>
 
       <details class="panel acc" open>
         <summary><span class="acc-hd">Accounts<span class="acc-sub">What you have and what you owe, in your words</span></span></summary>
         <div class="acc-body">
-          <p class="sub">Everything else here is built from what you've logged. This is the one place you just state the truth: what is really in each account today, and <b>what is really on each card</b>. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
-          <p class="sub"><b>Cards and lines of credit belong here too.</b> Pick <b>Credit card / line of credit</b> as the kind and put in what is on it - $0 is a real answer, and on a line you keep at zero it is the whole point. What you owe comes straight off your net worth, the limit turns an unused line into a room figure, and the rate lets this app tell you what a balance is costing you. It also puts them in the <b>Move</b> list on Track, which is how a card payment gets logged without charging you twice for what you bought.</p>
-          <p class="sub"><b>And it is the scoreboard.</b> This app never connects to your bank, which means every other figure in it is built from what you chose to type - log less and it looks calmer. This number is the exception, because it comes from outside and you have nothing to gain by inflating it. What it does over months is the honest answer to whether any of this is working. Keep it current and the app can tell you the truth; let it go stale and it can only tell you about your typing.</p>
+          <p class="sub" data-say="1">Everything else here is built from what you've logged. This is the one place you just state the truth: what is really in each account today, and <b>what is really on each card</b>. It feeds your net worth and your runway, and it's how "savings" becomes an answerable question - how much is emergency money, how much is the kids'.</p>
+          <p class="sub" data-say="1"><b>Cards and lines of credit belong here too.</b> Pick <b>Credit card / line of credit</b> as the kind and put in what is on it - $0 is a real answer, and on a line you keep at zero it is the whole point. What you owe comes straight off your net worth, the limit turns an unused line into a room figure, and the rate lets this app tell you what a balance is costing you. It also puts them in the <b>Move</b> list on Track, which is how a card payment gets logged without charging you twice for what you bought.</p>
+          <p class="sub" data-say="1"><b>And it is the scoreboard.</b> This app never connects to your bank, which means every other figure in it is built from what you chose to type - log less and it looks calmer. This number is the exception, because it comes from outside and you have nothing to gain by inflating it. What it does over months is the honest answer to whether any of this is working. Keep it current and the app can tell you the truth; let it go stale and it can only tell you about your typing.</p>
           <div class="row" style="gap:8px;margin-top:12px">
             <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
             <select id="acctKind" style="min-width:120px"></select>
@@ -3551,7 +3582,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <details class="panel acc" data-stage="2" open>
         <summary><span class="acc-hd">Assets vs. Liabilities<span class="acc-sub">What you own, honestly - and your net worth</span></span></summary>
         <div class="acc-body">
-          <p class="sub"><b style="color:var(--text)">The real definition:</b> an asset puts money IN your pocket. A liability takes money OUT. Not what you were sold - what's actually true. Net worth counts everything you'd walk away with, but only money-making assets are buying your freedom.</p>
+          <p class="sub" data-say="1"><b style="color:var(--text)">The real definition:</b> an asset puts money IN your pocket. A liability takes money OUT. Not what you were sold - what's actually true. Net worth counts everything you'd walk away with, but only money-making assets are buying your freedom.</p>
           <div class="nw" id="nwNum">$0</div>
           <div class="nwbreak" id="nwBreak"></div>
           <div class="avl-bar" id="avlBar"><div class="a" style="width:50%"></div><div class="s" style="width:0%"></div><div class="l" style="width:50%"></div></div>
@@ -3581,7 +3612,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <details class="panel acc" data-stage="2">
         <summary><span class="acc-hd">Dreams &amp; goals<span class="acc-sub">Name what you're chasing and watch it get closer</span></span></summary>
         <div class="acc-body">
-          <p class="sub">A budget with no dream behind it is just a spreadsheet. Name the thing. Put a number on it. Watch it get closer.</p>
+          <p class="sub" data-say="1">A budget with no dream behind it is just a spreadsheet. Name the thing. Put a number on it. Watch it get closer.</p>
           <div class="row">
             <label class="fld" style="flex:1">Dream / goal
               <input type="text" id="goalName" placeholder="Debt-free · Emergency fund · Trip · Business">
@@ -3604,7 +3635,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <details class="panel acc" data-stage="2">
         <summary><span class="acc-hd">Skill &amp; Capacity Investments<span class="acc-sub">Spending that raises your earning ceiling</span></span></summary>
         <div class="acc-body">
-          <p class="sub">Courses, certs, tools, events - the spending that raises your <b style="color:var(--text)">earning ceiling</b>. Log the cost and the extra you'd earn per hour, and I'll show the payback. This is offense, not consumption.</p>
+          <p class="sub" data-say="1">Courses, certs, tools, events - the spending that raises your <b style="color:var(--text)">earning ceiling</b>. Log the cost and the extra you'd earn per hour, and I'll show the payback. This is offense, not consumption.</p>
           <div class="row">
             <label class="fld" style="flex:1">Investment
               <input type="text" id="skillName" placeholder="Certification, course, tool…">
@@ -3624,7 +3655,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <details class="panel acc" data-stage="2">
         <summary><span class="acc-hd">Giving &amp; Circulation<span class="acc-sub">Money moves on purpose, not by leftover</span></span></summary>
         <div class="acc-body">
-          <p class="sub">Money is energy. Hoarding stalls it; giving keeps it moving. Set a target, give on purpose, and watch it circulate. This isn't leftover money - it's a discipline of abundance.</p>
+          <p class="sub" data-say="1">Money is energy. Hoarding stalls it; giving keeps it moving. Set a target, give on purpose, and watch it circulate. This isn't leftover money - it's a discipline of abundance.</p>
           <div class="give-target">Target: give <input type="number" id="givePct" min="0" max="100" step="1" placeholder="10"> % of income</div>
           <div class="row">
             <label class="fld" style="flex:1">Gift / cause
@@ -3643,7 +3674,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <details class="panel acc" data-stage="3">
         <summary><span class="acc-hd">Network Capital<span class="acc-sub">The return on who you invest in</span></span></summary>
         <div class="acc-body">
-          <p class="sub">The highest-yield asset is often a relationship. Track what you invest in people - a mentor lunch, a conference ticket, a strategic dinner - and rate the <b style="color:var(--text)">Return on Relationship</b> so you can tell social investment from social noise.</p>
+          <p class="sub" data-say="1">The highest-yield asset is often a relationship. Track what you invest in people - a mentor lunch, a conference ticket, a strategic dinner - and rate the <b style="color:var(--text)">Return on Relationship</b> so you can tell social investment from social noise.</p>
           <div class="row">
             <label class="fld" style="flex:1">Investment
               <input type="text" id="netName" placeholder="Lunch with mentor, conference ticket…">
@@ -3664,7 +3695,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <details class="panel acc" data-stage="3">
         <summary><span class="acc-hd">Silent Sovereignty Audit<span class="acc-sub">Real wealth is quiet - are you building it?</span></span></summary>
         <div class="acc-body">
-          <p class="sub">Fake wealth looks rich and quietly drains you. Real wealth is silent and pays you. Here's which one you're actually building.</p>
+          <p class="sub" data-say="1">Fake wealth looks rich and quietly drains you. Real wealth is silent and pays you. Here's which one you're actually building.</p>
           <div id="sovAudit"></div>
         </div>
       </details>
@@ -3674,7 +3705,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <section class="view" id="view-learn">
       <div class="panel">
         <h2>Money School</h2>
-        <p class="sub">The techniques the "financially comfortable" already know. Plain English. No gatekeeping.</p>
+        <p class="sub" data-say="1">The techniques the "financially comfortable" already know. Plain English. No gatekeeping.</p>
         <div class="lesson" id="lesson"></div>
         <div class="lesson-nav">
           <div class="dots" id="dots"></div>
@@ -3683,7 +3714,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
       <div class="panel" id="gate-circ">
         <h2>Abundance &amp; Circulation</h2>
-        <p class="sub">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. You tag a spend as you log it.</p>
+        <p class="sub" data-say="1">Money is energy. Tag your expenses and watch the ratio: capital flowing toward growth and giving vs. money leaking out of fear and scarcity. You tag a spend as you log it.</p>
         <div id="circChart"></div>
       </div>
     </section>
@@ -3702,7 +3733,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <section class="view" id="view-reflect">
       <div class="panel">
         <h2>Reflect</h2>
-        <p class="sub">What actually happened, in four views. The numbers here are only as good as what you have logged - they are a mirror, not a verdict.</p>
+        <p class="sub" data-say="1">What actually happened, in four views. The numbers here are only as good as what you have logged - they are a mirror, not a verdict.</p>
         <div class="rf-tabs" id="rfTabs" role="tablist">
           <button class="rf-tab on" data-rf="report" role="tab">The report</button>
           <button class="rf-tab" data-rf="breakdown" role="tab">Breakdown</button>
@@ -3719,7 +3750,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <section class="view" id="view-diary">
       <div class="panel">
         <h2>Money diary</h2>
-        <p class="sub">Write what actually happened, in your own words. The wins, the hard ones, what is coming. Nothing here is graded - and anything that sounds like money, I will offer to log for you.</p>
+        <p class="sub" data-say="1">Write what actually happened, in your own words. The wins, the hard ones, what is coming. Nothing here is graded - and anything that sounds like money, I will offer to log for you.</p>
         <div class="dy-chips" id="diaryKinds"></div>
         <div id="diaryAsk" class="dy-ask"></div>
         <textarea id="diaryText" class="dy-text" rows="4" placeholder="However it comes out…"></textarea>
@@ -3737,7 +3768,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            tone engine and shown to nobody. -->
       <div class="panel" id="storyPanel">
         <h2>Your money story</h2>
-        <p class="sub">The part of this that is not arithmetic. What you said at the start is here, in your words, and the questions under it are the ones worth coming back to - not once, but whenever the answer changes.</p>
+        <p class="sub" data-say="1">The part of this that is not arithmetic. What you said at the start is here, in your words, and the questions under it are the ones worth coming back to - not once, but whenever the answer changes.</p>
         <div id="storyBody"></div>
       </div>
       <div class="panel">
@@ -3750,7 +3781,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <section class="view" id="view-settings">
       <div class="panel">
         <h2>Your True Hourly Wage</h2>
-        <p class="sub">This one number powers everything: hours-of-life on every purchase, Freedom Mode, and your runway. Set it once.</p>
+        <p class="sub" data-say="1">This one number powers everything: hours-of-life on every purchase, Freedom Mode, and your runway. Set it once.</p>
         <div class="row" style="margin-bottom:14px">
           <label class="fld">Take-home pay per hour
             <input type="number" id="wage" min="0" step="0.5" placeholder="e.g. 22" style="width:150px">
@@ -3763,7 +3794,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <details class="truerate" id="trueRate">
           <summary>Calculate your True Net Hourly Wage</summary>
           <div class="tr-body">
-            <p class="sub" style="margin:6px 0 12px">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs - the commute, the gas, the work lunches - spread over the time the job actually eats.</p>
+            <p class="sub" style="margin:6px 0 12px" data-say="1">Your real rate isn't your paycheck ÷ hours. It's what's left after the job's hidden costs - the commute, the gas, the work lunches - spread over the time the job actually eats.</p>
             <div class="row" id="trFields"></div>
             <div class="tr-result" id="trResult" style="display:none"></div>
           </div>
@@ -3772,7 +3803,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel">
         <h2>Free comfort list</h2>
-        <p class="sub">A lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button. Write down what actually helps you when money isn't the answer. Do it now, while you're calm; the app shows the list back to you inside every gut-check, exactly when the urge is loudest.</p>
+        <p class="sub" data-say="1">A lot of spending isn't about the thing - it's about a feeling, and buying is just the fastest button. Write down what actually helps you when money isn't the answer. Do it now, while you're calm; the app shows the list back to you inside every gut-check, exactly when the urge is loudest.</p>
         <div class="row" style="margin-top:12px">
           <label class="fld" style="flex:1">What helps<input type="text" id="comfortInput" placeholder="e.g. Walk outside, call my brother, hot shower"></label>
           <button class="btn primary" id="comfortAdd">Add</button>
@@ -3782,7 +3813,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
       <div class="panel">
         <h2>Just my spending</h2>
-        <p class="sub">Not the one who pays the bills? Turn this on to drop the Four Walls and zero-based budgeting entirely. The home screen becomes your spending, your streak, and the gut-check - built for tracking your own purchases (Amazon, coffee, the random stuff), not running the household.</p>
+        <p class="sub" data-say="1">Not the one who pays the bills? Turn this on to drop the Four Walls and zero-based budgeting entirely. The home screen becomes your spending, your streak, and the gut-check - built for tracking your own purchases (Amazon, coffee, the random stuff), not running the household.</p>
         <label class="hh-toggle"><input type="checkbox" id="spendOn"> Focus on just my spending</label>
         <div id="spendFields" style="display:none">
           <div class="row" style="margin-top:14px">
@@ -3790,13 +3821,13 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
               <span class="fl-in">$<input type="number" id="spendLimit" min="0" step="10" inputmode="decimal" placeholder="e.g. 300" style="width:130px"></span>
               <div class="unit-work" id="spendLimitW"></div></div>
           </div>
-          <p class="sub" style="margin-top:10px">Set a personal "fun money" number and the home screen shows a progress bar - how much you've spent and what's left. Leave it blank for pure tracking, no limit.</p>
+          <p class="sub" style="margin-top:10px" data-say="1">Set a personal "fun money" number and the home screen shows a progress bar - how much you've spent and what's left. Leave it blank for pure tracking, no limit.</p>
         </div>
       </div>
 
       <div class="panel">
         <h2>Household (couples)</h2>
-        <p class="sub">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials.</p>
+        <p class="sub" data-say="1">Sharing money with a partner? Turn this on to tag income by person and see a fair, income-proportional split of the essentials.</p>
         <label class="hh-toggle"><input type="checkbox" id="hhOn"> We share this budget as a couple</label>
         <div id="hhFields" style="display:none">
           <div class="row" style="margin-top:14px">
@@ -3804,45 +3835,45 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <label class="fld">Partner's name<input type="text" id="hhNameB" placeholder="Partner" maxlength="24" style="width:130px"></label>
             <label class="fld">Partner's take-home / hr<input type="number" id="hhWageB" min="0" step="0.5" placeholder="e.g. 20" style="width:160px"></label>
           </div>
-          <p class="sub" style="margin-top:10px">Now the income logger has an "Earned by" picker, and the Home screen shows your combined income, who earns what, and a fair split.</p>
+          <p class="sub" style="margin-top:10px" data-say="1">Now the income logger has an "Earned by" picker, and the Home screen shows your combined income, who earns what, and a fair split.</p>
           <div id="syncPanel" class="syncbox"></div>
         </div>
       </div>
 
       <div class="panel">
         <h2>Weekly Gut-Check</h2>
-        <p class="sub">One blunt money prompt a week. Clarity straight to your inbox - nothing else.</p>
+        <p class="sub" data-say="1">One blunt money prompt a week. Clarity straight to your inbox - nothing else.</p>
         <form id="subForm" class="subform" novalidate>
           <input type="email" id="subEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" required>
           <button class="btn primary" type="submit">Join the Weekly Check-In</button>
         </form>
-        <p class="sub subfine">Zero spam. Unsubscribe anytime. Your financial data stays 100% on this device - only your email is shared, and only with the newsletter provider.</p>
+        <p class="sub subfine" data-say="1">Zero spam. Unsubscribe anytime. Your financial data stays 100% on this device - only your email is shared, and only with the newsletter provider.</p>
         <div id="subResult" class="subresult" role="status" aria-live="polite"></div>
         <div class="offer-row">
           <a class="btn" data-offer="guide" href="#" target="_blank" rel="noopener" style="display:none">Get the Method Guide</a>
         </div>
-        <p class="sub offerfine" id="offerFine" style="display:none">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
+        <p class="sub offerfine" id="offerFine" style="display:none" data-say="1">The guide is educational - the method behind the app, in plain language. It is not personalized financial advice.</p>
       </div>
 
       <div class="panel">
         <h2>Which areas you want</h2>
-        <p class="sub">Turn off anything you do not use and it leaves the menu entirely. Nothing is deleted - whatever you have entered stays exactly where it is and comes straight back if you switch the area on again. Home, Plan, Track and Settings stay put, because an app without them has nothing to do.</p>
+        <p class="sub" data-say="1">Turn off anything you do not use and it leaves the menu entirely. Nothing is deleted - whatever you have entered stays exactly where it is and comes straight back if you switch the area on again. Home, Plan, Track and Settings stay put, because an app without them has nothing to do.</p>
         <div id="areaToggles"></div>
       </div>
 
       <div class="panel" id="supportPanel" style="display:none">
         <h2>What this costs</h2>
-        <p class="sub">Nothing, and there is no locked version. No ads, no subscription, no affiliate links pointing you at where to put your money - that would make this the exact thing it was built to fight. It does not see your numbers, so it could not sell them if it wanted to.</p>
-        <p class="sub" id="supportEarned"></p>
+        <p class="sub" data-say="1">Nothing, and there is no locked version. No ads, no subscription, no affiliate links pointing you at where to put your money - that would make this the exact thing it was built to fight. It does not see your numbers, so it could not sell them if it wanted to.</p>
+        <p class="sub" id="supportEarned" data-say="1"></p>
         <div class="offer-row">
           <a class="btn ghost" data-offer="support" href="#" target="_blank" rel="noopener" style="display:none">Pay what it was worth</a>
         </div>
-        <p class="sub offerfine">One payment, no account, nothing unlocks - you would be paying for the thing you already have. Entirely optional, and the app never asks twice.</p>
+        <p class="sub offerfine" data-say="1">One payment, no account, nothing unlocks - you would be paying for the thing you already have. Entirely optional, and the app never asks twice.</p>
       </div>
 
       <div class="panel">
         <h2>Setup &amp; data</h2>
-        <p class="sub">Everything lives on this device. Nothing leaves it unless you turn on sync - and sync is encrypted before it goes.</p>
+        <p class="sub" data-say="1">Everything lives on this device. Nothing leaves it unless you turn on sync - and sync is encrypted before it goes.</p>
         <div class="row">
           <button class="btn" id="appMapBtn">How it all fits →</button>
           <button class="btn" id="intakeBtn2">Re-run setup chat</button>
@@ -3853,7 +3884,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div class="startover" id="startOver">
           <div class="so-head">Start over</div>
-          <p class="sub" style="margin:6px 0 10px">Wipes the budget, every transaction, your goals and your settings from this browser. There is no server copy and no undo - so save a backup first if there is any chance you will want this back.</p>
+          <p class="sub" style="margin:6px 0 10px" data-say="1">Wipes the budget, every transaction, your goals and your settings from this browser. There is no server copy and no undo - so save a backup first if there is any chance you will want this back.</p>
           <div class="row">
             <button class="btn ghost" id="resetBackupFirst">Back it up first</button>
             <button class="btn ghost danger" id="resetBtn2">Erase everything</button>
@@ -3861,7 +3892,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div class="databox">
           <div class="db-head">Keep a safe backup</div>
-          <p class="sub" style="margin:6px 0 10px">Your data lives only in this browser, so clearing your cache or switching devices would wipe it. Save an <b>encrypted</b> backup file you can restore anywhere with your passphrase. The file is scrambled - useless to anyone without the phrase.</p>
+          <p class="sub" style="margin:6px 0 10px" data-say="1">Your data lives only in this browser, so clearing your cache or switching devices would wipe it. Save an <b>encrypted</b> backup file you can restore anywhere with your passphrase. The file is scrambled - useless to anyone without the phrase.</p>
           <div id="backupNote" class="db-note"></div>
           <div class="row">
             <button class="btn primary" id="encBackupBtn">Save encrypted backup</button>
@@ -3871,11 +3902,11 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <label class="fld" style="margin-top:12px">Remind me to back up
             <select id="autoBackupSel"></select>
           </label>
-          <p class="sub" style="margin-top:8px;font-size:12.5px">A web app cannot write a file to your device on its own - no browser allows it, which is the same rule that stops any page dropping files on your machine. So this watches the clock and asks; saving is one tap. <span id="autoBackupWhen"></span></p>
+          <p class="sub" style="margin-top:8px;font-size:12.5px" data-say="1">A web app cannot write a file to your device on its own - no browser allows it, which is the same rule that stops any page dropping files on your machine. So this watches the clock and asks; saving is one tap. <span id="autoBackupWhen"></span></p>
         </div>
         <div class="databox">
           <div class="db-head">Interface depth</div>
-          <p class="sub" style="margin:6px 0 10px">Guided mode unrolls advanced tools (offense, net worth, sovereignty) only as your Freedom Runway grows, so early on you see just the survival essentials. Switch to Show everything if you want every tool visible now.</p>
+          <p class="sub" style="margin:6px 0 10px" data-say="1">Guided mode unrolls advanced tools (offense, net worth, sovereignty) only as your Freedom Runway grows, so early on you see just the survival essentials. Switch to Show everything if you want every tool visible now.</p>
           <div class="uimode" id="uiMode">
             <button data-m="auto">Guided</button>
             <button data-m="all">Show everything</button>
@@ -3884,15 +3915,17 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <div class="databox">
           <div class="db-head">How much it explains</div>
-          <p class="sub" style="margin:6px 0 10px" data-noclamp="1">Brief shows the first two lines of any explanation and a <b>More</b> to open it. Nothing is deleted or hidden - it is clipped, and every word is one tap away. Full shows all of it, all the time, which is how this started and is why it began to read like one long sentence.</p>
+          <p class="sub" style="margin:6px 0 10px" data-noclamp="1" data-keep="1"><b>Clean</b> keeps the explanations off the screen. Each panel gets a small <b>?</b> beside its heading, and every word that used to sit there is behind it. <b>Brief</b> clips each one to two lines with a More. <b>Full</b> shows everything, always. Nothing is ever deleted - the only question is whether you read it now or when you ask.</p>
           <div class="uimode" id="sayMode">
+            <button data-say="clean">Clean</button>
             <button data-say="brief">Brief</button>
             <button data-say="full">Full</button>
           </div>
+          <div id="sayModeNote" class="db-note" style="margin-top:10px"></div>
         </div>
         <div class="databox">
           <div class="db-head">Voice &amp; tone</div>
-          <p class="sub" style="margin:6px 0 10px">How you want to be held accountable. This is the voice used everywhere - questions, gut-checks, nudges. Forgiving is gentle, Savage pulls no punches. The row below sets how it talks, not how old you are - pick whichever sounds like a person you would listen to.</p>
+          <p class="sub" style="margin:6px 0 10px" data-say="1">How you want to be held accountable. This is the voice used everywhere - questions, gut-checks, nudges. Forgiving is gentle, Savage pulls no punches. The row below sets how it talks, not how old you are - pick whichever sounds like a person you would listen to.</p>
           <div class="intensity" id="intensity">
             <button data-lvl="clean">Forgiving</button>
             <button data-lvl="blunt">Blunt</button>
@@ -3903,8 +3936,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <button data-reg="middle" title="Straight talk, no slang">Plain</button>
             <button data-reg="mature" title="Considered, more formal">Measured</button>
           </div>
-          <p class="sub" id="regSample" style="margin:8px 0 0;font-style:italic"></p>
-          <p class="sub" style="margin:16px 0 6px">Chat pacing. The setup chat takes a beat before answering, the way a person would. Turn it off if you would rather it kept up with you.</p>
+          <p class="sub" id="regSample" style="margin:8px 0 0;font-style:italic" data-say="1"></p>
+          <p class="sub" style="margin:16px 0 6px" data-say="1">Chat pacing. The setup chat takes a beat before answering, the way a person would. Turn it off if you would rather it kept up with you.</p>
           <div class="intensity" id="chatPace" style="margin-top:8px">
             <button data-pace="natural">Takes a beat</button>
             <button data-pace="instant">Instant</button>
@@ -3916,7 +3949,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
            off their own phone turns a guess into a fact. -->
       <div class="panel">
         <h2>Which version is this</h2>
-        <p class="sub">If something has been fixed and your phone still does the old thing, this is how you tell whether the fix has actually reached you. Read it out when you report something.</p>
+        <p class="sub" data-say="1">If something has been fixed and your phone still does the old thing, this is how you tell whether the fix has actually reached you. Read it out when you report something.</p>
         <div class="buildline" id="buildLine"></div>
       </div>
     </section>
@@ -3945,7 +3978,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <div class="modal sheet">
       <button class="x" id="intentX">✕</button>
       <h3>I want to…</h3>
-      <p class="sub" style="margin-bottom:14px">Skip the hunting - tell me what you're here to do.</p>
+      <p class="sub" style="margin-bottom:14px" data-say="1">Skip the hunting - tell me what you're here to do.</p>
       <div id="intentList"></div>
     </div>
   </div>
@@ -3967,6 +4000,16 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <button class="x" id="packSheetX">&#10005;</button>
       <h3 id="packSheetTitle">Category packs</h3>
       <div id="packSheetBody"></div>
+    </div>
+  </div>
+  <!-- Where the explanations went. One sheet, reused by every panel: the title
+       is the panel you asked from, the body is everything that panel would have
+       said if it said it all on screen. -->
+  <div class="modal-overlay" id="saySheet">
+    <div class="modal">
+      <button class="x" id="saySheetX">&#10005;</button>
+      <h3 id="saySheetTitle">About this</h3>
+      <div id="sayBody"></div>
     </div>
   </div>
   <div class="modal-overlay" id="catSheet">
@@ -4021,7 +4064,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
     <div class="modal">
       <button class="x" id="modalX">✕</button>
       <h3>Trap scan</h3>
-      <p class="sub" style="margin-bottom:16px">About to spend? Scan it before it gets you.</p>
+      <p class="sub" style="margin-bottom:16px" data-say="1">About to spend? Scan it before it gets you.</p>
       <div class="row">
         <label class="fld" style="flex:1">Target<input type="text" id="mName" placeholder="Sneakers, gadget, coffee…"></label>
         <label class="fld">Price $<input type="number" id="mAmt" min="0" step="0.01" placeholder="0.00" style="width:110px"></label>
@@ -4551,7 +4594,8 @@ function defaultState(){
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null,
            scans:[], opening:{}, syncOptIn:false,
-           deviceId:'', meIs:'a', changelog:[], graveyard:[], settingsM:{} };
+           deviceId:'', meIs:'a', changelog:[], graveyard:[], settingsM:{}, cellM:{},
+           syncLastPush:'', syncLastPull:'' };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -4573,6 +4617,7 @@ function normalizeState(s){
   if(!Array.isArray(s.changelog)) s.changelog=[];
   if(!Array.isArray(s.graveyard)) s.graveyard=[];
   if(!s.settingsM || typeof s.settingsM!=='object' || Array.isArray(s.settingsM)) s.settingsM={};
+  if(!s.cellM || typeof s.cellM!=='object' || Array.isArray(s.cellM)) s.cellM={};
   if(typeof s.deviceId!=='string') s.deviceId='';
   if(s.meIs!=='b') s.meIs='a';
   if(!Array.isArray(s.scans)) s.scans=[];
@@ -4588,7 +4633,7 @@ function normalizeState(s){
   /* Literal, not a const declared further down - normalizeState runs inside
      load(), which runs at `let state = load()`, and reaching for a const there
      is the temporal-dead-zone bug that has emptied this app twice. */
-  if(['brief','full'].indexOf(s.sayMode)<0) s.sayMode='brief';
+  if(['clean','brief','full'].indexOf(s.sayMode)<0) s.sayMode='clean';
   /* Heal the app's own bug in the app's own data. "Pay Yourself First" is a
      name this app writes, never one a person types from scratch, and it was
      being created with no growth tag - so every dollar somebody paid themselves
@@ -4827,7 +4872,40 @@ const SYNC_SETTINGS=['intensity','activeMonth','hourlyWage','register','freedomM
   'givingPct','uiMode','stageReached','householdOn','nameA','nameB','wageB','spendingMode',
   'spendLimit','trackStart','hoursPerWeek','debtBudget','debtStrategy','roomPay','calConfirm',
   'saveBudget','saveOrder','investReturn','investYears','theme','autoBackup','chatPace',
-  'guidesOff','budgets','opening','units','trueRate','sweptDays','seenGuide','areasOff','dayToDay','comfortMenu'];
+  'guidesOff','trueRate','seenGuide','areasOff','dayToDay','comfortMenu'];
+/* ---------- the two maps that cannot be merged whole ----------
+   Everything above is one value, so "whoever touched it last wins" is honest.
+   These two are not. budgets is {month:{category:amount}} and opening is
+   {month:amount} - thousands of separate decisions living in one field. Merging
+   them as a blob means the moment two people assign money in the same month,
+   one of them loses EVERY assignment they made, silently. The category itself
+   still arrives, because categories merge item by item, so the damage shows up
+   as a category that came across with nothing in it - which reads exactly like
+   sync failing to deliver it at all.
+   sweptDays is the same shape and the same stakes - each entry moves a real
+   amount into a goal on a given day - and units is per-field labelling that two
+   people should not be able to undo for each other.
+   The number is the depth of the map, so a cell can be addressed by its path. */
+const SYNC_CELLMAPS={budgets:2, opening:1, sweptDays:1, units:1};
+/* Flatten to {'2026-09|c1': 400}, which is the level a stamp belongs at. */
+function flatCells(obj, depth){
+  const out={};
+  const walk=(o, d, path)=>{
+    if(!o || typeof o!=='object') return;
+    Object.keys(o).forEach(k=>{
+      const p=path?path+'|'+k:k;
+      if(d<=1){ if(o[k]!==undefined && o[k]!==null) out[p]=o[k]; }
+      else walk(o[k], d-1, p);
+    });
+  };
+  walk(obj, depth, '');
+  return out;
+}
+function setCell(obj, path, val){
+  const parts=path.split('|'); let cur=obj;
+  for(let i=0;i<parts.length-1;i++){ if(!cur[parts[i]]||typeof cur[parts[i]]!=='object') cur[parts[i]]={}; cur=cur[parts[i]]; }
+  cur[parts[parts.length-1]]=val;
+}
 const CHANGELOG_MAX=300, GRAVE_MAX=500;
 function deviceId(){
   if(!state.deviceId){ state.deviceId=Math.random().toString(36).slice(2,10); }
@@ -4866,6 +4944,7 @@ function syncSnapshot(st){
   SYNC_COLLECTIONS.forEach(k=>{ const m={}; (Array.isArray(st[k])?st[k]:[]).forEach(it=>{
     if(it&&it.id!=null) m[it.id]=JSON.stringify(stripStamp(it)); }); o.c[k]=m; });
   SYNC_SETTINGS.forEach(k=>{ o.s[k]=JSON.stringify(st[k]===undefined?null:st[k]); });
+  o.m={}; Object.keys(SYNC_CELLMAPS).forEach(k=>{ o.m[k]=flatCells(st[k], SYNC_CELLMAPS[k]); });
   return o;
 }
 function stripStamp(it){ if(!it||typeof it!=='object') return it; const c={...it}; delete c._m; return c; }
@@ -4908,6 +4987,16 @@ function stampChanges(){
     const v=JSON.stringify(state[k]===undefined?null:state[k]);
     if(syncPrev.s[k]!==v){ sm[k]={...now}; touched=true; }
   });
+  /* Per cell, so one person assigning money to groceries cannot wipe out what
+     the other assigned to everything else. Clearing a cell is stamped too -
+     otherwise "I took that assignment back" loses to a stale copy of it. */
+  const cm=state.cellM=state.cellM||{};
+  Object.keys(SYNC_CELLMAPS).forEach(k=>{
+    const cur=flatCells(state[k], SYNC_CELLMAPS[k]), was=(syncPrev.m||{})[k]||{};
+    const same=(x,y)=>x===y||JSON.stringify(x)===JSON.stringify(y);
+    Object.keys(cur).forEach(p=>{ if(!same(was[p],cur[p])){ cm[k+'|'+p]={...now}; touched=true; } });
+    Object.keys(was).forEach(p=>{ if(!(p in cur)){ cm[k+'|'+p]={...now}; touched=true; } });
+  });
   if(touched) syncPrev=syncSnapshot(state);
 }
 /* ---- the merge, deliberately pure so it can be proven without a network ---- */
@@ -4944,6 +5033,30 @@ function mergeVault(local, remote){
     else { out[k]=local[k]; if(a) m[k]=a; }
   });
   out.settingsM=m;
+  /* Cell maps, reconciled one cell at a time. An absent cell is a real value
+     here - it means nothing is assigned - so a newer stamp with no cell behind
+     it correctly clears what the other side still shows. When neither side has
+     ever stamped a cell (it predates syncing), whichever side actually has it
+     wins, so an old budget arriving from the other phone is not thrown away. */
+  const lc=local.cellM||{}, rc=remote.cellM||{}, cm2={};
+  Object.keys(SYNC_CELLMAPS).forEach(k=>{
+    const depth=SYNC_CELLMAPS[k];
+    const L=flatCells(local[k],depth), R=flatCells(remote[k],depth);
+    const paths={}; Object.keys(L).forEach(p=>paths[p]=1); Object.keys(R).forEach(p=>paths[p]=1);
+    const built={};
+    Object.keys(paths).forEach(p=>{
+      const key=k+'|'+p, a=lc[key], b=rc[key];
+      let fromRemote;
+      if(stampNewer(b,a)) fromRemote=true;
+      else if(stampNewer(a,b)) fromRemote=false;
+      else fromRemote=(L[p]===undefined);
+      const val=fromRemote?R[p]:L[p], st=fromRemote?b:a;
+      if(st) cm2[key]=st;
+      if(val!==undefined) setCell(built,p,val);
+    });
+    out[k]=built;
+  });
+  out.cellM=cm2;
   /* One log, both sides, newest first, deduped by entry id. */
   const seen={}, log=[];
   [...(local.changelog||[]), ...(remote.changelog||[])].forEach(e=>{
@@ -4952,6 +5065,7 @@ function mergeVault(local, remote){
   out.changelog=log.slice(0,CHANGELOG_MAX);
   /* never inherited: this device is this device */
   out.deviceId=local.deviceId; out.meIs=local.meIs; out.syncOptIn=local.syncOptIn;
+  out.syncLastPush=local.syncLastPush; out.syncLastPull=local.syncLastPull;
   return out;
 }
 function save(){
@@ -5143,7 +5257,7 @@ function renderHousehold(){
   const wA=effectiveHourly(), wB=state.wageB||0;
   box.innerHTML=`<div class="panel household">
     <h2>Household</h2>
-    <p class="sub">One budget, two earners. It all stays on this device - to share it with your partner's phone, export the encrypted backup in Settings and have them restore it.</p>
+    <p class="sub" data-say="1">One budget, two earners. It all stays on this device - to share it with your partner's phone, export the encrypted backup in Settings and have them restore it.</p>
     <div class="hh-tot">Combined income this month <b>${usd(inc.total)}</b></div>
     <div class="hh-split">
       <div class="hh-p"><span class="nm">${nameA}</span><span class="v">${moneyOwner(inc.a,'a')}</span><span class="pc">${pct(rA)}%</span></div>
@@ -5305,7 +5419,7 @@ function renderSpending(){
   const showGateway = spent>0 || tcDone;
   const gatewayHTML = showGateway ? `<div class="sp-gateway">
     <div class="sp-k">When you're ready</div>
-    <p class="sub" style="margin:4px 0 10px">Tracking shows you the truth. Sometimes seeing it is enough to change it. Sometimes you want every dollar earmarked with a job. Your call - switch anytime, nothing's lost.</p>
+    <p class="sub" style="margin:4px 0 10px" data-say="1">Tracking shows you the truth. Sometimes seeing it is enough to change it. Sometimes you want every dollar earmarked with a job. Your call - switch anytime, nothing's lost.</p>
     <button class="btn ghost" id="toBudget">Give every dollar a job → full budgeting</button>
   </div>` : '';
   /* One number, and it was the accusing one. Someone who moved $145 into savings
@@ -5637,7 +5751,7 @@ function renderRewardCalendar(){
   if(lim<=0){
     /* No limit means no calendar, which used to mean no way to log from here
        either - the emptiest version of the screen was also the most useless. */
-    box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub">Set a monthly spending limit and this turns into a daily allowance - beat it each day to build a reward streak.</p>${trailBtn('limit','Set my monthly limit','solid')}<button class="btn primary cal-log" data-callog="today">Log money moving</button></div>`;
+    box.innerHTML=`<div class="panel"><h2>Reward calendar</h2><p class="sub" data-say="1">Set a monthly spending limit and this turns into a daily allowance - beat it each day to build a reward streak.</p>${trailBtn('limit','Set my monthly limit','solid')}<button class="btn primary cal-log" data-callog="today">Log money moving</button></div>`;
     box.querySelectorAll('[data-callog]').forEach(b=>b.onclick=()=>openQuickLogFor());
     return;
   }
@@ -7106,7 +7220,177 @@ if(typeof document!=='undefined' && document.body) document.body.dataset.view='h
 
    Cheap on purpose: only the visible view, only paragraphs not already
    measured at this width, and it bails entirely in Full mode. */
-function sayBrief(){ return state.sayMode!=='full'; }
+function sayBrief(){ return state.sayMode==='brief'; }
+function sayClean(){ return (state.sayMode||'clean')==='clean'; }
+/* Two different questions used to have one answer. "Is prose clipped in place?"
+   is sayBrief, and only Brief does that. "Does this reader want the short
+   version?" is sayShort, and BOTH Clean and Brief do - Clean more than Brief.
+   They were the same function while there were only two modes, and adding a
+   third would have quietly handed every new reader the longest copy in the app
+   on the first screen of the intake. */
+function sayShort(){ return state.sayMode!=='full'; }
+
+/* ---------- Clean mode: what counts as an explanation ----------
+   "The content is good. It's just too distracting when the interface should be
+   clean." So this does not cut a word - it moves the words off the panel and
+   puts them one tap away.
+
+   The whole risk of this feature sits in one decision: what may be hidden. Get
+   it wrong and an empty state stops telling you it is empty, an error stops
+   saying what failed, or the only instruction on a form disappears. So the rule
+   is conservative, and everything about it is stated rather than sensed:
+
+   an explanation is prose that would read the SAME if your numbers were
+   different.
+
+   Anything carrying a figure, a date, a name, or a state of the app is not an
+   explanation - it is the interface talking about you, and it stays. */
+const SAY_PROSE='.panel .sub, .acc-body .sub, .tab-intro, .build-intro, .rp-frame, .tl-lead, .walls-tag, .acw-note';
+/* Prose living inside any of these is reporting a situation, not teaching. */
+const SAY_LIVE='.empty,.none,.err,.error,.warn,.status,.cl-none,.sync-lock,.sync-traffic,.db-note,.banner,form,fieldset,#regSample,#sayModeNote,#uiModeNote';
+function sayIsExplanation(el){
+  if(!el) return false;
+  if(el.dataset.keep==='1') return false;                 // marked: never hide this
+  /* The structural guards come first and nothing overrides them - a paragraph
+     inside a form, an error or an empty state is the interface talking, however
+     it was authored. */
+  if(el.closest(SAY_LIVE)) return false;
+  const t=(el.innerText||'').trim();
+  if(!t) return false;
+  const words=t.split(/\s+/).filter(Boolean).length;
+  /* data-say is stamped on prose that is a STATIC literal in the source - no
+     ${} anywhere in it - so it cannot be reporting the reader's own numbers, and
+     the figure test below does not apply to it. That test cannot tell "you are
+     $700 away from your dream", which is live, from "$1,000 between you and
+     disaster", which is teaching. The source can: one is interpolated and one is
+     typed. Deciding it where the difference is visible beats guessing at it
+     where the difference is gone. */
+  if(el.dataset.say==='1') return words>=8;
+  /* Everything else is rendered, so a figure means it is describing the reader's
+     own situation and it stays. */
+  if(/[\d]/.test(t)) return false;
+  if(words<12) return false;
+  return true;
+}
+/* The heading this prose belongs under, which becomes the sheet's title and
+   tells the reader what they are about to read about. */
+/* A heading naming a section is short and stable. "Debt Payoff Planner" is one.
+   "The job pays $30 an hour" is a RESULT that happens to be marked up as an h2 -
+   using it would title the sheet with the reader's own wage and change every
+   time the wage did. Figures and long sentences disqualify a heading. */
+/* An accordion head carries its own one-line summary inside it, so innerText
+   reads as a twelve-word sentence and every one of them was rejected as "too
+   long". The name is the first line; the rest is the summary the accordion
+   already shows. */
+function sayHeadText(h){
+  if(!h) return '';
+  const sub=h.querySelector('.acc-sub');
+  if(sub){ const c=h.cloneNode(true); const s2=c.querySelector('.acc-sub'); if(s2) s2.remove(); return (c.textContent||'').trim(); }
+  return (h.innerText||'').trim();
+}
+function sayHeadingOK(h){
+  if(!h) return false;
+  const t=sayHeadText(h);
+  if(!t || /\d/.test(t)) return false;
+  return t.split(/\s+/).filter(Boolean).length<=7;
+}
+const SAY_HEADS='h2,h3,.db-head,.ph-title,.acc-hd';
+/* The heading a paragraph belongs to is the last one the reader passed on the
+   way down - not the nearest one in the tree. Walking outwards through
+   ancestors was the obvious version and it filed the Four Walls copy under
+   "Do this next", because that was the first heading an enclosing box happened
+   to own. Document order is what a person actually uses, so it is what this
+   uses: scan backwards from the prose and take the first usable heading. */
+function sayOwnerOf(el){
+  const view=el.closest('.view')||document.body;
+  const nodes=Array.from(view.querySelectorAll(SAY_HEADS+',.sub,.tab-intro,.build-intro,.rp-frame,.tl-lead,.walls-tag,.acw-note'));
+  const i=nodes.indexOf(el);
+  if(i<0) return null;
+  for(let j=i-1;j>=0;j--){
+    const n=nodes[j];
+    if(!n.matches(SAY_HEADS)) continue;
+    if(!sayHeadingOK(n)) continue;
+    if(n.offsetParent===null) continue;                    // a heading nobody can see is not a heading
+    return {box:n.parentElement, head:n, title:sayHeadText(n)};
+  }
+  /* Nothing above it. That is not a stray - it is the paragraph at the TOP of a
+     tab, which is the "what is this screen" copy and the most worth moving. It
+     belongs to the tab itself, so the tab is what titles it. */
+  const v=el.closest('.view'); if(!v) return null;
+  const name=(v.id||'').replace(/^view-/,'');
+  const lbl=document.querySelector('#tabs .tab[data-view="'+name+'"] .t-l');
+  return {box:v, head:null, title:(lbl?lbl.innerText.trim():'')||'This screen'};
+}
+let sayGroups=new Map();
+function saySheetOpen(key){
+  const g=sayGroups.get(key); if(!g) return;
+  const ov=document.getElementById('saySheet'), ttl=document.getElementById('saySheetTitle'), body=document.getElementById('sayBody');
+  if(!ov||!body) return;
+  if(ttl) ttl.textContent=g.title;
+  body.innerHTML=g.els.map(el=>`<p class="say-para">${el.innerHTML}</p>`).join('');
+  ov.classList.add('on'); pushOverlay();
+}
+/* One pass, one view. Cheap enough to run on every navigation and every render,
+   because it only ever looks at what is on screen. */
+function sayPass(view){
+  if(sayBusy) return;
+  sayBusy=true;
+  try{ sayPassInner(view); } finally { sayBusy=false; }
+  sayWatch(view);
+}
+function sayPassInner(view){
+  const clean=sayClean();
+  document.body.classList.toggle('say-clean', clean);
+  document.body.classList.toggle('say-brief', sayBrief());
+  const root=view ? document.getElementById('view-'+view) : document;
+  if(!root) return;
+  /* Leaving a mode has to put back everything the other mode did, or switching
+     to Full would show the prose and keep the question mark next to it. */
+  root.querySelectorAll('.say-why').forEach(b=>b.remove());
+  root.querySelectorAll('.say-hid').forEach(el=>el.classList.remove('say-hid'));
+  if(!clean){ clampPass(view); return; }
+  sayGroups=new Map(); let n=0;
+  const found=new Map();
+  root.querySelectorAll(SAY_PROSE).forEach(el=>{
+    if(el.closest('details:not([open])')) return;
+    if(el.offsetParent===null) return;
+    if(!sayIsExplanation(el)) return;
+    const own=sayOwnerOf(el); if(!own) return;
+    /* Keyed on the heading rather than the box: two paragraphs nested at
+       different depths under one title are one explanation, not two, and the
+       first cut of this put a second identical "?" beside three headings. */
+    const key=own.head||own.box;
+    if(!found.has(key)) found.set(key, {own, els:[]});
+    found.get(key).els.push(el);
+  });
+  found.forEach(({own, els})=>{
+    /* If hiding it would leave the panel with nothing to read, it was not
+       decoration - it was the panel. Leave it alone. */
+    const scope=own.head?(own.head.closest('.panel,.databox,.acc-body')||own.box):own.box;
+    /* Visible controls, not merely present ones. A panel gated shut is already
+       down to a heading and one line saying what will bring it back - putting a
+       "?" on it adds a control to the one place that had deliberately hidden all
+       of them, and leaves nothing to read but the question mark. */
+    const others=[...scope.querySelectorAll('button,input,select,textarea,table,canvas,.row,.chart,li')]
+      .filter(c=>!c.classList.contains('say-why') && c.offsetParent!==null);
+    if(!others.length) return;
+    const key='say'+(++n);
+    sayGroups.set(key, {title:own.title, els});
+    els.forEach(el=>el.classList.add('say-hid'));
+    const btn=document.createElement('button');
+    btn.className='say-why'; btn.type='button'; btn.textContent='?';
+    btn.setAttribute('aria-label','What is '+own.title.replace(/[?.:!]+$/,'')+'?');
+    btn.title='What is this?';
+    btn.onclick=e=>{ e.preventDefault(); e.stopPropagation(); saySheetOpen(key); };
+    if(own.head) own.head.appendChild(btn);
+    else {
+      /* No heading, so it stands where the paragraph stood - top of the tab,
+         which is where the eye starts anyway. */
+      btn.classList.add('say-solo');
+      els[0].insertAdjacentElement('beforebegin', btn);
+    }
+  });
+}
 function clampPass(view){
   document.body.classList.toggle('say-brief', sayBrief());
   if(!sayBrief()) return;
@@ -7143,18 +7427,47 @@ function clampPass(view){
     };
   });
 }
+/* ---------- keeping it clean after a render ----------
+   The marks and the "?" live in the DOM, so any render that rebuilds a panel's
+   innerHTML throws them away and the prose comes back - on the panel the reader
+   just interacted with, which is the worst possible moment for the screen to
+   fill up again. Rather than find and patch every render (there are dozens, and
+   the next one written would forget), watch the view that is on screen and
+   re-run the pass when its contents change.
+
+   sayPass mutates the thing it is watching, so it raises a flag while it works
+   and the observer ignores its own footprints. */
+let sayBusy=false, sayObs=null, sayObsTimer=null;
+function sayWatch(view){
+  if(sayObs){ sayObs.disconnect(); sayObs=null; }
+  const root=view?document.getElementById('view-'+view):null;
+  if(!root || typeof MutationObserver==='undefined') return;
+  sayObs=new MutationObserver(muts=>{
+    if(sayBusy) return;
+    /* Ignore the pass's own handiwork, or it would chase its tail. */
+    const real=muts.some(m=>{
+      if(m.type==='attributes') return false;
+      const touched=[...m.addedNodes,...m.removedNodes];
+      return touched.some(n=>!(n.classList&&(n.classList.contains('say-why')||n.classList.contains('sub-more'))));
+    });
+    if(!real) return;
+    clearTimeout(sayObsTimer);
+    sayObsTimer=setTimeout(()=>sayPass(view), 80);
+  });
+  sayObs.observe(root,{childList:true,subtree:true});
+}
 /* Opening an accordion is the first moment its prose has a width to be measured
    against, so that is when it gets measured. */
 document.addEventListener('toggle',e=>{
   const d=e.target;
-  if(d && d.tagName==='DETAILS' && d.open) clampPass(typeof currentTab!=='undefined'?currentTab:null);
+  if(d && d.tagName==='DETAILS' && d.open) sayPass(typeof currentTab!=='undefined'?currentTab:null);
 }, true);
 /* A width change re-decides it: what needs a "more" at 320px may not at 900. */
 (function(){
   let t=null;
   window.addEventListener('resize',()=>{ clearTimeout(t); t=setTimeout(()=>{
     document.querySelectorAll('[data-clamp-w]').forEach(el=>{ delete el.dataset.clampW; });
-    clampPass(typeof currentView==='function'?currentView():null);
+    sayPass(typeof currentTab!=='undefined'?currentTab:null);
   },160); });
 })();
 function activateTab(name,fromHistory){
@@ -7213,7 +7526,7 @@ function activateTab(name,fromHistory){
   /* After the view has drawn, or there is nothing to measure. Two frames: the
      first lets the panels lay out, the second catches anything a render kicked
      off inside them. */
-  requestAnimationFrame(()=>{ clampPass(name); requestAnimationFrame(()=>clampPass(name)); });
+  requestAnimationFrame(()=>{ sayPass(name); requestAnimationFrame(()=>sayPass(name)); });
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('.tab[data-view]').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.view)));
@@ -7329,6 +7642,7 @@ function closeTopOverlay(){
   const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
+  const ss=document.getElementById('saySheet'); if(ss&&ss.classList.contains('on')){ ss.classList.remove('on'); return true; }
   const ts=document.getElementById('txSheet'); if(ts&&ts.classList.contains('on')){ ts.classList.remove('on'); if(typeof txSheetId!=='undefined') txSheetId=null; return true; }
   const cs=document.getElementById('catSheet'); if(cs&&cs.classList.contains('on')){ cs.classList.remove('on'); if(typeof catSheetId!=='undefined') catSheetId=null; return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
@@ -7476,7 +7790,7 @@ function stageMapHTML(){
   const foot = forced
     ? 'Guided mode is off, so every tool is already showing. Turn it back on in Settings to climb the ladder properly.'
     : 'Runway is what unlocks these: how many months you could cover with what you have. It is not a button, because the tools above assume a cushion that has to be real.';
-  return `<h3>The ladder</h3><p class="sub" style="margin-bottom:14px">Three stages. The app only shows what you are ready for, and opens the rest as your runway grows.</p>${cards}<p class="sub sm-foot">${foot}</p>`;
+  return `<h3>The ladder</h3><p class="sub" style="margin-bottom:14px" data-say="1">Three stages. The app only shows what you are ready for, and opens the rest as your runway grows.</p>${cards}<p class="sub sm-foot">${foot}</p>`;
 }
 function openStageMap(){
   const ov=document.getElementById('stageMap'); if(!ov) return;
@@ -7622,7 +7936,7 @@ function renderRetro(){
   const granBtn=(k,lbl)=>`<button class="${v.gran===k?'on':''}" data-gran="${k}">${lbl}</button>`;
   const delta = (first&&last&&first.netWorth!=null&&last.netWorth!=null) ? last.netWorth-first.netWorth : null;
   el.innerHTML=`<div class="panel"><h2>Your evolution</h2>
-    <p class="sub">Your money over time. Snapshots are captured automatically each month.</p>
+    <p class="sub" data-say="1">Your money over time. Snapshots are captured automatically each month.</p>
     <div class="retro-ctl">
       <div class="uimode" id="retroGran">${granBtn('month','Monthly')}${granBtn('quarter','Quarterly')}</div>
       <div class="rangebtns">${rangeBtn('3m','3M')}${rangeBtn('6m','6M')}${rangeBtn('1y','1Y')}${rangeBtn('all','All')}${rangeBtn('custom','Custom')}</div>
@@ -7661,10 +7975,16 @@ function renderUiMode(){
   box.addEventListener('click',e=>{ const b=e.target.closest('button[data-m]'); if(!b) return;
     state.uiMode=b.dataset.m; save(); applyStage({silent:true}); renderUiMode(); renderAll&&renderAll(); });
 })();
+const SAY_NOTES={
+  clean:'Panels show what they do. The explanation is behind the <b>?</b> next to each heading.',
+  brief:'Every explanation shows its first two lines, with a <b>More</b> under it.',
+  full:'Every explanation shows in full, everywhere. This is how the app started, and it is why it began to read like one long sentence.'};
 function renderSayMode(){
   const box=document.getElementById('sayMode'); if(!box) return;
-  const on=sayBrief()?'brief':'full';
+  const on=state.sayMode||'clean';
   box.querySelectorAll('button[data-say]').forEach(b=>b.classList.toggle('on',b.dataset.say===on));
+  const note=document.getElementById('sayModeNote');
+  if(note) note.innerHTML=SAY_NOTES[on]||'';
 }
 (function(){ const box=document.getElementById('sayMode'); if(!box) return;
   box.addEventListener('click',e=>{ const b=e.target.closest('button[data-say]'); if(!b) return;
@@ -7676,9 +7996,10 @@ function renderSayMode(){
       el.classList.remove('clampable','open');
       const nx=el.nextElementSibling; if(nx&&nx.classList.contains('sub-more')) nx.remove();
     });
-    clampPass(typeof currentTab!=='undefined'?currentTab:null);
-    if(typeof toast==='function') toast(sayBrief()
-      ? 'Brief. Every explanation shows its first two lines, with More to open it - nothing is gone.'
+    sayPass(typeof currentTab!=='undefined'?currentTab:null);
+    if(typeof toast==='function') toast(
+      sayClean() ? 'Clean. Every explanation is behind the ? beside each heading - nothing is gone.'
+      : sayBrief() ? 'Brief. Every explanation shows its first two lines, with More to open it.'
       : 'Full. Every explanation shows in full, everywhere.');
   });
 })();
@@ -9562,6 +9883,7 @@ function renderCatSheet(){
   wirePlan(document.getElementById('catSheet'), false);
 }
 (function(){
+  const sx=document.getElementById('saySheetX'); if(sx) sx.addEventListener('click',dismissOverlay);
   const x=document.getElementById('catSheetX'); if(x) x.addEventListener('click',dismissOverlay);
   const ov=document.getElementById('catSheet');
   if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) dismissOverlay(); });
@@ -12064,8 +12386,16 @@ async function pushToVault(passphrase){
   const sess=await sbSession(); if(!sess) throw new Error('You are not signed in to sync.');
   const pass=passphrase||syncPass; if(!pass) throw new Error('No Sync Passphrase in this session - enter it to resume syncing.');
   const payload=await encryptVault(state, pass);
-  const {error}=await sb.from('user_vaults').upsert({ user_id:sess.user.id, encrypted_payload:payload, updated_at:new Date().toISOString() }, {onConflict:'user_id'});
+  const stamp=new Date().toISOString();
+  const {error}=await sb.from('user_vaults').upsert({ user_id:sess.user.id, encrypted_payload:payload, updated_at:stamp }, {onConflict:'user_id'});
   if(error) throw new Error(error.message);
+  /* Remember what we just wrote. Without this the next poll reads a timestamp
+     that has moved - because WE moved it - decides the other phone has news,
+     and pulls back its own write every fifteen seconds forever. Harmless to the
+     data, since merging is idempotent, and pure noise on the wire. */
+  syncLastSeen=stamp;
+  state.syncLastPush=stamp;
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(_){ }   // not save(): that would schedule another push
   return true;
 }
 async function pullFromVault(passphrase){
@@ -12088,6 +12418,7 @@ async function pullFromVault(passphrase){
   const merged=mergeVault(state, Object.assign(defaultState(), remote));
   state=normalizeState(merged); if(!state.activeMonth) state.activeMonth=thisMonth();
   syncPrev=null;                                      // re-baseline: a merge is not an edit by this device
+  state.syncLastPull=new Date().toISOString();
   save();                                             // syncPulling guards the auto-push
   syncPulling=false;
   /* What came back may differ from what the vault held, because our side had
@@ -12153,6 +12484,32 @@ let syncUI={view:'menu', email:'', err:''};
    account balances are always accurate". The second half is why it exists: with
    two people and one budget, a figure being wrong is far less useful to know
    than WHEN it went wrong and who was holding the phone. */
+/* ---------- has this phone actually sent anything ----------
+   Three rounds of "it still did not load" went by with no way for either side
+   to tell whether a device had ever pushed. syncNote said "Synced just now" and
+   vanished; the panel showed "Vault active" whether or not a byte had moved.
+   A vault holds only what was last successfully pushed to it, so a phone that
+   has been locked since the change was made never sent it - and the other
+   person pulls a vault that simply does not contain the thing they are looking
+   for, which looks exactly like a broken merge. These two lines separate those
+   two stories. */
+function syncAgeWords(iso){
+  if(!iso) return null;
+  const ms=Date.now()-new Date(iso).getTime();
+  if(!(ms>=0)) return null;
+  const s=Math.round(ms/1000);
+  if(s<75) return 'seconds ago';
+  if(s<3600) return Math.round(s/60)+' min ago';
+  if(s<86400) return Math.round(s/3600)+' hr ago';
+  return Math.round(s/86400)+' days ago';
+}
+function syncTrafficHTML(){
+  const up=syncAgeWords(state.syncLastPush), down=syncAgeWords(state.syncLastPull);
+  /* Never pushed is the interesting case, and the one worth saying loudly: it
+     means nothing on this phone has ever reached the other one. */
+  if(!up) return `<div class="sync-traffic none"><b>Nothing from this phone has reached the vault yet.</b> Whatever is on this device is still only on this device - if your partner is missing something you added here, this is why.</div>`;
+  return `<div class="sync-traffic"><span>Last sent <b>${escapeHtml(up)}</b></span><span>Last received <b>${escapeHtml(down||'never')}</b></span></div>`;
+}
 function changeLogHTML(n){
   const log=(state.changelog||[]).slice(0, n||8);
   if(!log.length) return `<div class="chlog"><div class="cl-h">Changes</div><p class="cl-none">Nothing has changed since this was set up. Once either of you edits something it is listed here, with who and when.</p></div>`;
@@ -12180,7 +12537,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-02 · unlock-in-place';
+const BUILD_STAMP='2026-09-03 · clean screens';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -12193,16 +12550,17 @@ function renderSync(){
   if(!state.householdOn){ box.innerHTML=''; return; }
   if(!syncConfigured()){
     box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag">Sovereign tier</span></div>
-      <p class="sub" style="margin-top:6px">End-to-end-encrypted sync across both phones is coming. Your budget gets encrypted on your device <b>before</b> it ever leaves - even we won't be able to read it. For now, share via the encrypted backup below.</p>`;
+      <p class="sub" style="margin-top:6px" data-say="1">End-to-end-encrypted sync across both phones is coming. Your budget gets encrypted on your device <b>before</b> it ever leaves - even we won't be able to read it. For now, share via the encrypted backup below.</p>`;
     return;
   }
   const v=syncUI.view, err=syncUI.err?`<div class="sync-err">${syncUI.err}</div>`:'';
   const warn=`<div class="sync-warn"><b>Read this carefully.</b> Your Sync Passphrase locks your data <b>before</b> it leaves your device. We never see it, and <b>we cannot reset it.</b> If you both lose it, the cloud copy is gone forever - there is no recovery. Write it somewhere safe.</div>`;
-  if(v==='loading'){ box.innerHTML=`<div class="sync-head">Household Sync</div><p class="sub">Checking your sync…</p>`; return; }
+  if(v==='loading'){ box.innerHTML=`<div class="sync-head">Household Sync</div><p class="sub" data-say="1">Checking your sync…</p>`; return; }
   if(v==='active'){
     box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag on">Vault active</span></div>
       <p class="sub" style="margin-top:6px">${escapeHtml(syncNote||'Your encrypted vault is live. Your changes go up as you make them, and theirs come down on their own.')}</p>
       <div class="sync-instr"><b>To link your partner's phone:</b> have them open the app → Settings → turn on "We share this budget" → <b>Link to an existing vault</b>, and enter this account's <b>email, password, and Sync Passphrase</b>.</div>
+      ${syncTrafficHTML()}
       ${changeLogHTML()}
       <!-- "Check now" rather than "Sync now": nothing here is waiting on a
            button any more, and a button that claims to do the syncing implies
@@ -12217,7 +12575,7 @@ function renderSync(){
   }
   if(v==='unlock'){
     box.innerHTML=`<div class="sync-head">Household Sync</div>
-      <p class="sub" style="margin-top:6px">You're signed in on this device. Enter your Sync Passphrase to unlock and resume syncing (we keep it in memory only, never stored).</p>
+      <p class="sub" style="margin-top:6px" data-say="1">You're signed in on this device. Enter your Sync Passphrase to unlock and resume syncing (we keep it in memory only, never stored).</p>
       <div class="sync-form"><input type="password" id="syncPassIn" placeholder="Sync Passphrase"><button class="btn sm primary" id="syncUnlock">Unlock →</button></div>${err}
       <button class="intake-skip" id="syncOut2">Sign out instead</button>`;
     document.getElementById('syncUnlock').onclick=async()=>{ const p=document.getElementById('syncPassIn').value; if(!p) return; syncUI.err=''; try{ await pullFromVault(p); syncPass=p; syncActive=true; syncPassRemember(p); syncPollStart(); syncNote='Unlocked and synced.'; syncUI.view='active'; renderSync(); }catch(e){ syncUI.err=syncPlainErr(e); renderSync(); } };
@@ -12241,14 +12599,14 @@ function renderSync(){
   }
   if(v==='host-key'){
     box.innerHTML=`<div class="sync-head">Create your Sync Passphrase</div>
-      <p class="sub" style="margin-top:6px">This is the key that encrypts your budget before it syncs. Pick something you'll both remember - and can share with your partner.</p>
+      <p class="sub" style="margin-top:6px" data-say="1">This is the key that encrypts your budget before it syncs. Pick something you'll both remember - and can share with your partner.</p>
       ${warn}
       <div class="sync-form"><input type="password" id="syncKey1" placeholder="Create a Sync Passphrase (min 8)"><input type="password" id="syncKey2" placeholder="Type it again"><button class="btn sm primary" id="syncActivate">Activate vault →</button></div>${err}`;
     document.getElementById('syncActivate').onclick=hostActivate;
     return;
   }
   box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag">Sovereign tier</span></div>
-    <p class="sub" style="margin-top:6px">One shared budget across both phones, <b>end-to-end encrypted</b> so even we can't read it. One of you sets it up; the other links in.</p>
+    <p class="sub" style="margin-top:6px" data-say="1">One shared budget across both phones, <b>end-to-end encrypted</b> so even we can't read it. One of you sets it up; the other links in.</p>
     <div class="sync-actions"><button class="btn sm primary" id="syncSetup">Set up Household Sync</button><button class="btn sm ghost" id="syncJoin">Link to an existing vault</button></div>${err}`;
   document.getElementById('syncSetup').onclick=()=>{ syncUI={view:'host-auth',email:'',err:''}; renderSync(); };
   document.getElementById('syncJoin').onclick=()=>{ syncUI={view:'join',email:'',err:''}; renderSync(); };
@@ -12898,7 +13256,7 @@ function trapOptions(sel){ return TRAPS.map(t=>`<option value="${t.v}"${t.v===se
 function fillTrapPickers(){
   ['impTrap','mTrap'].forEach(id=>{ const el=document.getElementById(id); if(el){ const cur=el.value||'scroll'; el.innerHTML=trapOptions(cur); } });
   const leg=document.getElementById('trapLegendBody');
-  if(leg) leg.innerHTML=`<p class="tl-lead">Four ways money gets pulled out of you. They're not character flaws - they're designs, built by people who are paid to be good at this. Naming which one you're in is how you stop arguing with yourself and start seeing the mechanism. And a fifth answer that is <b>not</b> a trap, because an app that calls every purchase a trap is telling you exactly as much as one that calls none of them a trap.</p>`
+  if(leg) leg.innerHTML=`<p class="tl-lead" data-say="1">Four ways money gets pulled out of you. They're not character flaws - they're designs, built by people who are paid to be good at this. Naming which one you're in is how you stop arguing with yourself and start seeing the mechanism. And a fifth answer that is <b>not</b> a trap, because an app that calls every purchase a trap is telling you exactly as much as one that calls none of them a trap.</p>`
     +TRAPS.map(t=>`<div class="tl-row"><span class="tl-ic">${t.icon}</span><div><div class="tl-n">${escapeHtml(t.label)}</div><div class="tl-d">${escapeHtml(TRAP_MEANS[t.v])}</div></div></div>`).join('');
 }
 /* the full explanation, for the legend - longer than the dropdown one-liners */
@@ -13302,7 +13660,7 @@ function acctWorkHTML(a){
                  : (catName(t.catId)||t.note||'Expense');
       return `<div class="acw-r"><span class="acw-d">${escapeHtml(t.date||'')}</span><span class="acw-w">${what}</span><b class="${inbound?'up':'down'}">${inbound?'+':'&minus;'}${usd(+t.amount||0)}</b></div>`;
     }).join('')}${d.n>rows.length?`<div class="acw-more">and ${d.n-rows.length} more, all of them on Track</div>`:''}</div>
-    <p class="acw-note">This is a projection from what you logged, nothing more. If the bank disagrees, the bank is right and the difference is the thing worth finding.</p>
+    <p class="acw-note" data-say="1">This is a projection from what you logged, nothing more. If the bank disagrees, the bank is right and the difference is the thing worth finding.</p>
   </details>`;
 }
 /* ---------- what the account actually said, over time ----------
@@ -13345,7 +13703,7 @@ function acctHistHTML(a){
     const x=h[0];
     return `<details class="ac-hist"><summary>1 reading, taken ${escapeHtml(x.d)}</summary>
       <div class="ach-rows"><div class="ach-r"><span class="ach-d">${escapeHtml(x.d)}</span><b>${usd(owed0?Math.max(0,-x.b):x.b)}</b><i>first reading</i></div></div>
-      <p class="acw-note">Recorded. The next time you retype this number, the change between the two lands here and in the month's figures - that is the trend this app is built on. History starts the day the account was added; anything before it was never recorded and cannot be recovered.</p>
+      <p class="acw-note" data-say="1">Recorded. The next time you retype this number, the change between the two lands here and in the month's figures - that is the trend this app is built on. History starts the day the account was added; anything before it was never recorded and cannot be recovered.</p>
     </details>`;
   }
   const owed=isOwedAcct(a);
@@ -13361,7 +13719,7 @@ function acctHistHTML(a){
       return `<div class="ach-r"><span class="ach-d">${escapeHtml(x.d)}</span><b>${usd(owed?Math.max(0,-x.b):x.b)}</b>${
         d==null?'<i>first reading</i>':`<i class="${d>=0?'up':'down'}">${d>=0?'+':'&minus;'}${usd(Math.abs(d))}</i>`}<span class="ach-h">${escapeHtml(HOW[x.how]||'')}</span></div>`;
     }).join('')}</div>
-    <p class="acw-note">Kept on this device, one reading a day. It starts the day the account was added - anything before that was never recorded and cannot be recovered.</p>
+    <p class="acw-note" data-say="1">Kept on this device, one reading a day. It starts the day the account was added - anything before that was never recorded and cannot be recovered.</p>
   </details>`;
 }
 function acctMoveIn(a, month){
@@ -13798,7 +14156,7 @@ function renderComfortMenu(){
   box.innerHTML = (list.length
     ? `<div class="cm-chips">${list.map(c=>`<span class="cm-c edit">${escapeHtml(c)}<button class="cm-x" data-cmdel="${escapeHtml(c)}" title="Remove">✕</button></span>`).join('')}</div>
        <div class="sub" style="margin-top:10px">These show up inside a gut-check, right when the urge does.</div>`
-    : `<div class="sub">Nothing yet. Add a few things that genuinely help you - they'll appear inside every gut-check.</div>`)
+    : `<div class="sub" data-keep="1">Nothing yet. Add a few things that genuinely help you - they'll appear inside every gut-check.</div>`)
     +(seeds.length?`<div class="cm-chips" style="margin-top:10px">${seeds.map(s=>`<button class="cm-seed" data-cmadd="${escapeHtml(s)}">+ ${escapeHtml(s)}</button>`).join('')}</div>`:'');
   // delete by VALUE, not index - a sync pull can replace the array under a stale render
   box.querySelectorAll('button[data-cmdel]').forEach(b=>b.onclick=()=>{ const i=(state.comfortMenu||[]).indexOf(b.dataset.cmdel); if(i>-1){ state.comfortMenu.splice(i,1); comfortChanged(); } });
@@ -14363,7 +14721,7 @@ function freedomExplainHTML(){
   const hpw=state.hoursPerWeek>0?state.hoursPerWeek:40;
   const moHrs=(state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS);
   const dayHrs=moHrs/21.7;
-  if(!(H>0)) return `<p class="sub">There is no rate set yet, so every figure stays in dollars. Add your take-home pay per hour in Settings and the whole app can reprice itself in hours of your life.</p>
+  if(!(H>0)) return `<p class="sub" data-say="1">There is no rate set yet, so every figure stays in dollars. Add your take-home pay per hour in Settings and the whole app can reprice itself in hours of your life.</p>
     <button class="btn sm" id="ftGoWage">Set my rate →</button>`;
   const src = state.hourlyWage>0
     ? (state.wageAuto ? 'worked out from the income you logged and the hours it takes' : 'the rate you entered yourself')
@@ -14374,7 +14732,7 @@ function freedomExplainHTML(){
   const exName = pick ? catName(pick.catId) : 'a $100 buy';
   const exHrs = exAmt/H;
   const exOut = fmtLife(exAmt);
-  return `<p class="sub" style="margin-bottom:4px">Every figure is divided by what one hour of your life actually pays.</p>
+  return `<p class="sub" style="margin-bottom:4px" data-say="1">Every figure is divided by what one hour of your life actually pays.</p>
   <div class="ft-math">
     Your rate: <b>${usd(H)}</b> per hour<br>
     <span class="sub" style="font-size:12.5px">${escapeHtml(src)}.</span><br>
@@ -14384,7 +14742,7 @@ function freedomExplainHTML(){
     <b>${escapeHtml(exName)}</b> costs ${usd(exAmt)}.<br>
     ${usd(exAmt)} ÷ ${usd(H)}/hr = <b>${(Math.round(exHrs*10)/10)} hours</b> of work = <b>${exOut}</b>.
   </div>
-  <p class="sub" style="margin:14px 0 6px"><b>Why the unit changes.</b> Small amounts read in minutes, big ones in months, so the number stays something you can picture:</p>
+  <p class="sub" style="margin:14px 0 6px" data-say="1"><b>Why the unit changes.</b> Small amounts read in minutes, big ones in months, so the number stays something you can picture:</p>
   <div class="ft-math" style="padding:6px 14px">
     <div class="ft-rung"><span>Under an hour</span><span>minutes</span></div>
     <div class="ft-rung"><span>Under a workday</span><span>hours</span></div>
@@ -14392,7 +14750,7 @@ function freedomExplainHTML(){
     <div class="ft-rung"><span>A working month or more</span><span>months</span></div>
   </div>
   <p class="sub" style="margin-top:12px"><b>These are working days, not calendar days.</b> One day here is <b>${Math.round(dayHrs*10)/10} hrs</b> at your desk, and one month is <b>${Math.round(moHrs)} hrs</b> - about 21.7 working days. That is why a full month of pay can read as roughly 18 to 22 days rather than 30: nobody works all 30.</p>
-  <p class="sub" style="margin-top:10px">You always <b>type dollars</b>. Only the display changes, so nothing you enter is ever converted or lost.</p>`;
+  <p class="sub" style="margin-top:10px" data-say="1">You always <b>type dollars</b>. Only the display changes, so nothing you enter is ever converted or lost.</p>`;
 }
 function openFreedomHelp(){
   const body=document.getElementById('ftHelpBody'); if(!body) return;
@@ -14572,7 +14930,7 @@ function renderStory(){
       <div class="sq-n">${escapeHtml(q.ask)}</div>
       <div class="sq-go"><button class="btn sm ghost" data-storywrite="${q.k}">Write about this →</button></div></div>`;
   }).join('')
-  + `<p class="sub" style="margin-top:14px">Nothing here is graded and nothing leaves this device. The entries you write land in <b>Your story so far</b> below, and anything that sounds like money gets offered up to log - so a sentence about a bad week can become the entry that explains a number three months from now.</p>`;
+  + `<p class="sub" style="margin-top:14px" data-say="1">Nothing here is graded and nothing leaves this device. The entries you write land in <b>Your story so far</b> below, and anything that sounds like money gets offered up to log - so a sentence about a bad week can become the entry that explains a number three months from now.</p>`;
   box.querySelectorAll('[data-storywrite]').forEach(b=>b.addEventListener('click',()=>{
     const q=STORY_Q.find(x=>x.k===b.dataset.storywrite); if(!q) return;
     const t=document.getElementById('diaryText'); if(!t) return;
@@ -15231,7 +15589,7 @@ function renderTrueRateCard(){
   box.innerHTML=`<div class="panel trc">
     <div class="ph-eye">One number, before you go further</div>
     <h2>The job pays ${usd(H)} an hour. Your hour costs more than that.</h2>
-    <p class="sub">Every purchase in this app is priced in hours of your life, and that pricing is only as honest as this rate. Right now it is your pay divided by the hours on your timesheet - which ignores the commute you don't get paid for, the prep, and the money the job itself costs you in gas, lunches and clothes. Two questions and it's the real number. Every field takes whatever period you think in, and the <b>?</b> next to each shows its working.</p>
+    <p class="sub" data-say="1">Every purchase in this app is priced in hours of your life, and that pricing is only as honest as this rate. Right now it is your pay divided by the hours on your timesheet - which ignores the commute you don't get paid for, the prep, and the money the job itself costs you in gas, lunches and clothes. Two questions and it's the real number. Every field takes whatever period you think in, and the <b>?</b> next to each shows its working.</p>
     <div class="row" style="margin-top:12px">${trFieldsHTML('trc')}</div>
     <div class="row" style="margin-top:14px">
       <button class="btn primary" id="trcGo">Show me my real rate</button>
@@ -15834,10 +16192,10 @@ function renderTripwires(){
         </div>
         <ol class="tw-steps">${r.steps.map(x=>`<li>${x}</li>`).join('')}</ol>
         <p class="sub">${r.note}</p>
-        <p class="sub">Takes about a minute per app, once. Nothing here needs an account, a store, or a payment.</p>
+        <p class="sub" data-say="1">Takes about a minute per app, once. Nothing here needs an account, a store, or a payment.</p>
       </div>
     </details>`:''}
-    <p class="sub" style="margin-top:12px">A tripwire is a nudge, never a lock. You can walk straight past it - the point is that you walked past it <b>on purpose</b>, which is a different thing from not noticing.</p>`;
+    <p class="sub" style="margin-top:12px" data-say="1">A tripwire is a nudge, never a lock. You can walk straight past it - the point is that you walked past it <b>on purpose</b>, which is a different thing from not noticing.</p>`;
   box.querySelectorAll('[data-twseed]').forEach(b=>b.onclick=()=>twAdd(b.dataset.twseed,b.dataset.twtrap));
   box.querySelectorAll('[data-twdel]').forEach(b=>b.onclick=()=>twRemove(b.dataset.twdel));
   box.querySelectorAll('[data-twplat]').forEach(b=>b.onclick=()=>{ twPlatform=b.dataset.twplat; renderTripwires(); });
@@ -16845,7 +17203,7 @@ function appMapHTML(){
       <span class="mr-go">→</span></button>`; }).join('');
   const shown=MAP_ORDER.filter(m=>areaOn(m.v));
   const done=shown.filter(m=>areaUsed(m.v)).length;
-  return `<p class="sub">The six numbered areas are the loop: decide, record, look, defend, build, clear. The rest are there when you want them. Tap any one to go.</p>
+  return `<p class="sub" data-say="1">The six numbered areas are the loop: decide, record, look, defend, build, clear. The rest are there when you want them. Tap any one to go.</p>
     <div class="map-prog"><b>${done}</b> of ${shown.length} areas used so far</div>
     <div class="map-list">${rows}</div>
     <div class="map-foot"><button class="btn sm ghost" id="mapReplay">Replay the first-time guides</button></div>`;
@@ -17919,7 +18277,7 @@ function renderReport(){
     ? `<details class="rp-lock"><summary>${locked.length} more would appear with a little more logged</summary><ul>${locked.map(l=>`<li>${escapeHtml(l.t)}${l.do?' '+trailBtn(l.do,null,'sm'):''}</li>`).join('')}</ul></details>`
     : '';
   const outsideFoot = signals.some(g=>g.outside)
-    ? `<p class="rp-frame">The outside numbers say what is, not what to do. They name no bank, no fund and no product - context for your own figures, nothing more.</p>` : '';
+    ? `<p class="rp-frame" data-say="1">The outside numbers say what is, not what to do. They name no bank, no fund and no product - context for your own figures, nothing more.</p>` : '';
   box.innerHTML = signals.length
     ? cards+outsideFoot+lockHTML
     : `<div class="empty rf-empty">Nothing worth saying yet - and saying something anyway would be worse than saying nothing. Log a month of money in and out and this fills itself in.<div class="rf-cta">${trailBtn('income','Log income','solid')}${trailBtn('logspend','Log an expense')}</div></div>`+lockHTML;
@@ -17946,11 +18304,11 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
     body.innerHTML=`<div id="rpBody"></div>`;
     renderReport();
   } else if(rfTab==='breakdown'){
-    bar.innerHTML=`<p class="sub rf-lead">Where it went and where it came from. Widen the window to tell a one-off from a habit, and tap a slice to break it down further.</p>`;
+    bar.innerHTML=`<p class="sub rf-lead" data-say="1">Where it went and where it came from. Widen the window to tell a one-off from a habit, and tap a slice to break it down further.</p>`;
     body.innerHTML=`<div id="bdBox"></div>`;
     renderBreakdown();   // carries its own 1/3/6/12 control, which IS the period here
   } else if(rfTab==='trends'){
-    bar.innerHTML=monthBar+`<p class="sub rf-lead">How each thing has moved, month by month - then every category you spent in during <span id="chartMonth">this month</span>, biggest first.</p>`;
+    bar.innerHTML=monthBar+`<p class="sub rf-lead" data-say="1">How each thing has moved, month by month - then every category you spent in during <span id="chartMonth">this month</span>, biggest first.</p>`;
     body.innerHTML=`<div id="trendPick"></div><div id="trendBody"></div><div id="catChart"></div>`;
     renderTrendSeries();
     renderCharts();
@@ -17960,7 +18318,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
        the headline exactly as before - a card is just no longer counted as a
        negative asset. */
     const nw=netWorth(), a=sumAssets()+assetAcctTotal(), l=sumLiab()+owedTotal();
-    bar.innerHTML=`<p class="sub rf-lead">What you own minus what you owe, and the running balance of everything you have tracked.</p>`;
+    bar.innerHTML=`<p class="sub rf-lead" data-say="1">What you own minus what you owe, and the running balance of everything you have tracked.</p>`;
     body.innerHTML=`<div class="rf-nw"><div class="rf-nwv ${nw<0?'bad':'good'}">${money(nw)}</div><div class="rf-nwk">Net worth today</div>
         <div class="rf-nwsplit"><span>Assets <b>${money(a)}</b></span><span>Owed <b>${money(l)}</b></span></div>
         <button class="btn sm ghost" id="rfEditNW">${(typeof state!=='undefined'&&state.spendingMode)?'Edit my accounts':'Edit what you own and owe'} →</button></div>
@@ -17969,7 +18327,7 @@ document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.classList.toggle('on',
     const e=document.getElementById('rfEditNW');
     if(e) e.onclick=()=>{ activateTab('goals'); setTimeout(()=>{ const d=[...document.querySelectorAll('#view-goals details')].find(x=>/assets/i.test(x.innerText.slice(0,40))); if(d){ d.open=true; d.scrollIntoView({behavior:'smooth',block:'center'}); } },180); };
   } else {
-    bar.innerHTML=`<p class="sub rf-lead">Last 6 months. Green should be taller than red. Every single time.</p>`;
+    bar.innerHTML=`<p class="sub rf-lead" data-say="1">Last 6 months. Green should be taller than red. Every single time.</p>`;
     body.innerHTML=`<div id="monthChart" class="months"></div>
       <div id="monthRead"></div>
       <div class="legend"><span class="k"><span class="sw" style="background:var(--good)"></span>Income</span><span class="k"><span class="sw" style="background:var(--accent-2)"></span>Spending</span></div>`;
@@ -18819,11 +19177,11 @@ function iaShowWelcome(){
      Switching here is a real choice and is remembered, not a peek. */
   const card=w.querySelector('.iaw-card');
   if(card){
-    const sync=()=>card.classList.toggle('long', !sayBrief());
+    const sync=()=>card.classList.toggle('long', !sayShort());
     sync();
     const more=document.getElementById('iaWelMore'), less=document.getElementById('iaWelLess');
     if(more) more.onclick=()=>{ state.sayMode='full'; save(); sync(); w.scrollTop=0; };
-    if(less) less.onclick=()=>{ state.sayMode='brief'; save(); sync(); w.scrollTop=0; };
+    if(less) less.onclick=()=>{ state.sayMode=(state.sayMode==='full'?'clean':state.sayMode); save(); sync(); w.scrollTop=0; };
   }
   w.scrollTop=0;
   const go=document.getElementById('iaWelGo');
@@ -18965,7 +19323,7 @@ function iaBotSay(text, done){
    an order is a worse question, not a lighter one. */
 function iaBotText(s, a){
   const ans=a||iaAns;
-  if(typeof sayBrief==='function' && sayBrief() && s.botShort)
+  if(typeof sayShort==='function' && sayShort() && s.botShort)
     return typeof s.botShort==='function' ? s.botShort(ans) : s.botShort;
   return typeof s.bot==='function' ? s.bot(ans) : s.bot;
 }
