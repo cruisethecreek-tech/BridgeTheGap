@@ -1427,6 +1427,31 @@ opened on the longest copy in the app for every new user. It is `sayShort()` now
 and the split is the point: **when a boolean grows a third case, every caller
 that read it as a yes/no has to be asked which question it was really asking.**
 
+### The check that was measuring the wrong rectangle
+
+A fixed handle was overlapping text, so the obvious check is "does the handle's
+box overlap any element's box". It failed on `Do this next` - a centred heading
+whose box spans the full column while its glyphs sit in the middle. Nothing was
+covered; nothing a person could ever see was wrong.
+
+The fix is not a tolerance or an exclusion list. It is to measure the thing the
+complaint was actually about. `Range.getClientRects()` over an element's text
+nodes returns the rectangles the **glyphs** occupy, which is what "sitting on top
+of the words" means. Layout boxes are a proxy for that, and proxies are where
+false alarms and, worse, false clears come from - a box test would also have
+passed a handle covering the tail of a long left-aligned line if the box
+happened to start elsewhere.
+
+Worth pairing with the contrast probe added at the same time. The new rows on
+Home rendered as pale grey that read as disabled controls, and no structural
+check noticed, because structurally they were perfect: present, visible, correct
+size, correctly wired. The token was the bug - `--ink` is a recessed *surface* in
+this file and its own declaration says so in a comment. What catches that is not
+another assertion about the DOM but a measurement of the pixels: compute the
+luminance ratio of the rendered colour against the rendered background, in both
+themes, and require 4.5. **When a defect is "it looks wrong", the check has to
+be of what was drawn, not of what was written.**
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a

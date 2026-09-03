@@ -1115,8 +1115,25 @@
   .say-why.loose{position:absolute;top:14px;right:14px;margin:0}
   /* Standing on its own where a tab's opening paragraph used to be. */
   .say-why.say-solo{margin:0 0 14px;width:22px;height:22px;flex-basis:22px;font-size:12px}
+
+  /* ---------- Home's "more" drawer ---------- */
+  .homemore{margin-top:26px;padding:18px 16px 16px;border:1px solid var(--line);
+    border-radius:16px;background:var(--card)}
+  .hm-head{font-weight:900;font-size:16px;letter-spacing:-.01em;margin-bottom:4px}
+  .homemore .hm-sub{color:var(--muted);font-size:12.5px;line-height:1.5;margin:0 0 12px}
+  .hm-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .hm-chip{font:inherit;font-size:13px;font-weight:700;padding:9px 13px;border-radius:999px;
+    border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer;
+    transition:border-color .15s,color .15s,background .15s}
+  .hm-chip:hover,.hm-chip:focus-visible{border-color:var(--accent);color:var(--accent)}
+  .hm-chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .hm-chip.on::after{content:' ▴';font-size:9px}
+  .hm-chip:not(.on)::after{content:' ▾';font-size:9px;opacity:.5}
+  /* Shut is the default and the point. Only the one that was asked for opens. */
+  .hm-panel{display:none}
+  .hm-panel.hm-on{display:block;margin-top:14px}
   .panel{position:relative}
-  #sayBody .say-para{color:var(--ink);font-size:14px;line-height:1.6;margin:0 0 15px}
+  #sayBody .say-para{color:var(--text);font-size:14px;line-height:1.6;margin:0 0 15px}
   #sayBody .say-para:last-child{margin-bottom:0}
   #sayBody .say-from{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;
     text-transform:uppercase;color:var(--muted);margin:0 0 5px}
@@ -2640,12 +2657,22 @@
   .rec.invest .tag{background:rgba(var(--accent-rgb),.12);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.34)}
   .rec.invest .am{color:var(--accent)}
   .rec .am{font-weight:900;font-variant-numeric:tabular-nums}.rec.income .am{color:var(--good)}
-  .glance{position:fixed;left:0;top:38%;z-index:120;display:flex;flex-direction:row-reverse;align-items:flex-start}
-.gl-tab{background:var(--panel);border:1px solid var(--line);border-left:none;color:var(--accent);border-radius:0 12px 12px 0;width:34px;height:46px;font-size:17px;line-height:1;cursor:pointer;box-shadow:3px 0 14px rgba(0,0,0,.28);flex:none;padding:0}
+  /* Pinned to the RIGHT edge, not the left. It is a fixed handle floating over
+     the page, and the page's text is left-aligned - so on the left it sat on
+     top of the first characters of every line it crossed, which is how "See the
+     ladder" came to read "e the ladder" in a screenshot. On the right it lands
+     in the ragged ends of lines instead, where there is almost always nothing. */
+  /* Above the page, BELOW anything modal. At 120 it outranked the modal scrim
+     (60) and the full-screen intake (70), so this page-furniture handle was
+     always being painted on top of them - it simply used to land on empty space
+     at the left edge. Moving it right put it straight over every sheet's close
+     button, which is how a latent stacking bug became a visible one. */
+  .glance{position:fixed;right:0;top:38%;z-index:56;display:flex;flex-direction:row;align-items:flex-start}
+.gl-tab{background:var(--panel);border:1px solid var(--line);border-right:none;color:var(--accent);border-radius:12px 0 0 12px;width:34px;height:46px;font-size:17px;line-height:1;cursor:pointer;box-shadow:-3px 0 14px rgba(0,0,0,.28);flex:none;padding:0}
 .gl-tab:hover{border-color:var(--accent)}
-.gl-panel{width:0;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-left:none;border-radius:0 12px 12px 0;box-shadow:6px 0 24px rgba(0,0,0,.35);transition:width .18s ease,padding .18s ease;padding:0;max-width:min(78vw,272px)}
+.gl-panel{width:0;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-right:none;border-radius:12px 0 0 12px;box-shadow:-6px 0 24px rgba(0,0,0,.35);transition:width .18s ease,padding .18s ease;padding:0;max-width:min(78vw,272px)}
 .glance.on .gl-panel{width:min(78vw,272px);padding:13px 15px}
-.glance.on .gl-tab{border-radius:0 12px 12px 0}
+.glance.on .gl-tab{border-radius:12px 0 0 12px}
 .gl-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:9px;white-space:nowrap}
 .gl-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:6px 0;font-size:13.5px;white-space:nowrap}
 .gl-row b{font-size:15px;font-weight:900}
@@ -3026,6 +3053,15 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       </div>
       <div class="walls hide-in-spending" id="wallsGrid"></div>
       <div class="hide-in-spending" style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
+      <!-- Everything that is not "where do I stand" or "what do I do next" gets
+           relocated in here at boot by homeMoreMount(). Empty in the markup on
+           purpose: the panels keep their own ids and their own renderers, they
+           just stop being on the screen until somebody asks for one. -->
+      <div class="homemore" id="homeMore" hidden>
+        <div class="hm-head">More on your money</div>
+        <p class="hm-sub" data-keep="1">Everything else this app works out about you. Nothing is gone - open the one you want.</p>
+        <div class="hm-chips" id="hmChips"></div>
+      </div>
     </section>
 
     <!-- ============ BUDGET ============ -->
@@ -7229,6 +7265,97 @@ function sayClean(){ return (state.sayMode||'clean')==='clean'; }
    third would have quietly handed every new reader the longest copy in the app
    on the first screen of the intake. */
 function sayShort(){ return state.sayMode!=='full'; }
+
+/* ---------- Home: where do I stand, and what do I do next ----------
+   "All of these are still on one screen of the home, isn't this too intense for
+   a user to look at within an app? That's just one screen, there is entirely too
+   much text and should be replaced with a learn option to explore the
+   unnecessary yet useful information - can it just be hidden until revealed by
+   the user via a separate card?"
+
+   Clean mode had shortened the paragraphs, which was not the problem. Home was
+   long because FIFTEEN separate sections lived on it, and only three of them
+   answered a question anybody opens a budgeting app to ask.
+
+   So Home now answers exactly two: where do I stand, and what do I do next.
+   Whatever is on it has to earn a place under one of those. Everything else is
+   real, useful, and somewhere else - one card, one row per thing, opened one at
+   a time by the person who wanted it.
+
+   The panels are not rewritten or duplicated. They are MOVED, keeping their own
+   ids, their own renderers and their own handlers, so nothing else in the app
+   has to know this happened. */
+const HOME_MORE=[
+  {id:'trueRateCard',   label:'Your true hourly wage'},
+  {id:'householdBox',   label:'Household'},
+  {id:'retroBox',       label:'Your evolution'},
+  {id:'offenseCard',    label:'Offense vs. Defense'},
+  {id:'enoughCard',     label:'The "Enough" anchor'},
+  {id:'whyCard',        label:'Why you are here'},
+  {id:'moneyStoryCard', label:'Your money story'}
+];
+let homeMoreOpen=null;
+function homeMoreMount(){
+  const box=document.getElementById('homeMore'); if(!box || box.dataset.mounted==='1') return;
+  box.dataset.mounted='1';
+  HOME_MORE.forEach(m=>{ const el=document.getElementById(m.id);
+    if(el){ el.classList.add('hm-panel'); box.appendChild(el); } });
+}
+/* Which rows deserve to exist: a panel that rendered nothing this month does not
+   get a name in the list, because a row that opens onto nothing is worse than no
+   row at all. */
+function homeMoreLive(){
+  /* Spending mode hides some of these and only some. Putting hide-in-spending on
+     the card itself was the lazy version, and it took Household - which spending
+     mode is meant to keep - down with everything else. Each panel keeps its own
+     rule, and a row is offered only when the panel behind it would really show. */
+  /* The flag lives on the Home view, not on body - reading it off body was
+     always false, which quietly turned this whole guard into a no-op. */
+  const spend=!!document.querySelector('#view-home.spending-mode');
+  return HOME_MORE.filter(m=>{ const el=document.getElementById(m.id);
+    if(!el || el.hidden || (el.innerHTML||'').trim()==='' || el.classList.contains('stage-locked')) return false;
+    if(spend && el.classList.contains('hide-in-spending')) return false;
+    if(!spend && el.classList.contains('show-in-spending')) return false;
+    return true; });
+}
+/* Opening and closing only ever toggles classes. The first cut rebuilt the row
+   list on every tap, which destroys and recreates the button being pressed - the
+   pointer does not care, but a keyboard loses its place on every open, and the
+   row you just activated stops existing underneath you. */
+function homeMoreSync(){
+  document.querySelectorAll('#hmChips .hm-chip').forEach(c=>{
+    const on=c.dataset.hm===homeMoreOpen;
+    c.classList.toggle('on',on); c.setAttribute('aria-expanded',on?'true':'false');
+  });
+  HOME_MORE.forEach(m=>{ const el=document.getElementById(m.id);
+    if(el) el.classList.toggle('hm-on', homeMoreOpen===m.id); });
+}
+function renderHomeMore(){
+  const box=document.getElementById('homeMore'), chips=document.getElementById('hmChips');
+  if(!box||!chips) return;
+  homeMoreMount();
+  const live=homeMoreLive();
+  box.hidden=live.length===0;
+  /* If a panel went quiet while it was the open one, close it rather than
+     leaving a row highlighted that no longer has anything behind it. */
+  if(homeMoreOpen && !live.some(m=>m.id===homeMoreOpen)) homeMoreOpen=null;
+  const want=live.map(m=>m.id).join(',');
+  if(chips.dataset.set!==want){
+    chips.dataset.set=want;
+    chips.innerHTML=live.map(m=>`<button class="hm-chip" type="button" data-hm="${m.id}" aria-expanded="false">${escapeHtml(m.label)}</button>`).join('');
+  }
+  homeMoreSync();
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-hm]'); if(!c) return;
+  /* One at a time. Opening all of them would rebuild the page this replaced. */
+  homeMoreOpen = (homeMoreOpen===c.dataset.hm) ? null : c.dataset.hm;
+  homeMoreSync();
+  if(homeMoreOpen){
+    const el=document.getElementById(homeMoreOpen);
+    if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+});
 
 /* ---------- Clean mode: what counts as an explanation ----------
    "The content is good. It's just too distracting when the interface should be
@@ -12537,7 +12664,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-03 · clean screens';
+const BUILD_STAMP='2026-09-03 · Home cut down';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -20653,6 +20780,9 @@ function renderHome(){
   renderHousehold();
   renderSpending();
   if(typeof applyStage==='function') applyStage();
+  /* Last, because it reads whether each of those renderers actually produced
+     anything - a panel with nothing to say this month does not get a row. */
+  renderHomeMore();
 }
 /* 2A: Offense vs Defense balance */
 function renderOffenseDefense(){

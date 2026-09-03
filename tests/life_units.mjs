@@ -218,6 +218,13 @@ for(const [name,txt,need] of [
 /* ---- 5. the specific sentences that were broken, by name ---- */
 const named = await p.evaluate(() => {
   activateTab('home'); calSelDay=3; renderRewardCalendar(); renderAll();
+  /* The fair-share sentence moved off Home and into the "More on your money"
+     card when Home was cut back to what you must act on. Same sentence, same
+     rule about how it conjugates, one tap further in - so the test takes that
+     tap, and keeps reading what a person would actually see rather than
+     reaching past the interface for the string. */
+  const hh=document.querySelector('#hmChips .hm-chip[data-hm="householdBox"]');
+  if(hh) hh.click();
   const home=document.getElementById('view-home').innerText;
   activateTab('budget');
   /* The roll-up prompt moved off the Plan row and into the category's own sheet
