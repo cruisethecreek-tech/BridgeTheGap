@@ -1305,6 +1305,11 @@
   .recfill .rf-n{width:100%;font-size:11.5px;color:var(--muted);line-height:1.45}
   .ltb-note .ltb-src{color:var(--muted)}
   .sync-err .se-raw{display:block;margin-top:6px;font-size:11px;opacity:.75;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word}
+  .sync-traffic{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--muted)}
+  .sync-traffic b{color:var(--text)}
+  .sync-traffic.none{display:block;background:rgba(var(--accent-2-rgb),.10);border:1px solid var(--accent-2);
+    border-radius:11px;padding:11px 13px;line-height:1.5}
+  .sync-traffic.none b{color:var(--text)}
   .chlog{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
   .chlog .cl-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px}
   .cl-row{display:flex;gap:10px;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:12.5px;line-height:1.45;border-bottom:1px solid var(--line)}
@@ -4551,7 +4556,8 @@ function defaultState(){
            investReturn:7, investYears:10, lev:{}, theme:'auto',
            autoBackup:'weekly', backupNagDay:'', diary:[], chatPace:'natural', intakeDraft:null,
            scans:[], opening:{}, syncOptIn:false,
-           deviceId:'', meIs:'a', changelog:[], graveyard:[], settingsM:{} };
+           deviceId:'', meIs:'a', changelog:[], graveyard:[], settingsM:{},
+           syncLastPush:'', syncLastPull:'' };
 }
 /* LOCAL dates, not UTC: toISOString() flips to tomorrow at 5-8pm in the Americas,
    which broke the evening reminder, quick-log default date, and today's calendar cell. */
@@ -4952,6 +4958,7 @@ function mergeVault(local, remote){
   out.changelog=log.slice(0,CHANGELOG_MAX);
   /* never inherited: this device is this device */
   out.deviceId=local.deviceId; out.meIs=local.meIs; out.syncOptIn=local.syncOptIn;
+  out.syncLastPush=local.syncLastPush; out.syncLastPull=local.syncLastPull;
   return out;
 }
 function save(){
@@ -12064,8 +12071,16 @@ async function pushToVault(passphrase){
   const sess=await sbSession(); if(!sess) throw new Error('You are not signed in to sync.');
   const pass=passphrase||syncPass; if(!pass) throw new Error('No Sync Passphrase in this session - enter it to resume syncing.');
   const payload=await encryptVault(state, pass);
-  const {error}=await sb.from('user_vaults').upsert({ user_id:sess.user.id, encrypted_payload:payload, updated_at:new Date().toISOString() }, {onConflict:'user_id'});
+  const stamp=new Date().toISOString();
+  const {error}=await sb.from('user_vaults').upsert({ user_id:sess.user.id, encrypted_payload:payload, updated_at:stamp }, {onConflict:'user_id'});
   if(error) throw new Error(error.message);
+  /* Remember what we just wrote. Without this the next poll reads a timestamp
+     that has moved - because WE moved it - decides the other phone has news,
+     and pulls back its own write every fifteen seconds forever. Harmless to the
+     data, since merging is idempotent, and pure noise on the wire. */
+  syncLastSeen=stamp;
+  state.syncLastPush=stamp;
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(_){ }   // not save(): that would schedule another push
   return true;
 }
 async function pullFromVault(passphrase){
@@ -12088,6 +12103,7 @@ async function pullFromVault(passphrase){
   const merged=mergeVault(state, Object.assign(defaultState(), remote));
   state=normalizeState(merged); if(!state.activeMonth) state.activeMonth=thisMonth();
   syncPrev=null;                                      // re-baseline: a merge is not an edit by this device
+  state.syncLastPull=new Date().toISOString();
   save();                                             // syncPulling guards the auto-push
   syncPulling=false;
   /* What came back may differ from what the vault held, because our side had
@@ -12153,6 +12169,32 @@ let syncUI={view:'menu', email:'', err:''};
    account balances are always accurate". The second half is why it exists: with
    two people and one budget, a figure being wrong is far less useful to know
    than WHEN it went wrong and who was holding the phone. */
+/* ---------- has this phone actually sent anything ----------
+   Three rounds of "it still did not load" went by with no way for either side
+   to tell whether a device had ever pushed. syncNote said "Synced just now" and
+   vanished; the panel showed "Vault active" whether or not a byte had moved.
+   A vault holds only what was last successfully pushed to it, so a phone that
+   has been locked since the change was made never sent it - and the other
+   person pulls a vault that simply does not contain the thing they are looking
+   for, which looks exactly like a broken merge. These two lines separate those
+   two stories. */
+function syncAgeWords(iso){
+  if(!iso) return null;
+  const ms=Date.now()-new Date(iso).getTime();
+  if(!(ms>=0)) return null;
+  const s=Math.round(ms/1000);
+  if(s<75) return 'seconds ago';
+  if(s<3600) return Math.round(s/60)+' min ago';
+  if(s<86400) return Math.round(s/3600)+' hr ago';
+  return Math.round(s/86400)+' days ago';
+}
+function syncTrafficHTML(){
+  const up=syncAgeWords(state.syncLastPush), down=syncAgeWords(state.syncLastPull);
+  /* Never pushed is the interesting case, and the one worth saying loudly: it
+     means nothing on this phone has ever reached the other one. */
+  if(!up) return `<div class="sync-traffic none"><b>Nothing from this phone has reached the vault yet.</b> Whatever is on this device is still only on this device - if your partner is missing something you added here, this is why.</div>`;
+  return `<div class="sync-traffic"><span>Last sent <b>${escapeHtml(up)}</b></span><span>Last received <b>${escapeHtml(down||'never')}</b></span></div>`;
+}
 function changeLogHTML(n){
   const log=(state.changelog||[]).slice(0, n||8);
   if(!log.length) return `<div class="chlog"><div class="cl-h">Changes</div><p class="cl-none">Nothing has changed since this was set up. Once either of you edits something it is listed here, with who and when.</p></div>`;
@@ -12180,7 +12222,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-02 · unlock-in-place';
+const BUILD_STAMP='2026-09-03 · sync-traffic';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -12203,6 +12245,7 @@ function renderSync(){
     box.innerHTML=`<div class="sync-head">Household Sync <span class="sync-tag on">Vault active</span></div>
       <p class="sub" style="margin-top:6px">${escapeHtml(syncNote||'Your encrypted vault is live. Your changes go up as you make them, and theirs come down on their own.')}</p>
       <div class="sync-instr"><b>To link your partner's phone:</b> have them open the app → Settings → turn on "We share this budget" → <b>Link to an existing vault</b>, and enter this account's <b>email, password, and Sync Passphrase</b>.</div>
+      ${syncTrafficHTML()}
       ${changeLogHTML()}
       <!-- "Check now" rather than "Sync now": nothing here is waiting on a
            button any more, and a button that claims to do the syncing implies

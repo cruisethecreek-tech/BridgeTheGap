@@ -333,6 +333,13 @@ The change log is that same record read forwards: *"Kristi changed account Chequ
 `mergeVault` is deliberately **pure**, which is why the whole correctness story is provable without a network - the `syncmerge` probe asserts the old replace-behaviour loses the coffee, and that the merge keeps both sides. What remains unverified from the build environment is the round trip against the real project; that is still a human's job.
 
 
+**Has this phone actually sent anything** (`syncTrafficHTML`, `state.syncLastPush` / `syncLastPull`) - three rounds of *"it still did not load"* went by with neither side able to tell whether a device had ever pushed. `syncNote` said *"Synced just now"* and vanished; the panel said **Vault active** whether or not a byte had moved.
+
+A vault holds only **what was last successfully pushed to it**. A phone that has been locked since the change was made never sent it - `scheduleVaultPush` returns on its first line without a passphrase - so the other person pulls a vault that genuinely does not contain the thing they are looking for, which is indistinguishable from a broken merge. The Household panel now separates those two stories: *"Nothing from this phone has reached the vault yet - if your partner is missing something you added here, this is why"*, or once it has, **Last sent** and **Last received**.
+
+*A real bug fell out of building it.* `pushToVault` wrote a fresh `updated_at` and never recorded it, so the next poll read a timestamp **it had moved itself**, concluded the other phone had news, and pulled back its own write every fifteen seconds forever. Harmless to the data, because merging is idempotent, and pure noise on the wire. The push records its own stamp now, asserted both ways: no self-pull, and a genuine change from the other side still comes down.
+
+
 **Unlock where you are standing** (the inline form in `syncLockedHTML`, `refreshSyncState` on tab arrival) - reported immediately after the banner shipped: *"every time I press unlock sync it navigates to the Build tab, but when I go back to Plan I have to press it again."* Two faults in one tap.
 
 The button walked to the Household panel, and **`refreshSyncState` was called at boot and nowhere else** - so arriving there showed whatever the panel had last drawn, frequently with no passphrase box in it at all. The Tripwires lesson for the third time: *a render function no surface calls is a panel that does not exist*, and this file's own breadcrumb walked straight into it. Arriving at that tab refreshes it now.
