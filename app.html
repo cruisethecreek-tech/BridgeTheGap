@@ -12910,7 +12910,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · the badge names its own figure';
+const BUILD_STAMP='2026-09-04 · the split is named once';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -18637,7 +18637,7 @@ REPORT_SIGNALS.push(
       const eq=debtEquity(best), ltv=debtLTV(best);
       return { t:`${escapeHtml(best.name)} is buying you something`, standing:true, bad:false,
         body:`You owe <b>${money(best.balance)}</b> against something worth <b>${money(debtWorth(best))}</b>, so <b>${money(eq)}</b> of it is yours. `
-          + `That is the difference between a debt and a liability: this one has an asset on the other side of it${ltv!=null?`, and <b>${debtEquityPct(best)}%</b> of it is yours with <b>${ltv}%</b> still owed against it`:''}.`,
+          + `That is the difference between a debt and a liability: this one has an asset on the other side of it${ltv!=null?`, and the split is <b>${debtEquityPct(best)}%</b> yours to <b>${ltv}%</b> still owed`:''}.`,
         work:`${money(debtWorth(best))} worth − ${money(best.balance)} owed = ${money(eq)} yours`,
         nudge:`What this does <b>not</b> mean is that the debt is free - it still costs ${(+best.apr||0)>0?`<b>${best.apr}%</b> a year`:'whatever its rate is'}, and equity you cannot spend does not pay a bill. `
           + `What it means is that the payoff order on this page is a question about <b>rates</b>, not about which loan feels heaviest. ${voice(RP_TONE.owedDown,null)}` };
