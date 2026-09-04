@@ -2203,7 +2203,12 @@
   .ac-work>summary::-webkit-details-marker,.ac-hist>summary::-webkit-details-marker{display:none}
   .ac-work>summary::before,.ac-hist>summary::before{content:'▸ ';font-size:9px}
   .ac-work[open]>summary::before,.ac-hist[open]>summary::before{content:'▾ '}
-  .acw-sum{margin-top:7px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.6;word-break:break-word}
+  /* The whole equation on one line ran off a 390px screen and got cut mid-figure
+     - "= $5,4" - which is the one place in this app a number must not be
+     truncated, because the panel exists to show its working. */
+  .acw-sum{margin-top:7px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.6;
+    overflow-wrap:anywhere;white-space:normal}
+  .acw-rows,.ac-work{min-width:0;max-width:100%}
   .acw-sum b{color:var(--text)}
   .acw-parts{margin-top:7px}
   .acw-p{display:flex;align-items:baseline;gap:7px;font-size:12px;padding:3px 0;border-top:1px solid var(--line)}
@@ -2213,10 +2218,19 @@
   .acw-p b.up,.acw-r b.up,.ach-r i.up{color:var(--good)}
   .acw-p b.down,.acw-r b.down,.ach-r i.down{color:var(--accent-2)}
   .acw-rows{margin-top:8px}
-  .acw-r{display:flex;align-items:baseline;gap:7px;font-size:11.5px;padding:2px 0}
+  /* A row that opens the entry it stands for has to look like it does. */
+  .acw-r{display:flex;align-items:baseline;gap:7px;font-size:11.5px;padding:5px 6px;width:100%;
+    background:none;border:none;border-radius:8px;color:inherit;font-family:inherit;
+    text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .acw-r:hover,.acw-r:focus-visible{background:var(--bg)}
+  .acw-r::after{content:'›';margin-left:2px;color:var(--muted);font-weight:900}
+  .acw-unnamed{color:var(--accent-2,var(--accent));font-style:italic;font-weight:700}
   .acw-d,.ach-d{color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
   .acw-w{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .acw-more{font-size:11px;color:var(--muted);margin-top:4px}
+  /* It named a place instead of opening one. Now it opens the rest, here. */
+  .acw-more{font:inherit;font-size:11.5px;font-weight:800;color:var(--accent);background:none;
+    border:none;padding:6px 0 2px;margin-top:2px;cursor:pointer;display:block;text-align:left}
+  .acw-more:hover,.acw-more:focus-visible{text-decoration:underline}
   .acw-note{font-size:11px;color:var(--muted);line-height:1.5;margin:8px 0 0}
   .ach-rows{margin-top:6px}
   .ach-r{display:flex;align-items:baseline;gap:7px;font-size:11.5px;padding:3px 0;border-top:1px solid var(--line);flex-wrap:wrap}
@@ -12877,7 +12891,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · carry what you choose';
+const BUILD_STAMP='2026-09-04 · the working is actionable';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -13987,24 +14001,73 @@ function acctWorkHTML(a){
   const owed=isOwedAcct(a);
   const start=owed ? -(+a.balance||0) : (+a.balance||0);
   const end=owed ? -acctExpected(a) : acctExpected(a);
+  /* kept out here so the row renderer can read it */
   /* On a card everything points the other way, so the arithmetic is written the
      way the person is thinking: what is ON it goes up when it is charged. */
   const line=d.parts.map(x=>`${(owed? -x.sign : x.sign)>0?'+':'&minus;'} ${usd(x.v)}`).join(' ');
-  const rows=d.rows.slice().sort((x,y)=>(x.date<y.date?1:-1)).slice(0,8);
+  /* "and 16 more, all of them on Track" was a dead sentence: it named a place
+     rather than opening one, and the thing somebody wants at that moment is the
+     other sixteen, here, where they are already looking. */
+  const all=d.rows.slice().sort((x,y)=>(x.date<y.date?1:-1));
+  const rows=acwOpen[a.id] ? all : all.slice(0,ACW_FIRST);
   return `<details class="ac-work"><summary>Show the work &middot; ${d.n} entr${d.n===1?'y':'ies'} since ${escapeHtml(a.updated)}</summary>
     <div class="acw-sum">${usd(start)} ${line} = <b>${usd(end)}</b></div>
     <div class="acw-parts">${d.parts.map(x=>`<div class="acw-p"><span>${escapeHtml(x.label)}</span><i>${x.n}</i><b class="${(owed?-x.sign:x.sign)>0?'up':'down'}">${(owed?-x.sign:x.sign)>0?'+':'&minus;'}${usd(x.v)}</b></div>`).join('')}</div>
     <div class="acw-rows">${rows.map(t=>{
       const inbound = t.type==='income' || (t.destAcctId===a.id && t.acctId!==a.id);
-      const what = t.type==='income' ? (t.source||'Income')
+      const raw = t.type==='income' ? (t.source||'Income')
                  : t.type==='transfer' ? `${acctName(t.acctId)||'somewhere'} &rarr; ${acctName(t.destAcctId)||'somewhere'}`
                  : t.type==='invest' ? (t.source||'Investment')
                  : (catName(t.catId)||t.note||'Expense');
-      return `<div class="acw-r"><span class="acw-d">${escapeHtml(t.date||'')}</span><span class="acw-w">${what}</span><b class="${inbound?'up':'down'}">${inbound?'+':'&minus;'}${usd(+t.amount||0)}</b></div>`;
-    }).join('')}${d.n>rows.length?`<div class="acw-more">and ${d.n-rows.length} more, all of them on Track</div>`:''}</div>
+      /* "Still not formatted enough to actually know what it is." A name OCR
+         turned to soup - "© + = £1 = Accounts Move Money Check" - is already in
+         the ledger and rendering it verbatim asks somebody to recognise
+         something unrecognisable. Say it needs a name instead, and make the row
+         open so it can be given one. */
+      /* Only free text gets the test. A transfer label and a category name are
+         composed by this app, so questioning them would be questioning itself. */
+      const ours = t.type==='transfer' || (t.type==='expense' && catName(t.catId));
+      const what = (ours || acwReadable(raw)) ? raw : `<i class="acw-unnamed">Needs a name</i>`;
+      return `<button type="button" class="acw-r" data-acwtx="${escapeHtml(t.id)}"><span class="acw-d">${escapeHtml(t.date||'')}</span><span class="acw-w">${what}</span><b class="${inbound?'up':'down'}">${inbound?'+':'&minus;'}${usd(+t.amount||0)}</b></button>`;
+    }).join('')}${d.n>rows.length?`<button type="button" class="acw-more" data-acwall="${escapeHtml(a.id)}">Show the other ${d.n-rows.length} &darr;</button>`:''}${(acwOpen[a.id]&&d.n>ACW_FIRST)?`<button type="button" class="acw-more" data-acwless="${escapeHtml(a.id)}">Show fewer &uarr;</button>`:''}</div>
     <p class="acw-note" data-say="1">This is a projection from what you logged, nothing more. If the bank disagrees, the bank is right and the difference is the thing worth finding.</p>
   </details>`;
 }
+const ACW_FIRST=8;
+/* Which accounts have their full ledger open. Per account, not one flag, so
+   opening one does not unroll every other card on the screen. */
+const acwOpen={};
+/* The same test the statement reader uses at parse time, applied at display
+   time to entries that were logged before it existed. A name that is mostly not
+   letters was never read - it was guessed at - and printing it as though it were
+   a name is what made this row unreadable rather than obviously broken. */
+function acwReadable(t){
+  const x=String(t||'').replace(/&[a-z]+;/gi,' ').trim();
+  if(!x) return false;
+  const letters=(x.match(/[A-Za-z]/g)||[]).length;
+  if(letters<3) return false;
+  /* The letter ratio alone was not enough, and the reported example is exactly
+     why: "© + = £1 = Accounts Move Money Check" is 63% letters and reads as
+     nonsense, because the damage is in the PREFIX. What gives it away is
+     characters a bank descriptor never contains - a copyright sign, a currency
+     symbol that is not the one you bank in, an equals sign. Anything outside
+     what a real statement line uses means the read went wrong, however much of
+     the rest survived. */
+  if(/[^A-Za-z0-9 .,'&\/#*()+:;_@%$-]/.test(x)) return false;
+  return letters/x.length>=0.45;
+}
+document.addEventListener('click',e=>{
+  const more=e.target.closest('[data-acwall]');
+  if(more){ acwOpen[more.dataset.acwall]=true; if(typeof renderAccounts==='function') renderAccounts(); return; }
+  const less=e.target.closest('[data-acwless]');
+  if(less){ acwOpen[less.dataset.acwless]=false; if(typeof renderAccounts==='function') renderAccounts(); return; }
+  /* Every row opens the entry it stands for. The reason this matters here and
+     not only on Track: this list is where a wrong figure gets noticed, and
+     noticing it and being unable to touch it is the whole complaint. */
+  const row=e.target.closest('[data-acwtx]');
+  if(row && typeof openTxSheet==='function'){ openTxSheet(row.dataset.acwtx); }
+});
+
 /* ---------- what the account actually said, over time ----------
    Asked directly: "are all these figures actually being tracked when changed?"
    They were not. The monthly snapshot stored ONE aggregate `bank` figure, so

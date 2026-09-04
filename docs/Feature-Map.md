@@ -1311,3 +1311,15 @@ The carry button committed `bankTotal()` - every account at once. For anybody wh
 Two panels carried an inline `style="display:none"` and set it themselves when empty. **An inline style outranks a class rule**, so the deck toggled `dk-on` and the panel did not move. Both use the `hidden` attribute now - which is the one `deckLive` already reads, so an empty panel is not offered a pill at all rather than being offered a dead one. Display inside a deck belongs to the deck.
 
 The general shape: **when two mechanisms can both set the same property, the one that wins is decided by CSS specificity rather than by intent** - and the loser fails silently, which is how a control comes to do nothing at all.
+
+## Showing the work, so it can be acted on
+
+Two faults circled on one panel: *"The purple should be actionable and blue is still not formatted enough to actually know what it is."*
+
+**Purple** was `and 16 more, all of them on Track` - a sentence that *names a place instead of opening one*. The thing somebody wants at that moment is the other sixteen, here, where they are already looking. It is a control now: **Show the other 16 ↓**, which unrolls the rest in place and offers to fold them back. Open state is per account, so opening one card does not unroll every other one on the screen.
+
+**Blue** was `© + = £1 = Accounts Move Money Check` printed as though it were a name somebody could recognise. It is an OCR read that never happened, logged before the statement reader learned to reject that. Rendering it verbatim asks the reader to identify something unidentifiable - so the row says **Needs a name** instead, and **every row is now a button that opens the entry it stands for**, because this list is exactly where a wrong figure gets noticed, and noticing it while being unable to touch it was the whole complaint.
+
+The readability test needed a second attempt, and the first one is the interesting part. The rule from the statement reader - *a name that is mostly not letters is soup* - passed this string, because `© + = £1 = Accounts Move Money Check` is **63% letters**. The damage is all in the prefix. What actually gives it away is characters a bank descriptor never contains: a copyright sign, a currency symbol that is not the one you bank in, an equals sign. Anything outside the set a real statement line uses means the read went wrong, however much of the rest survived. The test is also scoped to free text only - a transfer label and a category name are composed by this app, and questioning those would be the app questioning itself.
+
+**And the working was being cut off.** `$6,637.64 + $1,230.23 − $1,881.04 − $507.20 = $5,4` ran off a 390px screen mid-figure. That is the one number in this app that may never truncate, because the panel exists to show its arithmetic - a total you cannot read is worse than no total, since it looks like an answer. It wraps now, and a check asserts the equation ends on a complete figure rather than merely that the panel fits.

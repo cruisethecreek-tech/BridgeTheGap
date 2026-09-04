@@ -380,3 +380,25 @@ device even after this.
 On **Shield**, **What you've told me** should open when you tap it. If you have
 never talked anything through, the pill should not be there at all rather than
 being there and dead.
+
+### Show the work, on an account
+
+Settings shows `2026-09-04 · the working is actionable`.
+
+Open **Build → Accounts**, expand **Show the work** on an account with a lot of
+entries behind it:
+
+1. **The tail is a button.** "Show the other 16 ↓" should unroll the rest right
+   there, and offer to fold them back. It should no longer just tell you they
+   are on Track.
+2. **Every row opens.** Tap one - the entry should open so you can fix its name,
+   amount, date or category without leaving.
+3. **Anything unreadable says so.** An entry whose name came out as symbols
+   should read **Needs a name** rather than printing the symbols. Tap it and
+   give it one.
+4. **The equation fits.** The line above the rows should end on a complete
+   figure. If it is cut off mid-number on your phone, that is a bug worth
+   reporting - it is the one number in the app that must never be truncated.
+
+If a row you can read perfectly well says "Needs a name", tell me what it says -
+it means the test is too strict and is throwing away something legitimate.

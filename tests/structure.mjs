@@ -54,6 +54,9 @@ const CLOCK = new Date('2026-08-30T10:30:00').getTime();
 const CLOCK_D=(()=>{ const d=new Date(CLOCK);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 const CLOCK_M=CLOCK_D.slice(0,7);
+/* the month before the frozen one, for fixtures that need a "last month" date */
+const PREV_M=(()=>{ const [y,m]=CLOCK_M.split('-').map(Number);
+  return m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`; })();
 const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium' });
 const p = await b.newPage({ viewport:{width:390,height:1000} });
 /* A subclass rather than a Proxy: the first attempt wrapped Date in a Proxy and
@@ -9277,6 +9280,68 @@ check('a pill with something behind it actually opens it', dead.offered===true &
 check('...because no panel fights the deck with an inline display', dead.inline===false, JSON.stringify(dead));
 check('...and an empty one is not offered at all, rather than offered and dead',
       dead.goneWhenEmpty===true && dead.stillOthers===true, JSON.stringify(dead));
+
+/* ---- 111. showing the work, so it can be acted on ----
+   "The purple should be actionable and blue is still not formatted enough to
+   actually know what it is." Purple was "and 16 more, all of them on Track" - a
+   sentence naming a place instead of opening one. Blue was
+   "© + = £1 = Accounts Move Money Check", an OCR read that never happened,
+   printed as though it were a name somebody could recognise. */
+const bigLedger=[];
+for(let i=0;i<23;i++) bigLedger.push({id:'aw'+i,type:'invest',amount:5+i*2,
+  source:'ACH Withdrawal / Acorns Round-Ups Transfer 090426',date:CLOCK_D,acctId:'chk',ikind:'holds'});
+bigLedger.push({id:'soup',type:'invest',amount:25,source:'© + = £1 = Accounts Move Money Check',
+                date:CLOCK_D,acctId:'chk',ikind:'holds'});
+await seed({...FULL, activeMonth:CLOCK_M, categories:[{id:'c1',name:'Food'}],
+  budgets:{[CLOCK_M]:{c1:400}},
+  accounts:[{id:'chk',name:'Joint Checking',kind:'checking',balance:6637.64,
+             updated:PREV_M+'-27', purpose:'sinking'}],
+  transactions:bigLedger});
+await p.reload(); await p.waitForTimeout(900);
+const work = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('goals'); deckShow('goals','Accounts'); await w(700);
+  const openIt=async()=>{ const d=document.querySelector('.ac-work'); if(d) d.open=true; await w(300); };
+  await openIt();
+  const rows=()=>[...document.querySelectorAll('.acw-r')];
+  const o={ first:rows().length,
+    allButtons:rows().every(r=>r.tagName==='BUTTON'),
+    tail:document.querySelector('[data-acwall]'),
+    soupPrinted:rows().some(r=>/Accounts Move Money/.test(r.innerText)),
+    saysNeedsName:rows().some(r=>/Needs a name/.test(r.innerText)) };
+  o.tailIsButton=!!o.tail && o.tail.tagName==='BUTTON';
+  o.tailText=o.tail?o.tail.innerText.trim():'';
+  o.tail=undefined;
+  if(o.tailIsButton){ document.querySelector('[data-acwall]').click(); await w(450); await openIt();
+    o.afterMore=rows().length;
+    o.canFold=!!document.querySelector('[data-acwless]');
+    document.querySelector('[data-acwless]').click(); await w(450); await openIt();
+    o.folded=rows().length; }
+  /* the unreadable one has to be reachable, or naming it is impossible */
+  const bad=rows().find(r=>/Needs a name/.test(r.innerText));
+  if(bad){ bad.click(); await w(400);
+    const sh=document.getElementById('txSheet');
+    o.opensEntry=sh.classList.contains('on') && !!sh.querySelector('[data-txedit]');
+    closeTopOverlay(); await w(250); }
+  await openIt();
+  const doc=document.documentElement, sum=document.querySelector('.acw-sum');
+  o.over=[...document.querySelectorAll('.ac-work *')]
+    .filter(e=>e.getBoundingClientRect().right>doc.clientWidth+1).length;
+  o.sumText=(sum&&sum.innerText||'').replace(/\s+/g,' ');
+  return o;
+});
+check('the tail of the ledger is a control, not a sentence about another tab',
+      work.tailIsButton===true && !/on Track/.test(work.tailText), work.tailText);
+check('...that opens the rest where the reader already is',
+      work.afterMore>work.first && work.afterMore===24, JSON.stringify([work.first,work.afterMore]));
+check('...and folds them back', work.canFold===true && work.folded===work.first, String(work.folded));
+check('every entry in the working opens the entry it stands for',
+      work.allButtons===true && work.opensEntry===true, JSON.stringify([work.allButtons,work.opensEntry]));
+check('a name the reader never actually read is not printed as though it were one',
+      work.soupPrinted===false && work.saysNeedsName===true, JSON.stringify(work));
+check('the working fits the phone it is read on', work.over===0, String(work.over));
+check('...and the total it ends on is never cut in half',
+      /=\s*\$[\d,]+\.\d\d$/.test(work.sumText.trim()), work.sumText.slice(-42));
 
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
