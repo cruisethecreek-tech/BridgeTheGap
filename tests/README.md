@@ -1550,6 +1550,38 @@ panel somewhere else. **When a fix does not show up where you expect it, check
 that it is not showing up somewhere you are not looking, before you assume it
 did not happen.**
 
+### The third time the caption was the bug
+
+Three defects here have now had the identical shape, and every one of them
+survived a suite that checks arithmetic:
+
+- a partial figure printed under the words **net worth**
+- a caption promising a total the panel had not added up
+- **`$132,000 equity - 37.1% of its value`**, where 37.1% is the loan-to-value
+
+Nothing was miscalculated in any of them. `debtLTV` is right, and it is the
+number a lender asks for. What was false was the sentence the number had been
+placed inside - and a suite that reads values never opens that envelope, because
+the value it reads is correct.
+
+The test that catches this class is not another arithmetic check. It is a
+**pairing** check, and it comes in two strengths.
+
+The specific one asserts the equity figure carries the equity share. Useful, and
+it only ever catches the bug you already found.
+
+The general one is the one worth writing: **no percentage badge in the app may
+leave you to guess what it is a share of.** Every one has to say `used`, `yours`,
+`owe`, `left`, `drawn`, `covered`. A bare `37.1%` next to a dollar figure borrows
+its meaning from whatever sits closest, and that borrowing is exactly where the
+lie hides. That check would have failed on the day this shipped, without anybody
+knowing the bug existed.
+
+The heuristic that generalises: **read the figure and its label aloud as one
+sentence.** "One hundred and thirty two thousand equity, thirty seven percent of
+its value" is plainly false when spoken, and was invisible on screen for weeks -
+because on screen they are two elements, and out loud they are one claim.
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a
