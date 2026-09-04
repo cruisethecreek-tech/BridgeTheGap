@@ -1122,6 +1122,22 @@
     font-size:11px;font-weight:900;border-radius:6px;padding:1px 6px}
   /* The invitation reads as an opening, not a fault - the locked banner warns,
      this one offers, and they must not look like the same event. */
+  .carrypick{border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-top:10px;background:var(--bg)}
+  .cp-h{font-weight:900;font-size:14px;margin-bottom:3px}
+  .carrypick .cp-s{color:var(--muted);font-size:12px;line-height:1.45;margin:0 0 10px}
+  .cp-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+  .cp-row:first-of-type{border-top:none}
+  .cp-n{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cp-k{color:var(--muted);font-size:11.5px;white-space:nowrap}
+  .cp-b{white-space:nowrap}
+  .cp-sum{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);font-size:13px}
+  .cp-note{color:var(--muted);font-size:11.5px}
+  .cp-go{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+  .stranded{border:1px solid var(--accent);border-radius:14px;padding:12px 14px;margin:0 0 14px;
+    background:var(--card);font-size:13px;line-height:1.5;color:var(--muted)}
+  .stranded b{color:var(--text)}
+  .st-form{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .st-form select{flex:1;min-width:150px}
   .sync-lock.sync-invite{border-color:var(--accent);background:var(--card)}
   .sync-lock.sync-invite .sl-t b{color:var(--accent)}
 
@@ -3381,7 +3397,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="vaultList"></div>
       </div>
 
-      <div class="panel" id="lessonsPanel" style="display:none" data-deck="What you've told me">
+      <div class="panel" id="lessonsPanel" hidden data-deck="What you've told me">
         <h2>What you've told me</h2>
         <p class="sub" data-say="1">The times money left because something <b>happened</b> - not because you were tempted. Kept so the pattern can be seen, and so nothing here gets mistaken for a trap again.</p>
         <div id="lessonsBody"></div>
@@ -3908,7 +3924,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="areaToggles"></div>
       </div>
 
-      <div class="panel" id="supportPanel" style="display:none" data-deck="What this costs">
+      <div class="panel" id="supportPanel" hidden data-deck="What this costs">
         <h2>What this costs</h2>
         <p class="sub" data-say="1">Nothing, and there is no locked version. No ads, no subscription, no affiliate links pointing you at where to put your money - that would make this the exact thing it was built to fight. It does not see your numbers, so it could not sell them if it wanted to.</p>
         <p class="sub" id="supportEarned" data-say="1"></p>
@@ -9619,7 +9635,7 @@ function renderBudget(){
     flipStat('Assigned', assigned, '')+
     flipStat(lifeLabel('spent','Spent'), spent, '')+
     flipStat('Left to spend', lts, lts<0?'bad':'good');
-  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=syncLockedHTML()+`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=syncLockedHTML()+strandedPutAwayHTML(M)+`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
 
   const nmEl=document.getElementById('newMonthBanner');
   if(nmEl){
@@ -11507,6 +11523,22 @@ function renderQuickLog(){
       }
       if(catId==='__new'){ const nm=(el.querySelector('.ql-new').value||'').trim()||what||'Spending'; catId=findOrCreateCat(nm).id; }
       if(!catId) uncat++;   // honest: a row nothing could be guessed for lands as Uncategorized, and says so
+      /* "So all of these did not land in investing for acorns... if it didn't
+         land there where did it go?" They went in as put-aways with NO category,
+         because "Put away" sat in the same dropdown as the categories and so was
+         picked INSTEAD of one. Those are two different questions - which pool
+         this belongs to, and whether the money left you - and one list cannot
+         answer both. The category now decides the verb: choosing Acorns records
+         a put-away, in Acorns, and it shows up on the Plan line and in net
+         worth. Nothing has to be picked twice. */
+      const catObj=(state.categories||[]).find(x=>x.id===catId);
+      if(catObj && catPutsAway(catObj)){
+        const gT={id:uid(),type:'invest',amount:amt,catId,source:what||catObj.name,date,note:'',ikind:'holds'};
+        if(batchAcct) gT.acctId=batchAcct;
+        state.transactions.push(gT);
+        investAssetAdd(amt);
+        added++; put+=amt; el.remove(); return;
+      }
       const exT={id:uid(),type:'expense',amount:amt,catId,date,note:what};
       if(batchAcct) exT.acctId=batchAcct;
       state.transactions.push(exT); added++;
@@ -11934,7 +11966,7 @@ function renderTxSheet(){
   const fields=`<div class="cs-sec"><div class="cs-h">The entry</div>
     <div class="txs-f"><span class="txs-k">Amount</span><span class="txs-v">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${t.amount}" data-txedit="amount"></span></div>
     <div class="txs-f"><span class="txs-k">Date</span><span class="txs-v"><input type="date" value="${escapeHtml(t.date||'')}" data-txedit="date"></span></div>
-    ${t.type==='expense'?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId" id="txsCat">${catOpts}</select></span></div>
+    ${(t.type==='expense'||t.type==='invest')?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId" id="txsCat">${catOpts}</select></span></div>
       <div class="txs-f hide" id="txsNewWrap"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" id="txsCatNew" placeholder="Name the new one" enterkeyhint="done"></span></div>`:''}
     ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>
@@ -12845,7 +12877,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · voice, sharing, balance column';
+const BUILD_STAMP='2026-09-04 · carry what you choose';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -13110,7 +13142,7 @@ async function refreshSyncState(){
     const logged=(state.transactions||[]).length;
     const kept=(typeof impulseSaved==='function')?impulseSaved():0;
     if(logged>=20 || kept>0){
-      sp.style.display='';
+      sp.hidden=false;
       const e=document.getElementById('supportEarned');
       if(e) e.textContent = kept>0
         ? `You have talked yourself out of ${money(kept)} of impulse buys with this so far. If it keeps doing that, it is worth what you think it is worth.`
@@ -13452,8 +13484,10 @@ function renderLessons(){
   const panel=document.getElementById('lessonsPanel'), box=document.getElementById('lessonsBody');
   if(!panel||!box) return;
   const list=(state.lessons||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  if(!list.length){ panel.style.display='none'; box.innerHTML=''; return; }
-  panel.style.display='';
+  /* `hidden`, not an inline display - a decked panel's display belongs to the
+     deck, and an inline style silently outranks the class that opens it. */
+  if(!list.length){ panel.hidden=true; box.innerHTML=''; return; }
+  panel.hidden=false;
   const r=riskStanding();
   let head='';
   if(r && r.uncovered){
@@ -16411,6 +16445,36 @@ function twGuessPlatform(){
   twPlatform = /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Android/i.test(ua) ? 'android' : 'other';
   return twPlatform;
 }
+/* ---------- the calendar moves while the app is still open ----------
+   "Now is September... Not August." Your evolution said Start Aug, Now Aug, and
+   listed one month, on the 4th of September.
+
+   captureSnapshot() runs in boot(), and boot() runs once - at page load. An
+   installed app resumed from the background for days on end never boots again,
+   so the month turns over and nothing notices: no snapshot for the new month,
+   and a history that stops at whenever the app was last cold-started. The same
+   thing the tripwire code below already had to learn, on the same page.
+
+   So the month is watched rather than assumed. Coming back to the app is the
+   moment to check it, and it is free. */
+let seenMonth = (typeof thisMonth==='function') ? thisMonth() : '';
+function monthWatch(){
+  if(typeof thisMonth!=='function') return;
+  const m=thisMonth();
+  if(m===seenMonth) return;
+  seenMonth=m;
+  /* A new month with nothing logged in it yet is still a month that happened,
+     and it belongs on the record before anybody asks what changed. */
+  try{ if(typeof captureSnapshot==='function') captureSnapshot(); }catch(_){ }
+  try{ if(typeof ensureDay1==='function') ensureDay1(); }catch(_){ }
+  try{ if(typeof renderAll==='function') renderAll(); }catch(_){ }
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) monthWatch(); });
+window.addEventListener('focus',monthWatch);
+/* And a check on the hour, for a phone left on the table over midnight on the
+   1st - the visibility event never fires if nobody picks it up. */
+setInterval(monthWatch, 3600000);
+
 /* A tripwire fires more than once, and the second time the app is usually still
    open in the background - so the OS hands it the link without reloading the
    page, boot() never runs again, and the nudge silently does nothing. That is
@@ -17875,6 +17939,10 @@ const VOICE={
             blunt:'Name what this is all for, or it is just arithmetic.',
             savage:'Budgeting with no dream behind it is just watching your money leave more precisely.'}},
   /* --- sharing the budget with the other person in it --- */
+  stranded:{
+    middle:{clean:'Pick where they belong and they will show on the Plan line you assigned.',
+            blunt:'They counted toward your net worth but not against the plan. Say where they go.',
+            savage:'The money moved and the plan never saw it. Put it where it belongs.'}},
   syncCta:{
     middle:{clean:'Two people, one budget - but only this phone has it. Set up sharing so you are both looking at the same month.',
             blunt:'One budget, two people, and only one phone has it. Until you share it, you are each guessing at half.',
@@ -20913,6 +20981,56 @@ function openingSuggestion(M){
   const v=Math.round((bankTotal()-monthIncome(M))*100)/100;
   return v>0.005 ? v : 0;
 }
+/* ---------- carrying in only the accounts you mean ----------
+   "I don't want to add the full 83706 but I should be able to carry certain
+   accounts in my savings."
+
+   The carry button was all-or-nothing: bankTotal(), every account at once. For
+   anybody whose savings sits in the same app as their chequing that is not an
+   offer, it is a dare - so the only usable answer was to decline it, and Left to
+   budget stayed negative all month for a plan that was actually funded.
+
+   Which accounts are meant to fund THIS month is a judgement nobody else can
+   make, so the app asks instead of guessing. What it does bring is a sensible
+   starting point: the money you spend from is ticked, the money you have put
+   away is not, because carrying a retirement balance into a grocery budget is
+   how a plan starts lying to you. */
+function carryPickDefaults(){
+  return (state.accounts||[])
+    .filter(a=>(a.kind==='checking'||a.kind==='cash') && (+a.balance||0)>0)
+    .map(a=>a.id);
+}
+function carryPicked(M){
+  const m=(state.openingFrom||{})[M];
+  return Array.isArray(m) ? m : carryPickDefaults();
+}
+function carryTotal(M, ids){
+  const pick=new Set(ids||carryPicked(M));
+  const bal=(state.accounts||[]).filter(a=>pick.has(a.id) && a.kind!=='credit')
+    .reduce((s,a)=>s+(+a.balance||0),0);
+  /* Money logged as arriving this month is already counted as income, so
+     carrying the whole balance would count it twice. */
+  const v=Math.round((bal-monthIncome(M))*100)/100;
+  return v>0.005 ? v : 0;
+}
+function carryPickHTML(M){
+  /* A card balance is money you OWE. Offering it as funding would be the worst
+     possible arithmetic in an app about honesty. */
+  const accts=(state.accounts||[]).filter(a=>(+a.balance||0)>0 && a.kind!=='credit');
+  if(!accts.length) return '';
+  const pick=new Set(carryPicked(M));
+  const rows=accts.map(a=>`<label class="cp-row"><input type="checkbox" data-carrypick="${a.id}"${pick.has(a.id)?' checked':''}>
+    <span class="cp-n">${escapeHtml(a.name)}</span><span class="cp-k">${escapeHtml(((ACCT_KINDS||[]).find(k=>k.k===a.kind)||{}).label||a.kind||'')}</span>
+    <b class="cp-b">${money(+a.balance||0)}</b></label>`).join('');
+  return `<div class="carrypick" data-carrym="${M}">
+    <div class="cp-h">Which of these is funding ${escapeHtml(monShort(M))}?</div>
+    <p class="cp-s" data-keep="1">Tick the accounts this month's plan is actually spending from. Anything you leave unticked stays where it is and is not counted as money to budget.</p>
+    ${rows}
+    <div class="cp-sum">Carrying in <b data-carrysum="1">${money(carryTotal(M, [...pick]))}</b>${monthIncome(M)>0?` <span class="cp-note">(already-logged income for ${escapeHtml(monShort(M))} taken off, so nothing counts twice)</span>`:''}</div>
+    <div class="cp-go"><button class="btn sm primary" data-carrygo="${M}">Use this as money I already had</button>
+      <button class="btn sm ghost" data-carrycancel="1">Not now</button></div>
+  </div>`;
+}
 function setOpening(M,v){
   state.opening=state.opening||{};
   if(v>0.005) state.opening[M]=Math.round(v*100)/100; else delete state.opening[M];
@@ -21010,8 +21128,12 @@ function ltbNoteHTML(income,assigned,ltb,M){
   const src = opening>0
     ? `Already in the account <b>${money(opening)}</b> + logged this month <b>${money(earned)}</b> = <b>${money(income)}</b> to budget`
     : `Income logged <b>${money(income)}</b>`;
+  /* One button that committed bankTotal() was an all-or-nothing offer, and for
+     anybody with savings in the app the only usable answer was no. It opens the
+     picker now, and the picker is where the number gets decided. */
+  const carrySome = carryTotal(M);
   const carryBtn = (openingSuggestion(M)>0 && opening<=0)
-    ? `<button class="btn sm primary" data-carryin="${M}">Use the ${money(openingSuggestion(M))} already in my account</button>` : '';
+    ? `<button class="btn sm primary" data-carryin="${M}">${carrySome>0?`Use the ${money(carrySome)} I already have →`:'Carry in money I already have →'}</button><div data-carrywrap="${M}"></div>` : '';
   const clearBtn = opening>0
     ? `<button class="btn sm ghost" data-carryclear="${M}">That is not right - clear it</button>` : '';
   /* The reported case: a month that opens before payday, with last month's
@@ -21027,10 +21149,38 @@ function ltbNoteHTML(income,assigned,ltb,M){
 /* One handler for both buttons, anywhere they are drawn. */
 document.addEventListener('click',e=>{
   const c=e.target.closest('[data-carryin]');
-  if(c){ const M=c.dataset.carryin, v=openingSuggestion(M);
-    setOpening(M,v); renderBudget(); renderHome(); renderTx();
-    if(typeof toast==='function') toast(`${money(v)} carried in as money you already had. It funds the plan and is never counted as income you earned this month - your keep rate and the year ahead do not move.`);
+  if(c){
+    const M=c.dataset.carryin;
+    /* The note this button lives in is drawn on Home AND on Plan, so there are
+       two of every one of these in the document. Reaching for the first match
+       opened the picker on the other screen - the tap did something, somewhere
+       nobody was looking. Open the one belonging to the button that was
+       pressed. */
+    const wrap=c.parentElement && c.parentElement.querySelector(`[data-carrywrap="${M}"]`);
+    if(wrap){ wrap.innerHTML=wrap.innerHTML?'':carryPickHTML(M); }
     return; }
+  /* ticking an account moves the running total, so the figure is decided before
+     it is committed rather than explained afterwards */
+  const t=e.target.closest('[data-carrypick]');
+  if(t){
+    const box=t.closest('.carrypick'); if(!box) return;
+    const M=box.dataset.carrym;
+    const ids=[...box.querySelectorAll('[data-carrypick]')].filter(x=>x.checked).map(x=>x.dataset.carrypick);
+    const sum=box.querySelector('[data-carrysum]'); if(sum) sum.textContent=money(carryTotal(M,ids));
+    return; }
+  const g=e.target.closest('[data-carrygo]');
+  if(g){
+    const M=g.dataset.carrygo, box=g.closest('.carrypick');
+    const ids=[...box.querySelectorAll('[data-carrypick]')].filter(x=>x.checked).map(x=>x.dataset.carrypick);
+    const v=carryTotal(M,ids);
+    state.openingFrom=state.openingFrom||{}; state.openingFrom[M]=ids;
+    setOpening(M,v); renderBudget(); renderHome(); renderTx();
+    if(typeof toast==='function') toast(v>0
+      ? `${money(v)} carried in from ${ids.length} account${ids.length===1?'':'s'}. It funds the plan and is never counted as income you earned this month.`
+      : 'Nothing carried in - the accounts you ticked have no money left once this month\'s logged income is taken off.');
+    return; }
+  const cc=e.target.closest('[data-carrycancel]');
+  if(cc){ const box=cc.closest('.carrypick'); if(box) box.parentElement.innerHTML=''; return; }
   const x=e.target.closest('[data-carryclear]');
   if(x){ setOpening(x.dataset.carryclear,0); renderBudget(); renderHome(); renderTx();
     if(typeof toast==='function') toast('Cleared. The plan is funded by logged income again.'); }
@@ -21383,6 +21533,14 @@ function goSync(){
   },200);
 }
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-gosync]'); if(g){ e.preventDefault(); goSync(); } });
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#strandedGo')) return;
+  const sel=document.getElementById('strandedCat'); if(!sel) return;
+  const cat=(state.categories||[]).find(c=>c.id===sel.value);
+  const n=fileStrandedPutAways(sel.value);
+  if(typeof renderAll==='function') renderAll();
+  if(typeof toast==='function' && n) toast(`${n} put-away ${n===1?'entry':'entries'} filed under ${cat?cat.name:'that category'}. They are on the Plan line now.`);
+});
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
 document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.addEventListener('click',()=>{ rfTab=b.dataset.rf; renderReflectTab(); }));
 document.getElementById('openTalkBtn').addEventListener('click',()=>openTalk());
@@ -21610,6 +21768,55 @@ function growthKindFor(name){
    has no asset to create - the accounts and the debt list already hold those.
    The tag still keeps all three out of the spending breakdown. */
 function growthRecType(c){ return (c&&c.growth==='invest') ? 'invest' : 'expense'; }
+/* A category's growth kind, inherited from its group. "Acorns" sits under
+   "Investing" and carries no kind of its own, so asking the leaf alone said it
+   was ordinary spending - which is how money put into Acorns came to be filed
+   as though it had been spent, or as nothing at all. A child of an investing
+   group is investing, unless it says otherwise itself. */
+function growthOf(c){
+  let cur=c, hops=0;
+  while(cur && hops++<4){
+    if(cur.growth) return cur.growth;
+    cur = cur.parentId ? (state.categories||[]).find(x=>x.id===cur.parentId) : null;
+  }
+  return '';
+}
+/* Money moved into a savings or investing category did not leave you, so it is
+   recorded as a put-away rather than as spending - and it keeps the category, so
+   it lands on the Plan line you assigned it to. Both facts, one entry. */
+function catPutsAway(c){ const g=growthOf(c); return g==='invest'||g==='save'; }
+/* ---------- put-aways with nowhere to sit ----------
+   Asked directly, and it is the right question: "if it didn't land there where
+   did it go?" Nowhere visible. They were recorded, they counted toward net
+   worth, and they appeared on Track with an arrow - but with no category they
+   never touched the Plan line, so Acorns read $0 while the money had plainly
+   gone. Nothing was duplicated and nothing was lost; it was filed under nothing.
+
+   That is not a state anybody should have to fix one entry at a time, so the
+   app finds them and offers to file them in one move. */
+function strandedPutAways(M){
+  return txnsInMonth(M||state.activeMonth)
+    .filter(t=>t.type==='invest' && !t.catId);
+}
+function strandedPutAwayHTML(M){
+  const list=strandedPutAways(M); if(!list.length) return '';
+  const total=list.reduce((s,t)=>s+(+t.amount||0),0);
+  const opts=(state.categories||[]).filter(c=>catPutsAway(c))
+    .map(c=>{ const par=c.parentId?(state.categories||[]).find(x=>x.id===c.parentId):null;
+      return `<option value="${c.id}">${escapeHtml((par?par.name+' / ':'')+c.name)}</option>`; }).join('');
+  if(!opts) return '';
+  return `<div class="stranded"><b>${list.length} put-away ${list.length===1?'entry has':'entries have'} no category
+    - ${money(total)} in all.</b> ${escapeHtml(voice(VOICE.stranded,null))}
+    <span class="st-form"><select id="strandedCat">${opts}</select>
+    <button class="btn sm primary" id="strandedGo">File ${list.length===1?'it':'them'}</button></span></div>`;
+}
+function fileStrandedPutAways(catId){
+  if(!catId) return 0;
+  const list=strandedPutAways();
+  list.forEach(t=>{ t.catId=catId; });
+  if(list.length) save();
+  return list.length;
+}
 const GROWTH_TAG={invest:'Invested, not spent', save:'Saved, not spent', debt:'Debt paid down'};
 /* The Plan row has one line and no room for "Invested, not spent" beside a name,
    an amount and a pill. A coloured dot would have fitted and said nothing - and

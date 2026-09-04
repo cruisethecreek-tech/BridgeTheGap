@@ -9123,6 +9123,161 @@ const cta = await p.evaluate(async () => {
 check('no tab is a screen with nothing to do on it',
       Object.values(cta).every(n=>n>=1), JSON.stringify(cta));
 
+/* ---- 107. a put-away that belongs somewhere ----
+   "So all of these did not land in investing for acorns. Should I delete the
+   investing category? And if it didn't land there where did it go?"
+   Nowhere visible. "Put away" sat in the same dropdown as the categories, so it
+   was picked INSTEAD of one - two different questions, which pool and whether
+   the money left you, in one list that could only answer one. */
+await seed({...FULL, activeMonth:CLOCK_M,
+  categories:[{id:'inv',name:'Investing',growth:'invest'},{id:'ac',name:'Acorns',parentId:'inv'},
+              {id:'food',name:'Food'}],
+  budgets:{[CLOCK_M]:{ac:300,food:400}},
+  transactions:[43.40,40.60,17.90,200,25].map((a,i)=>
+    ({id:'pa'+i,type:'invest',amount:a,source:'ACH Withdrawal / Acorns',date:CLOCK_D,ikind:'holds'}))});
+await p.reload(); await p.waitForTimeout(900);
+const putAway = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const M=state.activeMonth;
+  const o={ inherits:growthOf((state.categories||[]).find(c=>c.id==='ac')),
+            plainCat:growthOf((state.categories||[]).find(c=>c.id==='food')),
+            strandedBefore:strandedPutAways(M).length,
+            onPlanBefore:catUsed('ac',M) };
+  activateTab('budget'); await w(600);
+  const box=document.querySelector('#view-budget .stranded');
+  o.offered=!!box;
+  o.text=box?box.innerText.replace(/\s+/g,' '):'';
+  o.opts=[...document.querySelectorAll('#strandedCat option')].map(x=>x.textContent);
+  if(box){ document.getElementById('strandedCat').value='ac';
+    document.getElementById('strandedGo').click(); await w(600); }
+  o.strandedAfter=strandedPutAways(M).length;
+  o.onPlan=Math.round(catUsed('ac',M)*100)/100;
+  o.rolledUp=Math.round(catUsed('inv',M)*100)/100;
+  o.asSpending=Math.round(catSpent('ac',M)*100)/100;
+  o.offerGone=!document.querySelector('#view-budget .stranded');
+  return o;
+});
+check('a category under an investing group is investing, without saying so twice',
+      putAway.inherits==='invest', putAway.inherits);
+check('...while an ordinary category is left alone', putAway.plainCat==='', putAway.plainCat);
+check('put-aways with no category are found and counted, not left silent',
+      putAway.strandedBefore===5 && putAway.onPlanBefore===0, JSON.stringify([putAway.strandedBefore,putAway.onPlanBefore]));
+check('...offered back with their total, on the tab the money belongs to',
+      putAway.offered===true && /\$326\.90/.test(putAway.text), putAway.text.slice(0,110));
+check('...to the categories money can be put away into, and no others',
+      putAway.opts.some(x=>/Acorns/.test(x)) && !putAway.opts.some(x=>/Food/.test(x)), JSON.stringify(putAway.opts));
+check('one tap files all of them', putAway.strandedAfter===0, String(putAway.strandedAfter));
+check('...onto the Plan line they were always meant for', putAway.onPlan===326.90, String(putAway.onPlan));
+check('...rolling up into the group, the way money does', putAway.rolledUp===326.90, String(putAway.rolledUp));
+check('...still counted as put away rather than spent', putAway.asSpending===0, String(putAway.asSpending));
+check('...and the offer stops once there is nothing left to file', putAway.offerGone===true);
+
+/* ---- 108. carrying in only the accounts you mean ----
+   "How could I plan a whole month from income that isn't logged but it won't let
+   me add the bank balance from the previous month? Left to budget will always be
+   negative. I don't want to add the full 83706 but I should be able to carry
+   certain accounts in my savings." One button committed bankTotal(), every
+   account at once, so the only usable answer was to decline it. */
+await seed({...FULL, activeMonth:CLOCK_M, categories:[{id:'c1',name:'Roof'}],
+  budgets:{[CLOCK_M]:{c1:4000}},
+  accounts:[{id:'chk',name:'Joint chequing',kind:'checking',balance:5230.23,updated:CLOCK_D},
+            {id:'sav',name:'Emergency',kind:'savings',balance:12000,updated:CLOCK_D},
+            {id:'ret',name:'401k',kind:'invest',balance:66476.05,updated:CLOCK_D},
+            {id:'visa',name:'Visa',kind:'credit',balance:900,updated:CLOCK_D}],
+  transactions:[{id:'i1',type:'income',amount:1230.23,date:CLOCK_D,source:'Pay',acctId:'chk'}]});
+await p.reload(); await p.waitForTimeout(900);
+const carry = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await w(700);
+  const btn=document.querySelector('#view-budget [data-carryin]');
+  const o={offered:!!btn, label:btn?btn.innerText.trim():'',
+           /* this note is drawn on Home AND Plan, so everything in it exists twice */
+           copies:document.querySelectorAll('[data-carryin]').length};
+  if(!btn) return o;
+  btn.click(); await w(400);
+  const box=btn.parentElement.querySelector('.carrypick');
+  o.openedHere=!!box;
+  if(!box) return o;
+  o.rows=[...box.querySelectorAll('[data-carrypick]')].map(x=>({id:x.dataset.carrypick,on:x.checked}));
+  o.sum=(box.querySelector('[data-carrysum]')||{textContent:''}).textContent;
+  const sav=box.querySelector('[data-carrypick="sav"]');
+  sav.checked=true; sav.dispatchEvent(new Event('click',{bubbles:true})); await w(250);
+  o.sum2=(box.querySelector('[data-carrysum]')||{textContent:''}).textContent;
+  box.querySelector('[data-carrygo]').click(); await w(600);
+  const M=state.activeMonth;
+  o.opening=openingFor(M); o.earned=monthIncome(M); o.toBudget=monthToBudget(M);
+  o.from=(state.openingFrom||{})[M];
+  return o;
+});
+check('the carry button offers what you spend from, not every account you own',
+      carry.offered===true && !/83,|78,/.test(carry.label), carry.label);
+check('...and opens a picker on the screen it was pressed on, not the other one',
+      carry.copies>=2 && carry.openedHere===true, JSON.stringify([carry.copies,carry.openedHere]));
+check('a credit card is never offered as money you have',
+      !(carry.rows||[]).some(r=>r.id==='visa'), JSON.stringify(carry.rows));
+check('spending accounts start ticked, put-away accounts do not',
+      carry.rows.find(r=>r.id==='chk').on===true && carry.rows.find(r=>r.id==='sav').on===false,
+      JSON.stringify(carry.rows));
+check('...the total is what is there less income already logged, so nothing counts twice',
+      /\$4,000\b/.test(carry.sum), carry.sum);
+check('...and it moves as you tick, before anything is committed',
+      /\$16,000\b/.test(carry.sum2), carry.sum2);
+check('what you ticked is what gets carried in', carry.opening===16000, String(carry.opening));
+check('...remembered as which accounts, not only as a number',
+      Array.isArray(carry.from) && carry.from.length===2, JSON.stringify(carry.from));
+check('...so the month has something to budget from', carry.toBudget===17230.23, String(carry.toBudget));
+check('...while money EARNED is still only what was logged', carry.earned===1230.23, String(carry.earned));
+
+/* ---- 109. the calendar moves while the app is open ----
+   "Now is September... Not August." captureSnapshot() lives in boot(), and
+   boot() runs once - at page load. An installed app resumed from the background
+   for days never boots again. */
+const rollover = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={before:thisMonth()};
+  o.hasBefore=(state.snapshots||[]).some(s=>s.month===o.before);
+  /* push the clock a month without reloading, exactly as a phone left open does */
+  const Real=window.Date;
+  const jump=new Real(Real.now()+40*24*3600*1000).getTime();
+  const off=jump-Real.now();
+  class S extends Real { constructor(...a){ a.length?super(...a):super(Real.now()+off);} static now(){return Real.now()+off;} }
+  window.Date=S;
+  document.dispatchEvent(new Event('visibilitychange'));
+  await w(700);
+  o.after=thisMonth();
+  o.hasAfter=(state.snapshots||[]).some(s=>s.month===o.after);
+  window.Date=Real;
+  return o;
+});
+check('the month turning over is noticed without anybody reloading',
+      rollover.after!==rollover.before, JSON.stringify([rollover.before,rollover.after]));
+check('...and the new month lands on the record by itself',
+      rollover.hasBefore===true && rollover.hasAfter===true, JSON.stringify(rollover));
+
+/* ---- 110. a pill that opens nothing ----
+   "What you've told me doesn't do anything. It's a dead action." The panel
+   carried an inline display:none, which a class rule cannot override - so the
+   pill toggled dk-on and the panel stayed shut. */
+const dead = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  state.lessons=[{id:'l1',date:state.activeMonth+'-02',name:'Jacket',amount:200,cause:'scroll',covered:'',note:'Bought it anyway'}];
+  save(); renderAll(); activateTab('impulse'); await w(650);
+  const chip=[...document.querySelectorAll('#deck-impulse .dk-chip')].find(c=>/told me/.test(c.dataset.dk));
+  const o={offered:!!chip};
+  if(chip){ chip.click(); await w(400);
+    const pn=document.getElementById('lessonsPanel');
+    o.opens=!!pn && getComputedStyle(pn).display!=='none' && pn.getBoundingClientRect().height>20;
+    o.inline=!!(pn && pn.style && pn.style.display); }
+  state.lessons=[]; save(); renderAll(); activateTab('impulse'); await w(500);
+  o.goneWhenEmpty=![...document.querySelectorAll('#deck-impulse .dk-chip')].some(c=>/told me/.test(c.dataset.dk));
+  o.stillOthers=document.querySelectorAll('#deck-impulse .dk-chip').length>0;
+  return o;
+});
+check('a pill with something behind it actually opens it', dead.offered===true && dead.opens===true, JSON.stringify(dead));
+check('...because no panel fights the deck with an inline display', dead.inline===false, JSON.stringify(dead));
+check('...and an empty one is not offered at all, rather than offered and dead',
+      dead.goneWhenEmpty===true && dead.stillOthers===true, JSON.stringify(dead));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }
