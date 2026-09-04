@@ -1283,3 +1283,31 @@ Three fixes, and the counting needed none of them - `investedFor(catId, month)` 
 **And the ones already logged are offered back.** `strandedPutAways` finds invest entries with no category, and Plan shows how many there are and what they total, with a picker of only the categories money can be put away into and one button that files all of them. It disappears when there is nothing left to file. Nobody should have to fix twelve entries one at a time to recover from a dropdown that asked the wrong question.
 
 The general lesson is about the shortcut, not the bug. **Two orthogonal questions crammed into one control will be answered as if they were one question** - and the person answering will be right, by the interface's own logic, while the data comes out wrong.
+
+## Four from one screenshot batch
+
+### Carrying in only the accounts you mean
+
+*"How could I plan a whole month from income that isn't logged but it won't let me add the bank balance from the previous month? Left to budget will always be negative. I don't want to add the full 83706 but I should be able to carry certain accounts in my savings."*
+
+The carry button committed `bankTotal()` - every account at once. For anybody whose savings and retirement live in the same app as their chequing, that is not an offer, it is a dare, and the only usable answer was to decline it. So Left to budget stayed negative all month for a plan that was actually funded.
+
+`carryPickHTML` asks instead of guessing, because which accounts fund *this* month is a judgement nobody else can make. What it does bring is a sensible start: **what you spend from is ticked, what you have put away is not**, because carrying a retirement balance into a grocery budget is how a plan starts lying to you. A credit card is never offered at all - that is money you owe. Money already logged as arriving this month is subtracted, so nothing counts twice, and the running total moves as you tick, before anything is committed. The choice is stored as `openingFrom[month]` - **which accounts**, not just the number it produced.
+
+**Playwright found a second bug while I was screenshotting the first.** A strict-mode locator refused to click `[data-carryin]` because it matched *two* elements: the left-to-budget note is drawn on Home **and** on Plan, so every control inside it exists twice. The handler reached for `document.querySelector('[data-carrywrap]')` and got Home's copy - so tapping the button on Plan opened the picker on a screen nobody was looking at. It opens the one belonging to the button that was pressed now. A test refusing to act on an ambiguous selector is a better bug report than most bug reports.
+
+### The calendar moves while the app is open
+
+*"Now is September... Not August."* Your evolution said Start Aug, Now Aug, and listed one month, on the 4th of September.
+
+`captureSnapshot()` runs in `boot()`, and **`boot()` runs once - at page load**. An installed app resumed from the background for days never boots again, so the month turns over and nothing notices: no snapshot for the new month, and a history that stops at whenever the app was last cold-started. The same lesson the tripwire code on this page had already learned, in a comment sitting forty lines away: *"the app is usually still open in the background... boot() never runs again."*
+
+`monthWatch()` checks on `visibilitychange`, on `focus`, and hourly for a phone left on the table over midnight on the 1st. Coming back to the app is the moment to check, and it is free.
+
+### A pill that opened nothing
+
+*"What you've told me doesn't do anything. It's a dead action."*
+
+Two panels carried an inline `style="display:none"` and set it themselves when empty. **An inline style outranks a class rule**, so the deck toggled `dk-on` and the panel did not move. Both use the `hidden` attribute now - which is the one `deckLive` already reads, so an empty panel is not offered a pill at all rather than being offered a dead one. Display inside a deck belongs to the deck.
+
+The general shape: **when two mechanisms can both set the same property, the one that wins is decided by CSS specificity rather than by intent** - and the loser fails silently, which is how a control comes to do nothing at all.

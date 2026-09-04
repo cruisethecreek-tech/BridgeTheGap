@@ -1515,6 +1515,41 @@ are labels, figures and category names that must not move - the same code reads
 21%. Both numbers are true; only one of them is the question. **Pick the
 denominator before you read the result, or the result picks it for you.**
 
+### The locator that refused, and was right
+
+While screenshotting a new picker I could not get it to appear, and spent three
+runs assuming my timing was wrong. Then a Playwright strict-mode locator refused
+to click the button at all:
+
+    strict mode violation: locator('[data-carryin]') resolved to 2 elements
+
+The left-to-budget note is drawn on Home **and** on Plan, so every control inside
+it exists twice. My click handler reached for
+`document.querySelector('[data-carrywrap]')` and got Home's copy - so pressing
+the button on Plan opened the picker on a screen nobody was looking at. The
+feature worked perfectly, somewhere else.
+
+Two things worth taking from it.
+
+**A tool refusing to guess is doing you a favour.** The obvious reaction to a
+strict-mode violation is to reach for `.first()` and move on. It was pointing at
+the actual defect: an ambiguous selector in a test usually means an ambiguous
+selector in the code, because they are written from the same mental model of the
+page - one where each thing exists once.
+
+**`document.querySelector` inside a click handler is a smell.** The event knows
+which element was pressed. Anything the handler then needs is almost always
+*relative to that element*, and a document-wide lookup silently picks whichever
+copy is earliest in the DOM. This is the second bug this session with that exact
+shape - the first was a banner query finding a hidden view's stale copy. The fix
+both times was to scope the question to the thing that was actually touched.
+
+The screenshot, incidentally, never was the problem. Three runs of "my timing
+must be off" and the app was telling me plainly the whole time by putting the
+panel somewhere else. **When a fix does not show up where you expect it, check
+that it is not showing up somewhere you are not looking, before you assume it
+did not happen.**
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a

@@ -345,3 +345,38 @@ nothing, which is why the Plan line read $0 while the money had clearly moved.
 If a savings or investing category of yours does **not** appear in that picker,
 tell me its name: it means the app has not recognised its group as a growth
 category, and that is a one-line fix.
+
+### Carrying in what you actually mean
+
+Settings shows `2026-09-04 · carry what you choose`.
+
+On **Plan**, the button under the left-to-budget note no longer offers your whole
+net worth. Tap it and you get a list of your accounts:
+
+1. **Check what starts ticked.** Chequing and cash, yes. Savings, retirement and
+   anything you have put away, no. A credit card should not be in the list at
+   all - that is money you owe.
+2. **Tick and untick.** The figure at the bottom should move as you go, before
+   you commit anything.
+3. **Check the subtraction.** If you have already logged income this month, it
+   comes off the total, so the same dollars are never counted twice.
+4. **Commit it.** Left to budget should stop being permanently negative, and
+   **Income** should still show only what you actually logged - carried-in money
+   is money you already had, not money you earned this month.
+
+Do this on **Home** as well as **Plan**. The same note is drawn on both, and
+until now tapping it on one opened the picker on the other.
+
+### The month turning over
+
+If you leave the app open on your phone for days, it should notice when the
+calendar moves. **Your evolution** on Home should say **Now · Sep** in September,
+not Now · Aug, and the table should have a row for each month. If it is stuck on
+an old month, tell me - it means the app is not noticing the rollover on your
+device even after this.
+
+### And the pill that did nothing
+
+On **Shield**, **What you've told me** should open when you tap it. If you have
+never talked anything through, the pill should not be there at all rather than
+being there and dead.
