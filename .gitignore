@@ -1,0 +1,2 @@
+# the gate writes its log here when run without GATE_LOG set
+gate.log
