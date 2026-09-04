@@ -4811,6 +4811,15 @@ function normalizeState(s){
   // backup) is forced to a finite number here. One string in a money field would
   // otherwise turn addition into concatenation everywhere downstream.
   const num=(v)=>{ const n=+v; return isFinite(n)?n:0; };
+  // ...and a quantity that cannot be negative says so. A wage, a week's hours,
+  // a limit, a target: there is no reading of any of them below zero. Found by
+  // the hostile suite typing "-5" into every number field it could see - it
+  // stuck, because parseFloat("-5")||0 is -5 and nothing downstream asked. A
+  // negative wage does not throw; it quietly turns "3.4 hrs of your life" into
+  // "-3.4 hrs", stated with exactly the same confidence as a true figure.
+  // Healed here as well as clamped at the inputs, because a value can arrive
+  // from a restore, a sync or a hand-edited backup without passing an input.
+  const qty=(v)=>{ const n=+v; return isFinite(n)&&n>0 ? n : 0; };
   // seed sort from current position once, per level, so an existing budget keeps
   // exactly the order it had before this feature existed
   (function(){
@@ -4868,8 +4877,8 @@ function normalizeState(s){
     target:num(c.target)}));
   (s.recurring||[]).forEach(r=>{ r.amount=num(r.amount); if(r.hours!=null) r.hours=num(r.hours); });
   (s.timeLog||[]).forEach(e=>{ e.hours=num(e.hours); });
-  s.hourlyWage=num(s.hourlyWage); s.hoursPerWeek=num(s.hoursPerWeek); s.spendLimit=num(s.spendLimit);
-  s.wageB=num(s.wageB); s.enough=num(s.enough); s.givingPct=num(s.givingPct); s.debtBudget=num(s.debtBudget);
+  s.hourlyWage=qty(s.hourlyWage); s.hoursPerWeek=qty(s.hoursPerWeek); s.spendLimit=qty(s.spendLimit);
+  s.wageB=qty(s.wageB); s.enough=qty(s.enough); s.givingPct=qty(s.givingPct); s.debtBudget=qty(s.debtBudget);
   return s;
 }
 /* This used to be one try/catch returning defaultState() on ANY throw - and
@@ -12940,7 +12949,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · two tabs, and what is left under both';
+const BUILD_STAMP='2026-09-04 · no quantity goes below zero';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -13084,7 +13093,7 @@ async function refreshSyncState(){
   const na=document.getElementById('hhNameA'), nb=document.getElementById('hhNameB'), wb=document.getElementById('hhWageB');
   if(na) na.addEventListener('input',()=>{ state.nameA=na.value.trim()||'You'; save(); renderHouseholdLabels(); renderHousehold(); });
   if(nb) nb.addEventListener('input',()=>{ state.nameB=nb.value.trim()||'Partner'; save(); renderHouseholdLabels(); renderHousehold(); });
-  if(wb) wb.addEventListener('input',()=>{ state.wageB=parseFloat(wb.value)||0; save(); renderHousehold(); });
+  if(wb) wb.addEventListener('input',()=>{ state.wageB=Math.max(0, parseFloat(wb.value)||0); save(); renderHousehold(); });
   // "Just my spending" controls
   const sp=document.getElementById('spendOn');
   if(sp) sp.addEventListener('change',()=>{
@@ -13177,8 +13186,16 @@ async function refreshSyncState(){
     el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{
       /* Blank and zero are different answers here. "I expect nothing from it"
          is a real position worth pricing; "I have not said" is a question the
-         screen should ask rather than answer on your behalf. */
-      (state.lev||(state.lev={}))[levKeys[id]] = el.value==='' ? null : (parseFloat(el.value)||0);
+         screen should ask rather than answer on your behalf.
+
+         The expected RETURN is the one field here that may be negative, and
+         deliberately so: an investment that loses money is a real position, and
+         refusing to price it would be the screen deciding what you are allowed
+         to plan for. An amount borrowed, a rate charged and a number of years
+         have no such reading, so those three are clamped. */
+      const k=levKeys[id];
+      const raw = el.value==='' ? null : (parseFloat(el.value)||0);
+      (state.lev||(state.lev={}))[k] = (raw!==null && k!=='ret') ? Math.max(0, raw) : raw;
       save(); renderLeverage();
     });
   });
@@ -15113,7 +15130,11 @@ document.getElementById('addLiab').addEventListener('click',()=>{
 /* --- hourly wage --- */
 const wageEl=document.getElementById('wage');
 wageEl.addEventListener('input',()=>{
-  const v=parseFloat(wageEl.value)||0;
+  /* Clamped, not merely parsed. A number field will hand you -5 without
+     complaint, and effectiveHourly() treats a negative as "not set" and falls
+     back to an estimate - so the field showed -5 while every hours figure was
+     quietly computed from something else entirely. Wrong either way. */
+  const v=Math.max(0, parseFloat(wageEl.value)||0);
   if(v!==state.hourlyWage) state.wageSetAt=todayStr();   // the outside-numbers card wants "hasn't moved since March", not a hedge
   state.hourlyWage=v; state.wageAuto=false; save();   // manual override stops auto-reblending
   updateWageNote(); renderAll(); if(pendingCheck) renderCheckResult();
@@ -15930,7 +15951,15 @@ function wireUnitField(o){
   const cur=()=>unitOf(o.id,o.dflt);
   const draw=()=>{ const w=document.getElementById(o.id+'W');
     if(w) w.innerHTML=periodWork(parseFloat(inp.value)||0, cur(), o.unitWord); };
-  const commit=()=>{ if(o.set) o.set(toMonthly(parseFloat(inp.value)||0, cur())); draw(); };
+  /* Clamped here, once, rather than at each of the eight call sites. Every
+     field wired through this helper is a QUANTITY - a spending limit, a debt
+     budget, a payment, an amount of cash, a target - and not one of them has a
+     meaning below zero. Exactly one call site was already writing
+     Math.max(0,...) by hand, which is the shape of a rule that belongs one
+     level down: seven others had no guard, and typing "-5" into any of them
+     stuck. Found by the hostile suite, which types -5 into everything it can
+     see and then asks the state what it kept. */
+  const commit=()=>{ if(o.set) o.set(Math.max(0, toMonthly(parseFloat(inp.value)||0, cur()))); draw(); };
   if(!inp.dataset.unitWired){
     inp.dataset.unitWired='1';
     inp.addEventListener('input',commit);

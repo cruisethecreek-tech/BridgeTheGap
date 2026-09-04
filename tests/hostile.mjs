@@ -36,6 +36,7 @@
    A failure here is a bug nobody has hit yet. That is the entire point.
    ============================================================ */
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+import { readFileSync } from 'node:fs';
 
 const results=[]; const check=(name,ok,detail='')=>results.push({ok,name,detail});
 const VIEWS=['home','budget','tx','impulse','debt','goals','reflect','learn','diary','settings'];
@@ -63,10 +64,70 @@ const BASE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,gui
 
 const seed = st => p.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)), st);
 
-/* Every submit in the app. Nothing here says what any of them do. */
+/* Every submit in the app. Nothing here says what any of them do.
+
+   This list is hand-written, and a hand-written list of forms goes stale the
+   moment somebody adds a form - which is the same failure as a tool that
+   measures one spelling of a thing and reports the others as missing. That
+   mistake has cost this project four separate bugs now. So section 5 no longer
+   trusts this list: it discovers the forms from the DOM and refuses if one of
+   them is not named here. The three at the end of this list were found that
+   way, having been added and never probed. */
 const BUTTONS=['addTx','addRec','addCat','addGoal','addAcct','addAsset','addLiab','addDebt',
                'addSkill','addGive','addNet','qlAdd','qlSave','swAdd','twAdd','comfortAdd',
-               'diarySave','tkSave'];
+               'diarySave','tkSave','timeCatAdd','pkAdd','iaBulkAdd',
+               /* These eight are not "add" buttons and it would have been easy to
+                  wave them through on that basis. The census would not have it:
+                  copyBtn, mergeBtn, reorderBtn, cullBtn and starterBtn are literal
+                  SIBLINGS of the add-category field, in the same .row, and mPrev,
+                  mNext and moreBtn are two levels from it. No structural rule can
+                  separate them from addCat, because the markup genuinely puts them
+                  together - and the honest response to that is to drive them
+                  rather than to invent a rule whose only job is to excuse them.
+                  They all write state, which is the whole qualification here. */
+               'copyBtn','mergeBtn','reorderBtn','cullBtn','starterBtn','mPrev','mNext','moreBtn'];
+
+/* Buttons the census will find and this suite deliberately does not drive, each
+   with the reason written down. An exemption without a reason is how a list of
+   forms quietly becomes a list of forms somebody could not be bothered with.
+
+   The sync buttons talk to a service this environment cannot reach, so what
+   they would prove here is that the network is blocked, which is already known
+   and is not a property of the app. The rest replace or export the whole state
+   by design: driving them tests the confirm() dialog rather than a form, and
+   the dialog handler above already answers every confirm with a refusal. */
+const OFF_LIMITS={
+  syncGo:'network unreachable in this environment', syncJoin:'network unreachable',
+  syncSetup:'network unreachable', syncActivate:'network unreachable',
+  syncCancel:'closes a dialog, writes nothing',
+  importBtn:'replaces the whole state by design', importBtn2:'replaces the whole state by design',
+  importLiab:'replaces the whole state by design',
+  exportBtn:'reads the state out, creates nothing', exportBtn2:'reads the state out, creates nothing',
+  encBackupBtn:'reads the state out, creates nothing', dgBackup:'reads the state out, creates nothing',
+  resetBtn2:'erases everything, behind a confirm this suite always refuses',
+  resetBackupFirst:'erases everything, behind a confirm this suite always refuses',
+  /* Doors, not forms. Each of these opens or navigates to something; the thing
+     it opens is what has fields, and where that thing has a submit, the submit
+     is in BUTTONS above and gets driven there. Exempting the door and driving
+     what is behind it covers the same ground once instead of twice. */
+  quickLogBtn:'opens the quick log; its submits qlAdd and qlSave are driven',
+  openTalkBtn:'opens the talk-through; its submit tkSave is driven',
+  glanceTab:'opens the glance panel, writes no record',
+  glanceGo:'navigates to Track, writes no record',
+  txBack:'navigates back a screen, writes no record',
+  footSettings:'navigates to Settings, writes no record',
+  installBtn:'asks the browser to install the app, touches no state of ours',
+  allMonthsBtn:'toggles which months the list shows, a view preference and not a record',
+  /* These came into view only once the doors above were opened, which is the
+     census doing its job: a form behind a shut door is invisible to a scan, and
+     an exemption that opens the door is what makes the next layer countable. */
+  qlSnap:'opens the camera, creates nothing until the scan is read',
+  qlPick:'opens the file picker, creates nothing until the scan is read',
+  qlClear:'empties the quick log form, the opposite of writing a record',
+  packSheetX:'closes the pack sheet',
+  impRun:'runs the target scan, whose result is committed by impCommit',
+  copyLink:'copies a URL to the clipboard, touches no state of ours'
+};
 
 /* A record's "identity" is whatever a person would read to tell it from another. */
 function identityFields(){ return ['name','source','label','title','dest','note']; }
@@ -172,6 +233,15 @@ async function openForm(bid, pick){
       qlAdd:  ()=>{ openQuickLogFor(todayStr()); },
       qlSave: ()=>{ openQuickLogFor(todayStr()); },
       twAdd:  ()=>{ renderTripwires(); },
+      /* Found by the census rather than by anyone remembering they existed. */
+      timeCatAdd: ()=>{ if(typeof renderTimeLog==='function') renderTimeLog(); },
+      pkAdd:  ()=>{ if(typeof openPacks==='function' && typeof CAT_PACKS!=='undefined')
+                      openPacks((CAT_PACKS[0]||{}).k); },
+      /* The bulk intake screen is drawn from a step object rather than from
+         state, so the step is supplied. A door the suite cannot open is a form
+         nobody probes, and a form nobody probes is not a form that passed. */
+      iaBulkAdd: ()=>{ if(typeof bulkLoop==='function')
+                         bulkLoop({loopKey:'probeLoop', chips:[{name:'Rent'},{name:'Power'}]}); },
       /* the sweep only draws its Add button once a row exists, which is the
          state a person is in by the time they could press it */
       swAdd:  ()=>{ subSweepRows=[{name:'Probe',amt:'9'}]; renderSubSweep(); } };
@@ -317,6 +387,132 @@ await p.reload(); await p.waitForTimeout(500);
 const emptyScreen=await sweepScreen();
 check('an app with nothing logged in it renders no impossible number',
       emptyScreen.length===0, emptyScreen.join(' | '));
+
+/* ---------- 5. the census: a form nobody probed is not a form that passed ----------
+   Sections 1 to 4 are only ever as complete as the BUTTONS list above, and that
+   list is written by hand. Three forms had already been added to the app and
+   never probed by the time this section was written - timeCatAdd, pkAdd and the
+   bulk intake add - and nothing anywhere said so, because a suite that walks a
+   list reports exactly the list it was given.
+
+   So the forms are counted from the DOM instead. A FORM here is defined
+   structurally rather than by name: a visible button that shares its region
+   with somewhere to type. That definition does not care what the next one is
+   called, which is the entire point - the day somebody adds a form and forgets
+   to add it here, this refuses.
+
+   Doors are opened first, because a form behind a flow is exactly the kind this
+   was missing. Anything the census can see but this suite will not drive has to
+   be in OFF_LIMITS with its reason written down. */
+await reset(BASE);
+const census = await p.evaluate(async (VIEWS) => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const seen={}; const everyId=new Set();
+  const typableIn = region => [...region.querySelectorAll('input,textarea')]
+    .filter(i=>!['checkbox','radio','date','file','hidden','submit','button'].includes(i.type)
+             && i.offsetParent!==null);
+  /* The first version of this asked whether the button's nearest .card/.panel
+     contained a field, and on the Plan tab that panel holds every assign box in
+     the budget - so the month arrows, the theme toggle and "Copy last month"
+     all came back as forms. A definition that loose does not describe a form,
+     it describes a tab.
+
+     Proximity is the honest structural signal instead: a submit sits WITH the
+     fields it submits, within a step or two of them. Three levels up covers
+     every real form in this app (an .fm-row, a .time-add, a .pk-act) and
+     excludes a button that merely shares a screen with a list of inputs. */
+  const NEAR=3;
+  const isForm = btn => {
+    let el=btn.parentElement;
+    for(let i=0;i<NEAR && el;i++,el=el.parentElement){
+      if(typableIn(el).length) return true;
+    }
+    return false;
+  };
+  const scan = where => {
+    document.querySelectorAll('button[id]').forEach(btn=>{
+      if(btn.offsetParent===null) return;
+      everyId.add(btn.id);
+      if(seen[btn.id]) return;
+      if(!isForm(btn)) return;
+      seen[btn.id]={id:btn.id, where, text:(btn.innerText||'').trim().slice(0,24)};
+    });
+  };
+  for(const v of VIEWS){
+    try{ activateTab(v); }catch(e){ continue; }
+    await w(120);
+    document.querySelectorAll('details').forEach(d=>{ d.open=true; });
+    document.querySelectorAll('[data-deck] .dk-chip').forEach(c=>{ try{ c.click(); }catch(e){} });
+    await w(140);
+    scan(v);
+  }
+  /* the same doors section 1 opens, so the two sections see the same app */
+  const DOORS={
+    quicklog:  ()=>openQuickLogFor(todayStr()),
+    tripwires: ()=>renderTripwires(),
+    sweep:     ()=>{ subSweepRows=[{name:'Probe',amt:'9'}]; renderSubSweep(); },
+    timelog:   ()=>{ if(typeof renderTimeLog==='function') renderTimeLog(); },
+    packs:     ()=>{ if(typeof openPacks==='function' && typeof CAT_PACKS!=='undefined') openPacks((CAT_PACKS[0]||{}).k); },
+    bulk:      ()=>{ if(typeof bulkLoop==='function') bulkLoop({loopKey:'probeLoop', chips:[{name:'Rent'},{name:'Power'}]}); }
+  };
+  for(const k of Object.keys(DOORS)){ try{ DOORS[k](); }catch(e){} await w(200); scan('door:'+k); }
+  return {forms:Object.values(seen), everyId:[...everyId]};
+}, VIEWS);
+
+const uncovered = census.forms.filter(f=>!BUTTONS.includes(f.id) && !(f.id in OFF_LIMITS));
+check('every form the app puts on screen is one this suite drives, or is exempt with a reason',
+      uncovered.length===0,
+      uncovered.map(f=>`${f.id} ("${f.text}") on ${f.where}`).slice(0,8).join(' | '));
+/* A census that found nothing would pass the check above for the wrong reason,
+   and would keep passing forever. */
+check('...and the census actually saw the app rather than an empty page',
+      census.forms.length>=12, `${census.forms.length} form-shaped of ${census.everyId.length} buttons seen`);
+/* The exemption list is only honest while every name on it still names
+   something. An exemption for a button that no longer exists is dead weight
+   that makes the list look more considered than it is - and if the id is ever
+   reused for a real form, the exemption silently swallows it.
+
+   Two wrong versions of this check preceded the right one, and both are worth
+   keeping in view. The first compared a subset's length against the whole
+   list's length, which is true for every possible input: a check that cannot
+   fail is worse than no check, because it reports green forever and reads like
+   coverage. The second compared against the ids visible in THIS fixture, and
+   called six live buttons dead - the sync sheet's controls are built on demand
+   and simply were not on screen, which is a fact about the fixture rather than
+   about the app.
+
+   So it reads the source. "Does the app still contain this id" is the question
+   the exemption is actually making a claim about, and it is answerable without
+   guessing which screen happens to be open. */
+const SOURCE = readFileSync('app.html','utf8');
+/* Third correction, and the same mistake a size smaller: searching only for
+   id="X" misses every button the app BUILDS, and it caught txBack, whose id is
+   handed to a helper as backToThisMonthHTML('txBack') and never written as an
+   attribute anywhere. A generated id is still an id the app contains. So the
+   token is looked for as an attribute or as a quoted string, which a removed
+   button leaves behind neither of. */
+const inSource = id => SOURCE.includes(`id="${id}"`)
+                     || SOURCE.includes(`'${id}'`) || SOURCE.includes(`"${id}"`);
+const ghosts = Object.keys(OFF_LIMITS).filter(id=>!inSource(id));
+check('...and every exemption still names a button the app actually has',
+      ghosts.length===0, ghosts.length?`no longer in the source: ${ghosts.join(', ')}`:'all live');
+
+/* The forms this fixture cannot get to. They have always been PRINTED at the
+   end of the run rather than silently skipped, which was the right instinct -
+   a form nobody probes is not a form that passed - but a printed line is not a
+   check, and a printed line is free to grow. Adding a form that lands here
+   would leave every assertion above green while the form went undriven.
+
+   So the set is named. A new name failing to appear on this list is a failure;
+   a name LEAVING it is the good outcome and passes, since the whole point is
+   that these should eventually be reachable. */
+const KNOWN_UNREACHABLE=['twAdd','tkSave','iaBulkAdd'];
+const stranded=unreachable.map(x=>String(x).split(':')[0].trim());
+const newlyStranded=stranded.filter(id=>!KNOWN_UNREACHABLE.includes(id));
+check('no form became unreachable that was not already known to be',
+      newlyStranded.length===0,
+      newlyStranded.length?`newly out of reach: ${newlyStranded.join(', ')}`
+                          :`still out of reach, as recorded: ${stranded.join(', ')||'none'}`);
 
 check('nothing threw at any point', errs.length===0, [...new Set(errs)].slice(0,4).join(' | '));
 
