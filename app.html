@@ -1284,7 +1284,16 @@
   .plan-switch .pv:hover{color:var(--text)}
   .plan-switch .pv.on{background:var(--accent);color:var(--on-accent)}
   .plan-cols.two{grid-template-columns:minmax(0,1fr) 7em}
-  .sub-spent{font-weight:800;font-size:15px;text-align:right}
+  /* Written as .subrow .sub-spent, not .sub-spent, and that is the whole point.
+     An older rule up in the subrow block sets this to 12px muted at specificity
+     0,2,0, so the plain .sub-spent here at 0,1,0 lost every time and the SPENT
+     figure - the number that tab exists to show - has been drawing itself as
+     secondary grey text the same weight as a caption. Nobody caught it because
+     it looked deliberate. It stops being survivable the moment a muted 11px
+     hint sits underneath it, because then the figure and its footnote are the
+     same thing to look at. */
+  .sub-spent,.subrow .sub-spent{display:block;font-weight:800;font-size:15px;
+    color:var(--text);text-align:right;white-space:nowrap}
   /* The one-glance answer, back in Planned - secondary to the number you are
      typing, never competing with it. */
   .rw-left{display:block;font-style:normal;font-size:11px;font-weight:800;
@@ -1302,8 +1311,6 @@
   .cat.grp .cat-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;
     background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px;font-size:14px}
   .cat.grp .cat-name{flex:1 1 7em;min-width:7em}
-  .cat.grp .cat-assign{flex:0 0 6.2em}
-  .cat.grp .avail{flex:0 0 5.6em}
   .cat.grp .cat-name{font-size:15px;flex:none;min-width:0}
   .cat.grp .cat-assign{display:block;text-align:right;font-weight:800;font-size:14px;color:var(--text)}
   .cat.grp .cat-assign i{display:block;font-style:normal;font-size:10.5px;font-weight:600;color:var(--muted)}
@@ -1317,12 +1324,26 @@
   .subrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;
     padding:9px 10px;margin-top:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
   .subrow .sub-name{flex:1 1 7em;min-width:7em}
-  /* The two money boxes are one item, so they wrap TOGETHER and stay together.
-     Split, the pill dropped to a second line on its own and left-aligned under
-     the name, which reads as a bug rather than as a row that needed more room. */
-  .rw-money{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto}
-  .subrow .sub-assign{flex:0 0 6.2em}
-  .subrow .avail{flex:0 0 5.6em}
+  /* The money column is sized ONCE, here, on the box every row shares.
+     It used to be set on each cell instead, and both cells said the identical
+     thing - flex:0 0 6.2em - and came out different widths, because em resolves
+     against the element's OWN font-size: 6.2em is 74px on the 12px assign cell
+     and 93px on the 15px spent cell. So the column jumped sideways as you
+     switched tabs, from two rules that read the same. rem is deliberate: it
+     answers to the root, so the number here is the number on the screen.
+
+     min-width:0 is not decoration either. A flex item defaults to min-width
+     auto, so the nowrap "$1,069.40 left" underneath would set the cell's floor
+     to the width of that string and quietly overrule the basis.
+
+     The width is not a fresh choice. It is the width the PLANNED cell already
+     had - 6.2em at 12px, so 74.4px, which is 4.65rem - because that is the mode
+     the list is used in and the name has been living beside it happily. Spent's
+     93px was the accident, not the standard. Picking a round number instead
+     cost the emoji its place on the name at 320px, on the two longest category
+     names, which is how a tidy-up becomes a regression. */
+  .rw-money{display:flex;align-items:center;gap:8px;flex:0 0 4.65rem;min-width:0;margin-left:auto}
+  .rw-money>*{flex:1 1 auto;min-width:0;width:100%}
   .subrow.lvl1{margin-left:12px}
   .subrow.lvl2{margin-left:24px}
   .subrow.overspent{border-color:rgba(var(--accent-2-rgb),.45)}
@@ -1454,13 +1475,13 @@
     .plan-cols.two{grid-template-columns:minmax(0,1fr) 6.4em}
     .cat.grp .cat-top{gap:6px;padding:9px 8px}
     .cat.grp .cat-name{flex:1 1 6em;min-width:6em}
-    .cat.grp .cat-assign{flex:0 0 5.6em}
-    .cat.grp .avail{flex:0 0 5em}
     .subrow{gap:6px;padding:8px}
     .rw-money{gap:6px}
     .subrow .sub-name{flex:1 1 6em;min-width:6em}
-    .subrow .sub-assign{flex:0 0 5.6em}
-    .subrow .avail{flex:0 0 5em}
+    /* one override for the narrow phone, on the one box that carries the width,
+       and again it is the width the assign cell already had here: 5.6em at 12px
+       is 67.2px, which is 4.2rem. */
+    .rw-money{flex:0 0 4.2rem}
     .avail{font-size:.86em;padding:6px 2px}
     .subrow .sub-assign input{padding:6px 4px;font-size:.93em}
     .subrow.lvl1{margin-left:8px} .subrow.lvl2{margin-left:16px}
@@ -4706,7 +4727,10 @@ function normalizeState(s){
      owns disappears on boot. That exact bug has been shipped once already in
      this file (syncInvestAsset reaching for uid); it does not get shipped
      twice. */
-  if(['planned','spent','left'].indexOf(s.planView)<0) s.planView='planned';
+  /* 'left' was a third view once. Dropping it from this literal is what
+     carries anybody still parked on it back to Planned, which now shows
+     everything that view did and the assignment field besides. */
+  if(['planned','spent'].indexOf(s.planView)<0) s.planView='planned';
   /* Literal, not a const declared further down - normalizeState runs inside
      load(), which runs at `let state = load()`, and reaching for a const there
      is the temporal-dead-zone bug that has emptied this app twice. */
@@ -9353,12 +9377,24 @@ function catUsed(id,M){ return catSpent(id,M)+catInvested(id,M); }
 
    So the list carries one money column now and the toggle says which question
    it is answering. Planned is the editable one - zero-based budgeting is typing
-   in that column, so it stays a field there and becomes a figure in the other
-   two. Every row then has exactly the same shape whatever the mode. */
+   in that column, so it stays a field there and becomes a figure in the other.
+
+   There were three tabs. Remaining went, because it had already been made
+   redundant by a fix to its neighbour: Planned lost the one-glance answer when
+   the toggle shipped, so "$250 left" was put back underneath the field. From
+   that moment a tab called Remaining showed the same figure the tab you were
+   already on was showing, only alone and larger. A tab that offers you strictly
+   less than the tab you are standing on is not a choice, it is a third of the
+   switch spent on nothing.
+
+   So the remainder now rides under BOTH figures instead of having a tab of its
+   own, which is what makes the removal lossless rather than a cut: whichever
+   question you asked, what is left is on the screen. Anyone parked on the old
+   view is carried to Planned by normalizeState, and lands on more than they
+   had, not less. */
 const PLAN_VIEWS=[
-  {k:'planned', label:'Planned', col:'Planned', why:'what you assigned'},
-  {k:'spent',   label:'Spent',   col:'Spent',   why:'what has actually gone'},
-  {k:'left',    label:'Remaining', col:'Left',  why:'assigned minus spent'}
+  {k:'planned', label:'Planned', col:'Planned', why:'what you assigned, and what is left of it'},
+  {k:'spent',   label:'Spent',   col:'Spent',   why:'what has actually gone, and what is left'}
 ];
 function planView(){ return PLAN_VIEWS.some(v=>v.k===state.planView) ? state.planView : 'planned'; }
 function setPlanView(k){
@@ -9706,7 +9742,12 @@ function renderBudget(){
       const a=catAssigned(c.id,M), sp=catUsed(c.id,M), rem=a-sp;
       const kids=childrenOf(c.id), isGroup=kids.length>0, collapsed=collapsedCats.has(c.id);
       const own=assignedFor(c.id,M);
-      const pillCls = rem<0 ? 'over' : (a>0 ? (rem>0?'good':'spent') : 'none');
+      /* The one-glance answer, written once and printed under whichever figure
+         the mode is showing. It used to exist only under Planned, which is what
+         left a whole tab with nothing of its own to say. It only appears when
+         there is something to say: a category with nothing assigned has no
+         remainder worth printing. */
+      const leftHint = a>0 ? `<i class="rw-left ${rem<0?'over':''}">${money(rem)} left</i>` : '';
       /* Renaming happens in the sheet, never here. Two live inputs carrying the
          same data-rename would have the save button picking one of them at
          random, and the row has no room for a text field anyway. */
@@ -9727,10 +9768,8 @@ function renderBudget(){
             <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
             <span class="cat-name">${nameHTML}</span>
             <span class="rw-money">${
-              view==='planned' ? `<span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}${
-                  a>0?`<i class="rw-left ${rem<0?'over':''}">${money(rem)} left</i>`:''}</span>`
-              : view==='spent' ? `<span class="cat-assign gcol${sp>a&&a>0?' over':''}">${money(sp)}</span>`
-              : `<span class="avail ${pillCls} gcol">${money(rem)}</span>`
+              view==='planned' ? `<span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}${leftHint}</span>`
+              : `<span class="cat-assign gcol${sp>a&&a>0?' over':''}">${money(sp)}${leftHint}</span>`
             }</span>
           </div>
         </div>`;
@@ -9744,17 +9783,8 @@ function renderBudget(){
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
         <span class="rw-money">${
-          /* Asked for after living with the toggle: Planned lost the one-glance
-             answer the list existed to give. It comes back as a hint under the
-             field rather than a second column - small, muted, and INSIDE the
-             money cell, so every row still has exactly one cell and the
-             uniformity the toggle was built for survives. It only appears when
-             there is something to say: a category with nothing assigned has no
-             remainder worth printing. */
-          view==='planned' ? `<span class="sub-assign"><span class="sa-row">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${
-              a>0 ? `<i class="rw-left ${rem<0?'over':''}">${money(rem)} left</i>` : ''}</span>`
-          : view==='spent' ? `<span class="sub-spent${sp>a&&a>0?' over':''}" title="What has gone">${money(sp)}</span>`
-          : `<span class="avail ${pillCls}" title="What is left">${money(rem)}</span>`
+          view==='planned' ? `<span class="sub-assign"><span class="sa-row">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
+          : `<span class="sub-spent${sp>a&&a>0?' over':''}" title="What has gone">${money(sp)}${leftHint}</span>`
         }</span>
       </div>`;
     };
@@ -12910,7 +12940,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · the split is named once';
+const BUILD_STAMP='2026-09-04 · two tabs, and what is left under both';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;

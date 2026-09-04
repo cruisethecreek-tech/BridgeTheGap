@@ -420,3 +420,31 @@ Worth checking anywhere else a percentage sits next to a dollar figure, on any
 tab. Each badge should say what it is a share of - used, yours, owe, left,
 covered. If you find one that just says a bare percentage and leaves you to
 infer, that is the same bug in a different place, and it is worth telling me.
+
+### Two tabs on the plan, not three
+
+Settings shows `2026-09-04 · two tabs, and what is left under both`.
+
+On **Plan**, the switch above the list is now **Planned / Spent**. Remaining is
+gone, because the figure it showed was already printed under the field in
+Planned, so it was a tab offering less than the tab you were standing on.
+
+What to check:
+
+- **Nothing went missing with it.** Tap **Spent**. Every row that has money
+  assigned should still show what is left underneath the spent figure, exactly
+  as Planned does. If you can see what has gone but not what remains, the
+  removal cost you something and I need to know.
+- **If you were sitting on Remaining**, the app should open on Planned by
+  itself. It should not open blank, and it should not lose your categories.
+- **The Spent number should look like a number**, not like a caption. It was
+  drawing at the same size and grey as the small print underneath it - a CSS
+  rule from elsewhere in the file had been quietly winning for a long time. The
+  big figure should be dark and bold, the "$419.40 left" under it small and
+  muted.
+- **The money column should not move when you switch tabs.** Put a thumb beside
+  it, tap between Planned and Spent, and watch the left edge of the figures. It
+  used to jump about 19px. If it still shifts, say so.
+- Worth a look on your **narrowest** screen and with a **long** number in it
+  (a category with $1,000+ left). The hint is set not to wrap, so if it collides
+  with the category name or runs off the edge, that is a real report.

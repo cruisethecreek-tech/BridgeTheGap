@@ -705,8 +705,15 @@ mechanical - every row has exactly **one** child of `.rw-money`, in every mode -
 so putting the "what is left" figure back into Planned had to happen inside that
 cell rather than beside it. The section checks it appears only when something is
 assigned, goes red when negative, follows what you type without a reload, and
-that Spent and Remaining stay clean, because in those modes the figure on the
-row already **is** the answer.
+that Spent carries the same hint, which is what let the third tab go.
+
+That last clause used to say the opposite - that Spent stayed clean, because in
+that mode the figure on the row already **is** the answer. True, and it was also
+the reason a tab called Remaining survived with nothing of its own to show: the
+only way to see what was left while looking at what had gone was to leave the
+view. **A test that asserts an omission will defend it.** This one passed
+happily for as long as the redundancy lasted, and had to be inverted rather
+than extended when the tab came out.
 
 The credit card section is the one where the arithmetic is checked before any of
 the words. What is owed is its own figure rather than a smaller bank balance,
