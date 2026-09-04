@@ -3596,11 +3596,11 @@ await p.setViewportSize({width:390,height:1200});
 await p.reload(); await p.waitForTimeout(700);
 const plan = await p.evaluate(async () => {
   activateTab('budget');
-  /* Read in the Remaining view: the plan list carries one money column now and
-     the availability pill only exists in the column that answers "what is
-     left". Every other property here - one line per category, nothing clipped,
-     no shortened money, no controls loose in the list - is about the row and
-     holds in all three modes. */
+  /* What is left is a hint under the money figure, in either mode - there is no
+     separate pill in the plan list any more, and no third tab that was only
+     ever showing this same number on its own. Every other property here - one
+     line per category, nothing clipped, no shortened money, no controls loose
+     in the list - is about the row and holds in both modes. */
   const box=document.getElementById('cats');
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   /* Both modes are set EXPLICITLY rather than assumed. planView is stored, so
@@ -3611,16 +3611,15 @@ const plan = await p.evaluate(async () => {
      the point of that mode: budgeting is typed here, not buried in a sheet. */
   const typeable=[...box.querySelectorAll('[data-row].subrow')]
     .every(r=>!!r.querySelector('input[data-cat]'));
-  setPlanView('left'); await wait(250);
   const rows=[...box.querySelectorAll('[data-row]')];
   const heights=rows.map(r=>Math.round(r.getBoundingClientRect().height));
   return {
     rows:rows.length,
     cols:!!box.querySelector('.plan-cols'),
-    /* counted in the Remaining view, which is where a pill exists at all now */
-    pills:box.querySelectorAll('.avail').length,
+    /* the remainder, wherever you are: one per row that has money assigned */
+    pills:box.querySelectorAll('.rw-left').length,
     tallest:Math.max(...heights),
-    oneLiners:heights.filter(h=>h<=64).length,
+    oneLiners:heights.filter(h=>h<=72).length,
     /* Reported twice from a real phone, both times as "text overflow": a name
        sliced through the middle of a letter, and money ellipsised to "$4...".
        Neither is truncation, both are the row lying about how much space it
@@ -3629,7 +3628,9 @@ const plan = await p.evaluate(async () => {
       return t && t.scrollHeight>t.clientHeight+1; }).length,
     spilledNames:rows.filter(r=>{ const t=r.querySelector('.rw-t');
       return t && t.getBoundingClientRect().bottom > r.getBoundingClientRect().bottom+1; }).length,
-    cutMoney:[...box.querySelectorAll('.avail, .subrow .sub-assign input')]
+    /* the pill is gone from this list; the figures that can be cut short now
+       are the assign field, the spent total and the remainder under either */
+    cutMoney:[...box.querySelectorAll('.subrow .sub-assign input, .sub-spent, .rw-left')]
       .filter(e=>e.scrollWidth>e.clientWidth+1).length,
     /* the controls that used to live on every row */
     barsInList:box.querySelectorAll('.bar').length,
@@ -3637,7 +3638,14 @@ const plan = await p.evaluate(async () => {
     deletesInList:box.querySelectorAll('[data-del]').length,
     pencilsInList:box.querySelectorAll('.cat-edit').length,
     addSubInList:box.querySelectorAll('[data-addsub-input]').length,
-    everyRowHasPill:rows.every(r=>!!r.querySelector('.avail')),
+    /* Was .avail, in a third view that no longer exists. The claim is the same
+       one - every row answers "what is left" without being opened - and it is
+       now answered by the hint under the money, in whichever mode you are in.
+       Rows with nothing assigned are excused, because they have no remainder
+       worth printing, and the count of those is returned rather than assumed. */
+    everyRowHasPill:rows.every(r=>!!r.querySelector('.rw-left')
+      || (catAssigned(r.dataset.row, state.activeMonth)||0)<=0),
+    rowsWithMoney:rows.filter(r=>(catAssigned(r.dataset.row, state.activeMonth)||0)>0).length,
     everyLeafTypeable:typeable
   };
 });
@@ -3646,7 +3654,14 @@ check('the plan is one line per category, with a column header over them',
 /* A row may take a second line for a long name - that is the row admitting it
    needs the space rather than cutting a word in half. What it may never do is
    clip, spill, or shorten a dollar figure, and most rows must still be one
-   line or the list is not compact at all. */
+   line or the list is not compact at all.
+
+   The height bar used to be 64px, which was the height of a row in the old
+   Remaining view: a single pill and nothing else. That view is gone, and it was
+   never the one anybody worked in - reading the leanest of three modes and
+   calling the answer "the list" flattered the list. A working row carries a
+   name, an editable field and the remainder under it, which is 70px, and the
+   ceiling stays where it was so a row that actually bloats is still caught. */
 check('...no name is clipped or spilled, and no dollar figure is shortened',
       plan.clippedNames===0 && plan.spilledNames===0 && plan.cutMoney===0,
       JSON.stringify({clipped:plan.clippedNames, spilled:plan.spilledNames, cutMoney:plan.cutMoney}));
@@ -3698,13 +3713,12 @@ check('a pool opens too, lists what is inside it, and does not offer its own amo
 /* The bug the compact row exposed: a growth pool could never be used up, so the
    Plan claimed money was available that had already left. */
 const growthPool = await p.evaluate(async () => {
-  /* What is left lives in the Remaining view now that the plan list carries a
-     Planned / Spent / Remaining toggle. The property is unchanged - a growth
-     category has to read as used up - but it has to be read from the column
-     that answers that question. */
-  setPlanView('left'); await new Promise(r=>setTimeout(r,240));
+  /* What is left is the hint under the money column now, present in either
+     mode. The property is unchanged - a growth category has to read as used
+     up - only where it is read from has moved. */
+  setPlanView('planned'); await new Promise(r=>setTimeout(r,240));
   const M=state.activeMonth;
-  const row=document.querySelector('#cats [data-catsheet="ret"] .avail');
+  const row=document.querySelector('#cats [data-catsheet="ret"] .rw-left');
   return { pill:row?row.innerText:'', used:catUsed('ret',M), spent:catSpent('ret',M),
            breakdown:(()=>{ rfTab='breakdown'; activateTab('reflect'); renderReflectTab();
              return document.getElementById('bdBox').innerText; })() };
@@ -5631,14 +5645,24 @@ const pv = await p.evaluate(async () => {
   o.spentFields=document.querySelectorAll('#cats input[data-cat]').length;
   o.spentHeader=[...document.querySelectorAll('.plan-cols span')][1].textContent;
   o.overMarked=document.querySelector('[data-row="rent"] .sub-spent').classList.contains('over');
-  setPlanView('left'); await wait(250);
-  o.leftLeaf=cell('wal'); o.leftOver=cell('rent');
+  /* Remaining used to be a third tab. It is a hint under the figure in BOTH
+     modes now, which is what let the tab go, so it is read from the hint. */
+  const hint=i=>{ const h=document.querySelector(`[data-row="${i}"] .rw-left`); return h?h.innerText.trim():''; };
+  o.spentHintLeaf=hint('wal'); o.spentHintOver=hint('rent');
+  setPlanView('planned'); await wait(250);
+  o.plannedHintLeaf=hint('wal'); o.plannedHintOver=hint('rent');
+  o.deadTab=!!document.querySelector('[data-planview="left"]');
   /* the uniformity claim, checked rather than asserted in prose */
   o.oneCellEverywhere=[...document.querySelectorAll('#cats .rw-money')].every(x=>x.children.length===1);
   return o;
 });
-check('the plan list carries a Planned / Spent / Remaining toggle',
-      pv.tabs.join(',')==='Planned,Spent,Remaining', pv.tabs.join(','));
+/* Three tabs became two. Remaining was cut because the fix that gave Planned
+   its "$250 left" hint had already made it redundant - it showed the same
+   figure as the tab you were standing on, alone and larger. */
+check('the plan list carries a Planned / Spent toggle, and only those two',
+      pv.tabs.join(',')==='Planned,Spent', pv.tabs.join(','));
+check('...with the removed view gone from the DOM, not merely hidden',
+      pv.deadTab===false, String(pv.deadTab));
 check('...as a real tablist, opening on Planned',
       pv.isTablist===true && pv.defaultOn==='planned', String(pv.defaultOn));
 check('...and one money column, labelled by whichever question is selected',
@@ -5654,17 +5678,25 @@ check('...with no field, because there is nothing to type into what you spent',
       pv.spentFields===0, String(pv.spentFields));
 check('...and overspending marked rather than merely printed',
       pv.overMarked===true && /spent/i.test(pv.spentHeader), pv.spentHeader);
-check('Remaining is assigned minus spent, negative when it should be',
-      /25/.test(pv.leftLeaf) && /-/.test(pv.leftOver), `${pv.leftLeaf} / ${pv.leftOver}`);
+check('what is left rides under the figure in Planned, negative when it should be',
+      /\$25\b/.test(pv.plannedHintLeaf) && /-/.test(pv.plannedHintOver),
+      `${pv.plannedHintLeaf} / ${pv.plannedHintOver}`);
+check('...and under Spent too, which is what made the third tab droppable',
+      /\$25\b/.test(pv.spentHintLeaf) && /-/.test(pv.spentHintOver),
+      `${pv.spentHintLeaf} / ${pv.spentHintOver}`);
 check('every row is the same shape in every mode, which was the whole ask',
       pv.oneCellEverywhere===true);
-/* stored, not just switched */
+/* Stored, not just switched. This used to reload expecting 'left' - a view
+   that no longer exists, so it came back 'planned' and looked like the store
+   had failed when the store was working exactly as designed. Set to a view
+   that is real, and the check means something again. */
+await p.evaluate(()=>setPlanView('spent'));
 await p.reload(); await p.waitForTimeout(450);
 const kept = await p.evaluate(async () => {
   activateTab('budget'); await new Promise(r=>setTimeout(r,300));
   return (document.querySelector('.plan-switch .pv.on')||{}).dataset?.planview;
 });
-check('...and the choice survives a reload', kept==='left', String(kept));
+check('...and the choice survives a reload', kept==='spent', String(kept));
 /* Asked for after living with it: "this should be floating so it's easy to
    switch between the three instead of scrolling all the way back up to the
    top." Sticky rather than a floating pill - it stays where it already is, so
@@ -5847,14 +5879,14 @@ const pmv = await p.evaluate(async () => {
   inp.dispatchEvent(new Event('input',{bubbles:true}));
   inp.dispatchEvent(new Event('change',{bubbles:true})); await wait(320);
   o.afterTyping=hint(document.querySelector('#cats [data-row="k2"]'));
-  /* and the other two modes are untouched - they ARE the answer, so a hint
-     under them would be the same number printed twice */
+  /* Spent carries the same hint. It did not use to, and that omission is what
+     kept a third tab alive with nothing of its own to show: the only way to
+     see what was left while looking at what had gone was to leave the view.
+     One cell per row still, so the shape does not change with the mode. */
   setPlanView('spent'); await wait(280);
-  o.spentNoHint=!document.querySelector('#cats .rw-left');
+  const sh=document.querySelector('#cats .rw-left');
+  o.spentHasHint=!!sh; o.spentHint=sh?sh.innerText.trim():'';
   o.spentOneCell=cells().every(c=>c.children.length===1);
-  setPlanView('left'); await wait(280);
-  o.leftNoHint=!document.querySelector('#cats .rw-left');
-  o.leftOneCell=cells().every(c=>c.children.length===1);
   return o;
 });
 check('in Planned, a row still has exactly one money cell', pmv.oneCellEach===true);
@@ -5870,10 +5902,11 @@ check('going over is stated and coloured, not just quietly negative',
 check('the dollar sign still sits beside the field, not above it', pmv.dollarBeside===true);
 check('the hint follows what you type, the moment the field is done',
       /\$210\b/.test(pmv.afterTyping||''), pmv.afterTyping);
-check('Spent carries no remainder hint - it is not the question that mode asks',
-      pmv.spentNoHint===true && pmv.spentOneCell===true);
-check('Remaining carries none either - it IS the column',
-      pmv.leftNoHint===true && pmv.leftOneCell===true);
+/* This pair used to assert the opposite: that only Planned carried the hint.
+   That was true, and it was also the reason a whole tab had nothing of its own
+   to say. The remainder rides under both figures now, so the tab could go. */
+check('Spent carries the remainder too, in one cell like every other mode',
+      pmv.spentHasHint===true && pmv.spentOneCell===true, pmv.spentHint||'');
 
 /* ---- 78. a credit card is a balance AND a move, and they are different facts ----
    Asked directly: "I have a card with a $13,700 limit and an equity line at
