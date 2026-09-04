@@ -253,3 +253,70 @@ Walk each tab and check:
 
 The pill you have open is filled in and shows a `▴`; the shut ones are outlined
 and show a `▾`.
+
+### Does it sound different now?
+
+Settings shows `2026-09-04 · voice back, sharing findable`.
+
+Go to **Settings -> Voice & tone** and move the dial between **Forgiving**,
+**Blunt** and **Savage**, then walk the tabs. What should change:
+
+- the line under the title on Home
+- the line over **Cover First**
+- the sentence each tab opens with (Plan, Track, Shield, Debt, Build, Diary)
+- the descriptions under **Do this next**
+
+What should NOT change, and is worth checking as hard as the rest: **no button
+should ever change its name.** `Add category` stays `Add category` at every
+setting. If a control renames itself with the mood, that is a bug - tell me
+which one.
+
+Two things override the dial on purpose: anything about rent, medical or the
+other essentials stays gentle even on Savage, and arithmetic explanations
+("income minus assigned equals...") never change tone. If Savage starts
+editing your sums, that is a bug.
+
+The honest limit: about a fifth of what the app asserts moves with the dial.
+If a screen still reads the same to you at both ends, name it and it gets wired.
+
+### Setting up sharing, for the first time
+
+With **We share this budget as a couple** on and sharing not yet set up, Home
+and Plan should both carry a banner naming your partner - *"Sam cannot see any
+of this"* - with one button.
+
+1. **Tap it.** It should land you in Settings with the Household section already
+   open and the sync panel on screen, not somewhere you have to hunt from.
+2. **Set sharing up.** The banner should disappear from both tabs and not come
+   back.
+3. **Turn household mode off and on again.** The banner should follow.
+
+This is the path your wife's phone takes too, from the other side. If the button
+lands on an empty box or a section you still have to open yourself, that is the
+bug worth reporting - it has been that twice already.
+
+### Reading a statement, after the balance-column fix
+
+Settings shows `2026-09-04 · voice, sharing, balance column`.
+
+Photograph a page of your statement - **several pages at once now works, and so
+does taking one shot, then another**. The pages appear numbered in the order they
+will be read.
+
+What to check against the paper:
+
+1. **Count the rows.** Five transactions on the page should give five rows. If
+   you get ten, the running-balance column is being read as transactions again.
+2. **Look for your balances.** No row should carry a figure that is your account
+   balance rather than an amount. Those were the `$5,311.75` rows.
+3. **Check the names.** Anything the reader could not make out should come
+   through blank with the amount filled in, not as scrambled characters. A blank
+   is honest; `== 2° Nf 2°. G&G)` is not.
+4. **Check nothing was lost.** Every amount on the paper should appear exactly
+   once. The note above the rows says how many it read and how many it could
+   name.
+
+The balance column is only dropped when the arithmetic proves it - each balance
+being the next one minus the amount between. A statement with no balance column
+should come through completely untouched, so if you use a bank that lists only
+amounts, nothing here should change for you.

@@ -1488,6 +1488,33 @@ tab's long prose moved. They go and find one now. A test that names a location
 when it means a thing will break every time the thing moves, and each of those
 breaks looks like a bug.
 
+### Measuring one spelling of a thing
+
+The StoryBrand audit reported that Reflect had no call to action at all, and I
+was one edit away from adding it a third one. It has two. This app has more than
+one name for "this is the action" - `.primary` on a button, `.solid` on a trail
+button - and the audit counted only the first.
+
+That is the dangerous shape of measurement error, because it does not look like
+an error. It looks like a finding. A tool that measures one spelling reports
+every other spelling as **missing**, and missing things invite you to add them -
+so the bug in the ruler becomes a change in the product.
+
+Two habits fall out of it, and they cost nothing:
+
+- **Enumerate the variants before counting.** One grep for `class="btn` would
+  have shown three action styles in ten seconds.
+- **Be suspicious of a zero.** A screen with fourteen buttons and no call to
+  action is not a plausible thing for anyone to have built. When a measurement
+  says something nobody would have done, check the measurement first.
+
+Worth pairing with the denominator question from the same pass. "How much of the
+app changes with the tone dial" first read as 2.4%, which sounds broken. Measured
+against the app's *assertions* rather than every line on screen - most of which
+are labels, figures and category names that must not move - the same code reads
+21%. Both numbers are true; only one of them is the question. **Pick the
+denominator before you read the result, or the result picks it for you.**
+
 The lesson is about where to put the hard part. Sync **looks** untestable here,
 and the temptation is to skip it and hope. Pushing the correctness into a pure
 function moved the untestable part down to "does Supabase store and return a

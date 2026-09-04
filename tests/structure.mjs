@@ -9016,6 +9016,113 @@ check('the quick-glance handle is on the ragged end of lines, not their start',
       handle.side==='right', handle.side);
 check('...so it is not sitting on top of any words', handle.over.length===0, handle.over.slice(0,2).join(' | '));
 
+/* ---- 106. the dial, and the door to sharing ----
+   "The three ways of speaking has been lost - blunt and savage vocabulary has
+   been lost, and only applied to the intake." Measured: 9 of 738 lines on screen
+   moved across the whole dial and six tabs moved by nothing.
+   And: "how is a person there to go to settings to sync for the first time,
+   there's no call to action." There was not one anywhere. */
+const dial = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const readAll=async()=>{
+    const o={leads:{}, labels:[], hero:''};
+    activateTab('home'); await w(320);
+    o.hero=(document.getElementById('hhSub')||{innerText:''}).innerText.trim();
+    o.walls=(document.getElementById('wallsTag')||{innerText:''}).innerText.trim();
+    for(const t of ['budget','tx','impulse','debt','goals','diary']){
+      activateTab(t); await w(300);
+      const lead=document.querySelector('#view-'+t+' .tab-intro, #deck-'+t+' .dk-sub');
+      o.leads[t]=lead?lead.innerText.trim():'';
+      [...document.querySelectorAll('#view-'+t+' button')]
+        .filter(x=>!x.classList.contains('dk-chip')&&!x.classList.contains('say-why'))
+        .forEach(x=>o.labels.push(x.innerText.trim()));
+    }
+    return o;
+  };
+  const was=state.intensity;
+  state.intensity='clean'; save(); renderAll(); await w(260); const c=await readAll();
+  state.intensity='blunt'; save(); renderAll(); await w(260); const b2=await readAll();
+  state.intensity='savage'; save(); renderAll(); await w(260); const sv=await readAll();
+  state.intensity=was; save(); renderAll();
+  return {c, b:b2, sv,
+    flatLeads:Object.keys(c.leads).filter(t=>c.leads[t]===b2.leads[t] || b2.leads[t]===sv.leads[t]),
+    labelsMoved:JSON.stringify(c.labels)!==JSON.stringify(sv.labels),
+    lock:{sensitive:effInt('Medical bill'), rent:effInt('Rent')}};
+});
+check('every tab opens on a sentence the dial actually moves',
+      dial.flatLeads.length===0, 'flat: '+dial.flatLeads.join(','));
+check('...including the opening line on Home', dial.c.hero!==dial.b.hero && dial.b.hero!==dial.sv.hero,
+      dial.sv.hero.slice(0,60));
+check('...and the line over the four walls', dial.c.walls!==dial.b.walls && dial.b.walls!==dial.sv.walls,
+      dial.sv.walls.slice(0,60));
+check('Savage is a different sentence from Blunt, not the same one louder',
+      Object.keys(dial.c.leads).every(t=>dial.b.leads[t]!==dial.sv.leads[t]));
+/* the half that matters just as much */
+check('no control renames itself when the mood changes', dial.labelsMoved===false,
+      dial.c.labels.filter((x,i)=>x!==dial.sv.labels[i]).slice(0,2).join(' | '));
+check('a medical bill is still spoken to gently whatever the dial says',
+      dial.lock.sensitive==='clean' && dial.lock.rent==='clean', JSON.stringify(dial.lock));
+
+const invite = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const wasH=state.householdOn, wasO=state.syncOptIn;
+  /* Turn it on the way a person does. Writing state.householdOn directly leaves
+     the Settings block that holds the sync panel collapsed, because the toggle's
+     own handler is what opens it - so the walk-to lands on a box with content
+     and no height, which is not a bug in the walk. */
+  state.syncOptIn=false; state.nameB='Sam'; save();
+  const cb=document.getElementById('hhOn');
+  if(cb && !cb.checked){ cb.checked=true; cb.dispatchEvent(new Event('change',{bubbles:true})); }
+  else { state.householdOn=true; save(); if(typeof applyHousehold==='function') applyHousehold(); }
+  await w(300);
+  renderAll(); activateTab('home'); await w(500);
+  const inv=document.querySelector('#view-home .sync-invite');
+  const o={onHome:!!inv, names:inv?/Sam cannot see/.test(inv.innerText):false};
+  activateTab('budget'); await w(360);
+  o.onPlan=!!document.querySelector('#view-budget .sync-invite');
+  if(inv){ activateTab('home'); await w(320);
+    const btn=document.querySelector('#view-home .sync-invite [data-gosync]');
+    if(btn){ btn.click(); await w(700);
+      const sp=document.getElementById('syncPanel');
+      o.landed=document.body.dataset.view;
+      o.panelSeen=!!sp && sp.offsetParent!==null && sp.getBoundingClientRect().height>10;
+      o.sectionOpen=!!sp && !!sp.closest('.dk-panel.dk-on');
+      /* why, if it is not seen */
+      const host=document.getElementById('deck-settings');
+      o.why=`hid=${host?host.hidden:'-'} live=${host?deckLive('settings').length:0} on=${!!document.querySelector('#view-settings.on')} h=${sp?Math.round(sp.getBoundingClientRect().height):-1} html=${sp?(sp.innerHTML||'').length:-1}`; } }
+  /* and it must vanish the moment sharing is on, rather than nagging forever */
+  state.syncOptIn=true; save(); renderAll(); activateTab('home'); await w(400);
+  o.goesAway=!document.querySelector('#view-home .sync-invite');
+  state.householdOn=wasH; state.syncOptIn=wasO; save();
+  if(typeof applyHousehold==='function') applyHousehold();
+  renderAll();
+  return o;
+});
+check('a household with nothing shared is told so, on the screen it opens on',
+      invite.onHome===true);
+check('...naming the person who cannot see it', invite.names===true);
+check('...and on Plan too, not only Home', invite.onPlan===true);
+check('...with one tap landing on the sync panel, opened',
+      invite.landed==='settings' && invite.panelSeen===true && invite.sectionOpen===true,
+      String(invite.why||'')+' | '+invite.landed);
+check('...and it stops asking once sharing is set up', invite.goesAway===true);
+
+/* StoryBrand's plainest rule: one obvious thing to do per screen */
+const cta = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const out={};
+  for(const t of ['home','budget','tx','impulse','debt','goals','diary','learn']){
+    activateTab(t); await w(400);
+    const v=document.getElementById('view-'+t);
+    const vis=el=>{const s=getComputedStyle(el);return s.display!=='none'&&el.getBoundingClientRect().height>6;};
+    out[t]=[...v.querySelectorAll('button')].filter(vis)
+      .filter(x=>x.classList.contains('primary')||x.classList.contains('solid')).length;
+  }
+  return out;
+});
+check('no tab is a screen with nothing to do on it',
+      Object.values(cta).every(n=>n>=1), JSON.stringify(cta));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

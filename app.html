@@ -1115,6 +1115,15 @@
   .say-why.loose{position:absolute;top:14px;right:14px;margin:0}
   /* Standing on its own where a tab's opening paragraph used to be. */
   .say-why.say-solo{margin:0 0 14px;width:22px;height:22px;flex-basis:22px;font-size:12px}
+  /* several pages of a statement, in the order they will be read */
+  .ql-page{position:relative;display:inline-block;margin:0 6px 6px 0;max-width:47%}
+  .ql-page .ql-photo-img{max-width:100%}
+  .ql-pagen{position:absolute;left:4px;top:4px;background:var(--accent);color:var(--on-accent);
+    font-size:11px;font-weight:900;border-radius:6px;padding:1px 6px}
+  /* The invitation reads as an opening, not a fault - the locked banner warns,
+     this one offers, and they must not look like the same event. */
+  .sync-lock.sync-invite{border-color:var(--accent);background:var(--card)}
+  .sync-lock.sync-invite .sl-t b{color:var(--accent)}
 
   /* ---------- the deck: one collapse pattern, every tab ---------- */
   .deck{margin-top:26px;padding:18px 16px 16px;border:1px solid var(--line);
@@ -1135,6 +1144,10 @@
      padding made everything in it 32px narrower than it was designed for, which
      at 320px squeezed the calendar's day cells below a thumb. */
   .dk-panel.dk-on{display:block;margin:14px -16px 0;padding-left:0;padding-right:0}
+  .dk-cta{margin-top:14px}
+  .dk-cta .btn{width:100%}
+  /* the direct action belongs above the browse list, not after it */
+  .deck .dk-cta{order:-1}
   /* A section that used to be its own <details> is opened by its pill now, so
      its summary would be a second control for the same thing. */
   .dk-panel.dk-was-details>summary{display:none}
@@ -3064,7 +3077,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
     <!-- ============ BUDGET ============ -->
     <section class="view" id="view-budget">
-      <div class="tab-intro">Plan is money that <b>has not happened yet</b>. Give every dollar a job, and set up what repeats. What it posts shows up on Track.</div>
+      <div class="tab-intro" id="planLead">Plan is money that <b>has not happened yet</b>. Give every dollar a job, and set up what repeats. What it posts shows up on Track.</div>
       <div class="panel">
         <div class="monthnav">
           <button id="mPrev" title="Previous month">‹</button>
@@ -3167,7 +3180,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
 
     <!-- ============ TRACK ============ -->
     <section class="view" id="view-tx">
-      <div class="tab-intro">Track is money that <b>already happened</b>. The plan it gets measured against lives on <b>Plan</b>.</div>
+      <div class="tab-intro" id="trackLead">Track is money that <b>already happened</b>. The plan it gets measured against lives on <b>Plan</b>.</div>
       <div class="panel">
         <h2>Log money in &amp; money out</h2>
         <p class="sub" data-say="1">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
@@ -7305,6 +7318,22 @@ const DECK_INTRO={
   budget:'Repeats, the calendar, and the membership sweep.',
   diary:'The parts of this that are not arithmetic.'
 };
+/* Where a tab has a voiced lead, the deck's intro yields to it rather than
+   repeating a flatter version of the same thing two inches lower. */
+const DECK_LEAD={goals:'buildLead', impulse:'shieldLead', debt:'debtLead', diary:'diaryLead'};
+function deckIntro(view){
+  const bank=DECK_LEAD[view] && VOICE[DECK_LEAD[view]];
+  return (bank && voice(bank,null)) || DECK_INTRO[view] || '';
+}
+/* StoryBrand's plainest rule: every screen needs one obvious thing to do. After
+   the collapse pass, Build was a tab with seven pills and NOT ONE button - a
+   screen that asks you to browse is a screen nobody acts on. The deck carries
+   the direct call to action for the tabs whose content is all inside it. */
+const DECK_CTA={
+  goals:{label:'State what is in your accounts →', dk:'Accounts'},
+  impulse:{label:'Set a tripwire →', dk:'Tripwires'},
+  diary:{label:'Write what happened →', dk:'Your money story'}
+};
 const DECK_HEAD={home:'More on your money', settings:'Settings', goals:'Your wealth layer',
   impulse:'The rest of the shield', tx:'More ways in', debt:'More on debt',
   budget:'More on the month', diary:'More'};
@@ -7334,8 +7363,9 @@ function deckMount(view){
   host=document.createElement('div');
   host.className='deck'; host.id='deck-'+view;
   host.innerHTML=`<div class="dk-head">${escapeHtml(DECK_HEAD[view]||'More')}</div>`+
-    (DECK_INTRO[view]?`<p class="dk-sub" data-keep="1">${escapeHtml(DECK_INTRO[view])}</p>`:'')+
-    `<div class="dk-chips"></div>`;
+    (deckIntro(view)?`<p class="dk-sub" data-keep="1" id="dkSub-${view}">${escapeHtml(deckIntro(view))}</p>`:'')+
+    `<div class="dk-chips"></div>`+
+    (DECK_CTA[view]?`<div class="dk-cta"><button class="btn primary" type="button" data-dkcta="${view}">${escapeHtml(DECK_CTA[view].label)}</button></div>`:'');
   v.appendChild(host);
   panels.forEach(el=>{
     el.classList.add('dk-panel');
@@ -7360,8 +7390,24 @@ function deckSync(view){
   host.querySelectorAll(':scope > [data-deck]').forEach(el=>
     el.classList.toggle('dk-on', deckLabel(el)===openId));
 }
+/* The one sentence each screen opens with is the app's opening assertion, so it
+   is exactly what the dial should move. These were hard-coded strings, which is
+   most of why six tabs did not change a word between Forgiving and Savage. */
+const LEAD_VOICE={budget:'planLead', tx:'trackLead'};
+function voiceLeads(view){
+  const id=LEAD_VOICE[view];
+  if(id){
+    const el=document.getElementById(id), bank=VOICE[id];
+    const line=bank&&voice(bank,null);
+    if(el && line && el.dataset.voiced!==line){ el.dataset.voiced=line; el.textContent=line; }
+  }
+  const sub=document.getElementById('dkSub-'+view);
+  if(sub){ const line=deckIntro(view);
+    if(line && sub.dataset.voiced!==line){ sub.dataset.voiced=line; sub.textContent=line; } }
+}
 function deckPass(view){
   if(!view) return;
+  voiceLeads(view);
   const host=deckMount(view); if(!host) return;
   const live=deckLive(view), chips=host.querySelector('.dk-chips');
   host.hidden=live.length===0;
@@ -7400,6 +7446,13 @@ function deckReveal(el){
   const fo=HTMLElement.prototype.focus;
   HTMLElement.prototype.focus=function(){ try{ deckReveal(this); }catch(_){ } return fo.apply(this,arguments); };
 })();
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-dkcta]'); if(!c) return;
+  const v=c.dataset.dkcta, cfg=DECK_CTA[v]; if(!cfg) return;
+  deckShow(v, cfg.dk);
+  const el=[...document.querySelectorAll('#deck-'+v+' [data-deck]')].find(x=>x.dataset.deck===cfg.dk);
+  if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'start'});
+});
 document.addEventListener('click',e=>{
   const c=e.target.closest('.dk-chip'); if(!c) return;
   const host=c.closest('.deck'); if(!host) return;
@@ -10725,6 +10778,11 @@ function qlRow(){ return `<div class="ql-row">
    qlGen is a render epoch: an OCR pass that outlives its panel must not write into
    a rebuilt (or closed) DOM. */
 let qlPhotoURL=null, qlPhotoFile=null, tessLoading=null, qlGen=0, qlGuessSaid=false;
+/* "It didn't let me upload multiple pictures." A statement is several pages and
+   the picker took one. The input now accepts a batch and this holds it - one
+   read pass per page, the text joined, parsed once at the end, so a transaction
+   split across a page break is still one statement. */
+let qlPages=[];
 /* Rows handed in from OUTSIDE the panel - today only the statement reader. It
    is a seed rather than a call into the panel's internals because wireRow and
    guessRow are closures over one render, and a third copy of the fill loop is
@@ -10861,7 +10919,12 @@ function qlParseOcr(text){
        photo two inches away. So the row is kept, blank-named and flagged, and
        the note says how many are waiting on a name. A silent drop is worse than
        a visible gap - a person can fix a gap. */
-    const named=desc.length>=2;
+    /* "== 2° Nf 2°. G&G) <|Se" came back as a transaction name. A name that is
+       mostly not letters is OCR soup, and showing it is worse than showing the
+       row as unnamed, because a person can fix a blank and will not think to
+       question something that looks like it was read. */
+    const letters=(desc.match(/[A-Za-z]/g)||[]).length;
+    const named=desc.length>=2 && letters>=3 && letters/desc.length>=0.45;
     /* A statement writes every debit as negative, so a minus is the norm and
        says nothing. An explicit plus is the one that means money arriving. */
     const row={what:named?desc.slice(0,80):'', amt};
@@ -10872,7 +10935,47 @@ function qlParseOcr(text){
   /* A statement the reader could not get a single amount out of is worth
      reporting as nothing, rather than quietly falling back to a reading built
      for something else and producing rows nobody can explain. */
-  return hits ? out : [];
+  return hits ? qlDropBalances(out) : [];
+}
+/* ---------- the running-balance column ----------
+   Reported with the statement beside the result: a page of Acorns withdrawals
+   came back with every real amount PLUS a row for every running balance -
+   "N 855-739-2859 / $5,311.75" sitting next to the transaction it was the
+   balance after. Every line on a bank statement carries two numbers, and the
+   reader was taking both.
+
+   Guessing by size would be wrong: a $5,311.75 transaction is perfectly
+   possible. But a balance column can be PROVED, because it is arithmetic:
+   listed newest first, each balance is the next one minus the amount between
+   them. From the report that started this - 5,334.25 - 22.50 = 5,311.75, and
+   again for 45.80 and 7.80 and 200.00 and 25.00.
+
+   So this does not decide by shape. It checks the sum, and only drops a column
+   when the numbers themselves say what it is. */
+function qlDropBalances(rows){
+  if(rows.length<4) return rows;
+  for(const off of [0,1]){
+    const amts=[], bals=[];
+    rows.forEach((r,i)=>((i%2===off)?amts:bals).push(r));
+    if(amts.length<2 || bals.length<2) continue;
+    let tests=0, hits=0;
+    for(let i=0; i+1<bals.length && i<amts.length; i++){
+      tests++;
+      const step=bals[i+1].amt-bals[i].amt;
+      /* a withdrawal shrinks the balance going forward, a deposit grows it, and
+         a statement may be listed either way round - so either sign proves it */
+      if(Math.abs(Math.abs(step)-amts[i].amt)<0.02) hits++;
+    }
+    /* Two agreeing pairs is a coincidence; most of them agreeing is a column. */
+    if(tests>=2 && hits/tests>=0.6){
+      /* The balances are not thrown away silently - the caller says how many
+         were recognised, because a reader that quietly halves your statement is
+         indistinguishable from one that missed half of it. */
+      amts.forEach(r=>{ r.balancesDropped=bals.length; });
+      return amts;
+    }
+  }
+  return rows;
 }
 /* The path this was built for: one line, one purchase, price at the end. */
 function qlParseNotepad(raw){
@@ -11203,10 +11306,10 @@ function wireScan(){
 function renderQuickLog(){
   const box=document.getElementById('quickLog'); if(!box) return;
   qlGen++;   // invalidate any OCR pass still running against the previous panel
-  if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPhotoFile=null; return; }
+  if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPages.forEach(p=>{ if(p.url) URL.revokeObjectURL(p.url); }); qlPages=[]; qlPhotoFile=null; return; }
   box.innerHTML=`<div class="ql-panel">
     <div class="ql-head"><span>One line each, then log them all. The little stuff is where it hides - and money you <b>put away</b> goes in here too, at the bottom of the category list.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
-    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Take a photo</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
+    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Take a photo</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" multiple class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
     <div id="qlPhotoPrev"></div>
     <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
     ${qlAcctRowHTML()}
@@ -11220,16 +11323,22 @@ function renderQuickLog(){
         photo=document.getElementById('qlPhoto'), readBtn=document.getElementById('qlRead'), prev=document.getElementById('qlPhotoPrev'), note=document.getElementById('qlOcrNote');
   snap.onclick=()=>cam.click();
   pick.onclick=()=>photo.click();
-  cam.onchange=()=>{ const f=cam.files&&cam.files[0]; cam.value=''; if(f){ photoTaken(f); } };
+  /* The camera still hands over one shot at a time, so each one is ADDED to the
+     batch rather than replacing it - that is how somebody photographs page two. */
+  cam.onchange=()=>{ const f=cam.files&&cam.files[0]; cam.value=''; if(f){ photoTaken([f],true); } };
   photo.onchange=()=>{
-    const f=photo.files&&photo.files[0]; photo.value=''; if(f) photoTaken(f);
+    const fs=[...(photo.files||[])]; photo.value=''; if(fs.length) photoTaken(fs);
   };
-  function photoTaken(f){
-    if(!f) return;
-    if(qlPhotoURL) URL.revokeObjectURL(qlPhotoURL);
-    qlPhotoFile=f;   // hand the File itself to the OCR pass - a blob: URL dies if the panel closes mid-read
-    qlPhotoURL=URL.createObjectURL(f);
-    prev.innerHTML=`<img class="ql-photo-img" src="${qlPhotoURL}" alt="Your notepad">`;
+  function photoTaken(fs, add){
+    fs=Array.isArray(fs)?fs:[fs];
+    if(!fs.length) return;
+    if(!add){ qlPages.forEach(p=>{ if(p.url) URL.revokeObjectURL(p.url); }); qlPages=[]; }
+    fs.forEach(f=>{ if(f) qlPages.push({file:f, url:URL.createObjectURL(f)}); });
+    qlPhotoFile=qlPages[0]&&qlPages[0].file;
+    qlPhotoURL=qlPages[0]&&qlPages[0].url;
+    prev.innerHTML=qlPages.map((p,i)=>
+      `<span class="ql-page"><img class="ql-photo-img" src="${p.url}" alt="Page ${i+1}">`+
+      (qlPages.length>1?`<span class="ql-pagen">${i+1}</span>`:'')+`</span>`).join('');
     readBtn.classList.remove('hide');
     /* It was called "snap my notepad" and read like it only took one thing. It
        takes anything with numbers on it, and the honest part is that some of
@@ -11247,7 +11356,16 @@ function renderQuickLog(){
       const T=await loadTesseract();
       if(gen!==qlGen) return;
       note.textContent='Reading your notepad right here on the device...';
-      const r=await T.recognize(qlPhotoFile||qlPhotoURL,'eng',{logger:m=>{ if(gen===qlGen && m.status==='recognizing text') note.textContent='Reading... '+Math.round((m.progress||0)*100)+'%'; }});
+      const pages=qlPages.length?qlPages:[{file:qlPhotoFile, url:qlPhotoURL}];
+      let text='';
+      for(let pi=0; pi<pages.length; pi++){
+        const src=pages[pi].file||pages[pi].url;
+        const rr=await T.recognize(src,'eng',{logger:m=>{ if(gen===qlGen && m.status==='recognizing text')
+          note.textContent=(pages.length>1?`Reading page ${pi+1} of ${pages.length}... `:'Reading... ')+Math.round((m.progress||0)*100)+'%'; }});
+        if(gen!==qlGen) return;
+        text += (text?'\n':'') + String((rr&&rr.data&&rr.data.text)||'');
+      }
+      const r={data:{text}};
       if(gen!==qlGen) return;
       const items=qlParseOcr(r&&r.data&&r.data.text);
       if(!items.length){ note.textContent="Couldn't make out clear lines (handwriting is genuinely hard). The photo's right there - punch the lines in yourself, it takes seconds."; }
@@ -11346,6 +11464,7 @@ function renderQuickLog(){
       const list=document.getElementById('qlList'); if(list) list.innerHTML=qlRow();
       box.querySelectorAll('.ql-row').forEach(wireRow);
       if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; }
+      qlPages.forEach(p=>{ if(p.url) URL.revokeObjectURL(p.url); }); qlPages=[];
       qlPhotoFile=null;
       const pv=document.getElementById('qlPhotoPrev'); if(pv) pv.innerHTML='';
       const rb=document.getElementById('qlRead'); if(rb) rb.classList.add('hide');
@@ -12160,7 +12279,7 @@ function renderLesson(){
   state.lesson=i;   // keep the stored index in-range (the next save persists it)
   const act=LESSON_ACTIONS[L.t];
   document.getElementById('lesson').innerHTML=`<div class="num">Lesson ${i+1} of ${LESSONS.length}</div><h3>${escapeHtml(L.t)}</h3><p>${escapeHtml(L.p)}</p>`
-    +`<div class="try"><b>Try this</b> ${escapeHtml(L.try)}${act?`<button class="try-go" id="lessonGo">${escapeHtml(act.label)} →</button>`:''}</div>`;
+    +`<div class="try"><b>Try this</b> ${escapeHtml(L.try)}${act?`<button class="try-go btn primary" id="lessonGo">${escapeHtml(act.label)} →</button>`:''}</div>`;
   document.getElementById('dots').innerHTML=LESSONS.map((_,d)=>`<button class="dot${d===i?' on':''}" data-lesson="${d}" aria-label="Lesson ${d+1}"></button>`).join('');
   const go=document.getElementById('lessonGo'); if(go&&act) go.onclick=()=>act.run();
   document.querySelectorAll('#dots [data-lesson]').forEach(d=>d.onclick=()=>lessonTo(+d.dataset.lesson));
@@ -12726,7 +12845,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-03 · one pattern everywhere';
+const BUILD_STAMP='2026-09-04 · voice, sharing, balance column';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -17703,7 +17822,110 @@ const RP_TONE={
    a context so the sensitive lock can floor it to clean; anything about the
    world or about arithmetic passes null. The situation floor applies to both.
    ============================================================ */
+/* ---------- what the dial is allowed to touch ----------
+   "The three ways of speaking has been lost - blunt and savage vocabulary has
+   been lost, and only applied to the intake." Measured before touching anything:
+   moving Forgiving -> Blunt -> Savage changed 9 of 738 lines on screen, 1.2%,
+   and six whole tabs changed by nothing at all. The dial was decoration.
+
+   The rule this pass follows, so it does not turn into noise: the app's
+   ASSERTIONS carry the voice - anything it says about you, your month, your
+   habits or your standing. Its LABELS do not. "Target $", "Add category" and
+   "Save entry" read the same at every setting, because a control that changes
+   its name with the mood is a control you have to re-learn. Savage is a
+   position, not a costume. */
 const VOICE={
+  heroSub:{
+    genz:{clean:'Budget to zero, gut-check every purchase, and watch the bag grow.',
+          blunt:'Budget to zero. Gut-check every purchase. Watch the bag grow - no filter, no cap.',
+          savage:'Every dollar gets a job or it walks. Gut-check the buy before it happens, not after.'},
+    middle:{clean:'Budget to zero, gut-check every purchase, and watch your dreams get funded.',
+            blunt:'Budget to zero. Gut-check every purchase. Fund the things you actually want.',
+            savage:'Give every dollar a job before the month gives it one. Then check the price in hours of your life.'},
+    mature:{clean:'Budget to zero, weigh every purchase, and fund what matters to you.',
+            blunt:'Budget to zero. Weigh each purchase against what it costs you in time.',
+            savage:'Assign every dollar deliberately, and price each purchase in the hours it took to earn.'}},
+  /* --- the steps on Home, which is the most-read block in the app --- */
+  stepIncome:{
+    middle:{clean:'Add this month\u2019s paycheck so every dollar has something to assign.',
+            blunt:'Nothing works until the income is in. Add this month\u2019s pay.',
+            savage:'You cannot budget money the app has never seen. Put the paycheck in.'}},
+  stepAssign:{
+    middle:{clean:'Give it a job before the month spends it for you.',
+            blunt:'Assign it now. Unassigned money does not wait to be asked.',
+            savage:'Every dollar without a job picks its own, and it never picks yours.'}},
+  stepOver:{
+    middle:{clean:'Trim a category until the plan fits what is coming in.',
+            blunt:'You have promised more than you have. Something has to come down.',
+            savage:'The plan is writing cheques the income cannot cover. Cut something, or the month will.'}},
+  stepWalls:{
+    middle:{clean:'Fund the essentials before anything else this month.',
+            blunt:'Essentials first. Everything else is a want wearing a costume.',
+            savage:'Roof, food, power, transport. Miss one and nothing else on this screen matters.'}},
+  stepWage:{
+    middle:{clean:'Unlocks hours-of-life pricing and Freedom Mode.',
+            blunt:'Without it, every price here is just a number with no cost attached.',
+            savage:'Until this is set, you have no idea what anything actually costs you.'}},
+  stepVault:{
+    middle:{clean:'Their timers are up - neutralize or decide.',
+            blunt:'Timers are up. Decide, or it decides by default.',
+            savage:'You put these on ice to see if you still wanted them. Time is up. Answer.'}},
+  stepDream:{
+    middle:{clean:'A budget with nothing behind it is just a spreadsheet.',
+            blunt:'Name what this is all for, or it is just arithmetic.',
+            savage:'Budgeting with no dream behind it is just watching your money leave more precisely.'}},
+  /* --- sharing the budget with the other person in it --- */
+  syncCta:{
+    middle:{clean:'Two people, one budget - but only this phone has it. Set up sharing so you are both looking at the same month.',
+            blunt:'One budget, two people, and only one phone has it. Until you share it, you are each guessing at half.',
+            savage:'You are running a joint budget on one phone. That is not a shared plan, it is two people spending against a number only one of you can see.'}},
+  syncNone:{
+    middle:{clean:'Nothing has been shared yet. Everything on this device stays on this device until you set it up.',
+            blunt:'Not shared. Whatever you change here, they will not see - and whatever they change, you will not.',
+            savage:'Not shared. Every figure on this screen is your half of a conversation nobody else is in.'}},
+  /* --- the four walls --- */
+  wallsAllCovered:{
+    middle:{clean:'All four covered this month. The floor is set.',
+            blunt:'All four covered. That is the floor, not the finish line.',
+            savage:'All four covered. That is the floor - the part that stops it getting worse, not the part that makes it better.'}},
+  wallsShort:{
+    middle:{clean:'Fund these before anything else this month.',
+            blunt:'These get funded before anything fun. Everything else is a want.',
+            savage:'These four are the difference between a hard month and a crisis. Nothing else gets a dollar until they do.'}},
+  /* --- the shield --- */
+  shieldLead:{
+    middle:{clean:'Check a purchase before you make it, not after.',
+            blunt:'Run it through here first. Afterwards is just accounting.',
+            savage:'Every purchase you talk yourself out of is money you never had to earn twice.'}},
+  trapsLead:{
+    middle:{clean:'Marketing, feeds and convenience markups are designed to move money.',
+            blunt:'Ads, feeds, status buys, convenience markups - all engineered to separate you from your money.',
+            savage:'Somebody was paid to put that in front of you, and they are better at their job than you are at ignoring it.'}},
+  /* --- what you owe --- */
+  debtLead:{
+    middle:{clean:'List what you owe and see the fastest way out.',
+            blunt:'Put the real numbers in. A payoff plan built on a guess is a guess.',
+            savage:'Every month this sits unlisted, it costs you money you already earned.'}},
+  /* --- the wealth layer --- */
+  buildLead:{
+    middle:{clean:'What you own, what you owe, and what you are building towards.',
+            blunt:'What you own against what you owe. This is the scoreboard, not the highlight reel.',
+            savage:'The only number here that cannot be talked up: what you own, minus what you owe.'}},
+  /* --- what already happened --- */
+  trackLead:{
+    middle:{clean:'Every paycheck and every purchase. This is what the plan gets measured against.',
+            blunt:'Log it all. A budget you do not measure is a wish with a spreadsheet.',
+            savage:'Money you do not log is money you have already decided not to look at.'}},
+  /* --- the month ahead --- */
+  planLead:{
+    middle:{clean:'Money that has not happened yet. Give every dollar a job.',
+            blunt:'Give every dollar a job now, or the month gives them one for you.',
+            savage:'Unassigned money does not sit still and wait. It leaves, and it never tells you where it went.'}},
+  /* --- writing it down --- */
+  diaryLead:{
+    middle:{clean:'What happened, in your own words. Nothing here is graded.',
+            blunt:'Write what actually happened. The numbers do not record why.',
+            savage:'The arithmetic will never tell you why you did it. This is the only place that can.'}},
   /* --- the reward calendar --- */
   aheadPace:{
     middle:{clean:'Money you chose to keep. Tap a green day to decide where it goes.',
@@ -20716,6 +20938,26 @@ function setOpening(M,v){
 
    This says it where the budget is, not where the setting is. */
 function syncLockedHTML(){
+  /* "How is a person there to go to settings to sync for the first time -
+     there's no call to action." There was not one. Household mode is switched on
+     in Settings and the vault is four taps deeper inside it, so a couple could
+     run this on two phones for a month, each holding half a budget, with nothing
+     on any screen suggesting the other half existed.
+
+     This banner already existed for the vault being LOCKED. The gap it did not
+     cover was the vault never having been made, which is the state every
+     household starts in and the only one that needs an invitation rather than a
+     passphrase. Same banner, same two tabs, one step earlier in the story. */
+  /* Never invite somebody who is already sharing. If the vault is live, the flag
+     saying they opted in is the less trustworthy of the two facts - an install
+     that joined before the flag existed has sync running and syncOptIn false,
+     and telling that person their partner cannot see anything would be a lie the
+     app could check. */
+  if(state.householdOn && !state.syncOptIn && !(syncActive && syncPass)){
+    const them=escapeHtml(state.nameB||'your partner');
+    return `<div class="sync-lock sync-invite"><span class="sl-t"><b>${them} cannot see any of this.</b> ${escapeHtml(voice(VOICE.syncNone,null))}</span>
+      <span class="sl-form"><button class="btn sm primary" data-gosync="1">Share this budget →</button></span></div>`;
+  }
   if(!state.syncOptIn || !state.householdOn) return '';
   if(syncActive && syncPass) return '';
   const them=escapeHtml(state.meIs==='b'?(state.nameA||'your partner'):(state.nameB||'your partner'));
@@ -20797,7 +21039,11 @@ function renderHome(){
   renderDataGuard();
   const hc=HOME_COPY[state.register]||HOME_COPY.middle;
   const setTxt=(id,t)=>{ const el=document.getElementById(id); if(el) el.textContent=t; };
-  setTxt('hhEye',hc.eye); setTxt('hhTitle',hc.title); setTxt('hhSub',hc.sub); setTxt('hhCta',hc.cta); setTxt('wallsTag',hc.wallsTag);
+  setTxt('hhEye',hc.eye); setTxt('hhTitle',hc.title);
+  /* The register picks the words; the dial picks how hard they land. This line
+     had a register table and no dial at all, so the app's opening claim read the
+     same whether you had asked to be handled gently or gone for. */
+  setTxt('hhSub', voice(VOICE.heroSub,null) || hc.sub); setTxt('hhCta',hc.cta); setTxt('wallsTag', voice(VOICE[(typeof WALLS!=='undefined' && WALLS.every(w=>wallAssigned(w,state.activeMonth)>0))?'wallsAllCovered':'wallsShort'],null) || hc.wallsTag);
   if(state.spendingMode){
     setTxt('hhEye','Track · Gut-check · No filter');
     setTxt('hhTitle','Keep your spending honest.');
@@ -20831,7 +21077,9 @@ function renderHome(){
     plainStat('Skip streak', skipStreak()+' ', 'pos')+
     flipStat('Net worth', nw, nw<0?'bad':'good');
   const lkh=document.getElementById('lifeKeyHome');
-  if(lkh) lkh.innerHTML=ltbNoteHTML(income,assigned,ltb,M)+flipHintHTML();
+  /* Home carried no sync banner at all - only Plan and Track did - which is the
+     one screen a person opens first and the one they open most. */
+  if(lkh) lkh.innerHTML=syncLockedHTML()+ltbNoteHTML(income,assigned,ltb,M)+flipHintHTML();
   renderWhyCard();
   renderTrueRateCard();
   renderMoneyStoryNote();
@@ -20952,19 +21200,33 @@ function renderNextSteps(){
     steps.push(['',`Finish setting up${answered?` - ${answered} answer${answered===1?'':'s'} in`:''}`,
       'You left partway through and nothing you said was lost. Everything below is working off half a picture until this is done.','intake']);
   }
-  if(income<=0) steps.push(['','Log your income','Add this month\'s paycheck so every dollar has something to assign.','income']);
+  if(income<=0) steps.push(['','Log your income',voice(VOICE.stepIncome,null),'income']);
   /* The all-clear line below is nearly unreachable - the giving step fires for
      almost everyone - so the voice belongs on the step people actually see. The
      survival branch stays exactly as it was: it is the tone floor doing its job
      one layer earlier, and it must win over the intensity picker. */
   else if(Math.abs(ltb)>=1) steps.push(['', ltb>0?`Assign your last ${actMoney(ltb)}`:`You're ${actMoney(-ltb)} over - trim a category`,
-    survival?'One small move at a time - assign what you can. No pressure to be perfect.':voice(VOICE.assignAll,null),'assign']);
+    survival?'One small move at a time - assign what you can. No pressure to be perfect.'
+      :voice(ltb<0?VOICE.stepOver:VOICE.assignAll,null),'assign']);
   // Situation-aware: survival mode leads with one small, real win, not a full-budget lecture
   if(survival && !hasCushion) steps.unshift(['','Start a $100 cushion','In survival mode this is the whole game - one small buffer so a flat tire is an annoyance, not a crisis.','dream']);
   if(wallsCovered<4) steps.push(['',`Cover your essentials (${wallsCovered}/4)`,`Fund ${firstUncovered?firstUncovered.name:'Roof, Food, Power & Wi-Fi, and Getting Around'} first.`, firstUncovered?'wall:'+firstUncovered.cat:'tab:budget']);
-  if(!state.hourlyWage) steps.push(['','Set your hourly wage','Unlocks hours-of-life pricing and Freedom Mode.','wage']);
-  if(unlocked>0) steps.push(['',`${unlocked} vault item${unlocked>1?'s':''} ready`,'Their timers are up - neutralize or decide.','tab:impulse']);
-  if(!state.goals.length) steps.push(['','Name one dream','A budget with nothing behind it is just a spreadsheet.','dream']);
+  if(!state.hourlyWage) steps.push(['','Set your hourly wage',voice(VOICE.stepWage,null),'wage']);
+  if(unlocked>0) steps.push(['',`${unlocked} vault item${unlocked>1?'s':''} ready`,voice(VOICE.stepVault,null),'tab:impulse']);
+  if(!state.goals.length) steps.push(['','Name one dream',voice(VOICE.stepDream,null),'dream']);
+  /* "How is a person there to go to settings to sync for the first time - there's
+     no call to action." There was not one anywhere. Household mode is turned on
+     from Settings and the vault is set up four taps deeper inside it, so a couple
+     could run this app on two phones for a month, each keeping half a budget,
+     with nothing on any screen suggesting the other half existed.
+
+     A step here is the one place the app is allowed to say "do this now", so a
+     budget with two people in it and no way to reach the second phone belongs in
+     the list. It sits below the money steps on purpose: getting your own month
+     straight comes first, sharing it comes next. */
+  if(state.householdOn && !state.syncOptIn)
+    steps.push(['', `Put this on ${escapeHtml(state.nameB||'your partner')}'s phone`,
+      voice(VOICE.syncCta,null), 'sync']);
   const givenM=(state.giving||[]).filter(g=>monthOf(g.date)===M).reduce((s,g)=>s+g.amount,0);
   const giveTarget=(state.givingPct>0&&income>0)?income*state.givingPct/100:0;
   const giveReachable = !state.spendingMode && (typeof activeStage!=='function' || activeStage()>=2);   // the Giving panel is stage-2, full-mode UI
@@ -21092,8 +21354,35 @@ function runNextStep(act){
   /* openIntake already offers the draft back - it just had no door on any
      screen a person was standing on. */
   if(act==='intake'){ openIntake(); return; }
+  if(act==='sync'){ goSync(); return; }
   goTrail(act);
 }
+/* One route to sharing, so every signpost points at the same door. Settings ->
+   the Household section -> the vault panel, opened and scrolled to, rather than
+   left for somebody to find four taps in. */
+function goSync(){
+  activateTab('settings');
+  /* Mount the deck before asking it to open something. activateTab schedules its
+     pass in a frame, so deckShow called straight after was setting a flag on a
+     deck that did not exist yet - the section got marked open and then sat
+     inside a container the pass had left hidden. */
+  if(typeof deckPass==='function') deckPass('settings');
+  if(typeof deckShow==='function') deckShow('settings','Household');
+  /* Render it on arrival. The last trail into this panel had exactly this bug -
+     it walked you to a box that had not been drawn since the state changed, so
+     the thing you were sent to look at was not there. */
+  if(typeof renderSync==='function') renderSync();
+  setTimeout(()=>{
+    if(typeof renderSync==='function') renderSync();
+    if(typeof deckPass==='function') deckPass('settings');
+    if(typeof deckShow==='function') deckShow('settings','Household');
+    const el=document.getElementById('syncPanel');
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    el.classList.add('so-flash'); setTimeout(()=>el.classList.remove('so-flash'),1600);
+  },200);
+}
+document.addEventListener('click',e=>{ const g=e.target.closest('[data-gosync]'); if(g){ e.preventDefault(); goSync(); } });
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
 document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.addEventListener('click',()=>{ rfTab=b.dataset.rf; renderReflectTab(); }));
 document.getElementById('openTalkBtn').addEventListener('click',()=>openTalk());
