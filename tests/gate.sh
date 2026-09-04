@@ -33,7 +33,7 @@ PROBES="credit rates acct swipe cardfind qlparse qlocr qlblank brief working
         monthhome growthcat intake6 logone newmonth syncgate syncerr syncmerge
         acctsay synclock build synctraffic cellmerge cellmerge2 saymode deck
         glance contrast voice balcol putaway carry monthdead showwork equity
-        twotabs"
+        twotabs weekly budgetmode"
 
 for t in $SUITES; do
   echo "=== $t ===" >> "$LOG"
