@@ -320,3 +320,28 @@ The balance column is only dropped when the arithmetic proves it - each balance
 being the next one minus the amount between. A statement with no balance column
 should come through completely untouched, so if you use a bank that lists only
 amounts, nothing here should change for you.
+
+### Put-aways that had nowhere to sit
+
+Settings shows `2026-09-04 · put-aways land in their category`.
+
+If you logged money into savings or investing using **→ Put away (savings or
+investing)**, those entries have no category on them. Open **Plan**: a box near
+the top should say how many there are and what they total, with a picker of your
+savings and investing categories and one button.
+
+1. **Pick Acorns and file them.** They should land on the Acorns line, roll up
+   into Investing, and the box should disappear.
+2. **Check the Plan column.** Switch it to **Spent** - Acorns should now show the
+   total, tagged as put away rather than spent. It is still your money and net
+   worth should not move, because it was already counted there.
+3. **Log a new one categorised to Acorns.** You should no longer need to pick
+   "Put away" at all - choosing Acorns records it as money put away, in Acorns,
+   because Acorns lives under Investing.
+
+Nothing was ever duplicated and nothing was lost - the entries were filed under
+nothing, which is why the Plan line read $0 while the money had clearly moved.
+
+If a savings or investing category of yours does **not** appear in that picker,
+tell me its name: it means the app has not recognised its group as a growth
+category, and that is a one-line fix.

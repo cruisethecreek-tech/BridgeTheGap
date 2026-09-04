@@ -9123,6 +9123,55 @@ const cta = await p.evaluate(async () => {
 check('no tab is a screen with nothing to do on it',
       Object.values(cta).every(n=>n>=1), JSON.stringify(cta));
 
+/* ---- 107. a put-away that belongs somewhere ----
+   "So all of these did not land in investing for acorns. Should I delete the
+   investing category? And if it didn't land there where did it go?"
+   Nowhere visible. "Put away" sat in the same dropdown as the categories, so it
+   was picked INSTEAD of one - two different questions, which pool and whether
+   the money left you, in one list that could only answer one. */
+await seed({...FULL, activeMonth:CLOCK_M,
+  categories:[{id:'inv',name:'Investing',growth:'invest'},{id:'ac',name:'Acorns',parentId:'inv'},
+              {id:'food',name:'Food'}],
+  budgets:{[CLOCK_M]:{ac:300,food:400}},
+  transactions:[43.40,40.60,17.90,200,25].map((a,i)=>
+    ({id:'pa'+i,type:'invest',amount:a,source:'ACH Withdrawal / Acorns',date:CLOCK_D,ikind:'holds'}))});
+await p.reload(); await p.waitForTimeout(900);
+const putAway = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const M=state.activeMonth;
+  const o={ inherits:growthOf((state.categories||[]).find(c=>c.id==='ac')),
+            plainCat:growthOf((state.categories||[]).find(c=>c.id==='food')),
+            strandedBefore:strandedPutAways(M).length,
+            onPlanBefore:catUsed('ac',M) };
+  activateTab('budget'); await w(600);
+  const box=document.querySelector('#view-budget .stranded');
+  o.offered=!!box;
+  o.text=box?box.innerText.replace(/\s+/g,' '):'';
+  o.opts=[...document.querySelectorAll('#strandedCat option')].map(x=>x.textContent);
+  if(box){ document.getElementById('strandedCat').value='ac';
+    document.getElementById('strandedGo').click(); await w(600); }
+  o.strandedAfter=strandedPutAways(M).length;
+  o.onPlan=Math.round(catUsed('ac',M)*100)/100;
+  o.rolledUp=Math.round(catUsed('inv',M)*100)/100;
+  o.asSpending=Math.round(catSpent('ac',M)*100)/100;
+  o.offerGone=!document.querySelector('#view-budget .stranded');
+  return o;
+});
+check('a category under an investing group is investing, without saying so twice',
+      putAway.inherits==='invest', putAway.inherits);
+check('...while an ordinary category is left alone', putAway.plainCat==='', putAway.plainCat);
+check('put-aways with no category are found and counted, not left silent',
+      putAway.strandedBefore===5 && putAway.onPlanBefore===0, JSON.stringify([putAway.strandedBefore,putAway.onPlanBefore]));
+check('...offered back with their total, on the tab the money belongs to',
+      putAway.offered===true && /\$326\.90/.test(putAway.text), putAway.text.slice(0,110));
+check('...to the categories money can be put away into, and no others',
+      putAway.opts.some(x=>/Acorns/.test(x)) && !putAway.opts.some(x=>/Food/.test(x)), JSON.stringify(putAway.opts));
+check('one tap files all of them', putAway.strandedAfter===0, String(putAway.strandedAfter));
+check('...onto the Plan line they were always meant for', putAway.onPlan===326.90, String(putAway.onPlan));
+check('...rolling up into the group, the way money does', putAway.rolledUp===326.90, String(putAway.rolledUp));
+check('...still counted as put away rather than spent', putAway.asSpending===0, String(putAway.asSpending));
+check('...and the offer stops once there is nothing left to file', putAway.offerGone===true);
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

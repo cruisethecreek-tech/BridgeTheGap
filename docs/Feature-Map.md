@@ -1261,3 +1261,25 @@ Guessing by size would be wrong - a $5,311.75 transaction is perfectly possible,
 **Also fixed in the same report.** `== 2° Nf 2°. G&G) <|Se` came back as a transaction *name*. A description that is mostly not letters is OCR soup, and showing it is worse than showing the row as unnamed: a person will fix a blank, and will not think to question something that looks like it was read properly. The amount is kept either way - that is the part OCR gets right and the part that is tedious to retype.
 
 **And the other half of the report:** *"it didn't let me upload multiple pictures."* The dedicated statement reader took a batch; the Quick Log's own picker took one file, and its handler read `files[0]`. Both are fixed - the picker accepts a batch, the camera *adds* a shot rather than replacing (which is how you photograph page two), pages are thumbnailed in reading order, and the read pass OCRs each page and parses the joined text **once**, so a transaction split across a page break is still one statement.
+
+## A put-away belongs somewhere
+
+Asked with three screenshots and exactly the right question: *"So all of these did not land in investing for acorns. Should I delete the investing category? And if it didn't land there where did it go? I thought I put it here if it doesn't belong. Is it a duplicate?"*
+
+No, nothing was duplicated, and the Investing category should stay. The money went **nowhere visible**, and that was my fault, from a shortcut I left a comment admitting at the time:
+
+> *"Two entries at the bottom of the same dropdown, so nothing new has to fit on a phone row."*
+
+`→ Put away (savings or investing)` sat in the **same list as the categories**, so it was picked *instead of* one. Those are two different questions - **which pool does this belong to**, and **did the money actually leave you** - and one dropdown can only answer one of them. The entry came out as `type:'invest'` with no `catId`: it counted toward net worth, it appeared on Track with its arrow, and it never touched the Plan line. Acorns read `$0` while $462.20 had plainly gone somewhere.
+
+Worse, it could not be repaired: the transaction edit sheet only offered **Category** when `type==='expense'`, so an invest entry had no way to be filed even one at a time.
+
+Three fixes, and the counting needed none of them - `investedFor(catId, month)` was already correct and had simply never been given a `catId`.
+
+**The category decides the verb.** `growthOf()` walks up the tree, so "Acorns" under "Investing" is an investing category without having to be told twice, and choosing it records a put-away **in that category**. One choice, both facts. `→ Put away` stays as the fallback for money that genuinely has no category.
+
+**An invest row can be filed.** Category now appears on the edit sheet for invest as well as expense.
+
+**And the ones already logged are offered back.** `strandedPutAways` finds invest entries with no category, and Plan shows how many there are and what they total, with a picker of only the categories money can be put away into and one button that files all of them. It disappears when there is nothing left to file. Nobody should have to fix twelve entries one at a time to recover from a dropdown that asked the wrong question.
+
+The general lesson is about the shortcut, not the bug. **Two orthogonal questions crammed into one control will be answered as if they were one question** - and the person answering will be right, by the interface's own logic, while the data comes out wrong.

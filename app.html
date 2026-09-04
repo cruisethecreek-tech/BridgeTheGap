@@ -1122,6 +1122,11 @@
     font-size:11px;font-weight:900;border-radius:6px;padding:1px 6px}
   /* The invitation reads as an opening, not a fault - the locked banner warns,
      this one offers, and they must not look like the same event. */
+  .stranded{border:1px solid var(--accent);border-radius:14px;padding:12px 14px;margin:0 0 14px;
+    background:var(--card);font-size:13px;line-height:1.5;color:var(--muted)}
+  .stranded b{color:var(--text)}
+  .st-form{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .st-form select{flex:1;min-width:150px}
   .sync-lock.sync-invite{border-color:var(--accent);background:var(--card)}
   .sync-lock.sync-invite .sl-t b{color:var(--accent)}
 
@@ -9619,7 +9624,7 @@ function renderBudget(){
     flipStat('Assigned', assigned, '')+
     flipStat(lifeLabel('spent','Spent'), spent, '')+
     flipStat('Left to spend', lts, lts<0?'bad':'good');
-  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=syncLockedHTML()+`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
+  const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=syncLockedHTML()+strandedPutAwayHTML(M)+`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
 
   const nmEl=document.getElementById('newMonthBanner');
   if(nmEl){
@@ -11507,6 +11512,22 @@ function renderQuickLog(){
       }
       if(catId==='__new'){ const nm=(el.querySelector('.ql-new').value||'').trim()||what||'Spending'; catId=findOrCreateCat(nm).id; }
       if(!catId) uncat++;   // honest: a row nothing could be guessed for lands as Uncategorized, and says so
+      /* "So all of these did not land in investing for acorns... if it didn't
+         land there where did it go?" They went in as put-aways with NO category,
+         because "Put away" sat in the same dropdown as the categories and so was
+         picked INSTEAD of one. Those are two different questions - which pool
+         this belongs to, and whether the money left you - and one list cannot
+         answer both. The category now decides the verb: choosing Acorns records
+         a put-away, in Acorns, and it shows up on the Plan line and in net
+         worth. Nothing has to be picked twice. */
+      const catObj=(state.categories||[]).find(x=>x.id===catId);
+      if(catObj && catPutsAway(catObj)){
+        const gT={id:uid(),type:'invest',amount:amt,catId,source:what||catObj.name,date,note:'',ikind:'holds'};
+        if(batchAcct) gT.acctId=batchAcct;
+        state.transactions.push(gT);
+        investAssetAdd(amt);
+        added++; put+=amt; el.remove(); return;
+      }
       const exT={id:uid(),type:'expense',amount:amt,catId,date,note:what};
       if(batchAcct) exT.acctId=batchAcct;
       state.transactions.push(exT); added++;
@@ -11934,7 +11955,7 @@ function renderTxSheet(){
   const fields=`<div class="cs-sec"><div class="cs-h">The entry</div>
     <div class="txs-f"><span class="txs-k">Amount</span><span class="txs-v">$<input type="number" inputmode="decimal" min="0" step="0.01" value="${t.amount}" data-txedit="amount"></span></div>
     <div class="txs-f"><span class="txs-k">Date</span><span class="txs-v"><input type="date" value="${escapeHtml(t.date||'')}" data-txedit="date"></span></div>
-    ${t.type==='expense'?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId" id="txsCat">${catOpts}</select></span></div>
+    ${(t.type==='expense'||t.type==='invest')?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId" id="txsCat">${catOpts}</select></span></div>
       <div class="txs-f hide" id="txsNewWrap"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" id="txsCatNew" placeholder="Name the new one" enterkeyhint="done"></span></div>`:''}
     ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>
@@ -12845,7 +12866,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · voice, sharing, balance column';
+const BUILD_STAMP='2026-09-04 · put-aways land in their category';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -17875,6 +17896,10 @@ const VOICE={
             blunt:'Name what this is all for, or it is just arithmetic.',
             savage:'Budgeting with no dream behind it is just watching your money leave more precisely.'}},
   /* --- sharing the budget with the other person in it --- */
+  stranded:{
+    middle:{clean:'Pick where they belong and they will show on the Plan line you assigned.',
+            blunt:'They counted toward your net worth but not against the plan. Say where they go.',
+            savage:'The money moved and the plan never saw it. Put it where it belongs.'}},
   syncCta:{
     middle:{clean:'Two people, one budget - but only this phone has it. Set up sharing so you are both looking at the same month.',
             blunt:'One budget, two people, and only one phone has it. Until you share it, you are each guessing at half.',
@@ -21383,6 +21408,14 @@ function goSync(){
   },200);
 }
 document.addEventListener('click',e=>{ const g=e.target.closest('[data-gosync]'); if(g){ e.preventDefault(); goSync(); } });
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#strandedGo')) return;
+  const sel=document.getElementById('strandedCat'); if(!sel) return;
+  const cat=(state.categories||[]).find(c=>c.id===sel.value);
+  const n=fileStrandedPutAways(sel.value);
+  if(typeof renderAll==='function') renderAll();
+  if(typeof toast==='function' && n) toast(`${n} put-away ${n===1?'entry':'entries'} filed under ${cat?cat.name:'that category'}. They are on the Plan line now.`);
+});
 document.addEventListener('click',e=>{ const b=e.target.closest('.nextstep[data-act]'); if(b) runNextStep(b.dataset.act); });
 document.querySelectorAll('#rfTabs .rf-tab').forEach(b=>b.addEventListener('click',()=>{ rfTab=b.dataset.rf; renderReflectTab(); }));
 document.getElementById('openTalkBtn').addEventListener('click',()=>openTalk());
@@ -21610,6 +21643,55 @@ function growthKindFor(name){
    has no asset to create - the accounts and the debt list already hold those.
    The tag still keeps all three out of the spending breakdown. */
 function growthRecType(c){ return (c&&c.growth==='invest') ? 'invest' : 'expense'; }
+/* A category's growth kind, inherited from its group. "Acorns" sits under
+   "Investing" and carries no kind of its own, so asking the leaf alone said it
+   was ordinary spending - which is how money put into Acorns came to be filed
+   as though it had been spent, or as nothing at all. A child of an investing
+   group is investing, unless it says otherwise itself. */
+function growthOf(c){
+  let cur=c, hops=0;
+  while(cur && hops++<4){
+    if(cur.growth) return cur.growth;
+    cur = cur.parentId ? (state.categories||[]).find(x=>x.id===cur.parentId) : null;
+  }
+  return '';
+}
+/* Money moved into a savings or investing category did not leave you, so it is
+   recorded as a put-away rather than as spending - and it keeps the category, so
+   it lands on the Plan line you assigned it to. Both facts, one entry. */
+function catPutsAway(c){ const g=growthOf(c); return g==='invest'||g==='save'; }
+/* ---------- put-aways with nowhere to sit ----------
+   Asked directly, and it is the right question: "if it didn't land there where
+   did it go?" Nowhere visible. They were recorded, they counted toward net
+   worth, and they appeared on Track with an arrow - but with no category they
+   never touched the Plan line, so Acorns read $0 while the money had plainly
+   gone. Nothing was duplicated and nothing was lost; it was filed under nothing.
+
+   That is not a state anybody should have to fix one entry at a time, so the
+   app finds them and offers to file them in one move. */
+function strandedPutAways(M){
+  return txnsInMonth(M||state.activeMonth)
+    .filter(t=>t.type==='invest' && !t.catId);
+}
+function strandedPutAwayHTML(M){
+  const list=strandedPutAways(M); if(!list.length) return '';
+  const total=list.reduce((s,t)=>s+(+t.amount||0),0);
+  const opts=(state.categories||[]).filter(c=>catPutsAway(c))
+    .map(c=>{ const par=c.parentId?(state.categories||[]).find(x=>x.id===c.parentId):null;
+      return `<option value="${c.id}">${escapeHtml((par?par.name+' / ':'')+c.name)}</option>`; }).join('');
+  if(!opts) return '';
+  return `<div class="stranded"><b>${list.length} put-away ${list.length===1?'entry has':'entries have'} no category
+    - ${money(total)} in all.</b> ${escapeHtml(voice(VOICE.stranded,null))}
+    <span class="st-form"><select id="strandedCat">${opts}</select>
+    <button class="btn sm primary" id="strandedGo">File ${list.length===1?'it':'them'}</button></span></div>`;
+}
+function fileStrandedPutAways(catId){
+  if(!catId) return 0;
+  const list=strandedPutAways();
+  list.forEach(t=>{ t.catId=catId; });
+  if(list.length) save();
+  return list.length;
+}
 const GROWTH_TAG={invest:'Invested, not spent', save:'Saved, not spent', debt:'Debt paid down'};
 /* The Plan row has one line and no room for "Invested, not spent" beside a name,
    an amount and a pill. A coloured dot would have fitted and said nothing - and
