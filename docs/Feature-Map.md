@@ -1197,3 +1197,67 @@ HTMLElement.prototype.focus      = function(){ deckReveal(this); return fo.apply
 **A card's padding is not a panel's width.** Nesting a panel inside the deck's padded card made everything in it 32px narrower than it was built for, and at 320px that squeezed the calendar's day cells to 27px - below a thumb. Opened sections break out of the horizontal padding.
 
 **A lone question mark on an otherwise empty tab.** On tabs that are now almost entirely deck, the tab-intro's Clean-mode `?` had no heading to attach to and floated alone at the top like a stray glyph. It hangs off the deck's own heading instead. Build's intro copy also still said *"Net worth is open below; tap any section to expand it"*, which described the accordions it no longer has.
+
+## The dial, put back to work
+
+Reported twice, the second time plainly: *"The three ways of speaking has been lost - blunt and savage vocabulary has been lost, and only applied to the intake."*
+
+Measured before touching anything. Moving Forgiving -> Blunt -> Savage changed **9 of 738 lines on screen. 1.2%.** Plan, Track, Shield, Build, Diary and Learn changed by **nothing at all** - Shield being a whole tab built on confrontation that did not shift a word. The dial was decoration everywhere except the setup chat.
+
+The rule this pass follows, so it does not just become noise:
+
+> **The app's assertions carry the voice. Its labels do not.**
+
+Anything the app says *about you* - your month, your habits, where you stand - moves with the dial. `Target $`, `Add category` and `Save entry` read identically at every setting, because a control that renames itself with the mood is a control you have to re-learn. Savage is a position, not a costume.
+
+Wired: the opening line on Home, the line over the four walls, every tab's opening sentence (Plan, Track, Shield, Debt, Build, Diary), and the **Do this next** steps - which is the most-read block in the app and was seven hard-coded strings.
+
+Result: **21% of the app's 273 assertions now change with the dial**, up from about 3%, and every tab moves. Measured as a share of *assertions* rather than of all lines, because most lines on a screen are labels, figures and category names that must not move.
+
+What stayed flat on purpose, and should: arithmetic explanations (*"Income logged $3,200 - assigned $3,100 = $100"*), mechanical instructions (*"Tap any card to flip"*), and the privacy statements. Tone does not get to edit arithmetic. The existing sensitive-topic floor still overrides everything: a medical bill or the rent is spoken to gently no matter where the dial sits.
+
+## Sharing: there was no door
+
+*"How is a person there to go to settings to sync for the first time - there's no call to action."*
+
+There was not one anywhere. Household mode is turned on in Settings, and the vault is set up four taps deeper inside it - and the collapse pass had just buried it one level further, inside a pill. Two people could run this on two phones for a month, each holding half a budget, with nothing on any screen suggesting the other half existed.
+
+The banner that says *"this budget is not syncing"* already existed for a vault that is **locked**. The state it never covered was a vault that was **never made** - which is the state every household starts in, and the only one that needs an invitation rather than a passphrase. Same banner, one step earlier in the story: **"Sam cannot see any of this"** with a single button, on Home and on Plan, in the voice you chose. It stops asking the moment sharing is set up.
+
+`goSync()` is the one route, so every signpost points at the same door: Settings, the Household section opened, the sync panel rendered *on arrival* and scrolled to. Three details it needs and did not have at first:
+
+- **Mount before opening.** `activateTab` schedules its pass in a frame, so calling `deckShow` straight after was setting a flag on a deck that did not exist yet: the section got marked open and then sat inside a container the pass had left hidden.
+- **Render on arrival.** The previous trail into this panel had exactly this bug - it walked you to a box that had not been drawn since the state changed.
+- **Not a step in the list.** Home shows three next-steps and a fresh budget fills all three with money basics, correctly. An invitation that only appears once you have nothing else to do is not an invitation.
+
+## StoryBrand: what the audit found
+
+Against the framework - the user is the hero, the app is the guide, one obvious direct call to action per screen, a plan, named stakes:
+
+**Held up.** The user is the hero throughout (*"Every dollar answers to you"*), the app guides rather than performs, Home's hero has a direct CTA with a *transitional* one beside it (**Start budgeting** / **Run a gut check**), and the grunt test passes: what it offers, how life gets better, what to do next.
+
+**Broken by my own collapse pass, now fixed.** Build was a tab with seven pills and **not one button** - a screen that asks you to browse is a screen nobody acts on. The deck carries a direct CTA now (`DECK_CTA`) for the tabs whose whole content sits inside it, and Learn's *"Try this"* action - the one thing to do on that tab - was styled as an aside rather than as the action.
+
+**One measurement mistake worth recording.** The audit first reported Reflect as having no call to action at all, and I nearly gave it one. It has two: this app has more than one name for *"this is the action"* - `.primary` on a button, `.solid` on a trail button - and the audit was only counting the first. **A tool that measures one spelling of a thing will report the other spellings as missing.**
+
+Still open and not invented away: Settings has no call to action, which is correct for a settings screen, and Reflect's own CTAs only render once the month has enough logged to report on. Neither is a regression.
+
+## The running-balance column
+
+Reported with the bank's own screen beside the result: a page of Acorns withdrawals came back with every real amount **plus a row for every running balance** - `N 855-739-2859 / $5,311.75` sitting next to the transaction it was the balance after. Half the rows were not transactions at all.
+
+Every line on a bank statement carries two numbers, and the reader was taking both.
+
+Guessing by size would be wrong - a $5,311.75 transaction is perfectly possible, and an app that silently drops your largest amounts is worse than one that adds a few. But a balance column can be **proved**, because it is arithmetic: listed newest first, each balance is the next one minus the amount between them. From the report that started this:
+
+```
+5,334.25 − 22.50 = 5,311.75   ✓
+5,380.05 − 45.80 = 5,334.25   ✓
+5,111.75 − 200.00 = 4,911.75  … and so on down the page
+```
+
+`qlDropBalances` splits the extracted stream into its two interleavings and tests that relation on each. A column is only dropped when most of the pairs agree - two agreeing pairs is a coincidence, most of them agreeing is a column - and the reader then says how many balances it set aside, because a reader that quietly halves your statement is indistinguishable from one that missed half of it. A statement with no balance column is untouched, which the probe checks explicitly.
+
+**Also fixed in the same report.** `== 2° Nf 2°. G&G) <|Se` came back as a transaction *name*. A description that is mostly not letters is OCR soup, and showing it is worse than showing the row as unnamed: a person will fix a blank, and will not think to question something that looks like it was read properly. The amount is kept either way - that is the part OCR gets right and the part that is tedious to retype.
+
+**And the other half of the report:** *"it didn't let me upload multiple pictures."* The dedicated statement reader took a batch; the Quick Log's own picker took one file, and its handler read `files[0]`. Both are fixed - the picker accepts a batch, the camera *adds* a shot rather than replacing (which is how you photograph page two), pages are thumbnailed in reading order, and the read pass OCRs each page and parses the joined text **once**, so a transaction split across a page break is still one statement.
