@@ -448,3 +448,24 @@ What to check:
 - Worth a look on your **narrowest** screen and with a **long** number in it
   (a category with $1,000+ left). The hint is set not to wrap, so if it collides
   with the category name or runs off the edge, that is a real report.
+
+### Nothing goes below zero
+
+Settings shows `2026-09-04 · no quantity goes below zero`.
+
+Nobody reported this - a test found it by typing `-5` into every number field in
+the app and asking what stuck. Four of them kept it.
+
+Worth a minute if you want to see it gone:
+
+- **Settings, hourly wage.** Type `-5`. It should land on `0`, not `-5`. Then
+  put your real wage back.
+- Same for a **partner's wage** if the household split is on, the **spending
+  limit** in spend mode, the **debt budget** on the payoff planner, and the
+  **amount** and **rate** on the leverage panel.
+- The one that is *meant* to accept a negative is the **expected return** on
+  leverage. An investment that loses money is a real thing to plan for, and the
+  screen should not refuse it.
+
+If a figure anywhere reads as negative hours - *"-3.4 hrs of your life"* - that
+is this bug still alive somewhere I did not find, and it is worth telling me.

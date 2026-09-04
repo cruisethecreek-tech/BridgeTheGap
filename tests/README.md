@@ -19,8 +19,40 @@ node tests/funnel.mjs                # one honest ask, by link and never by scri
 node tests/hostile.mjs               # the inputs nobody thinks to supply
 ```
 
+Or all of it, plus the fifty-four probes, in one command that refuses rather
+than reports:
+
+```bash
+bash tests/gate.sh                   # 13 suites + 54 probes; exits 1 on any failure
+GATE_LOG=/tmp/g.log bash tests/gate.sh   # ...writing its log somewhere else
+```
+
 Requires a Chromium that Playwright can drive; the scripts point at
 `/opt/pw-browsers/chromium` and are run from the repo root.
+
+## The probes, and why they are in the repository now
+
+`tests/probes/` holds fifty-four narrow tests. The difference between a probe
+and a suite is scope, not rigour: a **suite** is a broad net over one dimension
+(structure, layout, arithmetic, palette, the hostile pass), while a **probe**
+was written the day one specific thing was reported - nearly always from a
+photograph of a real phone - and stays because the report will come back if the
+property stops holding.
+
+Every one of them lived outside the repository for most of its life, in a
+scratchpad directory belonging to the session that wrote it. The whole set
+would have disappeared with that container and nothing would have said so. The
+only edit made when they moved was the path: fourteen addressed the app as an
+absolute path to one machine and now use `process.cwd()`, which is what every
+suite already committed here does.
+
+They still point at `/opt/pw-browsers/chromium` absolutely, because the suites
+beside them do. Making half the tests more portable than the other half is an
+inconsistency wearing the costume of an improvement; the honest fix is one
+change to all sixty-seven files, and it has not been made yet.
+
+If you add a probe, add its name to `PROBES` in `tests/gate.sh`. A probe the
+gate does not run is a probe that will rot without telling you.
 
 ## Why `hostile.mjs` exists, and what it cannot do
 
@@ -70,10 +102,77 @@ that no user could ever hit - because `load()` merges a stored state over
 exist. **A harness that enters through a door the user cannot use reports faults
 they cannot hit, and hides the ones they can.** It resets through `load()` now.
 
-Against the fixed code it is 8 of 8 across **289 form submissions on 18 forms**,
-with `tkSave` printed as still unreachable - it lives several steps into the
-talk-through flow. That line is deliberate output rather than a silent skip: a
-form nobody probed is not a form that passed.
+Against the fixed code it is 12 of 12 across **364 form submissions on 29
+forms**, with `twAdd`, `tkSave` and `iaBulkAdd` recorded as still unreachable in
+this fixture. That is deliberate output rather than a silent skip: a form nobody
+probed is not a form that passed.
+
+### The list of forms was itself the blind spot
+
+`BUTTONS` is hand-written, and a hand-written list of forms goes stale the
+moment somebody adds a form. Three had been added and never probed -
+`timeCatAdd`, `pkAdd` and the bulk intake add - and nothing anywhere said so,
+because **a suite that walks a list reports exactly the list it was given.**
+That is the same failure as a tool that counts one spelling of a thing and calls
+the others absent, which has now cost this project four separate bugs.
+
+So section 5 counts the forms from the DOM instead. A form is defined
+structurally rather than by name: **a visible button within three levels of
+somewhere to type.** Anything the census finds must be driven, or exempted with
+its reason written in `OFF_LIMITS`. The day somebody adds a form and forgets to
+list it, this refuses.
+
+Four wrong versions preceded the working one, and each is a distinct way to
+build a check that cannot do its job:
+
+1. **Too loose a definition.** v1 asked whether the button's nearest
+   `.card`/`.panel` contained a field. On Plan that panel holds every assign box
+   in the budget, so the month arrows, the theme toggle and *Copy last month*
+   all came back as forms. A definition that loose does not describe a form, it
+   describes a tab.
+2. **A check that cannot fail.** The exemption guard first compared a subset's
+   length against the whole list's length - true for every possible input. That
+   is worse than no check: it reports green forever and reads like coverage.
+3. **Measuring the fixture instead of the app.** v2 of that guard compared
+   against the ids visible on screen and called six live buttons dead, because
+   the sync sheet's controls are built on demand and simply were not open.
+4. **Too narrow a definition, one size down.** v3 searched the source for
+   `id="X"` and missed every id the app *builds* - it flagged `txBack`, which is
+   handed to a helper as `backToThisMonthHTML('txBack')` and never written as an
+   attribute anywhere.
+
+The census also settled an argument about eight buttons on Plan. `copyBtn`,
+`mergeBtn`, `reorderBtn`, `cullBtn` and `starterBtn` are literal **siblings** of
+the add-category field, in the same `.row` as `addCat` itself. No structural
+rule can separate them, because the markup genuinely puts them together - and
+the honest response to that is to drive them rather than to invent a rule whose
+only job is to excuse them. They all write state, which is the whole
+qualification. Doors are the opposite case and are exempted: `quickLogBtn` opens
+the quick log, and the submits behind it are already driven by name.
+
+**What it found on its first run.** Typing `-5` into every number field it could
+see, and then asking the state what it kept: `hourlyWage`, `wageB`, `spendLimit`
+and `lev.apr` all stored it. A negative wage does not throw - it quietly turns
+*"3.4 hrs of your life"* into *"-3.4 hrs"*, stated with exactly the same
+confidence as a true figure, and `effectiveHourly()` treats a negative as *"not
+set"* and silently computes from an estimate instead while the field still shows
+`-5`. Wrong in both directions at once.
+
+The fix is one line in `wireUnitField`, which is the choke point all eight of
+those settings pass through, plus a clamp on the two wage inputs and a `qty()`
+healer in `normalizeState` for values arriving from a restore, a sync or a
+hand-edited backup. Exactly one call site had been writing `Math.max(0, ...)` by
+hand already, which is the shape of a rule living one level too high: seven
+others had no guard at all. The one field left signed on purpose is the expected
+**return** on leverage - an investment that loses money is a real position, and
+refusing to price it would be the screen deciding what you are allowed to plan
+for.
+
+Finally, the unreachable list became a check rather than a printed line.
+Printing was the right instinct, but a printed line is free to grow: a form
+added tomorrow that lands there would leave every assertion green while going
+undriven. The set is named now, so a **new** name failing is a failure, while a
+name *leaving* it passes - that is the outcome the list wants.
 
 **What this suite does not do.** It covers one class: input handling, invented
 identity, impossible numbers. It would not have caught the ledger readout whose
