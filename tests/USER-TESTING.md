@@ -402,3 +402,21 @@ entries behind it:
 
 If a row you can read perfectly well says "Needs a name", tell me what it says -
 it means the test is too strict and is throwing away something legitimate.
+
+### The equity badge
+
+Settings shows `2026-09-04 · the badge names its own figure`.
+
+On **Debt**, any loan with a value on the thing behind it (a mortgage, a car)
+shows an equity figure and a percentage. Read the whole line out loud:
+
+- With equity: **"$132,000 equity - 62.9% of it is yours"**. That should be true
+  when spoken. The old line said 37.1%, which was your *loan*, and it read as
+  though you owned barely a third of your own house.
+- Underwater: **"$5,000 underwater - owe 135.7% of its value"**. Here the
+  loan-to-value is the right number, and it says it is the loan.
+
+Worth checking anywhere else a percentage sits next to a dollar figure, on any
+tab. Each badge should say what it is a share of - used, yours, owe, left,
+covered. If you find one that just says a bare percentage and leaves you to
+infer, that is the same bug in a different place, and it is worth telling me.

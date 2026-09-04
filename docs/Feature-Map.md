@@ -1323,3 +1323,23 @@ Two faults circled on one panel: *"The purple should be actionable and blue is s
 The readability test needed a second attempt, and the first one is the interesting part. The rule from the statement reader - *a name that is mostly not letters is soup* - passed this string, because `© + = £1 = Accounts Move Money Check` is **63% letters**. The damage is all in the prefix. What actually gives it away is characters a bank descriptor never contains: a copyright sign, a currency symbol that is not the one you bank in, an equals sign. Anything outside the set a real statement line uses means the read went wrong, however much of the rest survived. The test is also scoped to free text only - a transfer label and a category name are composed by this app, and questioning those would be the app questioning itself.
 
 **And the working was being cut off.** `$6,637.64 + $1,230.23 − $1,881.04 − $507.20 = $5,4` ran off a 390px screen mid-figure. That is the one number in this app that may never truncate, because the panel exists to show its arithmetic - a total you cannot read is worse than no total, since it looks like an answer. It wraps now, and a check asserts the equation ends on a complete figure rather than merely that the panel fits.
+
+## A percentage is a percentage OF something
+
+Reported with the arithmetic already worked out, which made it undeniable:
+
+> `$132,000 equity   37.1% of its value`
+>
+> 78,000 / 210,000 = 37.1% - that is the **loan**. The equity share is 132,000 / 210,000 = **62.9%**. *"The math for the percentages shown is mathematically correct for calculating the Loan-to-Value ratio... However, the interface design is misleading because it places those debt percentages directly next to the equity dollar amounts."*
+
+Exactly right, and the diagnosis is the important half. **Nothing was miscalculated.** `debtLTV` is correct, it is the number a lender asks for, and it belongs in the app. What was false was the sentence it had been placed inside: a reader is told their equity is 37.1% of the value, when they own 62.9% of it.
+
+This is the third time this shape has appeared here, after **a partial figure wearing the name "net worth"** and **a caption promising a total the panel did not add up**. Every one of them passed arithmetic checks, because in every one of them the arithmetic was right.
+
+The badge now describes the figure standing beside it. Where there is equity: **62.9% of it is yours**, and the colours run the right way round, since more is better. Where the loan exceeds the value there is no equity share to report, so the loan-to-value *is* the story - and it says which number it is talking about: **owe 135.7% of its value**.
+
+Reflect carried the same sentence in prose - *"you are 37.1% of the way in"*, which reads as progress toward owning it and is the same lie in a friendlier voice. It names both halves now, and which is which.
+
+**The general check matters more than the specific one.** Alongside the fix, a sweep asserts that no percentage badge anywhere in the app leaves you to guess what it is a share of: each one has to say *used*, *yours*, *owe*, *left*, *drawn*, *covered*, *funded*. A bare *"37.1%"* next to a dollar figure borrows its meaning from whatever happens to sit closest, and that is a loan the interface cannot repay.
+
+The rule, stated so it survives this file: **a figure and its percentage are one sentence, and the sentence has to be true when read aloud.** "One hundred and thirty two thousand equity, thirty seven percent of its value" is false out loud, and was invisible on screen for weeks.

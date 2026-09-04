@@ -9343,6 +9343,42 @@ check('the working fits the phone it is read on', work.over===0, String(work.ove
 check('...and the total it ends on is never cut in half',
       /=\s*\$[\d,]+\.\d\d$/.test(work.sumText.trim()), work.sumText.slice(-42));
 
+/* ---- 112. a percentage must be a percentage OF the figure beside it ----
+   Reported with the arithmetic already done: "$132,000 equity - 37.1% of its
+   value". 78,000/210,000 = 37.1%, which is the LOAN. The equity share is
+   132,000/210,000 = 62.9%. The number was right and the sentence it sat in was
+   false, which is the harder kind of wrong to catch - the third time this shape
+   has come up here, after a partial figure wearing the name "net worth". */
+await seed({...FULL, activeMonth:CLOCK_M,
+  debts:[{id:'m1',name:'Bears Den mortgage',balance:78000,apr:4.375,min:850,kind:'mortgage',worth:210000,secured:true},
+         {id:'m2',name:'Upside down car',balance:19000,apr:7.9,min:410,kind:'auto',worth:14000,secured:true}]});
+await p.reload(); await p.waitForTimeout(900);
+const eqPair = await p.evaluate(async () => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const m=(state.debts||[]).find(d=>d.id==='m1');
+  const o={ ltv:debtLTV(m), pct:debtEquityPct(m), eq:debtEquity(m) };
+  activateTab('debt'); await w(700);
+  const rows=[...document.querySelectorAll('#view-debt .dr-eq')].map(x=>x.innerText.replace(/\s+/g,' ').trim());
+  o.equityRow=rows.find(t=>/132,000/.test(t))||'';
+  o.underRow=rows.find(t=>/underwater/i.test(t))||'';
+  /* the general form: every one of these badges must name the quantity it is a
+     share OF, rather than leaning on the figure beside it to imply it */
+  o.vague=[...document.querySelectorAll('.ac-util')]
+    .map(x=>x.innerText.trim())
+    .filter(t=>/%/.test(t) && !/(used|yours|owe|left|drawn|covered|funded|of target)/i.test(t));
+  return o;
+});
+check('the loan-to-value is still worked out and still correct', eqPair.ltv===37.1, String(eqPair.ltv));
+check('...and the share that is yours is its complement, not a second guess',
+      eqPair.pct===62.9 && eqPair.eq===132000, JSON.stringify(eqPair));
+check('an equity figure carries the equity share, never the debt share',
+      /62\.9%/.test(eqPair.equityRow) && !/37\.1%/.test(eqPair.equityRow), eqPair.equityRow);
+check('...and the badge says whose it is in words', /of it is yours/i.test(eqPair.equityRow), eqPair.equityRow);
+check('underwater is the one case the loan-to-value is the story, and it says so',
+      /underwater/i.test(eqPair.underRow) && /owe .*% of its value/i.test(eqPair.underRow), eqPair.underRow);
+check('no percentage badge leaves you to guess what it is a share of',
+      eqPair.vague.length===0, eqPair.vague.slice(0,3).join(' | '));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

@@ -6214,9 +6214,22 @@ function debtSumHTML(d){
   }
   if(worth>0){
     const ltv=debtLTV(d);
+    /* "$132,000 equity - 37.1% of its value" put a debt percentage next to an
+       equity figure and let the caption do the lying: the reader is told their
+       equity is 37.1% of the value when it is 62.9%. The number was right and
+       the sentence it sat in was false, which is the harder kind of wrong to
+       notice. The badge now describes the figure it is standing beside.
+
+       Underwater is the one case where the loan-to-value IS the story, because
+       there is no equity share to report - so it says how far past the value
+       the loan has gone, and says that it is the loan it is talking about. */
+    const eqPct=debtEquityPct(d);
+    const badge = debtUnderwater(d)
+      ? (ltv!=null?` <span class="ac-util hot">owe ${ltv}% of its value</span>`:'')
+      : (eqPct!=null?` <span class="ac-util ${eqPct>=50?'cool':eqPct>=20?'warm':'hot'}">${eqPct}% of it is yours</span>`:'');
     out += `<span class="dr-r dr-eq">${debtUnderwater(d)
         ? `<b class="dr-over">${usd(-debtEquity(d))} underwater</b>`
-        : `<b class="dr-good">${usd(debtEquity(d))} equity</b>`}${ltv!=null?` <span class="ac-util ${ltv>=100?'hot':ltv>=80?'warm':'cool'}">${ltv}% of its value</span>`:''}</span>`;
+        : `<b class="dr-good">${usd(debtEquity(d))} equity</b>`}${badge}</span>`;
   }
   return out;
 }
@@ -6281,7 +6294,13 @@ function debtWorth(d){ const v=+((d||{}).worth); return (isFinite(v)&&v>0)?v:0; 
    you sold it today and cleared the loan - positive and the debt is buying you
    something, negative and you would still owe after handing back the keys. */
 function debtEquity(d){ const w=debtWorth(d); return w>0 ? Math.round((w-Math.max(0,+d.balance||0))*100)/100 : null; }
+/* Loan-to-value: what you still OWE as a share of the thing's worth. A real and
+   useful number - it is the one a lender asks about - and the one that must
+   never be printed beside the word "equity" without saying which it is. */
 function debtLTV(d){ const w=debtWorth(d); return w>0 ? Math.round(Math.max(0,+d.balance||0)/w*1000)/10 : null; }
+/* The other half, and the half that belongs next to an equity figure: how much
+   of the thing is actually yours. */
+function debtEquityPct(d){ const l=debtLTV(d); return l==null ? null : Math.round((100-l)*10)/10; }
 function debtUnderwater(d){ const e=debtEquity(d); return e!=null && e<0; }
 function securedDebts(){ return (state.debts||[]).filter(d=>debtWorth(d)>0); }
 function debtLimit(d){ const L=+((d||{}).limit); return (isFinite(L)&&L>0)?L:0; }
@@ -12891,7 +12910,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · the working is actionable';
+const BUILD_STAMP='2026-09-04 · the badge names its own figure';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -18618,7 +18637,7 @@ REPORT_SIGNALS.push(
       const eq=debtEquity(best), ltv=debtLTV(best);
       return { t:`${escapeHtml(best.name)} is buying you something`, standing:true, bad:false,
         body:`You owe <b>${money(best.balance)}</b> against something worth <b>${money(debtWorth(best))}</b>, so <b>${money(eq)}</b> of it is yours. `
-          + `That is the difference between a debt and a liability: this one has an asset on the other side of it${ltv!=null?`, and you are ${ltv}% of the way in`:''}.`,
+          + `That is the difference between a debt and a liability: this one has an asset on the other side of it${ltv!=null?`, and <b>${debtEquityPct(best)}%</b> of it is yours with <b>${ltv}%</b> still owed against it`:''}.`,
         work:`${money(debtWorth(best))} worth − ${money(best.balance)} owed = ${money(eq)} yours`,
         nudge:`What this does <b>not</b> mean is that the debt is free - it still costs ${(+best.apr||0)>0?`<b>${best.apr}%</b> a year`:'whatever its rate is'}, and equity you cannot spend does not pay a bill. `
           + `What it means is that the payoff order on this page is a question about <b>rates</b>, not about which loan feels heaviest. ${voice(RP_TONE.owedDown,null)}` };
