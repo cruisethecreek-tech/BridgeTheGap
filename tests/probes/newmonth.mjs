@@ -65,7 +65,15 @@ const after = await pg.evaluate(async () => {
     ltbClass:(document.querySelector('#summary .stat.ltb')||{className:''}).className,
     canClear:!!document.querySelector('#view-budget [data-carryclear]') };
 });
-ok('carrying it in funds the plan', after.opening===2600 && after.toBudget===2600, JSON.stringify([after.opening,after.toBudget]));
+/* The month's total is no longer "the carried money alone" - it also holds the
+   two paydays still ahead, which is the separate fix that sits beside this one.
+   The property this line is actually about is unchanged: the carry lands as an
+   OPENING of exactly what was carried, and it raises the month by exactly that
+   much and not a cent more. Stated as a delta, so it stops depending on what
+   else the month happens to count. */
+ok('carrying it in funds the plan, by exactly what was carried',
+   after.opening===2600 && Math.abs((after.toBudget-before.toBudget)-2600)<0.005,
+   JSON.stringify([after.opening, before.toBudget, after.toBudget]));
 /* the line that matters: this is money he HAD, not money he earned */
 ok('...without counting as income earned this month', after.income===0 && after.incomeUnmoved===true,
    String(after.income));
@@ -80,8 +88,11 @@ const spare = await pg.evaluate(() => {
   return { ltb:monthToBudget(M)-topCats().reduce((s,c)=>s+catAssigned(c.id,M),0),
            note:(document.getElementById('lifeKeyPlan')||{innerText:''}).innerText.replace(/\s+/g,' ') };
 });
+/* 600 was "2,600 carried less 2,000 assigned" back when nothing else counted.
+   With two paydays ahead the spare is larger, and the point of the check was
+   never the figure - it was that the plan stops being reported as broken. */
 ok('the plan stops reading as minus two thousand dollars',
-   Math.abs(spare.ltb-600)<0.005 && !/-\$2,000/.test(spare.note), String(spare.ltb));
+   spare.ltb>0 && !/-\$2,000/.test(spare.note), String(spare.ltb));
 
 /* ---- 3. clearing it puts the figure back where it was ---- */
 const cleared = await pg.evaluate(async () => {
@@ -89,8 +100,13 @@ const cleared = await pg.evaluate(async () => {
   document.querySelector('[data-carryclear]').click(); await w(500);
   return { opening:openingFor(state.activeMonth), toBudget:monthToBudget(state.activeMonth) };
 });
-ok('clearing it is honest too - the plan goes back to unfunded',
-   cleared.opening===0 && cleared.toBudget===0, JSON.stringify(cleared));
+/* Clearing takes back the carried money and NOTHING else. It used to leave the
+   month at zero because the carry was all the month had; now the paydays still
+   ahead survive it, and they should - saying "that is not my opening balance"
+   is not a statement about whether you get paid on the 4th. */
+ok('clearing it takes back exactly what was carried, and nothing else',
+   cleared.opening===0 && Math.abs((after.toBudget-cleared.toBudget)-2600)<0.005,
+   JSON.stringify({...cleared, wasCarried:after.toBudget}));
 
 /* ---- 4. logging income offers the rule he already set up ---- */
 const rec = await pg.evaluate(async () => {

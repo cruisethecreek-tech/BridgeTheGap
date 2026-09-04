@@ -469,3 +469,84 @@ Worth a minute if you want to see it gone:
 
 If a figure anywhere reads as negative hours - *"-3.4 hrs of your life"* - that
 is this bug still alive somewhere I did not find, and it is worth telling me.
+
+### A monthly plan on weekly pay
+
+Settings shows `2026-09-04 · the month counts the paydays still coming`.
+
+This is the one you reported. **Left to budget** was comparing money that had
+arrived against a plan for the whole month, which for weekly pay reads negative
+for most of the month and only comes true on the last payday.
+
+On **Home**, the note under the cards should now read three parts, not two:
+
+> Already in the account **$2,983.42** + logged this month **$1,230.23** + still
+> due this month **$3,690.69** (3 more paydays on your rules) = **$7,904.34** to
+> budget - assigned **$6,624.21** = **$1,280.13** still waiting for a job.
+
+What to check, and what would be a real report:
+
+- **The payday count is right.** It says how many it is counting. Count your own
+  remaining paydays this month. If it says 3 and you have 2 left, tell me - a
+  plan told it has money that is not coming is the worst failure this could have.
+- **It should not count a payday you never got.** If a paycheck was due on the
+  1st and never landed, the app should NOT quietly assume it. It only counts
+  dates after today.
+- **It should not count one twice.** If you log a paycheck ahead of its date,
+  the total should not jump.
+- **A finished month** should show no "still due" line at all.
+- If you have **no recurring income rules** set up, nothing changes for you -
+  the app will not guess a pay schedule it was never told.
+
+### Net worth on Home
+
+Same build. Your Net worth tile was showing **$507.20** while your bank showed
+**$69,767.88** - Home was leaving the bank out of the sum entirely.
+
+- Open **Home**. Net worth should now be roughly your bank, minus the cards,
+  plus anything you own.
+- Open **Reflect**. The net worth there should be **the same number**. It always
+  used the correct definition, so the two disagreed. If they still disagree, that
+  is a real report.
+
+### Choosing how your month counts money
+
+Settings shows `2026-09-04 · the month counts the paydays still coming` or later.
+
+You asked for this to be your choice rather than mine, and for irregular income
+to be handled honestly. Both are in.
+
+**In Settings**, under the household toggles, there are now two options:
+
+- *Everything I expect this month, including paydays still to come*
+- *Only what I actually hold right now*
+
+The line underneath tells you which is running and **how it got there**. Before
+you pick, it says "Not chosen yet, so this is read from your setup". After you
+pick, it says "Your choice". If it ever says "Your choice" when you never chose,
+that is a real report.
+
+**In the note on Home or Plan**, the other mode is offered in one tap, with the
+amount named - *"Count the $3,690.69 still due this month →"* or *"Only count
+what I actually have →"*. It only appears when the two modes would actually
+print different numbers.
+
+Worth checking:
+
+- **Switch between them and watch the figure.** The difference should be exactly
+  the paydays still ahead, nothing else.
+- **Your choice should stick** through closing and reopening the app, and should
+  not quietly revert.
+- **If you sync with your wife**, this travels with the rest of the settings, so
+  you should both be looking at the same kind of month.
+
+### If your income is irregular
+
+If you have **no repeating income set up** - tips, commission, shifts that vary -
+the app will not guess a pay schedule it was never told. A month counts what you
+carried in plus what actually landed, and when the plan looks short it says so
+in as many words rather than leaving you to wonder what you configured wrong.
+
+Turning on *"everything I expect this month"* in that situation should change
+**nothing at all**, because there is nothing to project. If it changes a figure,
+that is money the app invented and I want to know immediately.

@@ -1283,6 +1283,10 @@
     transition:background .14s ease,color .14s ease}
   .plan-switch .pv:hover{color:var(--text)}
   .plan-switch .pv.on{background:var(--accent);color:var(--on-accent)}
+  .bm-pick{margin-top:12px;padding:11px 12px;background:var(--ink);border:1px solid var(--line);border-radius:11px}
+  .bm-q{font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px}
+  .bm-pick .hh-toggle{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.4;margin:4px 0}
+  .bm-why{margin-top:7px;font-size:12px;line-height:1.5;color:var(--muted)}
   .plan-cols.two{grid-template-columns:minmax(0,1fr) 7em}
   /* Written as .subrow .sub-spent, not .sub-spent, and that is the whole point.
      An older rule up in the subrow block sets this to 12px muted at specificity
@@ -3913,6 +3917,16 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Just my spending</h2>
         <p class="sub" data-say="1">Not the one who pays the bills? Turn this on to drop the Four Walls and zero-based budgeting entirely. The home screen becomes your spending, your streak, and the gut-check - built for tracking your own purchases (Amazon, coffee, the random stuff), not running the household.</p>
         <label class="hh-toggle"><input type="checkbox" id="spendOn"> Focus on just my spending</label>
+        <!-- Two coherent ways to run a zero-based month, and the person picks.
+             Named by what they DO rather than by jargon: "paycheck to paycheck"
+             means different things to different people and half of them hear an
+             insult in it. -->
+        <div class="bm-pick" id="budgetModePick">
+          <div class="bm-q">What should a month count as money to budget?</div>
+          <label class="hh-toggle"><input type="radio" name="budgetMode" value="month"> Everything I expect this month, including paydays still to come</label>
+          <label class="hh-toggle"><input type="radio" name="budgetMode" value="have"> Only what I actually hold right now</label>
+          <div class="bm-why" id="budgetModeWhy"></div>
+        </div>
         <div id="spendFields" style="display:none">
           <div class="row" style="margin-top:14px">
             <div class="ufld"><span class="fl-k">Spending limit (optional)<span id="spendLimitUnit"></span></span>
@@ -4877,6 +4891,7 @@ function normalizeState(s){
     target:num(c.target)}));
   (s.recurring||[]).forEach(r=>{ r.amount=num(r.amount); if(r.hours!=null) r.hours=num(r.hours); });
   (s.timeLog||[]).forEach(e=>{ e.hours=num(e.hours); });
+  if(['month','have'].indexOf(s.budgetMode)<0) s.budgetMode='';   // '' means derive, and a literal because PLAN_VIEWS-style consts do not exist yet at load()
   s.hourlyWage=qty(s.hourlyWage); s.hoursPerWeek=qty(s.hoursPerWeek); s.spendLimit=qty(s.spendLimit);
   s.wageB=qty(s.wageB); s.enough=qty(s.enough); s.givingPct=qty(s.givingPct); s.debtBudget=qty(s.debtBudget);
   return s;
@@ -4978,7 +4993,7 @@ const SYNC_COLLECTIONS=['transactions','categories','accounts','recurring','debt
   'timeLog','timeCats','snapshots','vault','scans'];
 /* Scalars and small objects: merged key by key on the same timestamps, so a
    setting changed on one phone is not undone by an older copy from the other. */
-const SYNC_SETTINGS=['intensity','activeMonth','hourlyWage','register','freedomMode','enough',
+const SYNC_SETTINGS=['intensity','activeMonth','hourlyWage','register','freedomMode','enough','budgetMode',
   'givingPct','uiMode','stageReached','householdOn','nameA','nameB','wageB','spendingMode',
   'spendLimit','trackStart','hoursPerWeek','debtBudget','debtStrategy','roomPay','calConfirm',
   'saveBudget','saveOrder','investReturn','investYears','theme','autoBackup','chatPace',
@@ -5987,6 +6002,26 @@ function renderRewardCalendar(){
     const d=b.dataset.callog;
     openQuickLogFor(d==='today'?null:d);   // no date = today, and today is what the panel already defaults to
   });
+}
+/* Says which mode is running and how it got there. A derived setting that never
+   admits it was derived is indistinguishable from one the person chose, and the
+   two deserve different amounts of trust from whoever is reading. */
+function renderBudgetModeWhy(){
+  /* The radios are repainted here too. The mode can be changed from the note on
+     Home or Plan, and a Settings screen still showing the old choice when you
+     arrive at it is the kind of disagreement that makes a person stop trusting
+     both screens. */
+  document.querySelectorAll('input[name="budgetMode"]').forEach(r=>{ r.checked=(r.value===budgetMode()); });
+  const el=document.getElementById('budgetModeWhy'); if(!el) return;
+  const m=budgetMode(), chosen=budgetModeChosen(), rules=hasIncomeRules();
+  const M=state.activeMonth, ahead=(typeof incomeDueRest==='function')?incomeDueRest(M):{total:0,hits:0};
+  el.innerHTML = chosen
+    ? (m==='month'
+        ? `Your choice. A month counts the paydays still to come${ahead.total>0?` - <b>${money(ahead.total)}</b> of it still to come in ${fmtMonthShort(M)}`:''}.`
+        : `Your choice. Nothing is counted until it lands, whatever your rules say is coming.`)
+    : (rules
+        ? `Not chosen yet, so this is read from your setup: you have repeating income, so a month counts what it says is still due. Pick either one above and it stops being read and starts being your answer.`
+        : `Not chosen yet, so this is read from your setup: nothing repeating is set up, so there is nothing to count ahead and a month counts only what you hold. That is the honest answer for tips, commission or hours that vary.`);
 }
 function applySpending(){
   const on=!!state.spendingMode;
@@ -12949,7 +12984,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · no quantity goes below zero';
+const BUILD_STAMP='2026-09-04 · the month counts the paydays still coming';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -13095,6 +13130,21 @@ async function refreshSyncState(){
   if(nb) nb.addEventListener('input',()=>{ state.nameB=nb.value.trim()||'Partner'; save(); renderHouseholdLabels(); renderHousehold(); });
   if(wb) wb.addEventListener('input',()=>{ state.wageB=Math.max(0, parseFloat(wb.value)||0); save(); renderHousehold(); });
   // "Just my spending" controls
+  /* The radios show the EFFECTIVE mode, not the stored one, so an unchosen
+     state does not render as two empty circles that answer nothing. The line
+     underneath is where the difference is admitted: derived, or picked. */
+  document.querySelectorAll('input[name="budgetMode"]').forEach(r=>{
+    r.checked = (r.value===budgetMode());
+    r.addEventListener('change',()=>{ if(r.checked) setBudgetMode(r.value); });
+  });
+  /* No renderBudgetModeWhy() here, and that omission is the whole lesson. This
+     block runs at SETUP, and the line it draws reads incomeDueRest, which walks
+     recOccurrences, which reads the REC_FREQS const declared thousands of lines
+     further down - so drawing it here threw "Cannot access 'REC_FREQS' before
+     initialization" and took the rest of the script with it. The temporal dead
+     zone, for the third time in this file, and the first two are written up in
+     comments I had already read. Wiring wires; drawing belongs in a render
+     pass, where everything the file declares exists. */
   const sp=document.getElementById('spendOn');
   if(sp) sp.addEventListener('change',()=>{
     state.spendingMode=sp.checked;
@@ -15173,6 +15223,7 @@ function renderAll(){
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
   renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons(); renderReflectTab(); renderTripwires();
+  renderBudgetModeWhy();   // draws here, not at wire time - see the note where it is wired
   renderAreaToggles(); applyAreaVisibility();   // a sync pull can change which areas this person wants
   applyPanelGates();   // panels with nothing to show fold away, and say what brings them back
   ensureDay1();   // renderHome already ends with applyStage - no second pass
@@ -21005,6 +21056,7 @@ function boot(){
   wireHpw();
   renderFreedomToggle(); renderTrSettings(); wireHpw(); fillTrapPickers();
   renderBackupNote(); renderAutoBackup();
+  renderBudgetModeWhy();   // boot paints it too: renderAll is not called at first paint
   renderAreaToggles(); applyAreaVisibility();   // the areas this person chose to keep
   // Progressive interface: never strip a tool an existing user already engaged with.
   state.stageReached=Math.max(state.stageReached||1, runwayStage(), evidenceStage());
@@ -21114,7 +21166,108 @@ function renderDataGuard(){
    not money you earned this month: it funds the plan, and it must never touch
    the keep rate, the year projection, or anything that measures earning. */
 function openingFor(M){ const v=+((state.opening||{})[M]); return (isFinite(v)&&v>0)?Math.round(v*100)/100:0; }
-function monthToBudget(M){ return Math.round((monthIncome(M)+openingFor(M))*100)/100; }
+/* ---------- income that has not landed yet, but is going to ----------
+   Reported by somebody paid WEEKLY, on the 4th of the month: "why am I getting
+   penalized for a month's budget when I'm only getting paid weekly?"
+
+   Exactly right, and the app was doing something incoherent. It took the
+   numerator from one philosophy and the denominator from another: money that
+   has ACTUALLY ARRIVED, set against a plan for a WHOLE MONTH. For anyone not
+   paid monthly in advance that reads negative for most of the month and only
+   comes true on the last payday - so the plan gets called broken twenty-odd
+   days out of thirty, for being a monthly plan.
+
+   The figures were never wrong. $4,213.65 really had arrived and $6,624.21
+   really was assigned. It is the sentence they sat in that was false: "You've
+   planned for more than is behind it" is not true when three more paydays fall
+   before the month ends. Same shape as an equity figure captioned with the
+   loan's percentage - a true number making a false claim by where it was put.
+
+   The app already knew the answer. Income rules carry an amount and a
+   frequency, and recOccurrences() dates every firing in a month. It simply was
+   never asked.
+
+   Two things this deliberately will NOT do. It does not count an occurrence
+   dated today or earlier: money due on the 1st that was never logged is a
+   question for the person, not an assumption for the app, and there is a
+   "post what is due" action for exactly that. And it does not count an
+   occurrence whose money is already logged against the same source on the same
+   day, which is what would otherwise turn one paycheck into two. Erring short
+   is the only safe direction here: a plan told it has money it will not get is
+   worse than a plan told to wait. */
+function incomeDueRest(M){
+  const today=todayStr();
+  const logged=new Set(txnsInMonth(M).filter(t=>t.type==='income')
+    .map(t=>`${t.date}|${String(t.source||'').trim().toLowerCase()}`));
+  let total=0, hits=0;
+  (state.recurring||[]).filter(r=>r.type==='income' && +r.amount>0).forEach(r=>{
+    const src=String(r.source||'').trim().toLowerCase();
+    (recOccurrences(r,M)||[]).forEach(d=>{
+      if(d<=today) return;                       // already happened, or is happening now
+      if(logged.has(`${d}|${src}`)) return;      // this one is already in the book
+      total+=+r.amount; hits++;
+    });
+  });
+  return {total:Math.round(total*100)/100, hits};
+}
+/* ---------- which of the two budgets a person is actually running ----------
+   Counting the paydays still ahead fixed the reported case and was immediately
+   answered with the better point: "I think that should be the choice of the
+   user. It should be either or depending on their choice. Some users get paid
+   by irregular income, such as tips or commission as well."
+
+   Both halves of that are right, and the second is the sharper one. Projecting
+   from repeating rules is only honest when repeating rules describe the money.
+   For tips, commission, shifts that vary or work that arrives when it arrives,
+   there is nothing to project FROM, and an app that guessed anyway would be
+   telling somebody they had money that may never come - the one failure this
+   whole area has been trying to avoid.
+
+   So there are two modes and the person owns the choice:
+
+     'month' - plan the whole month. What was carried in, what has landed, and
+               what your own repeating income says is still due before the month
+               is out. The right shape for regular pay.
+     'have'  - only what you actually hold. Carried in plus landed, nothing
+               projected. The right shape for irregular income, and for anyone
+               who would rather a plan never promise what has not arrived.
+
+   Unset derives rather than defaults, because a default is a guess made once
+   and a derivation can be shown: somebody with repeating income set up gets
+   'month', somebody without gets 'have', and the note says which it is doing
+   and offers the other in one tap. The moment a person chooses, the choice is
+   stored and nothing overrides it - including this derivation, which is why it
+   tests for the stored string rather than for truthiness. */
+/* A FUNCTION, not `const BUDGET_MODES=[...]`, and that is not a style choice.
+   The const version threw "Cannot access 'BUDGET_MODES' before initialization"
+   on the first render: monthToBudget() runs while the page is still being set
+   up, long before a const declared this far down the file exists. That is the
+   temporal dead zone, it has emptied this app twice before (syncInvestAsset
+   reaching for uid, normalizeState reaching for PLAN_VIEWS), and both of those
+   are commented in this file as lessons - which did not stop me writing it a
+   third time. Function declarations hoist; consts do not. */
+function isBudgetMode(m){ return m==='month' || m==='have'; }
+function hasIncomeRules(){
+  return (state.recurring||[]).some(r=>r.type==='income' && +r.amount>0);
+}
+function budgetMode(){
+  return isBudgetMode(state.budgetMode) ? state.budgetMode
+       : (hasIncomeRules() ? 'month' : 'have');
+}
+function budgetModeChosen(){ return isBudgetMode(state.budgetMode); }
+function setBudgetMode(m){
+  if(!isBudgetMode(m)) return;
+  state.budgetMode=m; save();
+  if(typeof renderAll==='function') renderAll();
+}
+/* What a month has to work with. In 'have' mode that is what was carried in and
+   what has landed, full stop - the projection is not merely hidden, it is not
+   counted, or the figure and the explanation underneath it would disagree. */
+function monthToBudget(M){
+  const base=monthIncome(M)+openingFor(M);
+  const ahead=budgetMode()==='month' ? incomeDueRest(M).total : 0;
+  return Math.round((base+ahead)*100)/100;
+}
 /* What the app would suggest carrying in: what is in the account now, less what
    has already been logged as arriving this month, so the two cannot double up. */
 function openingSuggestion(M){
@@ -21266,8 +21419,36 @@ function ltbNoteHTML(income,assigned,ltb,M){
   /* Never one figure standing for two. When money was carried in, the note
      names both halves and adds them on screen - the same rule the invest panel
      learned: a total that will not show its parts is asking to be trusted. */
-  const src = opening>0
-    ? `Already in the account <b>${money(opening)}</b> + logged this month <b>${money(earned)}</b> = <b>${money(income)}</b> to budget`
+  /* Three parts now, not two, and the third is the one the reader is most
+     likely to doubt - so it says how many paydays it is counting rather than
+     handing over a total and asking to be believed. */
+  const mode=budgetMode();
+  const dueAll=incomeDueRest(M);
+  /* Only counted when the mode counts it. Read regardless, because 'have' mode
+     still needs to know what it is declining to count in order to offer it. */
+  const due = mode==='month' ? dueAll : {total:0, hits:0};
+  const dueBit = due.total>0
+    ? ` + still due this month <b>${money(due.total)}</b> <span class="ltb-src">(${due.hits} more ${due.hits===1?'payday':'paydays'} on your rules)</span>`
+    : '';
+  /* The switch lives in the note, where the number being explained is, rather
+     than only in Settings - the same reasoning as the carry-in button. It is
+     only offered when it would change something: there is nothing to decide
+     between two modes that would print the same figure. */
+  const swap = dueAll.total>0
+    ? (mode==='month'
+        ? `<button class="btn sm ghost" data-budgetmode="have">Only count what I actually have →</button>`
+        : `<button class="btn sm ghost" data-budgetmode="month">Count the ${money(dueAll.total)} still due this month →</button>`)
+    : '';
+  /* Irregular income is not a broken version of regular income, and saying
+     nothing here would leave somebody on tips wondering what they set up wrong.
+     Shown only where it is load-bearing: the plan looks short, and there are no
+     rules that could ever fill the gap. */
+  const irregular = (!hasIncomeRules() && assigned>0 && ltb<-0.005)
+    ? ` <span class="ltb-src">Nothing repeating is set up, so there is nothing to count ahead - which is the honest answer if your income is tips, commission or shifts that vary. This plan counts what you actually hold.</span>`
+    : '';
+  const src = (opening>0 || due.total>0)
+    ? `${opening>0?`Already in the account <b>${money(opening)}</b> + logged this month <b>${money(earned)}</b>`
+                 :`Logged this month <b>${money(earned)}</b>`}${dueBit} = <b>${money(income)}</b> to budget`
     : `Income logged <b>${money(income)}</b>`;
   /* One button that committed bankTotal() was an all-or-nothing offer, and for
      anybody with savings in the app the only usable answer was no. It opens the
@@ -21277,16 +21458,51 @@ function ltbNoteHTML(income,assigned,ltb,M){
     ? `<button class="btn sm primary" data-carryin="${M}">${carrySome>0?`Use the ${money(carrySome)} I already have →`:'Carry in money I already have →'}</button><div data-carrywrap="${M}"></div>` : '';
   const clearBtn = opening>0
     ? `<button class="btn sm ghost" data-carryclear="${M}">That is not right - clear it</button>` : '';
+  /* Money that is genuinely IN HAND, which is not the same as the month's total
+     now that the total counts paydays still to come. Counting expected income
+     fixed one report and immediately created another: on the 1st, with $2,600
+     of last month's wages sitting in the account and two paydays ahead, Left to
+     budget went positive on the strength of money that had not arrived - so the
+     offer to put the $2,600 to work vanished, and the note cheerfully said
+     "$953.84 still waiting for a job" while $2,600 sat outside the plan
+     entirely. That is the same incoherence the projection was meant to end,
+     pointing the other way.
+
+     So the branch that says "nothing is funding it yet" asks about money in
+     hand, because a projection funds nothing today, and the carry-in offer is
+     no longer tied to the plan looking short. Real money sitting outside the
+     plan is worth naming whether or not the plan currently balances. */
+  const inHand = opening + earned;
+  const sitting = openingSuggestion(M);
   /* The reported case: a month that opens before payday, with last month's
      wages sitting in the account and the rent due on the 3rd. */
-  if(income<=0 && assigned>0) return `<div class="ltb-note">You've given <b>${money(assigned)}</b> a job but nothing is funding it yet, so it reads as <b>${money(ltb)}</b> left to budget. Nothing is overspent - the plan just doesn't have money behind it yet.${
-    openingSuggestion(M)>0 ? ` You do have <b>${money(openingSuggestion(M))}</b> sitting in your account from before this month started, and a plan is allowed to be funded by money you already have.` : ''
-  }${carryBtn}${trailBtn('income','Log my paycheck')}</div>`;
-  if(ltb<-0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than is behind it. That's not overspending - it's a plan that needs either more money accounted for or a category trimmed.${carryBtn}${clearBtn}${trailBtn('income','Log more income')}${trailBtn('plan','Trim a category')}</div>`;
-  if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every dollar has a job. That's zero-based, done right.${opening>0?` <span class="ltb-src">${src}.</span>`:''}${clearBtn}</div>`;
-  if(ltb>0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.${trailBtn('assign','Give it a job')}${clearBtn}</div>`;
+  if(inHand<=0 && assigned>0) return `<div class="ltb-note">You've given <b>${money(assigned)}</b> a job and nothing has funded it yet${
+    due.total>0 ? `, though <b>${money(due.total)}</b> is due before the month is out (${due.hits} more ${due.hits===1?'payday':'paydays'} on your rules)` : ''
+  }. Nothing is overspent - the plan just doesn't have money behind it yet.${
+    sitting>0 ? ` You do have <b>${money(sitting)}</b> sitting in your account from before this month started, and a plan is allowed to be funded by money you already have.` : ''
+  }${irregular}${carryBtn}${swap}${trailBtn('income','Log my paycheck')}</div>`;
+  if(ltb<-0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than is behind it. That's not overspending - it's a plan that needs either more money accounted for or a category trimmed.${irregular}${carryBtn}${swap}${clearBtn}${trailBtn('income','Log more income')}${trailBtn('plan','Trim a category')}</div>`;
+  /* The tail of every remaining branch. Money in the account that the plan has
+     never been told about is worth saying out loud even when the plan balances,
+     because "every dollar has a job" is false while that money exists. */
+  const sittingNote = (sitting>0 && opening<=0)
+    ? ` <span class="ltb-src">There is also <b>${money(sitting)}</b> in your account this plan has not been told about.</span>` : '';
+  if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every dollar has a job. That's zero-based, done right.${opening>0?` <span class="ltb-src">${src}.</span>`:''}${sittingNote}${carryBtn}${swap}${clearBtn}</div>`;
+  if(ltb>0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.${sittingNote}${trailBtn('assign','Give it a job')}${carryBtn}${swap}${clearBtn}</div>`;
   return '';
 }
+/* Delegated, because this button is drawn inside a note that Home and Plan both
+   render - the same reason the carry-in handler is delegated rather than wired
+   per render. Binding it at draw time would give whichever screen rendered last
+   the only working copy, which is a fault this file has already shipped twice. */
+document.addEventListener('click',e=>{
+  const bm=e.target.closest('[data-budgetmode]');
+  if(bm){ setBudgetMode(bm.dataset.budgetmode);
+    if(typeof toast==='function') toast(budgetMode()==='month'
+      ? 'Counting the paydays still due this month.'
+      : 'Counting only money you actually hold.');
+    return; }
+});
 /* One handler for both buttons, anywhere they are drawn. */
 document.addEventListener('click',e=>{
   const c=e.target.closest('[data-carryin]');
@@ -21351,7 +21567,17 @@ function renderHome(){
   // disagreed about the same month.
   const income=monthToBudget(M), assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
   const ltb=income-assigned, spent=monthExpense(M);
-  const nw=sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab();
+  /* This read sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab() and left
+     bankTotal() out, so a person with $69,767.88 in the bank was shown a "Net
+     worth" of $507.20 - the invest asset on its own. The app has exactly one
+     definition of the phrase, netWorth(), and every other surface uses it: the
+     Reflect tab, the snapshot history, the retro chart. Home disagreed with all
+     of them about the same moment, under the same word.
+
+     Fourth time this class has come up here - a partial figure wearing a whole
+     figure's name. It is not an arithmetic slip, which is why arithmetic checks
+     kept passing: the sum was correct, and the LABEL was the lie. */
+  const nw=netWorth();
   const ltbCls = income&&Math.abs(ltb)<0.005 ? 'good' : (ltb<0?'bad':'pos');
   const snap=document.getElementById('homeSnap'); if(!snap) return;
   // the growth lane belongs on the dashboard too - otherwise money moves and the

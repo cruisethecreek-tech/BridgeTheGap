@@ -9412,6 +9412,56 @@ check('underwater is the one case the loan-to-value is the story, and it says so
 check('no percentage badge leaves you to guess what it is a share of',
       eqPair.vague.length===0, eqPair.vague.slice(0,3).join(' | '));
 
+/* ---- 113. a figure called "net worth" is the net worth ----------------------
+   Home's tile computed sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab()
+   and left bankTotal() out, so $69,767.88 in the bank simply was not in it and
+   the tile read $507.20. Every other surface calls netWorth(), so Home
+   disagreed with the Reflect tab, the snapshot history and the retro chart
+   about the same moment, under the same word.
+
+   Fourth time this class has come up: a partial figure wearing a whole figure's
+   name. Arithmetic checks pass straight through it every time, because the sum
+   is right and the LABEL is what is false - so this is a pairing check, like
+   112, and it is deliberately GENERAL. It walks every tab and holds any short
+   piece of text that says "net worth" and shows one dollar figure to the app's
+   own single definition of the phrase. A fifth surface getting this wrong
+   fails here without anybody having to think of it first. */
+await seed({...FULL, activeMonth:CLOCK_M,
+  accounts:[{id:'a1',name:'Checking',kind:'checking',balance:69767.88,updated:CLOCK_M+'-01'},
+            {id:'c1',name:'Visa',kind:'credit',balance:-2148.94,limit:9000,updated:CLOCK_M+'-01'}],
+  assets:[{id:'as1',name:'Brokerage',value:507.20,kind:'real'}],
+  liabilities:[], debts:[]});
+await p.reload(); await p.waitForTimeout(900);
+const nwPair = await p.evaluate(async (VIEWS) => {
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const o={ truth:Math.round(netWorth()*100)/100, bank:Math.round(bankTotal()*100)/100, bad:[] };
+  const money=t=>{ const m=String(t).match(/\$-?[\d,]+(?:\.\d\d)?/g)||[]; return m; };
+  for(const v of VIEWS){
+    try{ activateTab(v); }catch(e){ continue; }
+    await w(180);
+    const root=document.getElementById('view-'+v); if(!root) continue;
+    for(const el of root.querySelectorAll('*')){
+      if(el.children.length>3) continue;                 // containers repeat their kids' text
+      const t=(el.innerText||'').replace(/\s+/g,' ').trim();
+      if(!/net worth/i.test(t)) continue;
+      if(t.length>90) continue;                          // prose, not a labelled figure
+      const figs=[...new Set(money(t))];
+      if(figs.length!==1) continue;                      // nothing to pair, or ambiguous
+      const n=Math.round(parseFloat(figs[0].replace(/[$,]/g,''))*100)/100;
+      if(Math.abs(n-o.truth)>0.02) o.bad.push(`${v}: "${t.slice(0,60)}" is ${n}, net worth is ${o.truth}`);
+    }
+  }
+  o.homeTile=(()=>{ const x=[...document.querySelectorAll('#homeSnap *')]
+      .map(e=>(e.innerText||'').replace(/\s+/g,' ').trim())
+      .find(t=>/^Net worth/i.test(t)); return x||''; })();
+  return o;
+}, VIEWS);
+check('the bank is part of net worth, which is the whole reason the tile was wrong',
+      Math.abs(nwPair.truth-(69767.88-2148.94+507.20))<0.02,
+      `${nwPair.truth} with ${nwPair.bank} in the bank`);
+check('...and no figure anywhere called net worth is a different number',
+      nwPair.bad.length===0, nwPair.bad.slice(0,3).join(' | '));
+
 console.log('STRUCTURE - one place to reflect, and nothing shown before it means something\n');
 let fails=0;
 for(const r of results){ if(!r.ok) fails++; console.log(`${r.ok?'ok  ':'FAIL'}  ${r.name}${r.detail?'\n        '+String(r.detail).replace(/\n/g,' ').slice(0,140):''}`); }

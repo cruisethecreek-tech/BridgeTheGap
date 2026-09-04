@@ -1851,3 +1851,51 @@ strips block and HTML comments before scanning. Line comments are left in on
 purpose - stripping `//` to end-of-line would eat the rest of any line
 containing `https://`, which is exactly where a real payment script would hide.
 
+
+
+## A fix that re-made the bug it was fixing, pointing the other way
+
+Reported on the 4th, paid weekly: *"why am I getting penalized for a month's
+budget when I'm only getting paid weekly??"* The app was comparing money that
+had **arrived** against a plan for a **whole month** - the numerator from
+paycheck-to-paycheck budgeting and the denominator from monthly budgeting - so a
+monthly plan read broken for twenty-odd days out of thirty. The fix was to count
+the paydays still ahead, which the recurring rules already knew about.
+
+The gate refused it. Not on the new probe, which passed 12 of 12, but on
+`newmonth` - the probe written months earlier for a *different* report about the
+bank balance not carrying over. With income now projected, Left to budget went
+positive, and the offer to carry in money already sitting in the account is
+drawn only when the plan looks short. So on the 1st, with **$2,600** of last
+month's wages in the account and two paydays ahead, the note said *"$953.84
+still waiting for a job"* while $2,600 sat outside the plan and went unmentioned.
+
+That is the same incoherence the fix was written to end, aimed the other way:
+the plan was now being told it had spare capacity on the strength of money that
+had not arrived, while ignoring money that had. **A regression suite earns its
+keep on the day a good change breaks an old promise**, and this is that day -
+nothing in the new work would have caught it, because the new work was not
+wrong about anything it was thinking about.
+
+The correction is that *"nothing is funding it yet"* asks about money **in
+hand**, since a projection funds nothing today, and the carry-in offer is no
+longer conditional on the plan looking short. Real money outside the plan is
+worth naming whether or not the plan balances - "every dollar has a job" is
+false while it exists.
+
+### Three assertions that had to change, and how to tell that from cheating
+
+Changing a test because it failed is how a suite stops meaning anything, so the
+distinction matters. Each of these had encoded a **figure** that was only
+correct while the carry was the only thing the month counted, in place of the
+**property** it was actually there to defend:
+
+| Was | Now | Why it is the same claim |
+|---|---|---|
+| `toBudget === 2600` | carrying raises the month by **exactly 2600** | The check was always about the delta; the absolute total only equalled it by accident of the fixture. |
+| `ltb === 600` | `ltb > 0` | 600 was "2,600 carried less 2,000 assigned". The point was never the figure - it was that the plan stops being reported as broken. |
+| clearing leaves `toBudget === 0` | clearing takes back **exactly 2600 and nothing else** | Saying "that is not my opening balance" is not a statement about whether you get paid on the 4th. |
+
+The test to apply: could the rewritten assertion still fail? All three can, and
+all three would have caught the original bug. An assertion loosened until it
+cannot fail is the second entry in this file's list of ways to fake coverage.
