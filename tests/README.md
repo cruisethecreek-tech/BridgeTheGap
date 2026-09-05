@@ -2047,3 +2047,36 @@ Budget shows 28 figures and Home 23, and both were left alone. Those are the
 category rows and the dashboard tiles - the content the person came for. **A
 density check that does not distinguish content from decoration will happily
 recommend deleting the product.**
+
+## Testing something the network cannot reach
+
+`vault.mjs` covers Realtime and vault history, and this machine cannot open a
+socket to `*.supabase.co` at all. The choice was between testing the logic
+against a stand-in and testing nothing, so the stand-in is a fake Supabase
+client - and it is written to be **hostile rather than convenient**, because a
+mock that only does the happy path proves the happy path and nothing else.
+
+It can refuse an insert (the `vault_versions` table not created), report
+`CHANNEL_ERROR` on subscribe (Realtime never enabled on the table - one line of
+SQL a household may simply not have run), and impersonate an SDK old enough to
+have no `channel()` method at all. Each of those is a state a real household
+will meet, and the property under test is the same in all three: **the sync is
+still working afterwards.** Falling back is the feature; the socket is the
+optimisation.
+
+The two checks worth naming:
+
+- **A missing history table cannot stop a budget from syncing.** Filing a
+  version is wrapped so it fails in silence. A backup feature that can prevent
+  saving is worse than no backup feature, and that is only true if something
+  enforces it.
+- **What gets filed is ciphertext.** The probe reads the rows the fake server
+  received and asserts no category name appears in them, and that the envelope
+  says `AES-GCM`. That is the promise the whole design rests on, so it is
+  checked against what the server actually receives rather than against the
+  function that was supposed to encrypt it.
+
+**What this does NOT prove**, and the honest limit of a stand-in: that the real
+project accepts these calls, that the RLS policies are right, or that two phones
+reconcile. A mock tests the client's half of a conversation. The other half is a
+two-device job and is written up in USER-TESTING.md rather than quietly assumed.

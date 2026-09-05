@@ -617,3 +617,47 @@ I did not fold **Budget** or **Home**. Those numbers are your categories and you
 dashboard - the things you opened the app to see. If they still feel like too
 much, tell me, because that is a different problem from this one and needs a
 different answer than hiding them.
+
+### Sync that arrives on its own, and can be rewound
+
+Settings shows `2026-09-05 · sync arrives on its own, and can be rewound`.
+
+**First, run the SQL.** `docs/Supabase.md` has it. Three blocks: the vault table
+(you probably have it), one line to turn on instant updates, and the version
+history table plus a prune trigger.
+
+Then, with both phones signed in:
+
+- **Settings → Household.** The panel now says which way changes reach you.
+  "The moment they make them" means the socket is up. "Every 15 seconds" means
+  the Realtime SQL has not been run - which is fine, nothing is missed, it is
+  just slower.
+- **Change a category on one phone and watch the other.** With Realtime on it
+  should land in about a second, without touching anything. If it takes 15
+  seconds, the panel is telling you the truth and the SQL is the fix.
+- **Turn the wifi off on one phone, change something, turn it back on.** It
+  should catch up. This is the case the slow poll exists for.
+
+**Version history** is under the same panel: *Show earlier versions of the
+vault*. Every time your budget goes up, a copy is filed - encrypted the same
+way, so it is only readable on a device with your passphrase.
+
+- **Put one back.** It replaces what is on the phone now, and files the current
+  version first, so you can undo the undo.
+- Worth doing once deliberately, on a quiet evening, so you know it works before
+  you ever need it in anger.
+
+If the version list says "No earlier versions filed yet" and you have synced
+several times, the `vault_versions` table has not been created. Nothing is
+broken - filing a version is designed to fail silently rather than stop your
+budget syncing.
+
+### What still needs your eyes and cannot get mine
+
+The network here cannot reach Supabase at all, so none of the above has ever
+run against your real project. The tests drive a stand-in. Two things only you
+can check:
+
+1. **The round trip between two real phones.** Still the oldest open item.
+2. **Your RLS policies.** Confirm a signed-in user can read only their own rows.
+   The dashboard Logs will show what the policies actually decided.
