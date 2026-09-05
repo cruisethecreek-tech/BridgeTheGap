@@ -29,52 +29,63 @@ const look=async(view,openFirst=true)=>pg.evaluate(async([v,openFirst])=>{
   const subs=[...root.querySelectorAll('.panel .sub, .acc-body .sub')];
   return {
     total:subs.length,
+    hidden:subs.filter(x=>x.classList.contains('say-hid')).length,
+    whys:root.querySelectorAll('.say-why').length,
+    /* the pattern that was removed, watched so it cannot return by any route */
     clamped:subs.filter(x=>x.classList.contains('clampable')).length,
     mores:root.querySelectorAll('.sub-more').length,
-    /* the whole point: no word is lost */
-    fullTextKept:subs.every(x=>!x.classList.contains('clampable') || x.innerText.length>60),
-    tallest:Math.max(0,...subs.filter(x=>x.classList.contains('clampable')).map(x=>Math.round(x.getBoundingClientRect().height))),
+    /* the whole point, and it survives the change of mechanism: no word is lost.
+       textContent rather than innerText, because hidden is precisely the state
+       being checked and innerText would report every one of them as empty. */
+    fullTextKept:subs.every(x=>!x.classList.contains('say-hid') || (x.textContent||'').trim().length>40),
     rule:!!root.querySelector('.panel>h2')
   };
 }, [view,openFirst]);
 
-/* Home used to be the best example of a screen full of long intros. It is not
-   any more, on purpose: everything that was not "where do I stand" or "what do I
-   do next" moved into the More card. So Brief gets measured where long intros
-   still live. Home gets checked for the opposite now. */
+/* This probe was written when Brief CLIPPED - two lines and a More under each
+   intro - and every check below asserted that. It was rewritten, not deleted,
+   when the report came in: "No it didn't give the acorns treatment I requested."
+   The reader was in Brief, and Brief was the one mode that never used the
+   explainer cards, so nothing built for them had ever reached that reader.
+
+   The subject of the probe is unchanged - what does Brief do with a long intro -
+   and the answer is now "hides it and offers a card", which is what Clean does.
+   The property that mattered under the old mechanism still matters under the
+   new one and is still checked: not one word is thrown away to get the screen
+   short. */
 const home=await look('home', false);
-ok('Home has no wall of intros left for Brief to clip', home.clamped===0, JSON.stringify(home));
+ok('Home has no wall of intros left in the first place', home.clamped===0, JSON.stringify(home));
 const trk=await look('tx');
-ok('long intros are clamped where they still live', trk.clamped>0, JSON.stringify(trk));
-ok('...and each clamped one gets exactly one More', trk.mores===trk.clamped, JSON.stringify(trk));
-ok('...clipped to about two lines, not eight', trk.tallest>0 && trk.tallest<=46, String(trk.tallest));
-ok('...with every word still in the DOM and readable', trk.fullTextKept===true);
+ok('long intros are hidden where they still live', trk.hidden>0, JSON.stringify(trk));
+ok('...and the clip-and-More pattern is gone', trk.clamped===0 && trk.mores===0, JSON.stringify(trk));
+ok('...replaced by the card Clean has always used', trk.whys>0, JSON.stringify(trk));
+ok('...with every word still in the DOM and one tap from being read', trk.fullTextKept===true);
 
 const goals=await look('goals');
-ok('the accounts panel is clamped too', goals.clamped>0, JSON.stringify(goals));
+ok('the accounts panel gets the same treatment', goals.hidden>0 && goals.clamped===0, JSON.stringify(goals));
 
-/* nothing that is already short grows a pointless More */
-const shortOnes=await pg.evaluate(()=>{
-  const subs=[...document.querySelectorAll('#view-goals .panel .sub, #view-goals .acc-body .sub')];
-  return subs.filter(x=>x.dataset.noclamp==='1').every(x=>!(x.nextElementSibling&&x.nextElementSibling.classList.contains('sub-more')));
-});
-ok('a short intro never grows a More that reveals nothing', shortOnes===true);
-
-/* More opens it, and says so */
+/* The card opens, and hands the page back afterwards. Under the old mechanism
+   this measured a paragraph growing taller in place - which is the thing the
+   reporter objected to, because it moves everything below it. */
 const opened=await pg.evaluate(async()=>{
   const w=ms=>new Promise(r=>setTimeout(r,ms));
-  const btn=document.querySelector('#view-goals .sub-more'); if(!btn) return null;
-  const el=btn.previousElementSibling;
-  const before=Math.round(el.getBoundingClientRect().height);
-  btn.click(); await w(120);
-  const after=Math.round(el.getBoundingClientRect().height);
-  const label=btn.textContent, aria=btn.getAttribute('aria-expanded');
-  btn.click(); await w(120);
-  return {before, after, label, aria, backTo:Math.round(el.getBoundingClientRect().height), backLabel:btn.textContent};
+  const btn=document.querySelector('#view-goals .say-why') || document.querySelector('#view-tx .say-why');
+  if(!btn) return null;
+  const view=btn.closest('.view');
+  const before=Math.round(view.scrollHeight);
+  btn.click(); await w(320);
+  const sheet=document.getElementById('saySheet');
+  const words=((document.getElementById('sayBody')||{innerText:''}).innerText||'')
+    .trim().split(/\s+/).filter(Boolean).length;
+  const on=sheet.classList.contains('on');
+  dismissOverlay(); await w(280);
+  return {before, after:Math.round(view.scrollHeight), on, words,
+          off:!sheet.classList.contains('on')};
 });
-ok('More opens that one paragraph', opened && opened.after>opened.before, JSON.stringify(opened));
-ok('...and says Less once it is open', opened.label==='Less' && opened.aria==='true');
-ok('...and closes again', opened.backTo===opened.before && opened.backLabel==='More');
+ok('the card opens with the words in it', opened && opened.on===true && opened.words>=8, JSON.stringify(opened));
+ok('...and closes again', opened && opened.off===true, JSON.stringify(opened));
+ok('...without the page under it changing height, which clipping could never do',
+   opened && opened.after===opened.before, JSON.stringify(opened));
 
 /* a heading you can find */
 const rule=await pg.evaluate(()=>{
@@ -98,14 +109,22 @@ const full=await pg.evaluate(async()=>{
 });
 ok('Full mode un-clips everything', full.clamped===0 && full.brief===false, JSON.stringify(full));
 ok('...and the choice is remembered', full.stored==='full');
+/* Leaving Full has to put the cards BACK. This asked whether it clamped again;
+   the same round trip, asked of the mechanism that replaced clamping. It is the
+   check that would catch a one-way door - a reader who tried Full and could
+   never get the short screen back. */
 const backBrief=await pg.evaluate(async()=>{
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('settings'); await w(350);
   document.querySelector('#sayMode button[data-say="brief"]').click(); await w(300);
   activateTab('goals'); deckShow('goals','Accounts'); await w(500);
-  return document.querySelectorAll('#view-goals .sub.clampable').length;
+  const root=document.getElementById('view-goals');
+  return { hidden:root.querySelectorAll('.sub.say-hid').length,
+           whys:root.querySelectorAll('.say-why').length,
+           clamped:root.querySelectorAll('.sub.clampable').length };
 });
-ok('...and switching back clamps again', backBrief>0, String(backBrief));
+ok('...and switching back hides them again, with the cards restored',
+   backBrief.hidden>0 && backBrief.whys>0 && backBrief.clamped===0, JSON.stringify(backBrief));
 /* Brief is no longer the default - Clean is, and Brief is the middle setting.
    The old assertion was true and is now false: a fact about the app, not a
    check that needed loosening. */

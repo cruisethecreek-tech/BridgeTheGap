@@ -71,6 +71,33 @@ const o=await p.evaluate(async(VIEWS)=>{
       .trim().split(/\s+/).filter(Boolean).length;
     out.ariaNamed=(btn.getAttribute('aria-label')||'');
   }
+  /* The control this whole idea rests on was 19px square - half the app's own
+     pills, a third of its nav tabs - and nobody measured it until somebody
+     reported the feature missing. The ring stays small so it does not shout
+     beside a heading; the TARGET is widened with a transparent pseudo-element,
+     so the box still reports 22px and only elementFromPoint can tell you the
+     truth about what a thumb will hit. */
+  /* Close the sheet first. The check above leaves it open, and elementFromPoint
+     answers about whatever is actually on top - so the hit test came back
+     "0px from centre" while reporting nothing about the button at all. A probe
+     that measures the overlay and blames the control is worse than no probe. */
+  dismissOverlay(); await w(350);
+  const btn2=document.querySelector('#view-home .say-why')||document.querySelector('.say-why');
+  if(btn2){
+    /* Into view before asking. elementFromPoint works in VIEWPORT coordinates,
+       so a control below the fold returns whatever happens to be at those
+       coordinates on screen - which reads exactly like a control nobody can
+       hit. Two different failures, one number, and only one of them is real. */
+    btn2.scrollIntoView({block:'center'}); await w(400);
+    const r=btn2.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+    out.inView = r.top>=0 && r.bottom<=window.innerHeight;
+    let reach=0;
+    for(let d=0; d<=26; d+=2){
+      const el=document.elementFromPoint(cx+d, cy);
+      if(el && el.closest('.say-why')===btn2) reach=d; else break;
+    }
+    out.hitReach=reach; out.ringH=Math.round(r.height);
+  }
   return out;
 },VIEWS);
 await b.close();
@@ -94,6 +121,9 @@ const T=[
   ['the card opens on tap', o.hasHomeBtn===true && o.sheetOpen===true, String(o.sheetOpen)],
   ['...titled by the section it belongs to', !!o.sheetTitle, o.sheetTitle],
   ['...carrying the text that left the screen', o.sheetWords>=8, String(o.sheetWords)],
+  ['the button is big enough for a thumb, whatever the ring looks like',
+   o.inView===true && o.hitReach>=14,
+   `captures taps ${o.hitReach}px from centre, ring ${o.ringH}px, inView=${o.inView}`],
   ['...and reachable by a reader who cannot see the glyph',
    /what is/i.test(o.ariaNamed), o.ariaNamed],
 ];
