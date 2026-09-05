@@ -2002,3 +2002,48 @@ genuinely visible measure 16 and 19 words. **A layout check that does not ask
 whether the thing is on screen is measuring the DOM, not the interface** - the
 same mistake as the overlap check that once compared element boxes instead of
 glyph rectangles.
+
+## Half the app was not running the feature, and nobody had measured the numbers
+
+Reported after the explainer cards shipped: *"No it didn't give the acorns
+treatment I requested for this debt payoff or any of the other topics. This is
+entirely too. Much text and facts in one scroll."*
+
+Both halves were right, and the first one is the more embarrassing.
+
+**The reporter was in Brief.** Every card built in the previous round exists only
+in Clean. Brief ran a different mechanism entirely - clip each paragraph to two
+lines, hang a *More* button under it - so the answer to "why did nothing change"
+was that nothing had. The measurement that found it took one probe run across
+all three modes, and it should have been the first thing done rather than the
+last: **a feature verified in one mode is verified in one mode.** Every probe
+written for the previous round had seeded `sayMode:'clean'`, which is exactly
+the state that made them pass.
+
+**And the figure count was 21 in all three.** The cards had only ever moved
+prose. Nothing in the app had ever measured how many *numbers* a screen puts in
+front of somebody, which is why a report carrying **ninety-three** of them in one
+scroll had survived every pass over this code. `fold.mjs` counts them now, per
+screen, with a ceiling.
+
+### Moving a node is not the same as copying it
+
+The chart lives inside a fold. The first instinct is `body.innerHTML =
+el.innerHTML`, and it produces a chart that looks perfect and does nothing,
+because every listener the renderer attached is on the original nodes. The block
+is moved with `appendChild` and put back on close - and `foldReturn()` has to run
+before the *next* fold opens too, or the first stays parented to a hidden sheet
+and disappears from the page it belongs to.
+
+Both are checked rather than assumed: the probe asserts the chart is in the
+sheet **and** gone from the page (proving a move, not a copy), that its tap
+targets survive, that opening a second fold hands the first back, and that after
+closing everything the screen measures exactly what it did before anything was
+opened.
+
+### What was deliberately not folded
+
+Budget shows 28 figures and Home 23, and both were left alone. Those are the
+category rows and the dashboard tiles - the content the person came for. **A
+density check that does not distinguish content from decoration will happily
+recommend deleting the product.**

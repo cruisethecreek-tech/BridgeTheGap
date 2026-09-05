@@ -580,3 +580,40 @@ Three things I left on screen on purpose. Tell me if you disagree with any:
 
 If any section still shows a paragraph you would rather tap for, tell me which
 heading it sits under and I will move it.
+
+### One answer, then chips
+
+Settings shows a build from 2026-09-05 or later.
+
+Two things changed, and the first is why the last round did nothing for you.
+
+**You were in Brief.** Brief was not using the explainer cards at all - it
+clipped each paragraph to two lines with a *More* under it. That pattern is
+gone. Brief and Clean now behave the same for text.
+
+**Facts now fold too.** On **Debt**, you should land on:
+
+> **Debt-free by August 2031**
+> 4 yrs 11 mo from now
+
+and then four chips: *What the interest costs · Why this order · Month by month ·
+The order you pay them*. Everything that used to be stacked down the page is
+inside those.
+
+On **Reflect**, every finding keeps its headline so you can still scan the whole
+report, with *The numbers* under each one.
+
+Worth checking:
+
+- **Tap "Month by month" and try the chart.** Dragging along it should still
+  move the reading underneath. If the chart is there but dead, that is a real
+  report and an important one.
+- **Open one chip, then another without closing.** Nothing should disappear from
+  the page behind the sheet.
+- **Close the sheet and look at the screen.** It should be exactly as it was.
+- **Reflect should be about two screens tall now**, not five.
+
+I did not fold **Budget** or **Home**. Those numbers are your categories and your
+dashboard - the things you opened the app to see. If they still feel like too
+much, tell me, because that is a different problem from this one and needs a
+different answer than hiding them.

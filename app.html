@@ -1104,11 +1104,19 @@
      Nothing is deleted: every hidden word is in the sheet that button opens. */
   .say-clean .say-hid{display:none!important}
   .say-clean .say-hid + .sub-more{display:none!important}
-  .say-why{display:inline-flex;align-items:center;justify-content:center;
-    width:19px;height:19px;flex:0 0 19px;margin-left:7px;padding:0;border-radius:50%;
+  /* The ring stays 22px so it does not shout beside a heading, but the TARGET
+     is 40px, reached with a transparent ::before rather than by growing the
+     circle. It was 19px square - the app's own pills are 36 and its nav tabs 52
+     - and this is the control the entire "explain it on tap" idea rests on. A
+     button nobody can reliably hit is a feature nobody has, and it was measured
+     only after somebody reported the feature missing. */
+  .say-why{display:inline-flex;align-items:center;justify-content:center;position:relative;
+    width:22px;height:22px;flex:0 0 22px;margin-left:7px;padding:0;border-radius:50%;
     border:1.5px solid var(--line);background:none;color:var(--muted);
     font:inherit;font-size:11px;font-weight:900;line-height:1;cursor:pointer;
     vertical-align:middle;transition:color .15s,border-color .15s}
+  .say-why::before{content:'';position:absolute;left:50%;top:50%;
+    width:40px;height:40px;transform:translate(-50%,-50%)}
   .say-why:hover,.say-why:focus-visible{color:var(--accent);border-color:var(--accent)}
   /* A panel with no heading to sit beside gets it pinned to the corner, which is
      the same place the eye already looks for it. */
@@ -1287,6 +1295,21 @@
   .bm-q{font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px}
   .bm-pick .hh-toggle{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.4;margin:4px 0}
   .bm-why{margin-top:7px;font-size:12px;line-height:1.5;color:var(--muted)}
+  /* A fold's chip row. Deliberately the same visual language as the deck pills
+     the reader already knows, so a second thing to learn is not the price of a
+     shorter screen. */
+  .fold-hid{display:none!important}
+  .fold-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  /* 36px, which is what .dk-chip is. Asked for explicitly earlier: "whatever you
+     choose just make it consistent throughout the entire app" - so a new pill
+     matches the pill already on the screen rather than inventing a size. */
+  .fold-chip{background:var(--ink);border:1px solid var(--line);color:var(--text);
+    border-radius:999px;padding:8px 13px;min-height:36px;font:inherit;font-size:13px;font-weight:700;
+    cursor:pointer;transition:border-color .14s ease,background .14s ease}
+  .fold-chip:hover{border-color:var(--accent)}
+  .fold-chip::after{content:' →';color:var(--muted);font-weight:600}
+  #sayBody .fold-hid{display:block!important}
+  .debt-hero-solo{display:block}
   .plan-cols.two{grid-template-columns:minmax(0,1fr) 7em}
   /* Written as .subrow .sub-spent, not .sub-spent, and that is the whole point.
      An older rule up in the subrow block sets this to 12px muted at specificity
@@ -6619,27 +6642,44 @@ function renderDebtResults(){
     else if(savesInterest<-1) cmp=`${otherName} would save ${money(-savesInterest)} in interest, but this order clears debts faster for momentum.`;
     else cmp=`Costs about the same as ${otherName} here - pick whichever keeps you motivated.`;
   }
+  /* One answer, then chips. This block used to print all of it at once: the
+     date, the duration, the total interest, the hours that interest costs, a
+     strategy comparison, a line of voice, a chart, a chart reading carrying six
+     more figures, the payoff order and a closing paragraph with three more.
+     Twenty-one figures, for a person who came to ask one question.
+
+     The question is "when am I out of this", so that is what stays on the
+     screen. Everything else is true, worth knowing, and not worth ambushing
+     somebody with on arrival - so each part keeps its own name and waits behind
+     a tap. Nothing is deleted and nothing is summarised away. */
   box.innerHTML=`
-    <div class="debt-hero">
-      <div><div class="sp-k">Debt-free by</div><div class="debt-date">${fmtMonth(freeMonth)}</div><div class="sub" style="margin:2px 0 0">${dur} from now</div></div>
-      <div style="text-align:right"><div class="sp-k">Total interest</div><div class="debt-int">${actMoney(plan.totalInterest)}</div>${H>0?`<div class="sub" style="margin:2px 0 0">${fmtHours(plan.totalInterest/H)} of your life</div>`:''}</div>
+    <div class="debt-hero debt-hero-solo">
+      <div><div class="sp-k">Debt-free by</div><div class="debt-date">${fmtMonth(freeMonth)}</div><div class="sub" data-keep="1" style="margin:2px 0 0">${dur} from now</div></div>
     </div>
     ${noApr?`<div class="debt-cmp" style="border-color:rgba(230,178,77,.4)">One or more debts have no interest rate set (0%), so this underestimates your interest and payoff date. Add each debt's APR above for the real number.</div>`:''}
-    ${cmp?`<div class="debt-cmp">${cmp}</div>`:''}
-    <div class="debt-cmp">${voice(VOICE.debtOut,null)}</div>
-    <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:14px" ${chartFocusAttrs('debtChart',pts.length,'What you still owe, month by month')}><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/><circle cx="${X(dSel).toFixed(1)}" cy="${Y(pts[dSel].total).toFixed(1)}" r="5" fill="#e6b24d" stroke="var(--panel)" stroke-width="2"/>${chartHits('debtChart',pts.length,X,w,h)}</svg>
-    ${(()=>{
-      const step=Math.max(1,Math.ceil(plan.schedule.length/40));
-      const monthsIn=dSel*step;
-      const when=shiftMonth(state.activeMonth, monthsIn);
-      const gone=totalBal-pts[dSel].total;
-      return chartRead(`<b>${fmtMonth(when)}</b> &middot; still owed <b>${money(pts[dSel].total)}</b>`
-        + (monthsIn>0?` &middot; <b>${money(gone)}</b> killed by then`:' - where you are today')
-        + `.<span class="cr-bits">${monthsIn===0?'Month one of the plan':debtDur(monthsIn)+' from now'} &middot; paying ${actMoney(budget)}/mo${H>0&&pts[dSel].total>0?` &middot; ${fmtHours(pts[dSel].total/H)} of your life still on the hook`:''}</span>`);
-    })()}
-    <div class="po-head">Payoff order</div>
-    <div class="po-list">${orderHTML}</div>
-    <p class="sub" style="margin-top:12px">You're putting <b>${actMoney(budget)}</b>/mo at <b>${actMoney(totalBal)}</b> of debt. Every extra dollar above your ${actMoney(totalMin)} minimums is what buys back those months. Results are estimates.</p>`;
+    <div data-fold="What the interest costs">
+      <div class="sp-k">Total interest</div><div class="debt-int">${actMoney(plan.totalInterest)}</div>
+      ${H>0?`<div class="sub" data-keep="1" style="margin:2px 0 0">${fmtHours(plan.totalInterest/H)} of your life</div>`:''}
+      <p class="sub" data-keep="1" style="margin-top:10px">You're putting <b>${actMoney(budget)}</b>/mo at <b>${actMoney(totalBal)}</b> of debt. Every extra dollar above your ${actMoney(totalMin)} minimums is what buys back those months. Results are estimates.</p>
+    </div>
+    ${cmp?`<div data-fold="Why this order"><div class="debt-cmp">${cmp}</div><div class="debt-cmp">${voice(VOICE.debtOut,null)}</div></div>`
+        :`<div data-fold="Why this order"><div class="debt-cmp">${voice(VOICE.debtOut,null)}</div></div>`}
+    <div data-fold="Month by month">
+      <svg viewBox="0 0 ${w} ${h+4}" width="100%" style="display:block;height:auto;margin-top:4px" ${chartFocusAttrs('debtChart',pts.length,'What you still owe, month by month')}><path d="${area}" fill="rgba(230,178,77,.12)"/><path d="${line}" fill="none" stroke="#e6b24d" stroke-width="2.5"/><circle cx="${X(dSel).toFixed(1)}" cy="${Y(pts[dSel].total).toFixed(1)}" r="5" fill="#e6b24d" stroke="var(--panel)" stroke-width="2"/>${chartHits('debtChart',pts.length,X,w,h)}</svg>
+      ${(()=>{
+        const step=Math.max(1,Math.ceil(plan.schedule.length/40));
+        const monthsIn=dSel*step;
+        const when=shiftMonth(state.activeMonth, monthsIn);
+        const gone=totalBal-pts[dSel].total;
+        return chartRead(`<b>${fmtMonth(when)}</b> &middot; still owed <b>${money(pts[dSel].total)}</b>`
+          + (monthsIn>0?` &middot; <b>${money(gone)}</b> killed by then`:' - where you are today')
+          + `.<span class="cr-bits">${monthsIn===0?'Month one of the plan':debtDur(monthsIn)+' from now'} &middot; paying ${actMoney(budget)}/mo${H>0&&pts[dSel].total>0?` &middot; ${fmtHours(pts[dSel].total/H)} of your life still on the hook`:''}</span>`);
+      })()}
+    </div>
+    <div data-fold="The order you pay them">
+      <div class="po-head">Payoff order</div>
+      <div class="po-list">${orderHTML}</div>
+    </div>`;
   renderInvestCompare();
 }
 /* Plot twist: crush the debt vs. pay minimums and invest the rest, same money out */
@@ -7689,11 +7729,120 @@ function sayOwnerOf(el){
   const lbl=document.querySelector('#tabs .tab[data-view="'+name+'"] .t-l');
   return {box:v, head:null, title:(lbl?lbl.innerText.trim():'')||'This screen'};
 }
+/* ---------- folds: the same idea, applied to FACTS ----------
+   "This is entirely too much text and facts in one scroll.. Think about the
+   physiology of bombarding new users with an overload of numbers and
+   information."
+
+   The explainer cards moved PROSE off the screen and did nothing at all about
+   figures, which is why the payoff planner still put twenty-one numbers in
+   front of somebody who had asked one question: when am I out of this. The
+   count was identical in all three modes, because no mode had ever been about
+   numbers.
+
+   A fold is a labelled block of detail that starts life as a chip and opens in
+   the same sheet the explainers use. The screen leads with one answer; every
+   other fact is one tap away and puts the page back exactly as it was when the
+   sheet closes.
+
+   The block is MOVED into the sheet rather than copied into it. A clone would
+   lose every listener the renderer attached - the chart's own tap targets among
+   them - and the second version of this shipped a payoff chart you could not
+   touch. It is put back where it came from on close, which is what the
+   placeholder is for. */
+let foldGroups=new Map(); let foldN=0;
+function foldPass(root){
+  if(!root) return;
+  /* Renderers rebuild their panels with innerHTML, which throws away every fold
+     this pass made and leaves its bookkeeping pointing at detached nodes. Left
+     alone the map grew by four entries on every single render - thirty-two
+     after eight passes over one screen - each one pinning a dead subtree in
+     memory for a session that might run all day. Swept here rather than in the
+     renderers, because there are many renderers and one of these. */
+  const shown=(document.getElementById('sayBody')||{dataset:{}}).dataset.foldShown;
+  foldGroups.forEach((g,k)=>{
+    /* Never sweep the one currently in the sheet, however dead its placeholder
+       is. The first version did, and foldReturn then could not find the entry
+       it needed in order to tidy up - so the block stayed parented to the sheet
+       and the leak fix quietly created a stranding bug in its place. */
+    if(k===shown) return;
+    if(!g.ph || !g.ph.isConnected) foldGroups.delete(k);
+  });
+  const blocks=[...root.querySelectorAll('[data-fold]')].filter(el=>!el.dataset.foldKey);
+  if(!blocks.length) return;
+  const byHost=new Map();
+  blocks.forEach(el=>{
+    const host=el.parentElement; if(!host) return;
+    if(!byHost.has(host)) byHost.set(host,[]);
+    byHost.get(host).push(el);
+  });
+  byHost.forEach((els,host)=>{
+    const row=document.createElement('div'); row.className='fold-row';
+    els.forEach(el=>{
+      const key='fold'+(++foldN);
+      el.dataset.foldKey=key;
+      const ph=document.createComment('fold '+key);
+      el.parentNode.insertBefore(ph, el);
+      el.classList.add('fold-hid');
+      /* The chip label and the sheet title are allowed to differ, and on the
+         report they must: the chip sits directly under the finding it belongs
+         to, so it only needs to say "the numbers", while the sheet opens on its
+         own and has to name which finding it is talking about. */
+      foldGroups.set(key,{title:el.dataset.foldtitle||el.dataset.fold||'Detail', el, ph});
+      const b=document.createElement('button');
+      b.type='button'; b.className='fold-chip'; b.dataset.foldopen=key;
+      b.textContent=el.dataset.fold||'Detail';
+      b.setAttribute('aria-label',(el.dataset.fold||'Detail')+' - open');
+      row.appendChild(b);
+    });
+    host.insertBefore(row, els[0]);
+  });
+}
+function foldOpen(key){
+  const g=foldGroups.get(key); if(!g) return;
+  const ov=document.getElementById('saySheet'), ttl=document.getElementById('saySheetTitle'),
+        body=document.getElementById('sayBody');
+  if(!ov||!body) return;
+  foldReturn();
+  if(ttl) ttl.textContent=g.title;
+  body.innerHTML='';
+  g.el.classList.remove('fold-hid');
+  body.appendChild(g.el);
+  body.dataset.foldShown=key;
+  ov.classList.add('on'); pushOverlay();
+}
+/* Put whatever is in the sheet back where it belongs, before the next thing
+   opens or the sheet closes. Without this the block stays parented to a hidden
+   sheet and simply vanishes from the page it belongs to. */
+function foldReturn(){
+  const body=document.getElementById('sayBody'); if(!body) return;
+  const key=body.dataset.foldShown; if(!key) return;
+  const g=foldGroups.get(key);
+  if(g && g.ph && g.ph.isConnected){
+    g.el.classList.add('fold-hid');
+    g.ph.parentNode.insertBefore(g.el, g.ph);
+  } else if(g && g.el && g.el.parentNode===body){
+    /* Its home was re-rendered out from under it while the sheet was open, so
+       there is nowhere to put it back: the page already has a fresh copy. Drop
+       it rather than leave a detached block sitting in the sheet, where the
+       next open would have inherited it. */
+    body.removeChild(g.el);
+  }
+  delete body.dataset.foldShown;
+  /* Belt and braces: whatever the bookkeeping said, the sheet must not be left
+     holding a block. Anything still here has no home to go back to. */
+  body.querySelectorAll(':scope > [data-fold]').forEach(el=>el.remove());
+}
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-foldopen]');
+  if(f){ e.preventDefault(); foldOpen(f.dataset.foldopen); }
+});
 let sayGroups=new Map();
 function saySheetOpen(key){
   const g=sayGroups.get(key); if(!g) return;
   const ov=document.getElementById('saySheet'), ttl=document.getElementById('saySheetTitle'), body=document.getElementById('sayBody');
   if(!ov||!body) return;
+  foldReturn();
   if(ttl) ttl.textContent=g.title;
   body.innerHTML=g.els.map(el=>`<p class="say-para">${el.innerHTML}</p>`).join('');
   ov.classList.add('on'); pushOverlay();
@@ -7707,11 +7856,17 @@ function sayPass(view){
      measures what is left. Doing it the other way round measured paragraphs
      that were about to be relocated anyway. Both are inside the busy flag, so
      the watcher does not react to either one's own edits. */
-  try{ deckPass(view); sayPassInner(view); } finally { sayBusy=false; }
+  try{ deckPass(view); foldPass(view?document.getElementById('view-'+view):document); sayPassInner(view); }
+  finally { sayBusy=false; }
   sayWatch(view);
 }
 function sayPassInner(view){
-  const clean=sayClean();
+  /* Brief is treated as Clean here. It used to clip prose in place instead, and
+     a person sitting in Brief - which is where this was reported from - got no
+     explainer cards at all, on any screen, however many were built. A mode that
+     silently opts out of the app's main way of handling text is not a
+     preference, it is a second app. */
+  const clean=sayClean()||sayBrief();
   document.body.classList.toggle('say-clean', clean);
   document.body.classList.toggle('say-brief', sayBrief());
   const root=view ? document.getElementById('view-'+view) : document;
@@ -7720,7 +7875,7 @@ function sayPassInner(view){
      to Full would show the prose and keep the question mark next to it. */
   root.querySelectorAll('.say-why').forEach(b=>b.remove());
   root.querySelectorAll('.say-hid').forEach(el=>el.classList.remove('say-hid'));
-  if(!clean){ clampPass(view); return; }
+  if(!clean) return;
   sayGroups=new Map(); let n=0;
   const found=new Map();
   root.querySelectorAll(SAY_PROSE).forEach(el=>{
@@ -7793,42 +7948,16 @@ function sayPassInner(view){
     }
   });
 }
-function clampPass(view){
-  document.body.classList.toggle('say-brief', sayBrief());
-  if(!sayBrief()) return;
-  const root=view ? document.getElementById('view-'+view) : document;
-  if(!root) return;
-  const w=Math.round(root.clientWidth||0);
-  root.querySelectorAll('.panel .sub, .acc-body .sub').forEach(el=>{
-    if(el.dataset.noclamp==='1') return;
-    /* Nothing that is not on screen. offsetParent was the obvious test and the
-       wrong one: a closed <details> in Chromium still gives its content a real
-       box and a real offsetParent - it is laid out and simply not painted - so
-       the guard passed and prose nobody could see got clamped. Asking whether it
-       sits inside a closed accordion is the question actually being asked, and
-       the toggle listener below measures it the moment one opens. */
-    if(el.closest('details:not([open])')) return;
-    if(el.offsetParent===null) return;
-    if(el.dataset.clampW===String(w)) return;         // already measured at this width
-    el.dataset.clampW=String(w);
-    el.classList.add('clampable');
-    const over=el.scrollHeight > el.clientHeight + 2;
-    if(!over){ el.classList.remove('clampable'); el.dataset.noclamp='1';
-      const nx=el.nextElementSibling; if(nx&&nx.classList.contains('sub-more')) nx.remove(); return; }
-    let btn=el.nextElementSibling;
-    if(!btn||!btn.classList.contains('sub-more')){
-      btn=document.createElement('button'); btn.className='sub-more'; btn.type='button';
-      el.insertAdjacentElement('afterend', btn);
-    }
-    btn.textContent = el.classList.contains('open') ? 'Less' : 'More';
-    btn.setAttribute('aria-expanded', el.classList.contains('open')?'true':'false');
-    btn.onclick=()=>{
-      const open=el.classList.toggle('open');
-      btn.textContent = open ? 'Less' : 'More';
-      btn.setAttribute('aria-expanded', open?'true':'false');
-    };
-  });
-}
+/* clampPass lived here: it clipped each explanation to two lines and hung a
+   "More" button under it. Removed rather than kept behind a mode, because it is
+   the exact pattern the reporter was looking at when they said the app had not
+   given them what they asked for - and they were right. Clipping costs the
+   space twice: the two lines still sit on the screen, opening them pushes
+   everything below out of place, and the reader has to decide whether the
+   sentence they cannot finish is worth the disruption. The card beside the
+   heading costs nothing until it is asked for and puts the page back exactly as
+   it was. Brief now means what Clean means for prose; the two still differ in
+   the intake, where sayShort() picks the copy. */
 /* ---------- keeping it clean after a render ----------
    The marks and the "?" live in the DOM, so any render that rebuilds a panel's
    innerHTML throws them away and the prose comes back - on the panel the reader
@@ -8044,7 +8173,7 @@ function closeTopOverlay(){
   const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
-  const ss=document.getElementById('saySheet'); if(ss&&ss.classList.contains('on')){ ss.classList.remove('on'); return true; }
+  const ss=document.getElementById('saySheet'); if(ss&&ss.classList.contains('on')){ foldReturn(); ss.classList.remove('on'); return true; }
   const ts=document.getElementById('txSheet'); if(ts&&ts.classList.contains('on')){ ts.classList.remove('on'); if(typeof txSheetId!=='undefined') txSheetId=null; return true; }
   const cs=document.getElementById('catSheet'); if(cs&&cs.classList.contains('on')){ cs.classList.remove('on'); if(typeof catSheetId!=='undefined') catSheetId=null; return true; }
   const m=document.getElementById('modal'); if(m&&m.classList.contains('on')){ m.classList.remove('on'); return true; }
@@ -8401,7 +8530,7 @@ function renderSayMode(){
     sayPass(typeof currentTab!=='undefined'?currentTab:null);
     if(typeof toast==='function') toast(
       sayClean() ? 'Clean. Every explanation is behind the ? beside each heading - nothing is gone.'
-      : sayBrief() ? 'Brief. Every explanation shows its first two lines, with More to open it.'
+      : sayBrief() ? 'Brief. Same cards as Clean, and the shorter wording through the intake.'
       : 'Full. Every explanation shows in full, everywhere.');
   });
 })();
@@ -18980,9 +19109,16 @@ function renderReport(){
       ${g.outside?`<div class="rp-src">Outside number · as of ${escapeHtml(g.outside)} · baked into the app, never fetched</div>`:''}
       ${g.standing?`<div class="rp-when">Your situation &middot; true right now, not just in ${escapeHtml(monShort(state.activeMonth))}</div>`:''}
       <div class="rp-t">${g.t}</div>
-      <div class="rp-b">${g.body}</div>
-      ${g.work?`<div class="rp-w" title="The arithmetic behind the line above">${escapeHtml(g.work)}</div>`:''}
-      ${g.nudge?`<div class="rp-n">${g.nudge}</div>`:''}
+      ${/* The finding stays on the screen; its numbers, arithmetic and nudge go
+            behind one tap. Reflect was putting NINETY-THREE figures in a single
+            scroll - nine findings each carrying five to thirteen of them - and
+            a report nobody can face is not a report. What is left is the list
+            of what the app found, which is what a person came to see. */''}
+      <div data-fold="The numbers" data-foldtitle="${escapeHtml(String(g.t).replace(/<[^>]*>/g,''))}">
+        <div class="rp-b">${g.body}</div>
+        ${g.work?`<div class="rp-w" title="The arithmetic behind the line above">${escapeHtml(g.work)}</div>`:''}
+        ${g.nudge?`<div class="rp-n">${g.nudge}</div>`:''}
+      </div>
     </div>`).join('');
   /* This list names exactly what is missing and used to stop there, which makes
      it a list of complaints. Anything the person can actually go and do now

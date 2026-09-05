@@ -31,7 +31,12 @@ const report = async () => pg.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('reflect'); rfTab='report'; renderReflectTab(); await wait(200);
   const {signals,locked}=buildReport();
-  return { txt:document.getElementById('rpBody').innerText,
+  /* textContent, not innerText. Each finding's numbers, arithmetic and nudge
+     sit inside a fold now, so innerText reports only the headlines and every
+     assertion about what the report SAYS came back false. What is being
+     checked here is whether the app makes the statement at all, not whether it
+     is painted on arrival - the fold probe is what covers the painting. */
+  return { txt:document.getElementById('rpBody').textContent,
            ks:signals.map(s=>s.k), locked:locked.map(l=>l.t),
            order:signals.map(s=>({k:s.k,bad:!!s.bad,standing:!!s.standing,outside:!!s.outside})) };
 });

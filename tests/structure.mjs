@@ -6097,7 +6097,14 @@ const readReport = () => p.evaluate(async () => {
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('reflect'); rfTab='report'; renderReflectTab(); await wait(220);
   const {signals,locked}=buildReport();
-  return { txt:document.getElementById('rpBody').innerText,
+  /* textContent, not innerText. Each finding's numbers, arithmetic and nudge sit
+     inside a fold now - the report was putting ninety-three figures in one
+     scroll - so innerText returns the headlines alone and ten checks about what
+     the report SAYS came back false at once. What is under test here is whether
+     the app makes the statement and shows its working, which is a question
+     about the copy; whether it is painted on arrival is a question about the
+     layout, and fold.mjs is what asks it. */
+  return { txt:document.getElementById('rpBody').textContent,
            ks:signals.map(x=>x.k), locked:locked.map(l=>l.t),
            order:signals.map(x=>({k:x.k,bad:!!x.bad,standing:!!x.standing,outside:!!x.outside})) };
 });
@@ -7014,68 +7021,84 @@ await seed({...EMPTY, uiMode:'all', stageReached:3, guidesOff:true, activeMonth:
                 {id:'e',type:'expense',amount:120,date:'2026-08-05',catId:'c1'}]});
 await p.reload(); await p.waitForTimeout(800);
 
-/* Brief is no longer the default - Clean is - so this section has to ask for the
-   mode it is testing instead of assuming the app boots into it. */
+/* Brief used to CLAMP: two lines and a "More" under each explanation. Every
+   check between here and the accordion pinned that, and they are rewritten
+   rather than deleted, because the property underneath them still matters and
+   only the mechanism changed.
+
+   It changed on a report: "No it didn't give the acorns treatment I requested."
+   The reader was in Brief, Brief was the one mode that did not use the
+   explainer cards, and clipping is the worst of the options anyway - the two
+   lines still take the space, opening one shoves the page around, and a person
+   has to decide whether a sentence they cannot finish is worth the disruption.
+
+   ONE THING IS GENUINELY LOST and it is worth writing down rather than
+   discovering later. Clipped text is still rendered, so find-in-page finds it
+   and a screen reader still reaches it in place. Hidden text is not. The
+   trade is deliberate: the "?" carries an aria-label naming its section, the
+   words are one tap away rather than gone, and Full mode still prints
+   everything inline for anyone who wants the page searchable. What must NEVER
+   be true is that the words stopped existing, and that is what is checked. */
 await p.evaluate(()=>{ state.sayMode='brief'; save(); });
 const brief = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   const look=async v=>{ activateTab(v); await w(600);
-    /* The long intros moved behind pills. A reader clamping them has one open,
-       so that is the state this measures - open the first section and read it. */
     const first=document.querySelector('#deck-'+v+' .dk-chip');
     if(first){ deckShow(v, first.dataset.dk); sayPass(v); await w(320); }
     const root=document.getElementById('view-'+v);
     const subs=[...root.querySelectorAll('.panel .sub, .acc-body .sub')];
-    return { clamped:subs.filter(x=>x.classList.contains('clampable')).length,
+    return { hidden:subs.filter(x=>x.classList.contains('say-hid')).length,
+             whys:root.querySelectorAll('.say-why').length,
+             /* the pattern that was removed must not come back by any route */
+             clamped:subs.filter(x=>x.classList.contains('clampable')).length,
              mores:root.querySelectorAll('.sub-more').length,
-             /* a clamped paragraph is TWO lines, not eight */
-             tallest:Math.max(0,...subs.filter(x=>x.classList.contains('clampable'))
-                                       .map(x=>Math.round(x.getBoundingClientRect().height))),
-             /* and every word of it is still there to be read */
-             wordsKept:subs.filter(x=>x.classList.contains('clampable'))
-                           .every(x=>x.innerText.trim().length>80),
-             pointless:subs.filter(x=>x.dataset.noclamp==='1')
-                           .some(x=>x.nextElementSibling&&x.nextElementSibling.classList.contains('sub-more')) };
+             /* and nothing was deleted to achieve it: the words are still in
+                the document, merely not painted */
+             wordsKept:subs.filter(x=>x.classList.contains('say-hid'))
+                           .every(x=>(x.textContent||'').trim().length>40) };
   };
   return { tx:await look('tx'), goals:await look('goals') };
 });
-check('long intros are clamped on Track and on Build',
-      brief.tx.clamped>0 && brief.goals.clamped>0, JSON.stringify(brief));
-check('...each clamped one getting exactly one More',
-      brief.tx.mores===brief.tx.clamped && brief.goals.mores===brief.goals.clamped,
+check('Brief hides the long intros rather than clipping them',
+      brief.tx.hidden>0 && brief.tx.clamped===0 && brief.goals.clamped===0,
       JSON.stringify(brief));
-check('...clipped to two lines rather than eight',
-      brief.tx.tallest>0 && brief.tx.tallest<=46 && brief.goals.tallest<=46,
-      `${brief.tx.tallest} / ${brief.goals.tallest}`);
-check('...with every word still in the text, because it is clipped and not hidden',
-      brief.tx.wordsKept===true && brief.goals.wordsKept===true);
-check('...and an intro short enough to fit never grows a More that reveals nothing',
-      brief.tx.pointless===false && brief.goals.pointless===false);
+check('...with no More button left anywhere to grow the page again',
+      brief.tx.mores===0 && brief.goals.mores===0, JSON.stringify(brief));
+check('...offering the card instead, which is what Clean does',
+      brief.tx.whys>0, JSON.stringify(brief.tx));
+check('...and not one word deleted to get there',
+      brief.tx.wordsKept===true && brief.goals.wordsKept===true, JSON.stringify(brief));
 
+/* The words have to be RETRIEVABLE, not merely present. A paragraph that exists
+   in the DOM and cannot be reached by any control is deleted as far as the
+   reader is concerned, and that is the failure this whole mechanism could hide
+   behind while every other check passed. */
 const sayTog = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
-  /* Pinning this to one tab stopped working the moment that tab's long prose
-     moved behind a pill. What is being tested is the More control itself, not
-     where it happens to live, so it goes and finds one. */
-  let btn=null;
+  let btn=null, view=null;
   for(const t of ['tx','debt','impulse','budget','goals','home','settings','diary']){
     activateTab(t); await w(420);
-    btn=document.querySelector('#view-'+t+' .sub-more');
-    if(btn) break;
+    btn=document.querySelector('#view-'+t+' .say-why');
+    if(btn){ view=t; break; }
   }
   if(!btn) return null;
-  const el=btn.previousElementSibling;
-  const shut=Math.round(el.getBoundingClientRect().height);
-  btn.click(); await w(140);
-  const open=Math.round(el.getBoundingClientRect().height);
-  const label=btn.textContent, aria=btn.getAttribute('aria-expanded');
-  btn.click(); await w(140);
-  return {shut, open, label, aria, back:Math.round(el.getBoundingClientRect().height), backLabel:btn.textContent};
+  btn.click(); await w(320);
+  const sheet=document.getElementById('saySheet');
+  const body=document.getElementById('sayBody');
+  const out={ view, opened:sheet.classList.contains('on'),
+    title:(document.getElementById('saySheetTitle')||{textContent:''}).textContent.trim(),
+    words:((body||{innerText:''}).innerText||'').trim().split(/\s+/).filter(Boolean).length,
+    aria:btn.getAttribute('aria-label')||'' };
+  dismissOverlay(); await w(250);
+  out.closed=!sheet.classList.contains('on');
+  return out;
 });
-check('More opens that one paragraph and says Less',
-      sayTog && sayTog.open>sayTog.shut && sayTog.label==='Less' && sayTog.aria==='true',
-      JSON.stringify(sayTog));
-check('...and closes it again', sayTog.back===sayTog.shut && sayTog.backLabel==='More');
+check('every hidden explanation is one tap from being read again',
+      sayTog && sayTog.opened===true && sayTog.words>=8, JSON.stringify(sayTog));
+check('...in a card that says which section it belongs to',
+      sayTog && sayTog.title.length>0 && /what is/i.test(sayTog.aria), JSON.stringify(sayTog));
+check('...and closes again without taking the page with it',
+      sayTog && sayTog.closed===true, JSON.stringify(sayTog));
 
 /* The accordion's own summary used to carry the open/shut signal. The pill
    carries it now - same question, asked of the control that answers it. */
@@ -7116,14 +7139,22 @@ const modes = await p.evaluate(async () => {
   activateTab('settings'); await w(400);
   document.querySelector('#sayMode button[data-say="brief"]').click(); await w(300);
   await openBuild();
-  return {full, backClamped:document.querySelectorAll('#view-goals .sub.clampable').length,
+  return {full,
+          backHidden:document.querySelectorAll('#view-goals .sub.say-hid').length,
+          backWhys:document.querySelectorAll('#view-goals .say-why').length,
+          backClamped:document.querySelectorAll('#view-goals .sub.clampable').length,
           fresh:normalizeState({}).sayMode};
 });
 check('Full gives every word back, everywhere, and remembers it',
       modes.full.clamped===0 && modes.full.body===false && modes.full.stored==='full',
       JSON.stringify(modes.full));
-check('...and switching back to Brief clamps again',
-      modes.backClamped>0, String(modes.backClamped));
+/* Leaving Full has to give the short screen BACK. This asked whether it clamped
+   again, which is the question that made sense while clamping was what Brief
+   did; the round trip it guards is the same one, and it is the check that would
+   catch a one-way door - a reader who tried Full and could never get out. */
+check('...and switching back to Brief hides them again, with the cards restored',
+      modes.backHidden>0 && modes.backWhys>0 && modes.backClamped===0,
+      JSON.stringify({hid:modes.backHidden, why:modes.backWhys, clamp:modes.backClamped}));
 /* Clean is what someone new gets now. Brief was the old default and it was the
    thing being complained about: it clipped every paragraph to two lines and put
    a More under each, so a dozen panels meant two dozen lines to skip and a dozen
@@ -8760,7 +8791,9 @@ check('...and still writes no transaction', scan.kept.tx===scan.before.tx && sca
 const scanRep = await p.evaluate(async () => {
   const w=ms=>new Promise(r=>setTimeout(r,ms));
   activateTab('reflect'); await w(750);
-  const cards=[...document.querySelectorAll('.rp-card')].map(c=>c.innerText);
+  /* textContent: each card's body sits inside a fold now, so innerText returns
+     the headline and the chip label and nothing the card actually said. */
+  const cards=[...document.querySelectorAll('.rp-card')].map(c=>c.textContent);
   const mine=cards.find(t=>/statement read/i.test(t))||'';
   return { there:!!mine, text:mine, total:cards.length,
     /* it must not be laid out as though it were one of the ledger's own months */

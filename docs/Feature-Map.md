@@ -1146,6 +1146,25 @@ A partial answer already existed and was making it worse. **Brief** (`clampPass`
 
 **Clean** (`sayPass`, `SAY_PROSE`, `sayIsExplanation`, `sayOwnerOf`, `saySheetOpen`) takes the prose out of the layout entirely and gives the **panel** one affordance rather than giving each paragraph its own: a small **?** beside the heading, opening one reusable sheet titled with that panel's name and holding every word that panel would have said. Modes are now **Clean / Brief / Full**, and Clean is the default. Result: **80% less prose on screen** (5,646px to 1,143px) and an app 18% shorter to scroll, with nothing deleted.
 
+**Folds: the same idea, applied to FACTS.** Reported with the explainer cards already shipped: *"No it didn't give the acorns treatment I requested for this debt payoff or any of the other topics. This is entirely too. Much text and facts in one scroll.. Think about the physiology of bombarding new users with an overload of numbers and information."*
+
+Two separate failures, and the first explains why none of the previous work was visible to the reporter. **They were in Brief.** Brief did not use the cards at all - it clipped each explanation to two lines and hung a *More* button under it (`clampPass`). That is the worst of the options: the two lines still occupy the screen, opening one shoves everything below it out of place, and the reader has to decide whether a sentence they cannot finish is worth the disruption. `clampPass` is deleted, and Brief now means what Clean means for prose; the two still differ in the intake, where `sayShort()` picks the copy. **A mode that silently opts out of the app's main way of handling text is not a preference, it is a second app.**
+
+The second failure was the real one. The cards had only ever moved **prose**. Measured on the payoff planner: **21 figures, identical in all three modes**, because no mode had ever been about numbers. A person came to ask one question - when am I out of this - and was met with the date, the duration, the total interest, the hours that interest costs, a strategy comparison, a line of voice, a chart, a chart reading carrying six more figures, the payoff order, and a closing paragraph with three more.
+
+A **fold** (`foldPass`, `foldOpen`, `foldReturn`, `data-fold`) is a labelled block of detail that starts as a chip and opens in the same sheet the explainers use. The screen leads with one answer and every other fact keeps its own name behind a tap.
+
+| screen | figures before | after | height |
+|---|---|---|---|
+| Reflect | **93** | 8 | 4,445 → 1,932px |
+| Debt | **21** | 8 | 2,288 → 1,713px |
+
+Debt opens on *"Debt-free by August 2031"* with four chips - *What the interest costs · Why this order · Month by month · The order you pay them*. The report keeps every finding's headline on the page, so it is still scannable at a glance, with each finding's numbers, arithmetic and nudge one tap in; its chip reads *"The numbers"* while the sheet is titled with the finding itself, which is why a fold may carry `data-foldtitle` separately from `data-fold`.
+
+The block is **moved** into the sheet, never cloned. A clone drops every listener the renderer attached - the chart's own tap targets among them - so the chart would have looked right and been dead. `foldReturn()` puts it back on close, and also before a second fold opens, or the first would stay parented to a hidden sheet and simply vanish from the page it belongs to.
+
+**Budget (28 figures) and Home (23) were deliberately left alone.** Those are category rows and dashboard tiles - the content the person came for, not decoration around it. Folding a budget's own numbers leaves a budget with no numbers.
+
 **And then it was found to be reaching almost none of it.** Asked for as *"I want every section to have its own explainer card that opens when clicked. To minimize the initial on screen text even further."* Measured before changing anything: **427 words of prose still on screen across ten screens, 9 explainer buttons, and Home carrying zero.** Three faults, each the same shape - one definition written down in more than one place:
 
 1. `data-say="1"` is stamped on 94 static-literal paragraphs and `sayIsExplanation` **reads** it to relax the word-count test, while `SAY_PROSE` - the selector deciding what to look at in the first place - listed eight class names and not the marker. The Home hero was the loudest casualty: the first prose on the first screen, explicitly marked, and never once considered by the pass built to move it.

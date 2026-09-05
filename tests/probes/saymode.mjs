@@ -95,7 +95,17 @@ const modes=await pg.evaluate(async ()=>{
   return out;
 });
 ok('Full shows everything and removes the buttons', modes.full.why===0 && modes.full.hid===0, JSON.stringify(modes.full));
-ok('Brief goes back to clipping in place, not hiding', modes.brief.hid===0 && modes.brief.why===0, JSON.stringify(modes.brief));
+/* This used to read "Brief goes back to clipping in place, not hiding", and it
+   was true of the app and wrong about the reader. Brief was the one mode that
+   did not use the explainer cards, so a person sitting in it got none of them
+   on any screen - which is exactly how it was reported. Brief and Clean now do
+   the same thing with prose; they still differ in the intake, where sayShort()
+   picks the wording. */
+ok('Brief hides and offers the card, exactly as Clean does',
+   modes.brief.hid>0 && modes.brief.why>0 && modes.brief.clamp===0, JSON.stringify(modes.brief));
+ok('...and the clip-and-More pattern is gone from every mode',
+   modes.full.clamp===0 && modes.clean.clamp===0 && modes.brief.clamp===0,
+   JSON.stringify(modes));
 ok('Clean hides again when you switch back', modes.clean.hid>0 && modes.clean.why>0, JSON.stringify(modes.clean));
 
 /* a render must not undo it */
