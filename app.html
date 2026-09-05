@@ -7598,7 +7598,16 @@ document.addEventListener('click',e=>{
 
    Anything carrying a figure, a date, a name, or a state of the app is not an
    explanation - it is the interface talking about you, and it stays. */
-const SAY_PROSE='.panel .sub, .acc-body .sub, .tab-intro, .build-intro, .rp-frame, .tl-lead, .walls-tag, .acw-note';
+/* [data-say="1"] leads this list, and its absence was a bug of the exact shape
+   that keeps recurring here: the marker existed on 94 paragraphs,
+   sayIsExplanation READ it two functions below to relax the word count - and
+   the selector that decides what to even look at never asked for it. So a
+   paragraph stamped "this is explanation" was skipped unless it also happened
+   to carry one of eight hand-listed class names. The Home hero was the loudest
+   casualty: the first prose on the first screen, marked, and never once
+   considered by the pass built to move it. A rule that reads a marker in one
+   place and ignores it in the place that does the collecting is not a rule. */
+const SAY_PROSE='[data-say="1"], .panel .sub, .acc-body .sub, .tab-intro, .build-intro, .rp-frame, .tl-lead, .walls-tag, .acw-note';
 /* Prose living inside any of these is reporting a situation, not teaching. */
 const SAY_LIVE='.empty,.none,.err,.error,.warn,.status,.cl-none,.sync-lock,.sync-traffic,.db-note,.banner,form,fieldset,#regSample,#sayModeNote,#uiModeNote';
 function sayIsExplanation(el){
@@ -7656,7 +7665,13 @@ const SAY_HEADS='h2,h3,.db-head,.ph-title,.acc-hd';
    uses: scan backwards from the prose and take the first usable heading. */
 function sayOwnerOf(el){
   const view=el.closest('.view')||document.body;
-  const nodes=Array.from(view.querySelectorAll(SAY_HEADS+',.sub,.tab-intro,.build-intro,.rp-frame,.tl-lead,.walls-tag,.acw-note'));
+  /* Built from SAY_PROSE, not from a second hand-written copy of it. The copy
+     is how the Home hero got lost twice in one fix: the collector was taught to
+     see [data-say="1"] and this list was not, so indexOf came back -1 and the
+     function returned null before it could even reach its own fallback. Two
+     lists describing the same set of prose, maintained separately, will drift -
+     the only question is which screen notices first. */
+  const nodes=Array.from(view.querySelectorAll(SAY_HEADS+','+SAY_PROSE));
   const i=nodes.indexOf(el);
   if(i<0) return null;
   for(let j=i-1;j>=0;j--){
@@ -7723,12 +7738,40 @@ function sayPassInner(view){
   found.forEach(({own, els})=>{
     /* If hiding it would leave the panel with nothing to read, it was not
        decoration - it was the panel. Leave it alone. */
-    const scope=own.head?(own.head.closest('.panel,.databox,.acc-body')||own.box):own.box;
+    /* The fallback used to be own.box - the heading's PARENT - and for prose
+       that does not live in a panel at all that is a wrapper holding the
+       heading and the paragraph and nothing else. It therefore always found
+       zero controls and always declined to move, which is how the Four Walls
+       line stayed on Home: its heading sits in a .walls-head div, so the guard
+       measured a two-element box and concluded the section would be left empty,
+       while the screen around it held eighteen controls.
+
+       The guard's real question is "would hiding this leave the panel with
+       nothing to read", so where there IS a panel it still asks exactly that
+       and a gated-shut panel is still protected - that is the panel-waiting
+       case, down to a heading and one line saying what brings it back, where a
+       "?" would be the only thing left. Where there is no panel, the honest
+       scope is the screen the prose is loose on. */
+    const scope=own.head
+      ? (own.head.closest('.panel,.databox,.acc-body') || own.head.closest('section,.view') || own.box)
+      : own.box;
     /* Visible controls, not merely present ones. A panel gated shut is already
        down to a heading and one line saying what will bring it back - putting a
        "?" on it adds a control to the one place that had deliberately hidden all
        of them, and leaves nothing to read but the question mark. */
-    const others=[...scope.querySelectorAll('button,input,select,textarea,table,canvas,.row,.chart,li')]
+    /* .pw-note earns its place in this list. The guard exists so a panel gated
+       shut - already down to a heading and the one line saying what brings it
+       back - does not end up showing a question mark and nothing else. That
+       line IS the .pw-note, and it was not counted, so every waiting panel read
+       as empty and kept its teaching on screen: the payoff planner was sitting
+       there with a heading, SIXTY-EIGHT words of explanation and the gate line,
+       which is the opposite of the state the guard was written to imagine.
+
+       Counting it protects exactly the case that deserves protection - a
+       waiting panel with nothing but a heading and one paragraph still stays -
+       while letting the loud ones fold down to heading, "?", and the sentence
+       that says what unlocks them. */
+    const others=[...scope.querySelectorAll('button,input,select,textarea,table,canvas,.row,.chart,li,.pw-note')]
       .filter(c=>!c.classList.contains('say-why') && c.offsetParent!==null);
     if(!others.length) return;
     const key='say'+(++n);
@@ -12984,7 +13027,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-04 · the month counts the paydays still coming';
+const BUILD_STAMP='2026-09-05 · every section explains itself on tap';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;

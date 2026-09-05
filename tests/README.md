@@ -1899,3 +1899,106 @@ correct while the carry was the only thing the month counted, in place of the
 The test to apply: could the rewritten assertion still fail? All three can, and
 all three would have caught the original bug. An assertion loosened until it
 cannot fail is the second entry in this file's list of ways to fake coverage.
+
+
+## Three copies of one definition, and the screen that proved they had drifted
+
+Asked for as *"I want every section to have its own explainer card that opens
+when clicked. To minimize the initial on screen text even further."* The
+mechanism was already built: Clean mode hides explanatory prose and puts a `?`
+beside its heading that opens a sheet titled by that section. It was reaching
+almost none of the prose it existed for.
+
+Measured before touching anything - **427 words of prose still on screen across
+ten screens, and 9 explainer buttons, with Home carrying zero.** Three faults,
+each a different way of writing the same definition twice:
+
+1. **A marker read in one place and ignored in the place that collects.**
+   `data-say="1"` is stamped on 94 static-literal paragraphs, and
+   `sayIsExplanation` reads it to relax the word-count test - but `SAY_PROSE`,
+   the selector deciding what to even look at, listed eight class names and not
+   the marker. The Home hero was the loudest casualty: the first prose on the
+   first screen, explicitly marked, never once considered by the pass built to
+   move it.
+2. **A second copy of that list in the function next door.** `sayOwnerOf` had
+   its own hardcoded prose selector, so after the collector learned to see the
+   hero, `indexOf` still returned -1 and the function returned null before
+   reaching its own tab-title fallback. Both derive from `SAY_PROSE` now.
+3. **A guard protecting a state that was not occurring.** It skips a panel gated
+   shut, reasoning that such a panel is "already down to a heading and one line
+   saying what brings it back", where a `?` would leave nothing to read. Sound.
+   But that line is a `.pw-note`, which was not in its list of things counting
+   as content - so every waiting panel read as empty. The payoff planner was
+   sitting there with a heading, **sixty-eight words of explanation** and the
+   gate line, which is the opposite of the state the guard imagined.
+
+After: **304 words (-29%), 13 explainers, and 100% of sections carrying
+explanatory prose offering it as a tap.** Debt 83 to 15 words, Learn 87 to 55,
+Home 77 to 54.
+
+### The diagnosis was worth more than the fix
+
+The first instinct was to guess which filter was too strict and loosen it. What
+actually happened: a throwaway script walked every screen, and for each visible
+paragraph reported **which specific filter rejected it and why**. That turned an
+argument into a table - and the table said two of the five rejection reasons
+were *correct* and must be left alone. Without it, loosening the gated-panel
+guard wholesale would have stripped the one line telling a reader what unlocks a
+panel. **Ask the code which rule rejected it before deciding the rule is wrong.**
+
+### What was deliberately left on the screen
+
+"Minimize" is not "hide", and `explain.mjs` asserts the difference:
+
+- The **left-to-budget note** stays, and there is a check that it is never
+  swept into a sheet. It is the arithmetic explaining the reader's own figures -
+  the thing that answered the weekly-pay report - and a plan whose explanation
+  needs a tap is a plan that reads as an unexplained accusation.
+- The **deck one-liners** stay. Seven words labelling the chip row below them
+  costs less than a tap to find out what a row does.
+- **Learn's lesson body** stays. Learn is where a person goes to read; moving
+  its content behind taps would be perverse.
+
+The probe holds coverage at 100%, a ceiling on words per screen and across the
+app, that the card opens with the right title and its text, and that the button
+carries an aria-label for a reader who cannot see the glyph.
+
+
+### The gate that refused this, and why narrowing it was not cheating
+
+Moving the prose off a waiting panel put a `?` on it, and a structure check
+requires a `.panel-waiting` to hide **all** of its `input, select, button`. So
+the gate refused the change, which is the correct behaviour for a check whose
+wording did not distinguish two different things.
+
+What that gate defends is that a panel does not offer a **tool a person cannot
+use yet**: the payoff planner's inputs would take numbers and compute nothing,
+so they are hidden until there is a debt to plan. The `?` is not a tool on that
+panel - it opens a card of text, works identically whether the panel is locked
+or not, and reading what a planner does before deciding to use it is a
+reasonable thing to want.
+
+The test for whether a narrowing is honest is the same one used earlier in this
+file: **can the rewritten check still fail, and would it still catch the fault
+it was written for?** It fails on any real input, select or action button
+leaking into a waiting panel, and the two checks either side of it still require
+the heading and the line saying what brings the panel back - so the `?` can
+never become the only thing on it.
+
+### A check of my own that measured text nobody can see
+
+Added in the same pass: a bound on how many words a waiting panel may show,
+because the payoff planner had been sitting at sixty-eight and would creep back
+if nothing watched it. It immediately failed on five panels, one of them **209
+words**.
+
+All five were wrong. `innerText` on an element that is **not rendered** falls
+back to `textContent`, and those panels were not on screen at all - so the check
+was reporting hidden copy as clutter. Acting on it would have sent somebody to
+shorten writing that costs the reader nothing.
+
+It filters on `offsetParent !== null` now, and the two waiting panels that are
+genuinely visible measure 16 and 19 words. **A layout check that does not ask
+whether the thing is on screen is measuring the DOM, not the interface** - the
+same mistake as the overlap check that once compared element boxes instead of
+glyph rectangles.
