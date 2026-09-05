@@ -550,3 +550,33 @@ in as many words rather than leaving you to wonder what you configured wrong.
 Turning on *"everything I expect this month"* in that situation should change
 **nothing at all**, because there is nothing to project. If it changes a figure,
 that is money the app invented and I want to know immediately.
+
+### Every section explains itself on tap
+
+Settings shows `2026-09-05 · every section explains itself on tap`.
+
+You asked for the Acorns pattern - a small mark next to a heading that opens a
+card with the explanation, so the screen itself stays short. The app already had
+it; it was reaching almost none of the text.
+
+What to look for:
+
+- A small **?** sits beside section headings. Tap it and a card slides up,
+  titled with that section's name, holding the words that used to be on screen.
+- **Home should be noticeably shorter.** The line under the big heading, and the
+  Four Walls line, are both behind taps now.
+- **Debt and Learn should be much shorter** where a panel is waiting to unlock.
+  You should still see the sentence saying what unlocks it - if that line has
+  gone, that is a real report.
+
+Three things I left on screen on purpose. Tell me if you disagree with any:
+
+1. **The left-to-budget note** on Home and Plan - the "$X + $Y = $Z to budget"
+   arithmetic. That is about your numbers, not a lesson, and a plan whose
+   explanation needs a tap reads like an accusation with no reason given.
+2. **The one-liners under each "More" row.** Seven words telling you what the
+   pills below are beats tapping to find out.
+3. **Learn's lesson text.** Learn is where you go to read.
+
+If any section still shows a paragraph you would rather tap for, tell me which
+heading it sits under and I will move it.

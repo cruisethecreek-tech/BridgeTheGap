@@ -170,7 +170,35 @@ const gates = await p.evaluate(async () => {
       h:(el.querySelector('h2')||{}).textContent||'?',
       note:(el.querySelector('.pw-note')||{}).textContent||'',
       keepsHeading:!!el.querySelector('h2'),
-      hidesControls:[...el.querySelectorAll('input,select,button')].every(c=>c.offsetParent===null) }));
+      /* .say-why is excluded, and the distinction is the point rather than a
+         convenience. What this gate defends is that a panel does not offer a
+         TOOL a person cannot use yet: the payoff planner's inputs would take
+         numbers and compute nothing, so they are hidden until there is a debt.
+         The "?" is not a tool on this panel - it opens a card of text, it works
+         identically whether or not the panel is unlocked, and reading what a
+         planner does before deciding to use it is a reasonable thing to want.
+
+         The check still fails on a real input, select or action button leaking
+         into a waiting panel, which is the fault it was written for. It also
+         still requires the heading and the line saying what brings the panel
+         back, so the "?" can never become the only thing on it. */
+      hidesControls:[...el.querySelectorAll('input,select,button')]
+        .filter(c=>!c.classList.contains('say-why'))
+        .every(c=>c.offsetParent===null),
+      /* and while we are here: a waiting panel should be SHORT. It was carrying
+         sixty-eight words of explanation next to the one line telling you what
+         unlocks it, which is what sent that prose behind the "?" in the first
+         place. Left unmeasured, it would creep straight back.
+
+         Measured only when the panel is actually ON SCREEN, and that guard is
+         load-bearing rather than tidiness: innerText on an element that is not
+         rendered falls back to textContent, so the first version of this
+         counted five panels nobody can see - one of them 209 words - and
+         reported them as clutter. A check that measures hidden text will fail
+         on content that costs the reader nothing, and sending an author to
+         shorten it would be pure waste. */
+      shown: el.offsetParent!==null,
+      words:(el.innerText||'').trim().split(/\s+/).filter(Boolean).length }));
   }
   return out;
 });
@@ -181,6 +209,10 @@ check('...each keeping its heading, so no tool is a secret', allWaiting.every(x=
 check('...each saying what will bring it back', allWaiting.every(x=>x.note.length>10),
       allWaiting.map(x=>x.note.slice(0,40)).join(' // '));
 check('...and hiding its controls until then', allWaiting.every(x=>x.hidesControls));
+const shownWaiting=allWaiting.filter(x=>x.shown);
+check('...without becoming an essay about a panel you cannot use yet',
+      shownWaiting.every(x=>x.words<=40),
+      `${shownWaiting.length} on screen: `+shownWaiting.map(x=>`${x.h}:${x.words}w`).join(' | '));
 
 /* an input panel is never gated - you cannot get data without it */
 const inputs = await p.evaluate(async () => {
