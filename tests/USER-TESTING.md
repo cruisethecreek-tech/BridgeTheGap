@@ -661,3 +661,30 @@ can check:
 1. **The round trip between two real phones.** Still the oldest open item.
 2. **Your RLS policies.** Confirm a signed-in user can read only their own rows.
    The dashboard Logs will show what the policies actually decided.
+
+### The statement scan, after the balance-column rewrite
+
+Settings shows `2026-09-10 · the balance column follows its own chain`.
+
+Scan the same statement that came back wrong - the page with the three Acorns
+round-ups. What should happen now:
+
+- **Three Acorns rows, not six.** $5.30, $10.00 and $18.50, with no sign of
+  $2,052.02, $2,057.32 or $2,067.32. Those are the running balances.
+- **The ALDI deposit should say it is money coming IN.** This is the one worth
+  checking hardest: the bank prints deposits with no plus sign, so a $2,436.96
+  paycheck was being read as spending. If it still lands as an expense, tell me
+  straight away - that is the more expensive of the two faults.
+- **The note under the read should say how many balances it set aside.**
+
+Two things that would be real reports:
+
+- **A row you cannot account for.** If the reader loses an amount, the balance
+  belonging to that row cannot be proved and comes through unnamed. One of those
+  is a known limit. More than one, or one that is *named*, is not.
+- **A missing transaction.** The opposite failure, and the worse one. If
+  something you can see on the bank's screen is not in the list, that matters
+  more than an extra row you can delete.
+
+Worth trying a till receipt too, which has no balance column at all. Every line
+should survive.
