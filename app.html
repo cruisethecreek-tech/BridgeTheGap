@@ -11257,28 +11257,114 @@ function qlParseOcr(text){
    when the numbers themselves say what it is. */
 function qlDropBalances(rows){
   if(rows.length<4) return rows;
-  for(const off of [0,1]){
-    const amts=[], bals=[];
-    rows.forEach((r,i)=>((i%2===off)?amts:bals).push(r));
-    if(amts.length<2 || bals.length<2) continue;
-    let tests=0, hits=0;
-    for(let i=0; i+1<bals.length && i<amts.length; i++){
-      tests++;
-      const step=bals[i+1].amt-bals[i].amt;
-      /* a withdrawal shrinks the balance going forward, a deposit grows it, and
-         a statement may be listed either way round - so either sign proves it */
-      if(Math.abs(Math.abs(step)-amts[i].amt)<0.02) hits++;
+  const {bals, signs}=qlBalanceChain(rows);
+  /* Three linked balances is a column; two is a coincidence waiting to happen.
+     And a "column" that swallowed nearly the whole page is a misread rather
+     than a discovery - refusing there costs somebody a little deleting, while
+     being wrong the other way silently halves their statement. */
+  if(bals.size<3 || bals.size>rows.length-2) return rows;
+  /* A statement usually prints its balance twice: once per row, and once as a
+     summary above the table. The summary is not part of the chain - nothing
+     steps to it - so it survived as a transaction for the exact amount the
+     account happens to hold. Any leftover token equal to the cent to a proven
+     balance is that same figure printed somewhere else, not a payment that
+     coincidentally matched a balance to the penny. */
+  const balVals=[...bals].map(i=>rows[i].amt);
+  const kept=[];
+  rows.forEach((r,i)=>{
+    if(bals.has(i)) return;
+    if(balVals.some(v=>Math.abs(v-r.amt)<0.005)) return;
+    /* The chain knows which way the money went, and it knows it better than the
+       reader does. A bank prints a debit with a minus and a deposit with no
+       sign at all, so the old rule - only an explicit "+" means income - filed
+       a $2,436.96 paycheck as spending. The balance either rose or fell, and
+       that is not a matter of whether a glyph survived the photograph. */
+    if(signs.has(i)) r.kind=signs.get(i);
+    kept.push(r);
+  });
+  kept.forEach(r=>{ r.balancesDropped=bals.size; });
+  return kept;
+}
+/* Which tokens are the running balance, found by FOLLOWING THE CHAIN rather
+   than by counting positions.
+
+   The first version split the list by odd and even index and asked whether the
+   two halves reconciled. On a clean read that is exactly right, and a clean
+   read is what it was tested on. On a real one it is all or nothing: a balance
+   summary printed above the table, a reference number inside a description, one
+   figure the reader could not make out - any single extra or missing token
+   shifts the parity of everything after it, the test fails for the whole page,
+   and every balance comes through as a transaction. Reported with the statement
+   held beside the result: three Acorns round-ups logged next to $2,052.02,
+   $2,057.32 and $2,067.32, which are the balances they left behind. Five of six
+   realistic misreads leaked the column that way.
+
+   A balance column is a chain, not a rhythm. Listed newest first, each balance
+   is the NEXT one plus that row's signed amount - 4,468.98 = 4,488.98 + (-20.00)
+   - so the amount belongs to the balance ABOVE it, and the difference between
+   two balances is that row's movement. That holds however much noise the reader
+   sprinkles around it, so this walks forward looking for the next link inside a
+   short window and steps over anything that does not fit instead of giving up.
+   Where the chain begins is unknown too, so it tries several starts and keeps
+   the longest run it can actually prove. */
+function qlBalanceChain(rows){
+  const n=rows.length, near=(a,b)=>Math.abs(a-b)<0.02;
+  /* Two readings of the same page can both be arithmetically perfect and only
+     one of them sane. With a balance summary printed above the table, starting
+     the chain one token early treats the summary as an AMOUNT and the $20.00
+     transaction as a BALANCE: 20 - 4,488.98 = -4,468.98 checks out exactly, and
+     the run comes out the same length as the true one, so whichever was tried
+     first won.
+
+     Size decides first, as before, because that is the evidence. The tie-break
+     is the smallest balance in the run, and it earns its place: a balance
+     column is the account's running total, so its figures sit consistently
+     above the movements through it. A "balance" of $20 carrying a $4,468.98
+     movement is not a reading of a bank statement. Guessing by size was
+     rejected as the test and stays rejected; this only chooses between readings
+     the arithmetic has already proved. */
+  let best={bals:new Set(), signs:new Map(), floor:-1};
+  for(let s=1;s<Math.min(n,9);s++){
+    const bals=new Set([s]), signs=new Map();
+    let cur=s;
+    while(cur<n){
+      let hit=-1, amtIdx=-1, delta=0;
+      /* A row carries an amount, a balance and some noise - not a paragraph -
+         so both windows stay short. Widening them buys nothing and starts
+         finding chains inside coincidences. */
+      for(let k=cur+1;k<Math.min(n,cur+5)&&hit<0;k++){
+        const d=rows[cur].amt-rows[k].amt, D=Math.abs(d);
+        for(let a=cur-1;a>=Math.max(0,cur-4)&&hit<0;a--){
+          if(bals.has(a)) continue;
+          if(near(D, rows[a].amt)){ hit=k; amtIdx=a; delta=d; break; }
+          /* A BALANCE THE READER MISSED leaves a gap of two rows rather than
+             one, and arithmetic says exactly what that looks like: the step is
+             this row's amount combined with the next one's, because the balance
+             that separated them never made it off the photo. Checking the sum
+             and the difference covers both directions without needing to know
+             which way either row went. Without this a single unreadable figure
+             ends the chain, the run comes up short of proof, and every balance
+             on the page is handed back as a transaction - which is the whole
+             fault being fixed, returning through a smaller door. */
+          for(let a2=a+1;a2<k;a2++){
+            if(a2===a||bals.has(a2)) continue;
+            if(near(D, rows[a].amt+rows[a2].amt) || near(D, Math.abs(rows[a].amt-rows[a2].amt))){
+              hit=k; amtIdx=a; delta=d; break;
+            }
+          }
+        }
+      }
+      if(hit<0) break;
+      bals.add(hit);
+      /* balance went UP across this row, so money arrived */
+      signs.set(amtIdx, delta>0?'income':'expense');
+      cur=hit;
     }
-    /* Two agreeing pairs is a coincidence; most of them agreeing is a column. */
-    if(tests>=2 && hits/tests>=0.6){
-      /* The balances are not thrown away silently - the caller says how many
-         were recognised, because a reader that quietly halves your statement is
-         indistinguishable from one that missed half of it. */
-      amts.forEach(r=>{ r.balancesDropped=bals.length; });
-      return amts;
-    }
+    const floor=bals.size?Math.min(...[...bals].map(i=>rows[i].amt)):-1;
+    if(bals.size>best.bals.size || (bals.size===best.bals.size && floor>best.floor))
+      best={bals,signs,floor};
   }
-  return rows;
+  return best;
 }
 /* The path this was built for: one line, one purchase, price at the end. */
 function qlParseNotepad(raw){
@@ -13313,7 +13399,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-05 · sync arrives on its own, and can be rewound';
+const BUILD_STAMP='2026-09-10 · the balance column follows its own chain';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;

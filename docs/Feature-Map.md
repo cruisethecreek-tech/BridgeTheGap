@@ -1334,7 +1334,23 @@ Guessing by size would be wrong - a $5,311.75 transaction is perfectly possible,
 5,111.75 − 200.00 = 4,911.75  … and so on down the page
 ```
 
-`qlDropBalances` splits the extracted stream into its two interleavings and tests that relation on each. A column is only dropped when most of the pairs agree - two agreeing pairs is a coincidence, most of them agreeing is a column - and the reader then says how many balances it set aside, because a reader that quietly halves your statement is indistinguishable from one that missed half of it. A statement with no balance column is untouched, which the probe checks explicitly.
+`qlDropBalances` splits the extracted stream into its two interleavings and tests that relation on each. A column is only dropped when most of the pairs agree, and the reader then says how many balances it set aside, because a reader that quietly halves your statement is indistinguishable from one that missed half of it. A statement with no balance column is untouched, which the probe checks explicitly.
+
+### Then it came back, because parity is not the pattern
+
+Reported a second time with a fresh statement: three Acorns round-ups logged alongside **$2,052.02, $2,057.32 and $2,067.32** - the balances they left behind. The arithmetic above was never wrong. How it went looking for the pattern was.
+
+Splitting by odd and even index requires the **whole page** to alternate. One extra or missing figure anywhere - a balance summary printed above the table, a reference number inside a description, one amount the reader could not make out - shifts the parity of everything after it, the test fails for the entire statement, and every balance comes through as a transaction. Measured against six realistic misreads before anything was changed: **five of the six leaked the whole column.** The original was tested on a clean read, which is the one case where parity holds.
+
+A balance column is a **chain, not a rhythm**. Each balance is the next one plus that row's signed amount, so the amount belongs to the balance *above* it and the difference between two balances is that row's movement. `qlBalanceChain` walks forward looking for the next link inside a short window and **steps over anything that does not fit** rather than giving up, tries several starting points because the first balance may be the second token or the sixth, and keeps the longest run it can prove.
+
+Three things fell out of writing it that way:
+
+- **A missing balance is bridgeable.** When a figure is lost the step spans two rows, which is arithmetically visible: the delta matches the sum or difference of two amounts. Without this, one unreadable figure ends the chain, the run comes up short of proof, and the whole column leaks again through a smaller door.
+- **Two readings can both be perfect.** With a summary above the table, starting one token early treats the summary as an amount and the $20.00 transaction as a balance - `20 − 4,488.98 = −4,468.98` checks out exactly, and the run is the same length. Size decides nothing on its own and still does not; it is only the **tie-break** between readings the arithmetic has already proved, on the grounds that a balance column sits consistently above the movements through it. A "balance" of $20 carrying a $4,468.98 movement is not a bank statement.
+- **The chain knows which way the money went.** A bank prints a debit with a minus and a deposit with no sign at all, so the old rule - only an explicit `+` means income - filed a **$2,436.96 paycheck as spending**. The balance either rose or fell across that row, and that does not depend on whether a glyph survived the photograph.
+
+**One honest limit, pinned rather than papered over.** If the reader loses an *amount*, the balance it would have proved has nothing left to prove it, and arithmetic cannot rule out that it was a payment. That row arrives unnamed and flagged - a visible gap rather than a silent wrong number - and the probe holds it at *at most one*, so it cannot quietly get worse.
 
 **Also fixed in the same report.** `== 2° Nf 2°. G&G) <|Se` came back as a transaction *name*. A description that is mostly not letters is OCR soup, and showing it is worse than showing the row as unnamed: a person will fix a blank, and will not think to question something that looks like it was read properly. The amount is kept either way - that is the part OCR gets right and the part that is tedious to retype.
 

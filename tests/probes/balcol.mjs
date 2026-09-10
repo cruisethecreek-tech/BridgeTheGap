@@ -94,6 +94,71 @@ ok('the quick log picker takes more than one photo', multi.found&&multi.multiple
 ok('...and there is somewhere to hold the pages', multi.holdsPages===true, JSON.stringify(multi));
 ok('the statement reader already did', multi.scan===true);
 
+/* ---------- the report that reopened this ----------
+   A statement scanned on a phone came back with the three Acorns round-ups AND
+   $2,052.02, $2,057.32, $2,067.32 - the running balances they left behind. The
+   arithmetic proof was right; the way it looked for the pattern was not. It
+   split the tokens by odd and even index and required the whole page to
+   alternate, so one stray figure anywhere shifted the parity of everything
+   after it and the entire column came through as transactions.
+
+   These are the shapes a real read actually arrives in. Each one used to leak. */
+const REAL=[['Home banking Withdrawal / Transfer',-20,4468.98],
+            ['ACH Deposit / ALDI Inc',2436.96,4488.98],
+            ['ACH Withdrawal / Acorns Round-Ups',-5.30,2052.02],
+            ['ACH Withdrawal / Acorns Round-Ups',-10.00,2057.32],
+            ['ACH Withdrawal / Acorns Round-Ups',-18.50,2067.32]];
+const BALS=[4468.98,4488.98,2052.02,2057.32,2067.32];
+const page=(extra='',mutate=x=>x)=>mutate(extra+REAL.map(([d,a,bal])=>
+  `${d}\n9000142693 Transfer 090926 ${a<0?'-':''}$${Math.abs(a).toLocaleString('en-US',{minimumFractionDigits:2})}`
+  +`\n855-739 $${bal.toLocaleString('en-US',{minimumFractionDigits:2})}\nSep 9, 2026`).join('\n'));
+
+const read=(t)=>pg.evaluate(x=>{
+  const out=qlParseOcr(x);
+  return { amts:out.map(r=>r.amt), kinds:out.map(r=>r.kind||'expense'),
+           names:out.map(r=>r.what||'') };
+},t);
+const leaks=r=>r.amts.filter(a=>BALS.includes(a)).length;
+
+let g=await read(page());
+ok('a clean statement gives back its transactions and none of its balances',
+   g.amts.length===5 && leaks(g)===0, JSON.stringify(g.amts));
+ok('...and the deposit is read as money arriving, not money spent',
+   g.kinds[1]==='income' && g.kinds.filter(k=>k==='income').length===1,
+   JSON.stringify(g.kinds));
+
+g=await read(page('Available balance $4,468.98\nPosted\n'));
+ok('a balance printed above the table does not become a transaction',
+   leaks(g)===0 && g.amts.length===5, JSON.stringify(g.amts));
+
+g=await read(page('',t=>t.replace('$2,052.02','[unreadable]')));
+ok('a balance the reader missed does not take the whole column with it',
+   leaks(g)===0, JSON.stringify(g.amts));
+
+g=await read(page('Pending\nPOS DEBIT SHELL OIL $41.20\n'));
+ok('a pending row with no balance beside it is kept, and the column still goes',
+   leaks(g)===0 && g.amts.includes(41.2), JSON.stringify(g.amts));
+
+g=await read(page('',t=>t.replace('ACH Deposit / ALDI Inc','ACH Deposit / ALDI Inc REF 12.34')));
+ok('a reference number inside a description does not break the read',
+   leaks(g)===0, JSON.stringify(g.amts));
+
+/* The guard, and it matters more than any of the above: a till receipt has no
+   balance column, and a detector eager enough to find one everywhere would
+   quietly eat half of somebody's shopping. */
+g=await read('MORRISONS\nMilk $2.40\nBread $1.80\nCheese $4.25\nApples $3.10\nTOTAL $11.55');
+ok('a receipt with no balance column keeps every line',
+   g.amts.length===5, JSON.stringify(g.amts));
+
+/* One honest limit, pinned so it cannot quietly get worse. When the READER
+   loses an amount, the balance that amount would have proved has nothing left
+   to prove it - arithmetic cannot rule out that it was a payment. It comes
+   through unnamed and flagged, which is a visible gap rather than a silent
+   wrong number, and the rest of the column still goes. */
+g=await read(page('',t=>t.replace('-$10.00','[unreadable]')));
+ok('an amount the reader lost costs at most its own balance, not the column',
+   leaks(g)<=1, JSON.stringify(g.amts));
+
 R.forEach(([n,p,d])=>{ if(!p) console.log('FAIL: '+n+(d?'  <'+d+'>':'')); });
 const bad=R.filter(x=>!x[1]).length;
 console.log(`${R.length-bad} of ${R.length} hold`);
