@@ -50,7 +50,7 @@ function makeState(i){
     if(type==='invest') it.ikind=pick(['holds','self']);
     recurring.push(it);
   }
-  return { onboarded:true, activeMonth:M, stageReached:3, hourlyWage:pick([0,12,22.5,40]), hoursPerWeek:pick([0,32,40,55]),
+  return { onboarded:true, mindOff:true, activeMonth:M, stageReached:3, hourlyWage:pick([0,12,22.5,40]), hoursPerWeek:pick([0,32,40,55]),
     categories:cats, budgets, transactions:txs, accounts, recurring,
     assets:rnd()<0.5?[{id:'as1',name:'Car',value:money(),kind:pick(['real','stuff']),cost:0}]:[],
     liabilities:rnd()<0.5?[{id:'l1',name:pick(['Visa','Mortgage']),value:money()}]:[],

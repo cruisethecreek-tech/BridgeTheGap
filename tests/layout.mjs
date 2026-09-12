@@ -35,7 +35,7 @@ const WIDTHS=[320,360,390,430];   // small Android, iPhone SE/13 mini, iPhone 14
 /* One household rich enough to light up every panel, with the long names and
    awkward amounts that actually break layouts: a category that does not fit,
    a four-figure amount with cents, a note longer than its row. */
-const HOUSE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,hourlyWage:24,
+const HOUSE={onboarded:true, mindOff:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,hourlyWage:24,
  categories:[{id:'food',name:'Food'},{id:'groc',name:'Groceries',parentId:'food'},{id:'eat',name:'Eating out',parentId:'food'},
    {id:'roof',name:'Roof over my head'},{id:'car',name:'Getting Around'},{id:'fun',name:'Fun / entertainment'},
    {id:'inv',name:'Investing / retirement',growth:'invest'}],
@@ -367,7 +367,7 @@ for(const theme of ['light','dark']){
   tp.on('pageerror',e=>errs.push('texture '+theme+': '+e.message));
   await tp.goto('file://'+process.cwd()+'/app.html'); await tp.waitForTimeout(400);
   await tp.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
-    {onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
+    {onboarded:true, mindOff:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
      categories:[{id:'f',name:'Food'}],budgets:{},transactions:[],goals:[],impulse:[],
      recurring:[],accounts:[],assets:[],liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[]});
   await tp.reload(); await tp.waitForTimeout(500);

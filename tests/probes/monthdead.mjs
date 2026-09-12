@@ -12,7 +12,7 @@ await pg.addInitScript(t=>{ const R=Date; window.__off=t-R.now();
   window.Date=S; }, new Date('2026-08-30T10:00:00').getTime());
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-08',hourlyWage:70,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-08',hourlyWage:70,
   categories:[{id:'c1',name:'Food'}],budgets:{'2026-08':{c1:400}},
   accounts:[{id:'a1',name:'Chequing',kind:'checking',balance:5000,updated:'2026-08-01'}],
   lessons:[{id:'l1',date:'2026-08-20',name:'Jacket',amount:200,cause:'scroll',covered:'',note:'Bought it anyway'}],

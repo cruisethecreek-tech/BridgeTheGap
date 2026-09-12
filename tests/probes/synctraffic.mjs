@@ -11,7 +11,7 @@ const pg=await b.newPage({viewport:{width:390,height:1000}});
 pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(()=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,householdOn:true,syncOptIn:true,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,householdOn:true,syncOptIn:true,
   activeMonth:'2026-09',nameA:'Pat',nameB:'Kristi',deviceId:'devA',meIs:'a',
   categories:[],budgets:{},transactions:[],goals:[],impulse:[],recurring:[],accounts:[],assets:[],
   liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[],snapshots:[],scans:[],opening:{},

@@ -11,7 +11,7 @@ const errs=[]; pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 /* his shape exactly: Acorns is a leaf under an Investing group */
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-09',hourlyWage:70,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-09',hourlyWage:70,
   categories:[{id:'inv',name:'Investing',growth:'invest'},
               {id:'ac',name:'Acorns',parentId:'inv'},
               {id:'st',name:'Stash',parentId:'inv'},

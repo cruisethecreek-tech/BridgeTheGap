@@ -8,7 +8,7 @@ await pg.goto('file://'+process.cwd()+'/app.html');
 /* A paycheck every two weeks, rent on the 1st, a subscription on the 12th,
    and an automatic invest - the shape of an ordinary month. */
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
   categories:[{id:'rent',name:'Rent'},{id:'subs',name:'Subscriptions'}],
   budgets:{'2026-08':{rent:1400,subs:20}},
   accounts:[{id:'a1',name:'Checking',kind:'checking',balance:3000,updated:'2026-08-01'}],

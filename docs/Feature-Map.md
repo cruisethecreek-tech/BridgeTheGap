@@ -126,6 +126,14 @@ collapses it otherwise; `#moreBtn` toggles it manually. `MORE_VIEWS` lists the t
 
 **Home's net worth tile agrees with the rest of the app.** It computed `sumAssetsKind('real')+sumAssetsKind('stuff')-sumLiab()` and left `bankTotal()` out, so a person with **$69,767.88** in the bank was shown a *"Net worth"* of **$507.20** - the brokerage asset on its own. There is exactly one definition of the phrase in this app, `netWorth() = sumAssets()+bankTotal()-sumLiab()`, and every other surface uses it: the Reflect tab, the snapshot history, the retro chart. Home disagreed with all of them about the same moment, under the same word, and would have printed $68,126.14 anywhere else. This is the **fourth** time a partial figure has worn a whole figure's name here, and the reason arithmetic checks keep passing through it is that the sum is always right - it is the label that is the lie.
 
+**Mindset cards** (`MIND_CARDS`, `mindMaybeShow`, `renderMindList`) - six long-form cards in the owner's own voice, one opening the app per day. They are the only body of text in here that is not the interface talking, so they are stored **verbatim**: nothing shortens them, nothing runs them through the tone dial, and a probe asserts the exact opening line and closing punch of each.
+
+**Once a day, not once an open**, and that is the whole design. Someone logging three coffees before lunch would otherwise read the same 180 words three times, and a thing written to be valued becomes a thing to tap past - after which it is wallpaper. `state.mindDay` holds the date last shown; `state.mindSeen` rotates every card before repeating any, then starts the round over rather than going silent, because going silent looks like a fault.
+
+**Dismissing one is never how you lose it.** All six live on Learn under *Mindset cards*, openable any time, and the library copy carries no *Got it* / *Stop showing these* buttons - those belong to the prompt, not to something a person chose to open. `state.mindOff` turns the daily card off from either place and back on from Learn.
+
+Held back from anybody still in the intake and from a first run: a person being asked twenty questions about their money does not need a lecture between two of them, and the app has not earned the interruption yet. Fired 900ms after `boot()` finishes, because a modal over a half-painted app reads as an error rather than a greeting.
+
 **Freedom Mode** (`$` / ⌛ header toggle) - converts every figure into **hours of your life** via `fmtLife` (minutes → hours → work-days → work-months). `money()` is mode-aware; `usd()` is always dollars. Needs an hourly wage. `renderFreedomToggle`, `renderAll`.
 
 **The unit rule.** `money()` converting everything is right for a figure you *read* and wrong for two kinds it does not own, so **`actMoney()`** (always dollars) marks the exceptions:

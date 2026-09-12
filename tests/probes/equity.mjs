@@ -9,7 +9,7 @@ const pg=await b.newPage({viewport:{width:390,height:900}});
 const errs=[]; pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-09',hourlyWage:70,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-09',hourlyWage:70,
   categories:[{id:'c1',name:'Food'}],budgets:{'2026-09':{c1:400}},
   debts:[{id:'m1',name:'Bears Den mortgage',balance:78000,apr:4.375,min:850,kind:'mortgage',worth:210000,secured:true},
          {id:'m2',name:'Upside down car',balance:19000,apr:7.9,min:410,kind:'auto',worth:14000,secured:true},

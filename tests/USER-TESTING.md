@@ -688,3 +688,29 @@ Two things that would be real reports:
 
 Worth trying a till receipt too, which has no balance column at all. Every line
 should survive.
+
+### The mindset cards
+
+Settings shows `2026-09-12 · a mindset card opens the day`.
+
+Six cards, in your own words, one opening the app each day.
+
+What to check:
+
+- **Open the app.** A card should appear about a second in, with the whole
+  thing - title, the punch line, the full text. Not a trimmed version.
+- **Close it and open the app again.** Nothing should appear. That is the
+  point: one a day, never twice in a day. If a second card shows up on the
+  same day, that is a real report.
+- **Learn, then Mindset cards.** All six should be listed with their punch
+  lines. Tapping one opens it. This is where a card you dismissed still lives.
+- **Stop showing these**, from the card or from Learn. It should stick across
+  a reload, and the switch to turn them back on is on Learn.
+- Worth confirming the words are **exactly as you wrote them**. If a single
+  sentence reads differently to how you sent it, tell me - nothing is supposed
+  to be editing your text.
+
+One judgement call worth your opinion rather than mine: **once a day at full
+length** is what I built. If it starts feeling like a toll gate on the way to
+logging a coffee, the two honest alternatives are leading with just the title
+and punch (full text one tap in), or dropping to once a week.

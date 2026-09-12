@@ -8,7 +8,7 @@ await pg.goto('file://'+process.cwd()+'/app.html');
 /* Clean is the default now. This probe is about Brief - clipping in place with a
    More - so it asks for that mode rather than assuming the app boots into it. */
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',s), JSON.stringify({
-  onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'brief',activeMonth:'2026-08',hourlyWage:30,
+  onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'brief',activeMonth:'2026-08',hourlyWage:30,
   categories:[{id:'c1',name:'Food'}],budgets:{'2026-08':{c1:400}},
   transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'},
                 {id:'e',type:'expense',amount:120,date:'2026-08-05',catId:'c1'}],

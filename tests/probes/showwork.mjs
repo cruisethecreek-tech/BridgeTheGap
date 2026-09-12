@@ -14,7 +14,7 @@ for(let i=0;i<23;i++) tx.push({id:'t'+i,type:'invest',amount:5+i,catId:null,
 tx.push({id:'soup',type:'invest',amount:25,source:'© + = £1 = Accounts Move Money Check',
          date:'2026-09-04',acctId:'chk',ikind:'holds'});
 await pg.evaluate(([s,tx])=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({...s,transactions:tx})),
- [{onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-09',hourlyWage:70,
+ [{onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-09',hourlyWage:70,
    categories:[{id:'c1',name:'Food'}],budgets:{'2026-09':{c1:400}},
    accounts:[{id:'chk',name:'Joint Checking',kind:'checking',balance:6637.64,updated:'2026-08-27',purpose:'sinking'}]}, tx]);
 await pg.reload(); await pg.waitForTimeout(1600);

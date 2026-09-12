@@ -7,7 +7,7 @@ pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 /* the user's own seven, plus a card */
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',s), JSON.stringify({
-  onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
+  onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
   categories:[{id:'c1',name:'Food'}],budgets:{'2026-08':{c1:400}},transactions:[],
   accounts:[
     {id:'a1',name:'Joint Checking',kind:'checking',balance:6637.64,updated:'2026-08-27'},

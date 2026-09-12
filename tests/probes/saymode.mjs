@@ -8,7 +8,7 @@ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const pg=await b.newPage({viewport:{width:390,height:900}});
 const errs=[]; pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
-const seed={onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',hourlyWage:30,
+const seed={onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',hourlyWage:30,
   categories:[{id:'c1',name:'Food'},{id:'c2',name:'Rent'}],budgets:{'2026-09':{c1:400,c2:1500}},
   accounts:[{id:'a1',name:'Checking',kind:'checking',balance:3000,updated:'2026-09-01'}],
   debts:[{id:'d1',name:'Visa',balance:2000,rate:19.9,min:60,kind:'card'}],

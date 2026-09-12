@@ -7,7 +7,7 @@ let pass=0, fail=0, errs=[];
 const ok=(n,c,d='')=>{ if(c){pass++;console.log('ok    '+n);} else {fail++;console.log('FAIL  '+n+(d?'\n        '+String(d).replace(/\n/g,' | ').slice(0,300):''));} };
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const M=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
-const base={onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:M,hourlyWage:30,
+const base={onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:M,hourlyWage:30,
   nameA:'Pat',nameB:'Kristi',meIs:'b',
   categories:[{id:'f',name:'Food'}],budgets:{[M]:{f:400}},
   transactions:[{id:'t',type:'income',amount:3000,date:M+'-01'}],

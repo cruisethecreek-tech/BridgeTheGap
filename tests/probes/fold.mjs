@@ -11,7 +11,7 @@ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const p=await b.newPage({viewport:{width:390,height:900}});
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
-const SEED={onboarded:true,activeMonth:'2026-09',uiMode:'all',stageReached:3,guidesOff:true,
+const SEED={onboarded:true, mindOff:true,activeMonth:'2026-09',uiMode:'all',stageReached:3,guidesOff:true,
   sayMode:'brief',                      /* the mode the report came from */
   hourlyWage:70,hoursPerWeek:40,debtBudget:1500,debtStrategy:'snowball',
   categories:[{id:'roof',name:'Roof'}],budgets:{'2026-09':{roof:1200}},

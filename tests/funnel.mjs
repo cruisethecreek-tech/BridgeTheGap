@@ -57,7 +57,7 @@ const p = await b.newPage({ viewport:{width:390,height:900} });
 p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(500);
 await p.evaluate(()=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({
-  onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
+  onboarded:true, mindOff:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
   categories:[],budgets:{},goals:[],impulse:[],recurring:[],accounts:[],assets:[],
   liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[],hours:[],
   transactions:Array.from({length:30},(_,i)=>({id:'t'+i,type:'expense',amount:10,date:'2026-08-0'+(i%9+1)}))

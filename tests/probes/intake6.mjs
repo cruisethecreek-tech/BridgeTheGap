@@ -106,7 +106,7 @@ const packs = await pg.evaluate(async () => {
   const rows2=[...document.querySelectorAll('.ia-pkc')];
   rows2[0].click(); await w(200);
   o.commitPick=(iaAns.packPick[key]||[]).slice();
-  state=JSON.parse(JSON.stringify(defaultState())); state.onboarded=true;
+  state=JSON.parse(JSON.stringify(defaultState())); state.onboarded=true; state.mindOff=true;
   (iaAns.packs||[]).forEach(k=>addPack(k,(iaAns.packPick||{})[k]));
   const flat=CAT_PACKS.find(p=>p.k===key).flat;
   o.landed=state.categories.filter(c=>flat?true:c.parentId).length;

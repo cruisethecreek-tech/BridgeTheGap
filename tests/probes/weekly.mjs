@@ -25,7 +25,7 @@ await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 
 /* Weekly pay anchored to Friday Sept 4. Occurrences: 4, 11, 18, 25.
    The 4th is today and is the one already logged, so three are still to come. */
-const SEED={ onboarded:true, activeMonth:'2026-09', uiMode:'all', stageReached:3,
+const SEED={ onboarded:true, mindOff:true, activeMonth:'2026-09', uiMode:'all', stageReached:3,
   guidesOff:true, sayMode:'clean',
   categories:[{id:'roof',name:'Roof'},{id:'food',name:'Food'},{id:'save',name:'Save'}],
   budgets:{'2026-09':{roof:3200,food:1424.21,save:2000}},          // 6,624.21 assigned

@@ -78,7 +78,7 @@ await p.goto('file://' + process.cwd() + '/app.html'); await p.waitForTimeout(40
 const seed = async () => {
   await p.evaluate(([cats, plan, income, spend]) => {
     localStorage.setItem('unfiltered_budget_v2', JSON.stringify({
-      onboarded:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, chatPace:'instant',
+      onboarded:true, mindOff:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, chatPace:'instant',
       hourlyWage:24, hoursPerWeek:40, household:true,
       categories:cats, budgets:{'2026-08':plan},
       transactions:income.concat(spend),
@@ -287,7 +287,7 @@ check('   ...and totals what is behind them', 2510, +(walls.coverFirstSays.match
    real paystub - they are left permanently 83 cents short and told so. */
 await p.evaluate(() => {
   localStorage.setItem('unfiltered_budget_v2', JSON.stringify({
-    onboarded:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, chatPace:'instant', hourlyWage:24,
+    onboarded:true, mindOff:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, chatPace:'instant', hourlyWage:24,
     categories:[{id:'roof',name:'Roof'},{id:'sav',name:'Savings'},{id:'fun',name:'Fun'}],
     budgets:{'2026-08':{roof:1200, sav:1000, fun:1047.83}},
     transactions:[{id:'i1',type:'income',amount:3247.83,source:'Pay',date:'2026-08-01'}],

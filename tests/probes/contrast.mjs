@@ -9,7 +9,7 @@ for(const theme of ['light','dark']){
   pg.on('pageerror',e=>errs.push(String(e)));
   await pg.goto('file://'+process.cwd()+'/app.html');
   await pg.evaluate(([s,t])=>{localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)); localStorage.setItem('theme',t);},
-   [{onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'clean',theme,activeMonth:'2026-09',hourlyWage:70,
+   [{onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'clean',theme,activeMonth:'2026-09',hourlyWage:70,
      householdOn:true,categories:[{id:'c1',name:'Food'}],budgets:{'2026-09':{c1:900}},
      accounts:[{id:'a1',name:'Chequing',kind:'checking',balance:85819,updated:'2026-09-01'}],
      transactions:[{id:'t1',type:'expense',amount:888,date:'2026-09-03',catId:'c1',acctId:'a1'}]}, theme]);

@@ -23,7 +23,7 @@ const PREVM=(()=>{ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; })();
 const PRIOR=ago(12), RECENT=ago(5), FIRST=ago(45);
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- ({onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:M0,hourlyWage:30,
+ ({onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:M0,hourlyWage:30,
   categories:[{id:'c1',name:'Food'}],budgets:{[M0]:{c1:400}},
   accounts:[
     {id:'jc',name:'Joint Checking',kind:'checking',purpose:'sinking',balance:6637.64,updated:RECENT,

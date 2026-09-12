@@ -10,7 +10,7 @@ const seed = st => pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JS
 
 /* The screenshot's own situation: a balance read on the 25th, income and
    spending logged since, and a projection asking to be trusted. */
-await seed({onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
+await seed({onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
   categories:[{id:'food',name:'Food'}], budgets:{'2026-08':{food:400}},
   accounts:[{id:'chk',name:'Joint Checking',kind:'checking',purpose:'sinking',balance:3843.28,updated:'2026-08-25'},
             {id:'sav',name:'Overflow income',kind:'checking',purpose:'emergency',balance:1000,updated:'2026-08-25'}],

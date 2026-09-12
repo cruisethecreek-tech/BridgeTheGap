@@ -1310,6 +1310,19 @@
   .fold-chip::after{content:' →';color:var(--muted);font-weight:600}
   #sayBody .fold-hid{display:block!important}
   .debt-hero-solo{display:block}
+  .mind-eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  .mind-t{margin:6px 0 10px;font-size:21px;line-height:1.25}
+  .mind-punch{margin:0 0 12px;font-size:15.5px;line-height:1.5;font-weight:700;color:var(--text);
+    padding-left:12px;border-left:3px solid var(--accent)}
+  .mind-body{margin:0;font-size:14px;line-height:1.65;color:var(--muted)}
+  .mind-acts{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+  .mind-foot{margin-top:10px;font-size:11.5px;line-height:1.5;color:var(--muted)}
+  .mind-row{display:block;width:100%;text-align:left;background:var(--ink);border:1px solid var(--line);
+    border-radius:12px;padding:11px 13px;margin-top:8px;font:inherit;cursor:pointer;
+    transition:border-color .14s ease}
+  .mind-row:hover{border-color:var(--accent)}
+  .mind-row .mr-t{display:block;font-size:14px;font-weight:800;color:var(--text)}
+  .mind-row .mr-p{display:block;margin-top:3px;font-size:12px;line-height:1.45;color:var(--muted)}
   .sync-live{margin-top:10px;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.5;
     background:var(--ink);border:1px solid var(--line);color:var(--muted)}
   .sync-live.on{border-color:rgba(53,201,154,.45);background:rgba(53,201,154,.08);color:var(--text)}
@@ -3467,6 +3480,13 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <div id="vaultList"></div>
       </div>
 
+      <!-- Every card, always. The one on opening is a prompt; this is the
+           library, so dismissing one is never how you lose it. -->
+      <div class="panel" id="mindPanel" data-deck="Mindset cards">
+        <h2>Mindset cards</h2>
+        <p class="sub" data-say="1">One of these opens the app once a day. All of them are here, whenever you want one.</p>
+        <div id="mindList"></div>
+      </div>
       <div class="panel" id="lessonsPanel" hidden data-deck="What you've told me">
         <h2>What you've told me</h2>
         <p class="sub" data-say="1">The times money left because something <b>happened</b> - not because you were tempted. Kept so the pattern can be seen, and so nothing here gets mistaken for a trap again.</p>
@@ -4148,6 +4168,12 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
   <!-- Where the explanations went. One sheet, reused by every panel: the title
        is the panel you asked from, the body is everything that panel would have
        said if it said it all on screen. -->
+  <div class="modal-overlay" id="mindSheet">
+    <div class="modal">
+      <button class="x" id="mindSheetX">&#10005;</button>
+      <div id="mindBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="saySheet">
     <div class="modal">
       <button class="x" id="saySheetX">&#10005;</button>
@@ -4376,6 +4402,40 @@ const SUB_ERR={
    SENSITIVE_RX) forces the Clean register on rent/medical/utilities/groceries/
    emergencies - be blunt everywhere else, never cameo-cruel during a crisis.
    ============================================================ */
+/* ---------- the mindset cards ----------
+   Written by the app's owner and stored VERBATIM. They are the one body of
+   text in here that is somebody's own voice rather than the interface's, so
+   nothing rewrites them, shortens them or runs them through the tone dial.
+
+   Shown ONCE A DAY, never on every load. Somebody logging three coffees before
+   lunch should not read the same two hundred words three times - that is how a
+   thing written to be valued becomes a thing to be tapped past, and after that
+   it is wallpaper. Once a day is the difference between a card and an advert.
+
+   Every one is also readable on demand from Learn, because a card that only
+   ever appears unbidden is a card you cannot go back to, and the best of these
+   is worth re-reading on a day it applies. Dismissing one must never be how you
+   lose it. */
+const MIND_CARDS=[
+  { k:'rich', t:'Rich mindset versus poor mindset',
+    punch:'Poor mindset spends to look better today. Rich mindset builds to live better later.',
+    body:`A poor mindset sees money as something to spend. A rich mindset sees money as something to grow. Poor mindset says I work for money. Rich mindset says money should start working for me too. That's why one person gets paid on Friday and feels broke by Monday. The other person gets paid and thinks, "What can this help me build?" Not always a business; sometimes it's a skill, a small investment, a better habit, or learning something that saves them from expensive mistakes. Poor mindset buys things to feel rich. Rich mindset builds things that make life less stressful. And here's the part people miss: You can have no money right now and still have a rich mindset. You can also make good money and still have a poor mindset, because the difference is not just your bank account. It's what your mind does when money shows up.` },
+  { k:'creator', t:'Consumer versus creator',
+    punch:'Consumer mindset spends attention to escape today. Creator mindset invests attention to design tomorrow.',
+    body:`A consumer mindset sees free time as a chance to be entertained. A creator mindset sees free time as a runway to build. Consumer mindset says, "I need to watch something to unwind." Creator mindset says, "I need to build something that works for me while I sleep." That's why one person scrolls for hours and feels drained by Monday. The other person works for an hour on a weekend and feels energized. It's not always about launching a massive startup; sometimes it's writing a block of code, designing a template, or starting a community project.` },
+  { k:'intent', t:'Reactive versus intentional',
+    punch:'Reactive mindset floats through the schedule to survive the day. Intentional mindset drives the schedule to win the week.',
+    body:`A reactive mindset sees the day as something that happens to them. An intentional mindset sees the day as something they design. Reactive mindset says, "I'll get to my goals when I find the time." Intentional mindset says, "I will block out time for my goals first." That's why one person gets to Friday and wonders where the week went. The other person gets to Friday and can point to exactly what they moved forward. It's not about being perfectly scheduled every minute; sometimes it's just setting one clear priority, holding a boundary, or taking a single deliberate step.` },
+  { k:'discipline', t:'Motivation versus discipline',
+    punch:'Motivation mindset waits for a spark to start. Discipline mindset builds the fire one log at a time.',
+    body:`A motivation mindset relies on a feeling to take action. A discipline mindset relies on a system to take action. Motivation mindset says, "I'll put in the work when I feel inspired." Discipline mindset says, "I'll put in the work because it's on the schedule." That's why one person starts ten projects and abandons them when the excitement fades. The other person builds slowly, checks the boxes, and crosses the finish line. It's not just about grinding yourself into the ground; sometimes it's a simple checklist, a daily habit tracker, or an accountability partner holding you to your word.` },
+  { k:'growth', t:'Fixed versus growth',
+    punch:'Fixed mindset shrinks to avoid looking foolish today. Growth mindset stretches to become competent later.',
+    body:`A fixed mindset sees failure as a permanent label. A growth mindset sees failure as a data point. Fixed mindset says, "I'm just not naturally good at this." Growth mindset says, "I'm not good at this yet." That's why one person hits a technical roadblock and quits, feeling defeated. The other person hits a roadblock and thinks, "What is this trying to teach me?" It's not always about blind optimism; sometimes it's learning a new software tool, adjusting a strategy after a setback, or asking for feedback instead of hiding.` },
+  { k:'productive', t:'Busy versus productive',
+    punch:'Busy mindset runs on a treadmill to feel tired. Productive mindset climbs a ladder to get higher.',
+    body:`A busy mindset sees value in motion. A productive mindset sees value in momentum. Busy mindset says, "I have a million things on my to-do list, I'm exhausted." Productive mindset says, "I have three priorities today that actually move the needle." That's why one person works a 12-hour day but stays in the exact same place. The other person works a focused 4-hour day and achieves exponential growth. It's not about doing everything yourself; sometimes it's delegating a task, automating a workflow, or simply saying 'no' to a distraction.` }
+];
 const QUOTES = {
   middle:{
     clean:[
@@ -4922,6 +4982,9 @@ function normalizeState(s){
     target:num(c.target)}));
   (s.recurring||[]).forEach(r=>{ r.amount=num(r.amount); if(r.hours!=null) r.hours=num(r.hours); });
   (s.timeLog||[]).forEach(e=>{ e.hours=num(e.hours); });
+  if(!Array.isArray(s.mindSeen)) s.mindSeen=[];
+  s.mindOff=!!s.mindOff;
+  if(typeof s.mindDay!=='string') s.mindDay='';
   if(['month','have'].indexOf(s.budgetMode)<0) s.budgetMode='';   // '' means derive, and a literal because PLAN_VIEWS-style consts do not exist yet at load()
   s.hourlyWage=qty(s.hourlyWage); s.hoursPerWeek=qty(s.hoursPerWeek); s.spendLimit=qty(s.spendLimit);
   s.wageB=qty(s.wageB); s.enough=qty(s.enough); s.givingPct=qty(s.givingPct); s.debtBudget=qty(s.debtBudget);
@@ -7314,6 +7377,60 @@ function investedAllTime(){ return state.transactions.filter(t=>t.type==='invest
 
 /* ---------- quote engine ---------- */
 let lastQuote='';
+/* Which card is next. Every one gets shown before any is shown twice - a
+   shuffle that can repeat is indistinguishable from a bug to the person on the
+   other end of it, who simply sees the same card twice in a week and concludes
+   there are only two. When the set runs out it starts again rather than going
+   quiet, because going quiet looks like something broke. */
+function mindNext(){
+  const seen=Array.isArray(state.mindSeen)?state.mindSeen:[];
+  let pool=MIND_CARDS.filter(c=>seen.indexOf(c.k)<0);
+  if(!pool.length) pool=MIND_CARDS;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function mindMark(k){
+  let seen=Array.isArray(state.mindSeen)?state.mindSeen.slice():[];
+  if(seen.indexOf(k)<0) seen.push(k);
+  if(seen.length>=MIND_CARDS.length) seen=[];      // round finished, start again
+  state.mindSeen=seen; state.mindDay=todayStr(); save();
+}
+function mindCardHTML(c,opts){
+  return `<div class="mind-eyebrow">Mindset</div>
+    <h3 class="mind-t">${escapeHtml(c.t)}</h3>
+    <p class="mind-punch">${escapeHtml(c.punch)}</p>
+    <p class="mind-body">${escapeHtml(c.body)}</p>`
+    + ((opts&&opts.actions)?`<div class="mind-acts">
+        <button class="btn primary" id="mindGot">Got it</button>
+        <button class="btn sm ghost" id="mindOff">Stop showing these</button>
+      </div>
+      <div class="mind-foot">One a day, never twice in a day. All of them live on <b>Learn</b> whenever you want them.</div>`:'');
+}
+function mindShow(card){
+  const c=card||mindNext(); if(!c) return false;
+  const ov=document.getElementById('mindSheet'), body=document.getElementById('mindBody');
+  if(!ov||!body) return false;
+  body.innerHTML=mindCardHTML(c,{actions:true});
+  ov.classList.add('on'); pushOverlay();
+  mindMark(c.k);
+  const got=document.getElementById('mindGot');
+  if(got) got.onclick=()=>dismissOverlay();
+  const off=document.getElementById('mindOff');
+  if(off) off.onclick=()=>{ state.mindOff=true; save();
+    if(typeof toast==='function') toast('No more cards on opening. They are all still on Learn.');
+    dismissOverlay(); if(typeof renderLessons==='function') renderLessons(); };
+  return true;
+}
+/* Opening the app is the moment, but not every moment of opening it. Held back
+   from anybody still in the intake - a person being asked twenty questions
+   about their money does not need a lecture between two of them - and from the
+   very first run, where the app has not earned the interruption yet. */
+function mindMaybeShow(){
+  if(state.mindOff) return false;
+  if(!state.onboarded) return false;
+  if(typeof intakeOpen!=='undefined' && intakeOpen) return false;
+  if(state.mindDay===todayStr()) return false;
+  return mindShow();
+}
 function newQuote(){
   const reg=QUOTES[state.register]||QUOTES.middle;
   const pool=reg[baseInt()]||reg.blunt;   // the situation floor applies to the header quote too
@@ -8181,6 +8298,7 @@ function closeTopOverlay(){
   const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
+  const ms=document.getElementById('mindSheet'); if(ms&&ms.classList.contains('on')){ ms.classList.remove('on'); return true; }
   const ss=document.getElementById('saySheet'); if(ss&&ss.classList.contains('on')){ foldReturn(); ss.classList.remove('on'); return true; }
   const ts=document.getElementById('txSheet'); if(ts&&ts.classList.contains('on')){ ts.classList.remove('on'); if(typeof txSheetId!=='undefined') txSheetId=null; return true; }
   const cs=document.getElementById('catSheet'); if(cs&&cs.classList.contains('on')){ cs.classList.remove('on'); if(typeof catSheetId!=='undefined') catSheetId=null; return true; }
@@ -10428,6 +10546,7 @@ function renderCatSheet(){
   wirePlan(document.getElementById('catSheet'), false);
 }
 (function(){
+  const mx=document.getElementById('mindSheetX'); if(mx) mx.addEventListener('click',dismissOverlay);
   const sx=document.getElementById('saySheetX'); if(sx) sx.addEventListener('click',dismissOverlay);
   const x=document.getElementById('catSheetX'); if(x) x.addEventListener('click',dismissOverlay);
   const ov=document.getElementById('catSheet');
@@ -13399,7 +13518,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-10 · the balance column follows its own chain';
+const BUILD_STAMP='2026-09-12 · a mindset card opens the day';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -14027,6 +14146,33 @@ function lessonNoteHTML(amt){
 /* The history has to be visible, not just consulted. A number the app quotes at
    you in a popup and never shows anywhere is something you cannot check, correct
    or argue with - and this one is built entirely out of things the user said. */
+function renderMindList(){
+  const box=document.getElementById('mindList'); if(!box) return;
+  box.innerHTML=MIND_CARDS.map(c=>
+    `<button type="button" class="mind-row" data-mindopen="${escapeHtml(c.k)}">
+       <span class="mr-t">${escapeHtml(c.t)}</span>
+       <span class="mr-p">${escapeHtml(c.punch)}</span>
+     </button>`).join('')
+    + (state.mindOff
+        ? `<div class="mind-foot">These no longer open with the app. <button class="btn sm ghost" id="mindOn">Show one a day again</button></div>`
+        : `<div class="mind-foot">One opens with the app each day. <button class="btn sm ghost" id="mindOffL">Stop showing these on opening</button></div>`);
+  const on=document.getElementById('mindOn');
+  if(on) on.onclick=()=>{ state.mindOff=false; save(); renderMindList();
+    if(typeof toast==='function') toast('Back to one a day.'); };
+  const off=document.getElementById('mindOffL');
+  if(off) off.onclick=()=>{ state.mindOff=true; save(); renderMindList();
+    if(typeof toast==='function') toast('No more cards on opening. They are all still here.'); };
+}
+/* Delegated: this list is redrawn whenever the switch is used, so a handler
+   bound at draw time is bound to a button that is about to be replaced. */
+document.addEventListener('click',e=>{
+  const r=e.target.closest('[data-mindopen]'); if(!r) return;
+  const c=MIND_CARDS.find(x=>x.k===r.dataset.mindopen); if(!c) return;
+  const ov=document.getElementById('mindSheet'), body=document.getElementById('mindBody');
+  if(!ov||!body) return;
+  body.innerHTML=mindCardHTML(c,{actions:false});
+  ov.classList.add('on'); pushOverlay();
+});
 function renderLessons(){
   const panel=document.getElementById('lessonsPanel'), box=document.getElementById('lessonsBody');
   if(!panel||!box) return;
@@ -15640,6 +15786,7 @@ function renderAll(){
   // a sync pull replaces state wholesale and calls only renderAll - so everything
   // boot() paints must repaint here too, or device B keeps showing device A's past
   renderDebt(); renderNetwork(); renderSkills(); renderGiving(); renderLesson(); renderComfortMenu(); renderAccounts(); renderDiary(); renderGlance(); renderLessons(); renderReflectTab(); renderTripwires();
+  renderMindList();
   renderBudgetModeWhy();   // draws here, not at wire time - see the note where it is wired
   renderAreaToggles(); applyAreaVisibility();   // a sync pull can change which areas this person wants
   applyPanelGates();   // panels with nothing to show fold away, and say what brings them back
@@ -21480,6 +21627,12 @@ function boot(){
   wireHpw();
   renderFreedomToggle(); renderTrSettings(); wireHpw(); fillTrapPickers();
   renderBackupNote(); renderAutoBackup();
+  renderMindList();
+  /* Last thing boot does, and deferred a beat past it. Opening a modal over a
+     half-painted app reads as an error rather than a greeting, and anything
+     boot does after this would be drawing underneath something the reader is
+     already looking at. */
+  setTimeout(()=>{ try{ mindMaybeShow(); }catch(_){ } }, 900);
   renderBudgetModeWhy();   // boot paints it too: renderAll is not called at first paint
   renderAreaToggles(); applyAreaVisibility();   // the areas this person chose to keep
   // Progressive interface: never strip a tool an existing user already engaged with.

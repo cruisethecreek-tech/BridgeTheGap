@@ -19,7 +19,7 @@ const MSHIFT=(()=>{const d=new Date(); return (d.getFullYear()*12+d.getMonth())-
 const shiftYM=(ym,n)=>{ let [y,m]=ym.split('-').map(Number); m+=n; y+=Math.floor((m-1)/12); m=((m-1)%12+12)%12+1; return `${y}-${String(m).padStart(2,'0')}`; };
 const live=o=>JSON.parse(JSON.stringify(o).replace(/2026-(0[1-9]|1[0-2])/g, mm=>shiftYM(mm,MSHIFT)));
 const seed = st => pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)), live(st));
-const BASE={onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
+const BASE={onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
   categories:[{id:'food',name:'Food'},{id:'rent',name:'Rent'}],
   budgets:{'2026-08':{food:400,rent:1200}},
   transactions:[{id:'i1',type:'income',amount:4000,date:'2026-08-01'},

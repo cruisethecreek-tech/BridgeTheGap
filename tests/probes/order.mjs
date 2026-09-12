@@ -7,7 +7,7 @@ pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 /* the screenshot's own day: five on Aug 28, typed in this order, Fees last */
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',s), JSON.stringify({
-  onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
+  onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
   categories:[{id:'c1',name:'Getting Around'},{id:'c2',name:'Fees'},{id:'c3',name:'Power & Wi-Fi'}],
   budgets:{'2026-08':{c1:300,c2:100,c3:200}},
   transactions:[

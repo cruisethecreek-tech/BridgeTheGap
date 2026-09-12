@@ -2,7 +2,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const p=await (await b.newContext({viewport:{width:390,height:844}})).newPage();
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));
-const SEED={ onboarded:true, activeMonth:'2026-09', uiMode:'all', stageReached:3, guidesOff:true,
+const SEED={ onboarded:true, mindOff:true, activeMonth:'2026-09', uiMode:'all', stageReached:3, guidesOff:true,
   sayMode:'clean', planView:'left',            /* parked on the view being removed */
   categories:[{id:'food',name:'Food'},{id:'wal',name:'Walmart',parentId:'food'},
               {id:'ald',name:'Aldi',parentId:'food'},{id:'sam',name:"Sam's club",parentId:'food'},

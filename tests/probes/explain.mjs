@@ -12,7 +12,7 @@ const p=await b.newPage({viewport:{width:390,height:900}});
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 await p.evaluate(()=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({
-  onboarded:true,activeMonth:'2026-09',uiMode:'all',stageReached:3,guidesOff:true,sayMode:'clean',
+  onboarded:true, mindOff:true,activeMonth:'2026-09',uiMode:'all',stageReached:3,guidesOff:true,sayMode:'clean',
   hourlyWage:24,hoursPerWeek:40,
   categories:[{id:'roof',name:'Roof'},{id:'food',name:'Food'}],budgets:{'2026-09':{roof:1200,food:600}},
   transactions:[{id:'i1',type:'income',amount:3200,date:'2026-09-01',source:'Pay',srcType:'primary'},

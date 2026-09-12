@@ -9,7 +9,7 @@ const pg=await b.newPage({viewport:{width:390,height:844}});
 const errs=[]; pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'clean',activeMonth:'2026-09',hourlyWage:70,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'clean',activeMonth:'2026-09',hourlyWage:70,
   householdOn:true, intake:{why:"I want to feel like I'm working for something", story:'scarcity'},
   snapshots:[{month:'2026-08',net:0,bank:80000,owed:0,runway:3.3,stage:3},
              {month:'2026-09',net:0,bank:85819,owed:882,runway:3.3,stage:3}],

@@ -15,7 +15,7 @@ await pg.addInitScript(t=>{ const R=Date, d=t-R.now();
   window.Date=S; }, CLOCK);
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(()=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',hourlyWage:30,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',hourlyWage:30,
   categories:[{id:'f',name:'Food'}],budgets:{'2026-09':{f:400}},
   accounts:[{id:'jc',name:'Joint Checking',kind:'checking',purpose:'sinking',balance:6637.64,updated:'2026-08-27',
              hist:[{d:'2026-08-27',b:6637.64,how:'bank'}]},
