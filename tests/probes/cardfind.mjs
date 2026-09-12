@@ -7,7 +7,7 @@ const pg=await b.newPage({viewport:{width:390,height:900}});
 pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto(URL);
 const seed=st=>pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),st);
-const BASE={onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
+const BASE={onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
   categories:[{id:'c',name:'Food'}],budgets:{'2026-08':{c:400}},
   transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}],
   goals:[],impulse:[],recurring:[],assets:[],liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[],snapshots:[]};

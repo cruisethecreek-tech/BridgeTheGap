@@ -7,7 +7,7 @@ const pg=await b.newPage({viewport:{width:390,height:900}});
 pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto(URL);
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',s), JSON.stringify({
-  onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:70,
+  onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:70,
   categories:[{id:'c1',name:'Getting around'}],budgets:{'2026-08':{c1:200}},
   transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'},
                 {id:'e1',type:'expense',amount:59.25,date:'2026-08-27',catId:'c1',note:'OH BUREAU MOTOR VEHIC',acctId:'a1'}],

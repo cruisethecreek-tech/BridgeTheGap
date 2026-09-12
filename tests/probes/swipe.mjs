@@ -7,7 +7,7 @@ const pg=await b.newPage({viewport:{width:390,height:844},hasTouch:true,isMobile
 pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto(URL);
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',s), JSON.stringify({
-  onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
+  onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
   categories:[{id:'c',name:'Food'}],budgets:{'2026-08':{c:400}},
   transactions:[{id:'i',type:'income',amount:3000,date:'2026-08-01'}],
   goals:[],impulse:[],recurring:[],accounts:[],assets:[],liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[],snapshots:[]}));

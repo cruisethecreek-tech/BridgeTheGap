@@ -6,7 +6,7 @@ const pg=await b.newPage({viewport:{width:390,height:800}});
 pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 const seed=st=>pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),st);
-const BASE={onboarded:true,welcomed:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
+const BASE={onboarded:true, mindOff:true,welcomed:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',
   hourlyWage:30,categories:[],budgets:{},accounts:[],transactions:[],goals:[],impulse:[],recurring:[],
   assets:[],liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[],snapshots:[]};
 await seed(BASE); await pg.reload(); await pg.waitForTimeout(900);

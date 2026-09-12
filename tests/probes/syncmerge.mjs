@@ -11,7 +11,7 @@ pg.on('pageerror',e=>errs.push(String(e)));
 const M=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(([M])=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,householdOn:true,activeMonth:M,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,householdOn:true,activeMonth:M,
   nameA:'Pat',nameB:'Kristi',deviceId:'devA',meIs:'a',
   categories:[{id:'food',name:'Food'}],budgets:{[M]:{food:400}},
   accounts:[{id:'a1',name:'Chequing',kind:'checking',balance:2000,updated:M+'-01'}],

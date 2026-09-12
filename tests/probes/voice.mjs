@@ -8,7 +8,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const errs=[]; const R=[]; const ok=(n,v,d)=>R.push([n,!!v,d]);
 /* a fresh budget with everything still to do, so every step fires */
-const raw={onboarded:true,uiMode:'all',stageReached:1,guidesOff:true,sayMode:'full',
+const raw={onboarded:true, mindOff:true,uiMode:'all',stageReached:1,guidesOff:true,sayMode:'full',
   register:'middle', activeMonth:'2026-09', householdOn:true, nameB:'Sam',
   categories:[{id:'c1',name:'Food'}],budgets:{},accounts:[],transactions:[],goals:[],debts:[]};
 async function look(intensity, extra={}){

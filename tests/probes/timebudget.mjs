@@ -20,7 +20,7 @@ pg.on('dialog',d=>d.accept('Exercise'));
 await pg.goto('file://'+process.cwd()+'/app.html');
 /* an install from BEFORE this existed: hours logged under the old field name */
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,hoursPerWeek:40,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,hoursPerWeek:40,
   categories:[{id:'c1',name:'Food'}],budgets:{'2026-08':{c1:400}},
   accounts:[],transactions:[],goals:[],impulse:[],recurring:[],assets:[],liabilities:[],diary:[],intake:{},lessons:[],
   timeLog:[{id:'e1',date:'2026-08-28',kind:'health',hours:2},

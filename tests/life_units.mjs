@@ -39,7 +39,7 @@ const liveMonths=o=>JSON.parse(JSON.stringify(o).split('2026-08').join(LIVE_M).s
 
 /* One household rich enough to light up every panel that prints money. */
 const STATE = {
-  onboarded:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, chatPace:'instant',
+  onboarded:true, mindOff:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, chatPace:'instant',
   hourlyWage:24, hoursPerWeek:40, register:'middle', intensity:'blunt',
   spendingMode:true, spendLimit:1550, trackStart:'2026-08-01', theme:'light',
   enough:3500, givePct:10, householdOn:true, wageB:19, debtBudget:900,

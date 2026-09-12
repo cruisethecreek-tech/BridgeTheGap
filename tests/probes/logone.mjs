@@ -10,7 +10,7 @@ pg.on('pageerror',e=>errs.push(String(e)));
 const M=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(([s,M])=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({...s,activeMonth:M,budgets:{[M]:{sc:329,rent:1400}}})),
- [{onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,hourlyWage:25,
+ [{onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,hourlyWage:25,
    categories:[{id:'rent',name:'Rent'},{id:'sc',name:'Sugarcreek'}],
    transactions:[],goals:[],impulse:[],recurring:[],accounts:[],assets:[],liabilities:[],
    diary:[],intake:{},lessons:[],debts:[],vault:[],snapshots:[],scans:[]}, M]);

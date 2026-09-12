@@ -10,7 +10,7 @@ const pg=await b.newPage({viewport:{width:390,height:1400}});
 pg.on('pageerror',e=>errs.push(String(e)));
 const M=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
 const nextM=(()=>{let [y,m]=M.split('-').map(Number); m++; if(m>12){m=1;y++;} return `${y}-${String(m).padStart(2,'0')}`;})();
-const seed={onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:M,hourlyWage:25,
+const seed={onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:M,hourlyWage:25,
   categories:[{id:'rent',name:'Rent'}],budgets:{[M]:{rent:1400}},
   transactions:[{id:'t1',type:'income',amount:3200,date:M+'-02'},
                 {id:'t2',type:'expense',amount:1400,catId:'rent',date:M+'-03'}],

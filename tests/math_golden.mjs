@@ -8,7 +8,7 @@ const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html');
 
 const S = {
-  onboarded:true, activeMonth:'2026-08', stageReached:3,
+  onboarded:true, mindOff:true, activeMonth:'2026-08', stageReached:3,
   hourlyWage:0, hoursPerWeek:50,             // wage derived, so we test the fallback too
   categories:[
     {id:'roof',name:'Roof'},

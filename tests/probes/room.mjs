@@ -9,7 +9,7 @@ await pg.goto(URL);
 const seed = st => pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)), st);
 
 /* The screenshot: Home equity, 3.49%, nothing drawn. Plus a dream to weigh it against. */
-await seed({onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
+await seed({onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
   categories:[{id:'c1',name:'Food'}],budgets:{'2026-08':{c1:400}},
   accounts:[{id:'a1',name:'Checking',kind:'checking',balance:4000,updated:'2026-08-01'}],
   transactions:[],goals:[{id:'g1',name:'Kitchen',target:12000,saved:2000,date:'',goalType:'foundation'}],

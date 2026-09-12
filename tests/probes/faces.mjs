@@ -9,7 +9,7 @@ await pg.goto('file://'+process.cwd()+'/app.html');
 const CATS=['Food','Power & Wi-Fi','Getting Around','Debt Payments','Emergency Fund',
             'Fun Money','Online shopping','Dream Fund','Trips & travel'];
 await pg.evaluate(([cats])=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
   categories:cats.map((n,i)=>({id:'c'+i,name:n})),
   budgets:{'2026-08':Object.fromEntries(cats.map((n,i)=>['c'+i,100]))},
   accounts:[{id:'a1',name:'Checking',kind:'checking',balance:3000,updated:'2026-08-01'}],

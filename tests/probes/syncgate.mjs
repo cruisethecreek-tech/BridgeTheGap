@@ -7,7 +7,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 let pass=0, fail=0;
 const ok=(n,c,d='')=>{ if(c){pass++;console.log('ok    '+n);} else {fail++;console.log('FAIL  '+n+(d?'\n        '+String(d).replace(/\n/g,' | ').slice(0,300):''));} };
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
-const base={onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',
+const base={onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',
   categories:[],budgets:{},transactions:[],goals:[],impulse:[],recurring:[],accounts:[],assets:[],
   liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[],snapshots:[],scans:[],opening:{}};
 

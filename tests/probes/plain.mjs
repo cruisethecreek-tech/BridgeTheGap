@@ -7,7 +7,7 @@ pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 /* their numbers off the screenshot */
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
   categories:[],budgets:{},accounts:[],transactions:[],goals:[],impulse:[],recurring:[],assets:[],
   liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[],snapshots:[],
   lev:{amt:25000,apr:3.9,ret:15,years:5,pay:300,cash:600}});

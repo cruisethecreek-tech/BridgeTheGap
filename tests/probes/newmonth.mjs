@@ -17,7 +17,7 @@ await pg.addInitScript(t=>{ const R=Date, d=t-R.now();
 }, CLOCK);
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(()=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',hourlyWage:30,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-09',hourlyWage:30,
   categories:[{id:'rent',name:'Rent'},{id:'food',name:'Food'}],
   budgets:{'2026-08':{rent:1400,food:600},'2026-09':{rent:1400,food:600}},
   /* last month's wages, still sitting there */

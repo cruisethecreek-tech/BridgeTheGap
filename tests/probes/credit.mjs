@@ -12,7 +12,7 @@ await pg.evaluate(()=>{ localStorage.clear(); });
 await pg.goto(URL);
 await pg.evaluate(()=>{
   state=load();
-  state.onboarded=true; state.intake={done:true};
+  state.onboarded=true; state.mindOff=true; state.intake={done:true};
   state.categories=[{id:'c1',name:'Food',parent:null}];
   state.accounts=[{id:'a1',name:'Checking',kind:'checking',balance:2000,updated:'2026-01-01'}];
   state.transactions=[]; state.assets=[]; state.liabilities=[];

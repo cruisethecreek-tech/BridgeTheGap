@@ -12,7 +12,7 @@ const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
 p.on('dialog',d=>d.accept());
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 await p.evaluate(()=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({
-  onboarded:true,activeMonth:'2026-09',uiMode:'all',stageReached:3,guidesOff:true,sayMode:'brief',
+  onboarded:true, mindOff:true,activeMonth:'2026-09',uiMode:'all',stageReached:3,guidesOff:true,sayMode:'brief',
   householdOn:true, syncOptIn:true,
   categories:[{id:'roof',name:'Roof'}],budgets:{'2026-09':{roof:1200}},
   transactions:[],accounts:[],assets:[],goals:[],recurring:[],impulse:[],liabilities:[],

@@ -28,7 +28,7 @@ const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(500);
 
 const seed = lessons => p.evaluate(l=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify({
-  onboarded:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, hourlyWage:24, hoursPerWeek:40,
+  onboarded:true, mindOff:true, activeMonth:'2026-08', uiMode:'all', stageReached:3, hourlyWage:24, hoursPerWeek:40,
   intake:{name:'Pat'}, categories:[{id:'roof',name:'Roof'}], budgets:{'2026-08':{roof:1250}},
   transactions:[{id:'i',type:'income',amount:3200,date:'2026-08-01'}],
   goals:[],impulse:[],recurring:[],accounts:[],assets:[],liabilities:[],diary:[],lessons:l })), lessons);

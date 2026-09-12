@@ -76,8 +76,18 @@ await p.addInitScript(target => {
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(500);
 
-const seed = st => p.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)), st);
-const EMPTY={onboarded:true,activeMonth:'2026-08',uiMode:'guided',stageReached:1,
+/* mindOff defaults ON in every fixture, and that is a statement about what each
+   suite is for rather than a convenience. A mindset card opens the app once a
+   day - and a fresh fixture is always day one, so without this every screen in
+   this file is tested through a modal sitting on top of it. It broke six suites
+   at once the first time: drags could not reach their rows, contrast shots
+   photographed the overlay, and the form census counted the card's own buttons.
+   A fixture that lets the daily card fire is testing the card, not the screen,
+   so exactly one suite does that on purpose - probes/mindset.mjs - and it is
+   the only place the flag is turned back on. */
+const seed = st => p.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',
+  JSON.stringify(Object.assign({mindOff:true}, s))), st);
+const EMPTY={onboarded:true, mindOff:true,activeMonth:'2026-08',uiMode:'guided',stageReached:1,
   categories:[],budgets:{},transactions:[],goals:[],impulse:[],recurring:[],accounts:[],
   assets:[],liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[]};
 const FULL={...EMPTY, uiMode:'all', stageReached:3, hourlyWage:24,
@@ -8243,7 +8253,7 @@ const ISO_TODAY=CLOCK_D;
    ============================================================ */
 const loadSafe = await p.evaluate(async () => {
   const KEY='unfiltered_budget_v2';
-  const real={onboarded:true,uiMode:'all',hourlyWage:31,activeMonth:'2026-08',
+  const real={onboarded:true, mindOff:true,uiMode:'all',hourlyWage:31,activeMonth:'2026-08',
     categories:[{id:'z1',name:'Food'}],budgets:{'2026-08':{z1:400}},
     transactions:[{id:'zt',type:'income',amount:1234,date:'2026-08-05',source:'Pay'}],
     accounts:[],goals:[],impulse:[],recurring:[],assets:[],liabilities:[],diary:[],

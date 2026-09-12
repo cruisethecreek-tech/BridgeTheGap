@@ -53,7 +53,7 @@ const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 p.on('dialog',d=>d.dismiss());           // a confirm() is a refusal, and refusing is a pass
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(500);
 
-const BASE={onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
+const BASE={onboarded:true, mindOff:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
   hourlyWage:24,hoursPerWeek:40,
   categories:[{id:'roof',name:'Roof'},{id:'fun',name:'Fun'}],
   budgets:{'2026-08':{roof:1200,fun:200}},
@@ -125,6 +125,7 @@ const OFF_LIMITS={
   qlPick:'opens the file picker, creates nothing until the scan is read',
   qlClear:'empties the quick log form, the opposite of writing a record',
   packSheetX:'closes the pack sheet',
+  mindSheetX:'closes the mindset card, which creates nothing and only ever shows text',
   impRun:'runs the target scan, whose result is committed by impCommit',
   copyLink:'copies a URL to the clipboard, touches no state of ours'
 };
@@ -380,7 +381,7 @@ check('...and duplicate names do not break any screen', twinScreen.length===0, t
 /* ---------- 4. an empty life ---------- */
 /* Every panel, on a state with nothing in it. Division by a month with no income
    is where impossible numbers are born. */
-await seed({onboarded:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
+await seed({onboarded:true, mindOff:true,activeMonth:'2026-08',uiMode:'all',stageReached:3,guidesOff:true,
   categories:[],budgets:{},transactions:[],goals:[],impulse:[],recurring:[],accounts:[],
   assets:[],liabilities:[],diary:[],intake:{},lessons:[],debts:[],vault:[]});
 await p.reload(); await p.waitForTimeout(500);

@@ -10,7 +10,7 @@ const pg=await b.newPage({viewport:{width:390,height:1200}});
 pg.on('pageerror',e=>errs.push(String(e)));
 await pg.goto('file://'+process.cwd()+'/app.html');
 await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
+ {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,activeMonth:'2026-08',hourlyWage:30,
   categories:[],budgets:{},transactions:[],goals:[],impulse:[],recurring:[],
   accounts:[{id:'a1',name:'Chequing',kind:'checking',balance:6000,updated:'2026-08-01'}],
   assets:[],liabilities:[],diary:[],intake:{},lessons:[],vault:[],snapshots:[],

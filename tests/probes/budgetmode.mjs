@@ -17,7 +17,7 @@ await p.addInitScript(t=>{ const R=Date,d=t-R.now();
 const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 
-const BASE={ onboarded:true, activeMonth:'2026-09', uiMode:'all', stageReached:3,
+const BASE={ onboarded:true, mindOff:true, activeMonth:'2026-09', uiMode:'all', stageReached:3,
   guidesOff:true, sayMode:'clean',
   categories:[{id:'roof',name:'Roof'},{id:'food',name:'Food'}],
   budgets:{'2026-09':{roof:3200,food:3424.21}},
