@@ -1389,6 +1389,25 @@
   .scan-bet .sb-help{display:block;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
     font-size:12.5px;color:var(--muted)}
   .scan-bet .sb-help a{color:var(--accent);font-weight:800;white-space:nowrap}
+  .dr-check{margin-top:6px;padding:8px 11px;border-radius:10px;font-size:12.5px;line-height:1.55;
+    background:var(--ink);border:1px solid var(--line);color:var(--muted)}
+  .dr-check b{color:var(--text)}
+  .dr-check.bad{border-color:rgba(var(--accent-2-rgb,214,109,74),.45)}
+  .dr-check.ok{border-color:rgba(53,201,154,.45)}
+  .dr-cheap{margin-top:6px;padding:8px 11px;border-radius:10px;font-size:12.5px;line-height:1.55;
+    background:var(--ink);border:1px solid var(--line);color:var(--muted)}
+  .dr-cheap b{color:var(--text)}
+  .dr-said input{font:inherit;font-size:12.5px}
+  /* The same shape as "Show me what it actually read" on the scan panel: the
+     headline stays, the figures wait. A collapsed details is out of innerText,
+     which is exactly what the arrival count measures and exactly what it is
+     supposed to mean - nobody is reading it until they ask. */
+  .dr-fold{margin-top:6px}
+  .dr-fold>summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--accent);list-style:none}
+  .dr-fold>summary::-webkit-details-marker{display:none}
+  .dr-fold>summary::after{content:' →';color:var(--muted)}
+  .dr-fold[open]>summary::after{content:' ↑'}
+  .dr-fold>div{margin-top:6px}
   .dr-min{flex-basis:100%;margin-top:7px;padding:8px 11px;border-radius:10px;font-size:12.5px;
     line-height:1.55;background:var(--ink);border:1px solid var(--line);color:var(--muted)}
   .dr-min b{color:var(--text)}
@@ -6526,7 +6545,7 @@ function ledgerRead(m,bal,prev,latest,isLast,since){
 }
 /* ---------- Debt Payoff Planner (snowball / avalanche) ---------- */
 function simulateDebts(debts, monthly, strategy){
-  let ds=debts.map(d=>({name:d.name, bal:+d.balance||0, apr:+d.apr||0, min:+d.minPayment||0, interest:0, paidMonth:null}));
+  let ds=debts.map(d=>({name:d.name, bal:+d.balance||0, apr:+d.apr||0, min:debtPI(d), interest:0, paidMonth:null}));
   /* A minimum can exceed what is left ($10 balance, $50 min) - the lender only
      takes the balance, so the required floor is min(min, balance). Uncapped, the
      planner refused to run for the person one payment from done. (Audit F6.) */
@@ -6572,7 +6591,7 @@ function simulateDebts(debts, monthly, strategy){
    to trust that). */
 function debtPaymentFor(debts, strat, targetMonths){
   const totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);
-  const totalMin=debts.reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0);
+  const totalMin=debts.reduce((s,d)=>s+Math.min(debtPI(d),+d.balance||0),0);
   if(!(totalBal>0)) return null;
   const clears=p=>{ const r=simulateDebts(debts,p,strat); return !r.error && !r.stalled && r.months<=targetMonths; };
   let lo=Math.max(totalMin,0), hi=Math.max(totalBal*1.5, totalMin+totalBal, 10);
@@ -6588,6 +6607,23 @@ function debtPaymentFor(debts, strat, targetMonths){
   if(real.error||real.stalled) return null;
   return {pay, months:real.months};
 }
+/* What a mortgage payment actually pays down.
+
+   Reported after a screenshot of a servicer's page: "Monthly Payment Amount:
+   $1,230.46". Typed in as it reads, the planner cleared a $77,266.76 loan at
+   3.375% in 70 months. The servicer's own page said November 2046 - about 284
+   months. Eighteen years apart, with nothing on screen to say why.
+
+   The reason is on the same page in a different card: an escrow advance of
+   $1,102.23. Taxes and insurance ride inside that payment, and they pay down
+   nothing. Working back from the servicer's own arithmetic, the principal and
+   interest on that loan is about $440 and the escrow is about $790.
+
+   So it belongs to the ENGINE rather than to any one screen: simulateDebts is
+   where a payment becomes progress, and nothing that is not paying down a
+   balance may enter there. A debt with no escrow is the debt it always was. */
+function debtPI(d){ return Math.max(0, (+((d||{}).minPayment)||0) - (+((d||{}).escrow)||0)); }
+function debtHasEscrow(d){ return (+((d||{}).escrow)||0)>0; }
 /* "3 yrs 11 mo", the same shape the payoff hero uses */
 function debtDur(m){
   const y=Math.floor(m/12), mo=m%12;
@@ -6603,13 +6639,14 @@ function debtDur(m){
    returning $0 of interest there would be a fabrication dressed as good news -
    and it would be the good news that stops somebody entering the rate. */
 function minPayCost(d){
-  const bal=+d.balance||0, apr=+d.apr||0, min=+d.minPayment||0;
+  const bal=+d.balance||0, apr=+d.apr||0, min=debtPI(d);
   if(!(bal>0)) return null;
   if(!(apr>0)) return {kind:'norate'};
   if(!(min>0)) return {kind:'nomin'};
   const monthlyInterest=bal*(apr/100/12);
   if(min<=monthlyInterest+0.005) return {kind:'never', monthlyInterest};
   const r=simulateDebts([{name:d.name||'this', balance:bal, apr, minPayment:min}], min, 'avalanche');
+  // (minPayment here is already the P&I, so the engine's own subtraction is a no-op)
   if(r.error||r.stalled) return {kind:'never', monthlyInterest};
   return {kind:'ok', months:r.months, interest:Math.round(r.totalInterest*100)/100,
           total:Math.round((bal+r.totalInterest)*100)/100, monthlyInterest};
@@ -6654,7 +6691,8 @@ function debtRoomHTML(d){
   const k=debtKind(d);
   const wantsRoom = k ? k.room : lim>0;
   const wantsWorth = k ? k.worth : worth>0;
-  if(!wantsRoom && !wantsWorth && !lim && !worth) return '';
+  const wantsEscrow = (k&&k.k==='mortgage') || debtHasEscrow(d) || !!d.saidPayoff;
+  if(!wantsRoom && !wantsWorth && !lim && !worth && !wantsEscrow) return '';
   const owed=Math.max(0,+d.balance||0);
   /* The field is ALWAYS the field - the derived line sits beside it rather than
      replacing it. The first version swapped the input for the summary once a
@@ -6670,6 +6708,12 @@ function debtRoomHTML(d){
   if(wantsWorth || worth>0){
     const lbl=(k&&k.worthLabel)||'Worth';
     out += `<label class="dr-f">${escapeHtml(lbl)} $<input type="number" inputmode="decimal" min="0" step="0.01" value="${worth||''}" placeholder="today's value" data-debt="${d.id}" data-k="worth"></label>`;
+  }
+  /* Asked for on a mortgage, offered on anything that already carries one, so
+     a value can never be stranded where nothing renders it. */
+  if(wantsEscrow){
+    out += `<label class="dr-f">escrow $<input type="number" inputmode="decimal" min="0" step="0.01" value="${(+d.escrow||0)||''}" placeholder="taxes + insurance" data-debt="${d.id}" data-k="escrow"></label>`;
+    out += `<label class="dr-f dr-said">they say paid off <input type="month" value="${escapeHtml(d.saidPayoff||'')}" data-debt="${d.id}" data-k="saidPayoff"></label>`;
   }
   out += `<div class="dr-sum" data-drsum="${d.id}">${debtSumHTML(d)}</div>`;
   out += `<label class="dr-sec"><span>Backed by</span><select data-debtsec="${d.id}"><option value="">Nothing</option><option value="1"${d.secured?' selected':''}>My home or something I own</option></select></label>`;
@@ -6716,13 +6760,56 @@ function debtSumHTML(d){
    Two fixes in one: found by ANY field belonging to that debt, and only the
    derived summary is rewritten. The inputs are left alone, so a redraw on every
    keystroke cannot take the box out from under a thumb. */
+/* The app checking itself against the one number it did not work out.
+
+   A servicer prints the date it expects this loan to clear. The app simulates
+   the same loan from the same figures. If the two disagree by more than a
+   season, one of them is wrong about something, and it is nearly always a
+   payment with taxes and insurance folded into it - so that is what gets named
+   first rather than left to be discovered. */
+function debtPayoffCheck(d){
+  const said=String(d.saidPayoff||''); if(!/^\d{4}-\d{2}$/.test(said)) return null;
+  const bal=+d.balance||0, apr=+d.apr||0, pi=debtPI(d);
+  if(!(bal>0) || !(apr>0) || !(pi>0)) return null;
+  const r=simulateDebts([{name:d.name||'this', balance:bal, apr, minPayment:pi}], pi, 'avalanche');
+  if(r.error) return null;
+  if(r.stalled) return {kind:'never', said};
+  const mine=shiftMonth(state.activeMonth, r.months);
+  const gap=monthsBetween(mine, said);
+  return { kind: Math.abs(gap)<=3 ? 'agrees' : 'differs', said, mine, gap, months:r.months };
+}
+function monthsBetween(a,b){
+  const [ay,am]=String(a).split('-').map(Number), [by,bm]=String(b).split('-').map(Number);
+  return (by*12+bm)-(ay*12+am);
+}
+function debtCheckHTML(d){
+  const c=debtPayoffCheck(d); if(!c) return '';
+  if(c.kind==='never') return `<div class="dr-check bad"><b>This never clears on these figures</b>, which means one of the three numbers above is not what it looks like.<details class="dr-fold"><summary>What your servicer says</summary><div>They put the payoff at <b>${escapeHtml(c.said)}</b>. At this payment the balance never comes down at all, so the payment, the rate or the balance is not the figure it appears to be.</div></details></div>`;
+  if(c.kind==='agrees') return `<div class="dr-check ok"><b>This agrees with your servicer</b>, so the figures above are the right ones.<details class="dr-fold"><summary>The two dates</summary><div>They say <b>${escapeHtml(c.said)}</b> and this works it out as <b>${escapeHtml(c.mine)}</b>.</div></details></div>`;
+  const early=c.gap>0;
+  return `<div class="dr-check bad"><b>This disagrees with your servicer about when it is paid off.</b> One of us is wrong.<details class="dr-fold"><summary>By how much, and the usual reason</summary><div>They say <b>${escapeHtml(c.said)}</b>. This works it out as <b>${escapeHtml(c.mine)}</b>, which is <b>${Math.abs(c.gap)} month${Math.abs(c.gap)===1?'':'s'}</b> ${early?'sooner':'later'}.${
+    early && !debtHasEscrow(d)
+      ? ` The usual reason is the payment: a mortgage payment carries taxes and insurance, and that part pays down nothing. Put it in the <b>escrow</b> box and the two should meet.`
+      : ` Check the balance, the rate and what actually comes off the loan each month.`}</div></details></div>`;
+}
+/* The advice a debt app is least likely to give, on the one debt that most
+   often deserves it. Nominal against nominal: a loan rate and a market return
+   are both before inflation, and comparing one to a real return would tilt the
+   answer toward paying off. */
+function debtCheapHTML(d){
+  const apr=+d.apr||0, bal=+d.balance||0;
+  if(!(apr>0) || !(bal>0)) return '';
+  const ret=investRet();
+  if(!(ret>apr+0.5)) return '';
+  return `<div class="dr-cheap"><b>This is cheaper than what money earns invested.</b> Paying it off early may be the worse move.<details class="dr-fold"><summary>The trade</summary><div>At <b>${apr}%</b> this costs less than the <b>${ret}%</b> you expect money to earn. Clearing it early is <b>guaranteed</b> to save the ${apr}%; investing instead is <b>not guaranteed</b> to make the ${ret}%. That is the whole trade, and it is a real choice rather than an obvious one - <b>Invest</b> runs it on your own numbers.</div></details></div>`;
+}
 function debtMinLine(d){
-  const inner=debtMinHTML(d);
+  const inner=debtMinHTML(d)+debtCheckHTML(d)+debtCheapHTML(d);
   return `<div class="dr-min" data-drmin="${d.id}"${inner?'':' hidden'}>${inner}</div>`;
 }
 function redrawMinLine(d){
   const el=document.querySelector('#debtList [data-drmin="'+d.id+'"]'); if(!el) return;
-  const inner=debtMinHTML(d);
+  const inner=debtMinHTML(d)+debtCheckHTML(d)+debtCheapHTML(d);
   el.innerHTML=inner; el.hidden=!inner;
 }
 function redrawRoomLine(d){
@@ -6934,7 +7021,9 @@ function renderDebt(){
       save(); renderDebtResults(); renderRoom(); redrawRoomLine(d);
       return;
     }
-    d[k]=v; save(); renderDebtResults(); redrawMinLine(d);
+    if(k==='escrow'){ if(v>0) d.escrow=v; else delete d.escrow; }
+    else d[k]=v;
+    save(); renderDebtResults(); redrawMinLine(d);
     /* Any of these can move what the summary says: the balance against a limit
        or a value, and the rate through the signals below. Narrowing this to
        'balance' is what let the equity go stale in the first place. */
@@ -6986,7 +7075,7 @@ function renderDebtResults(){
   const debts=state.debts.filter(d=>(+d.balance||0)>0);
   if(!debts.length){ box.innerHTML='<div class="sub" style="margin-top:12px">Add a debt with a balance to see your way out.</div>'; return; }
   const budget=state.debtBudget||0;
-  const totalMin=debts.reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0), totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);   // capped at the balance: a $50 min on a $10 remainder only costs $10
+  const totalMin=debts.reduce((s,d)=>s+Math.min(debtPI(d),+d.balance||0),0), totalBal=debts.reduce((s,d)=>s+(+d.balance||0),0);   // capped at the balance: a $50 min on a $10 remainder only costs $10
   if(budget < totalMin-0.01){
     box.innerHTML=`<div class="imp-err" style="margin-top:12px">Your monthly amount (${actMoney(budget)}) is under your minimum payments (${actMoney(totalMin)}). Set it to at least ${actMoney(totalMin)} to start making progress.</div>`;
     return;
@@ -7082,7 +7171,7 @@ function renderDebtResults(){
 function investCompare(debts, monthly, retPct, horizon){
   const r=retPct/100/12;
   const run=(crush)=>{
-    let ds=debts.map(d=>({bal:+d.balance||0, apr:+d.apr||0, min:+d.minPayment||0}));
+    let ds=debts.map(d=>({bal:+d.balance||0, apr:+d.apr||0, min:debtPI(d)}));
     let invest=0;
     for(let m=0;m<horizon;m++){
       ds.forEach(d=>{ if(d.bal>0.005) d.bal+=d.bal*(d.apr/100/12); });
@@ -7117,7 +7206,7 @@ function renderInvestCompare(){
   const box=document.getElementById('investResults'); if(!box) return;
   renderReturnPicker();
   const debts=state.debts.filter(d=>(+d.balance||0)>0);
-  const budget=state.debtBudget||0, totalMin=debts.reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0);
+  const budget=state.debtBudget||0, totalMin=debts.reduce((s,d)=>s+Math.min(debtPI(d),+d.balance||0),0);
   const ri=document.getElementById('investReturn'); if(ri&&document.activeElement!==ri) ri.value=state.investReturn||'';
   document.querySelectorAll('#investYears button').forEach(b=>b.classList.toggle('on',+b.dataset.y===(state.investYears||10)));
   if(!debts.length || budget<totalMin-0.01){ box.innerHTML='<div class="sub" style="margin-top:12px">Add your debts and a monthly amount above to see how paying down compares to investing.</div>'; return; }
@@ -14139,7 +14228,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · a hundred percent of part of the picture';
+const BUILD_STAMP='2026-09-13 · the warning stays, the figures wait';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -17228,7 +17317,7 @@ const FIELD_WHY={
       const work=state.hoursPerWeek>0?monthHours(state.hoursPerWeek):WORKMONTH_HRS;
       return `<b>(take-home &minus; overhead) &divide; (your work month + your commute hours)</b><br><br>Your work month is <b>${Math.round(work)} hours</b> (${state.hoursPerWeek>0?`${hpw} hours a week &times; 52 &divide; 12`:'a standard full-time 2,080-hour year &divide; 12 - set your real hours in Settings and this uses them'}). Commute hours a week are converted the same way, &times; 52 &divide; 12.<br><br>Nothing is rounded until the last step, and the result is what every hours-of-life figure in the app is priced against.`; } },
   debtBudget:{ t:'What this number does', b:()=>{
-      const mins=(state.debts||[]).filter(d=>+d.balance>0).reduce((s,d)=>s+Math.min(+d.minPayment||0,+d.balance||0),0);
+      const mins=(state.debts||[]).filter(d=>+d.balance>0).reduce((s,d)=>s+Math.min(debtPI(d),+d.balance||0),0);
       return `Everything you can put toward debt in a month, <b>including the minimums</b> - not extra on top of them. ${mins>0?`Your minimums come to <b>${money(mins)}</b>, so anything above that is what actually shortens the payoff.`:''}<br><br>The planner pays every minimum first, then throws the whole remainder at one debt at a time in the order you picked. It changes nothing in your budget - it is a projection you can argue with.`; } },
   spendLimit:{ t:'How the daily allowance is worked out', b:()=>{
       const lim=state.spendLimit||0, dim=daysInMonth(state.activeMonth);
