@@ -1323,6 +1323,39 @@
   .mind-row:hover{border-color:var(--accent)}
   .mind-row .mr-t{display:block;font-size:14px;font-weight:800;color:var(--text)}
   .mind-row .mr-p{display:block;margin-top:3px;font-size:12px;line-height:1.45;color:var(--muted)}
+  /* 1408x768 is 11/6 exactly. Stated rather than measured so the card does not
+     jump when the picture arrives - these are ~290KB each and load lazily. */
+  #mindSheet .x{background:rgba(5,6,9,.72);border:1px solid rgba(255,255,255,.2);color:#fff;
+    width:34px;height:34px;border-radius:999px;font-size:17px;line-height:1;top:11px;right:13px}
+  .mind-fig{display:block;width:100%;padding:0;margin:18px 0 14px;position:relative;font:inherit;
+    background:var(--ink);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    cursor:zoom-in;transition:border-color .14s ease}
+  .mind-fig:hover{border-color:var(--accent)}
+  .mind-fig img{display:block;width:100%;height:auto;aspect-ratio:11/6}
+  .mind-figz{position:absolute;right:9px;bottom:9px;background:rgba(5,6,9,.74);color:#fff;
+    border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;pointer-events:none}
+  /* Full bleed, no sheet chrome: nothing here competes with the picture. */
+  .modal-overlay.mind-zoom{z-index:80;background:#050609;backdrop-filter:none;
+    align-items:stretch;justify-content:stretch}
+  .mz-scroll{flex:1;min-width:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  /* min-width/height 100% keeps a fitted picture centred; once it is bigger than
+     the screen the padder grows with it and centring would clip the top left
+     corner out of reach, so zoomed mode starts the picture at the corner. */
+  .mz-pad{min-width:100%;min-height:100%;box-sizing:border-box;padding:12px;
+    display:flex;align-items:center;justify-content:center}
+  .mz-pad img{display:block;max-width:100%;height:auto;border-radius:10px;cursor:zoom-in}
+  .mind-zoom.big .mz-pad{align-items:flex-start;align-items:safe center;justify-content:flex-start;padding:0}
+  .mind-zoom.big .mz-pad img{max-width:none;width:330vw;border-radius:0;cursor:zoom-out}
+  .mz-x{position:absolute;top:calc(10px + env(safe-area-inset-top));right:14px;z-index:2;
+    background:rgba(5,6,9,.74);border:1px solid rgba(255,255,255,.22);color:#fff;
+    width:38px;height:38px;border-radius:999px;font-size:18px;line-height:1;cursor:pointer}
+  .mz-hint{opacity:1;transition:opacity .5s ease}
+  .mz-hint.gone{opacity:0}
+  .mz-hint{position:absolute;left:50%;transform:translateX(-50%);
+    bottom:calc(16px + env(safe-area-inset-bottom));z-index:2;pointer-events:none;
+    background:rgba(5,6,9,.78);border:1px solid rgba(255,255,255,.16);color:#fff;
+    border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;
+    max-width:86vw;text-align:center}
   .sync-live{margin-top:10px;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.5;
     background:var(--ink);border:1px solid var(--line);color:var(--muted)}
   .sync-live.on{border-color:rgba(53,201,154,.45);background:rgba(53,201,154,.08);color:var(--text)}
@@ -4174,6 +4207,14 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div id="mindBody"></div>
     </div>
   </div>
+  <!-- The pictures are wide and their type is small, so a card-width copy is a
+       thumbnail whatever we call it. This is where you actually read one: fit
+       to the screen first, one tap to blow it up, drag to move around it. -->
+  <div class="modal-overlay mind-zoom" id="mindZoom">
+    <div class="mz-scroll" id="mzScroll"><div class="mz-pad"><img id="mzImg" alt=""></div></div>
+    <button class="mz-x" id="mzX" aria-label="Close the picture">&#10005;</button>
+    <div class="mz-hint" id="mzHint"></div>
+  </div>
   <div class="modal-overlay" id="saySheet">
     <div class="modal">
       <button class="x" id="saySheetX">&#10005;</button>
@@ -4417,22 +4458,22 @@ const SUB_ERR={
    is worth re-reading on a day it applies. Dismissing one must never be how you
    lose it. */
 const MIND_CARDS=[
-  { k:'rich', t:'Rich mindset versus poor mindset',
+  { k:'rich', img:'mind/rich.jpg', t:'Rich mindset versus poor mindset',
     punch:'Poor mindset spends to look better today. Rich mindset builds to live better later.',
     body:`A poor mindset sees money as something to spend. A rich mindset sees money as something to grow. Poor mindset says I work for money. Rich mindset says money should start working for me too. That's why one person gets paid on Friday and feels broke by Monday. The other person gets paid and thinks, "What can this help me build?" Not always a business; sometimes it's a skill, a small investment, a better habit, or learning something that saves them from expensive mistakes. Poor mindset buys things to feel rich. Rich mindset builds things that make life less stressful. And here's the part people miss: You can have no money right now and still have a rich mindset. You can also make good money and still have a poor mindset, because the difference is not just your bank account. It's what your mind does when money shows up.` },
-  { k:'creator', t:'Consumer versus creator',
+  { k:'creator', img:'mind/creator.jpg', t:'Consumer versus creator',
     punch:'Consumer mindset spends attention to escape today. Creator mindset invests attention to design tomorrow.',
     body:`A consumer mindset sees free time as a chance to be entertained. A creator mindset sees free time as a runway to build. Consumer mindset says, "I need to watch something to unwind." Creator mindset says, "I need to build something that works for me while I sleep." That's why one person scrolls for hours and feels drained by Monday. The other person works for an hour on a weekend and feels energized. It's not always about launching a massive startup; sometimes it's writing a block of code, designing a template, or starting a community project.` },
-  { k:'intent', t:'Reactive versus intentional',
+  { k:'intent', img:'mind/intent.jpg', t:'Reactive versus intentional',
     punch:'Reactive mindset floats through the schedule to survive the day. Intentional mindset drives the schedule to win the week.',
     body:`A reactive mindset sees the day as something that happens to them. An intentional mindset sees the day as something they design. Reactive mindset says, "I'll get to my goals when I find the time." Intentional mindset says, "I will block out time for my goals first." That's why one person gets to Friday and wonders where the week went. The other person gets to Friday and can point to exactly what they moved forward. It's not about being perfectly scheduled every minute; sometimes it's just setting one clear priority, holding a boundary, or taking a single deliberate step.` },
-  { k:'discipline', t:'Motivation versus discipline',
+  { k:'discipline', img:'mind/discipline.jpg', t:'Motivation versus discipline',
     punch:'Motivation mindset waits for a spark to start. Discipline mindset builds the fire one log at a time.',
     body:`A motivation mindset relies on a feeling to take action. A discipline mindset relies on a system to take action. Motivation mindset says, "I'll put in the work when I feel inspired." Discipline mindset says, "I'll put in the work because it's on the schedule." That's why one person starts ten projects and abandons them when the excitement fades. The other person builds slowly, checks the boxes, and crosses the finish line. It's not just about grinding yourself into the ground; sometimes it's a simple checklist, a daily habit tracker, or an accountability partner holding you to your word.` },
-  { k:'growth', t:'Fixed versus growth',
+  { k:'growth', img:'mind/growth.jpg', t:'Fixed versus growth',
     punch:'Fixed mindset shrinks to avoid looking foolish today. Growth mindset stretches to become competent later.',
     body:`A fixed mindset sees failure as a permanent label. A growth mindset sees failure as a data point. Fixed mindset says, "I'm just not naturally good at this." Growth mindset says, "I'm not good at this yet." That's why one person hits a technical roadblock and quits, feeling defeated. The other person hits a roadblock and thinks, "What is this trying to teach me?" It's not always about blind optimism; sometimes it's learning a new software tool, adjusting a strategy after a setback, or asking for feedback instead of hiding.` },
-  { k:'productive', t:'Busy versus productive',
+  { k:'productive', img:'mind/productive.jpg', t:'Busy versus productive',
     punch:'Busy mindset runs on a treadmill to feel tired. Productive mindset climbs a ladder to get higher.',
     body:`A busy mindset sees value in motion. A productive mindset sees value in momentum. Busy mindset says, "I have a million things on my to-do list, I'm exhausted." Productive mindset says, "I have three priorities today that actually move the needle." That's why one person works a 12-hour day but stays in the exact same place. The other person works a focused 4-hour day and achieves exponential growth. It's not about doing everything yourself; sometimes it's delegating a task, automating a workflow, or simply saying 'no' to a distraction.` }
 ];
@@ -7395,7 +7436,15 @@ function mindMark(k){
   state.mindSeen=seen; state.mindDay=todayStr(); save();
 }
 function mindCardHTML(c,opts){
-  return `<div class="mind-eyebrow">Mindset</div>
+  const fig = c.img
+    ? `<button type="button" class="mind-fig" data-mindzoom="${escapeHtml(c.img)}"
+         data-mindalt="${escapeHtml(c.t)}" aria-label="Enlarge the picture: ${escapeHtml(c.t)}">
+         <img src="${escapeHtml(c.img)}" alt="${escapeHtml(c.t)}" width="1408" height="768"
+              loading="lazy" decoding="async">
+         <span class="mind-figz">Tap to enlarge</span>
+       </button>`
+    : '';
+  return fig + `<div class="mind-eyebrow">Mindset</div>
     <h3 class="mind-t">${escapeHtml(c.t)}</h3>
     <p class="mind-punch">${escapeHtml(c.punch)}</p>
     <p class="mind-body">${escapeHtml(c.body)}</p>`
@@ -7405,6 +7454,57 @@ function mindCardHTML(c,opts){
       </div>
       <div class="mind-foot">One a day, never twice in a day. All of them live on <b>Learn</b> whenever you want them.</div>`:'');
 }
+/* The picture, full screen. Two states and no more: the whole thing on the
+   screen, or big enough to read - which for type this small means wider than
+   the phone. Pinch still works (nothing here disables it), but a tap is what a
+   thumb reaches for first, so a tap is what the app answers. */
+function mindZoomOpen(src,alt){
+  const ov=document.getElementById('mindZoom'), im=document.getElementById('mzImg');
+  if(!ov||!im||!src) return false;
+  if(im.getAttribute('src')!==src) im.setAttribute('src',src);
+  im.alt=alt||'';
+  ov.classList.remove('big'); ov.classList.add('on');
+  mindZoomHint(); mindZoomHome(); pushOverlay();
+  return true;
+}
+function mindZoomShut(){
+  const ov=document.getElementById('mindZoom'); if(ov) ov.classList.remove('on','big');
+}
+function mindZoomHome(){
+  const sc=document.getElementById('mzScroll'); if(sc){ sc.scrollLeft=0; sc.scrollTop=0; }
+}
+let mzHintT=null;
+function mindZoomHint(){
+  const ov=document.getElementById('mindZoom'), h=document.getElementById('mzHint');
+  if(!ov||!h) return;
+  h.textContent = ov.classList.contains('big')
+    ? 'Drag to move around it. Tap it to fit it back on the screen.'
+    : 'Tap the picture to make it big enough to read.';
+  h.classList.remove('gone');
+  if(mzHintT) clearTimeout(mzHintT);
+  mzHintT=setTimeout(()=>h.classList.add('gone'), 3600);
+}
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-mindzoom]');
+  if(f){ e.preventDefault(); mindZoomOpen(f.dataset.mindzoom, f.dataset.mindalt); return; }
+  const ov=document.getElementById('mindZoom');
+  if(!ov||!ov.classList.contains('on')) return;
+  if(e.target.id==='mzImg'){ ov.classList.toggle('big'); mindZoomHome(); mindZoomHint(); return; }
+  /* Tapping the dark around a fitted picture closes it. Not while it is blown
+     up: there the dark is somewhere your thumb lands at the end of a drag, and
+     closing on that would throw away the thing you were reading. */
+  if(!ov.classList.contains('big') && e.target.closest('.mz-scroll')) dismissOverlay();
+});
+/* A picture that will not load leaves the card exactly as it was before there
+   were pictures, rather than a broken frame where one should be. The error
+   event does not bubble, so this listens on the way down. */
+document.addEventListener('error',e=>{
+  const im=e.target;
+  if(!im||im.tagName!=='IMG'||!im.closest) return;
+  const fig=im.closest('.mind-fig');
+  if(fig) fig.remove();
+  else if(im.id==='mzImg') mindZoomShut();
+},true);
 function mindShow(card){
   const c=card||mindNext(); if(!c) return false;
   const ov=document.getElementById('mindSheet'), body=document.getElementById('mindBody');
@@ -8298,7 +8398,8 @@ function closeTopOverlay(){
   const sm=document.getElementById('stageMap'); if(sm&&sm.classList.contains('on')){ sm.classList.remove('on'); return true; }
   if(typeof glanceOpen!=='undefined' && glanceOpen){ glanceSetOpen(false); return true; }
   const fh=document.getElementById('ftHelp'); if(fh&&fh.classList.contains('on')){ fh.classList.remove('on'); return true; }
-  const ms=document.getElementById('mindSheet'); if(ms&&ms.classList.contains('on')){ ms.classList.remove('on'); return true; }
+  const mz=document.getElementById('mindZoom'); if(mz&&mz.classList.contains('on')){ mz.classList.remove('on'); return true; }
+  const ms=document.getElementById('mindSheet'); if(ms&&ms.classList.contains('on')){ ms.classList.remove('on'); mindZoomShut(); return true; }
   const ss=document.getElementById('saySheet'); if(ss&&ss.classList.contains('on')){ foldReturn(); ss.classList.remove('on'); return true; }
   const ts=document.getElementById('txSheet'); if(ts&&ts.classList.contains('on')){ ts.classList.remove('on'); if(typeof txSheetId!=='undefined') txSheetId=null; return true; }
   const cs=document.getElementById('catSheet'); if(cs&&cs.classList.contains('on')){ cs.classList.remove('on'); if(typeof catSheetId!=='undefined') catSheetId=null; return true; }
@@ -10547,6 +10648,7 @@ function renderCatSheet(){
 }
 (function(){
   const mx=document.getElementById('mindSheetX'); if(mx) mx.addEventListener('click',dismissOverlay);
+  const mzx=document.getElementById('mzX'); if(mzx) mzx.addEventListener('click',dismissOverlay);
   const sx=document.getElementById('saySheetX'); if(sx) sx.addEventListener('click',dismissOverlay);
   const x=document.getElementById('catSheetX'); if(x) x.addEventListener('click',dismissOverlay);
   const ov=document.getElementById('catSheet');
@@ -13635,7 +13737,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · the words decide where the arithmetic cannot';
+const BUILD_STAMP='2026-09-13 · the picture says it before a word is read';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
