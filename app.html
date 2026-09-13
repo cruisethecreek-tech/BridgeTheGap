@@ -11346,7 +11346,34 @@ function qlParseOcr(text){
        row as unnamed, because a person can fix a blank and will not think to
        question something that looks like it was read. */
     const letters=(desc.match(/[A-Za-z]/g)||[]).length;
-    const named=desc.length>=2 && letters>=3 && letters/desc.length>=0.45;
+    /* The letter ratio alone lets soup through, because soup that happens to
+       contain a real word clears it. Three came back on one read: "2 oa N{ FC,
+       < Account", "OO << BE m = Accounts" and "($) SG = #1 = Accounts" - all of
+       them the reader's attempt at a column header, all of them sitting on a
+       row as if somebody had typed them. The last is exactly 45% letters, which
+       is the bar, so it passed by a rounding error.
+
+       So the same rule the account reader already uses applies here: a bank
+       descriptor is made of letters, digits and a short list of punctuation,
+       and a brace, a guillemet or an equals sign means the reader was looking
+       at furniture rather than a name. Rejecting leaves the row UNNAMED with
+       its amount intact, which is a gap somebody can fill from the photo - and
+       a gap is always better than a name nobody typed. */
+    const soup=/[^A-Za-z0-9 .,'&\/#*()+:;_@%$-]/.test(desc);
+    /* WORDS, not a letter ratio. The ratio asked whether letters outnumbered
+       everything else, and a real bank descriptor loses that vote: "Card
+       purchase / CITY OF YOUNGSTOWN 4900 (2026-09-11) 330-742-8700 OH" is 30
+       letters in 68 characters, 44%, just under the bar - so a perfectly good
+       name was thrown away for carrying the reference tail every bank prints
+       after it. Meanwhile "($) SG = #1 = Accounts" scored exactly 45% and was
+       kept. The measure was rewarding brevity, not readability.
+
+       What actually separates them is how many WORDS survived the read. Soup is
+       one real word adrift in symbols; a descriptor is several. Two runs of
+       three or more letters is enough, and a single long word - WALMART on its
+       own - is a name too. */
+    const words=(desc.match(/[A-Za-z]{3,}/g)||[]).length;
+    const named=!soup && desc.length>=2 && letters>=3 && (words>=2 || letters>=6);
     /* A statement writes every debit as negative, so a minus is the norm and
        says nothing. An explicit plus is the one that means money arriving. */
     const row={what:named?desc.slice(0,80):'', amt};
@@ -11439,8 +11466,19 @@ function qlBalanceChain(rows){
      again in what is left. A page whose balances do not form a run of three is
      left alone, which is the same refusal as before - it just no longer takes
      the rest of the statement down with it. */
+  /* Keep going until nothing more can be proved. The limit here was TEN, which
+     is a number I picked while thinking about three or four photographs -
+     somebody who scrolls a month of statement and shoots fifteen screens has
+     fifteen chains, and the eleventh page onward kept every balance it had.
+     Reported as "which account did these 111 come out of", and 111 rows is what
+     a leak of five pages looks like from the outside.
+
+     The real bound is arithmetic rather than taste: a chain claims at least
+     three tokens, so there cannot be more than a third of them, and the loop
+     stops on its own the moment a pass proves nothing. */
   const claimed=new Set(), bals=new Set(), signs=new Map();
-  for(let pass=0; pass<10; pass++){
+  const maxChains=Math.ceil(rows.length/3)+1;
+  for(let pass=0; pass<maxChains; pass++){
     const best=qlBestChain(rows, claimed);
     if(best.bals.size<3) break;
     best.bals.forEach(i=>{ bals.add(i); claimed.add(i); });
@@ -13542,7 +13580,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · every page has its own balance chain';
+const BUILD_STAMP='2026-09-13 · every page, however many, and no invented names';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;

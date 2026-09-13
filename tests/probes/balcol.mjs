@@ -211,6 +211,67 @@ ok('...and not one balance from any of them',
 ok('...with the deposit buried on page two still read as money arriving',
    pages.income.length===1 && pages.income[0]===1230.23, pages.income.join(' '));
 
+/* ---------- fifteen photos, not three ----------
+   Reported a third time, and the tell was in the app's own wording: "which
+   account did these 111 come out of". A hundred and eleven rows is what a leak
+   of five pages looks like from outside. The chain loop stopped after TEN
+   chains - a number chosen while picturing three or four photographs - so
+   everything from the eleventh page on kept its balances. The bound is
+   arithmetic now: a chain claims at least three tokens, so there cannot be more
+   than a third of them. */
+const mkPages=(count)=>{
+  const NAMES=['ACH Withdrawal / Acorns Round-Ups 9000142693','Card purchase / WALGREENS #9903 5912',
+    'POS Card purchase / TST* RED PLUM 5812','Card purchase / CITY OF YOUNGSTOWN 4900',
+    'ACH Withdrawal / PAYPAL 5499','Card purchase / SHELL OIL 5541'];
+  let sd=7; const rnd=()=>((sd=sd*1103515245+12345&0x7fffffff)/0x7fffffff);
+  const out=[]; let top=9000;
+  for(let i=0;i<count;i++){
+    const n=4+Math.floor(rnd()*3), rows=[];
+    for(let j=0;j<n;j++){ const a=Math.round((2+rnd()*300)*100)/100;
+      rows.push([NAMES[Math.floor(rnd()*NAMES.length)], (j===2&&i%4===0)?a:-a]); }
+    out.push(build(top,rows)); top=Math.round((top-200-rnd()*300)*100)/100;
+  }
+  return out;
+};
+const many=mkPages(15), manyAll=many.flat();
+const scaled=await pg.evaluate(([t,bals,amts])=>{
+  const out=qlParseOcr(t);
+  return { rows:out.length, leaked:out.filter(x=>bals.includes(x.amt)&&!amts.includes(x.amt)).length,
+           income:out.filter(x=>x.kind==='income').length };
+},[many.map(r=>'Account History\nFree Checking (153934-0050)\nPosted\n'+asPage(r)).join('\n'),
+   manyAll.map(r=>r[2]), manyAll.map(r=>Math.abs(r[1]))]);
+ok('fifteen photos give back fifteen pages of transactions and no balances',
+   scaled.rows===manyAll.length && scaled.leaked===0,
+   `${scaled.rows} of ${manyAll.length}, leaked ${scaled.leaked}`);
+ok('...with every deposit among them still read as money arriving',
+   scaled.income===manyAll.filter(r=>r[1]>0).length,
+   `${scaled.income} of ${manyAll.filter(r=>r[1]>0).length}`);
+
+/* ---------- a name nobody typed ----------
+   Three came off one read: "2 oa N{ FC, < Account", "OO << BE m = Accounts",
+   "($) SG = #1 = Accounts" - the reader's attempt at a column header, each
+   sitting on a row as though somebody had written it. The letter-ratio test let
+   them through and threw away real descriptors instead: CITY OF YOUNGSTOWN with
+   its reference tail is 44% letters and was dropped, while the soup scored
+   exactly 45% and was kept. It rewarded brevity, not readability. */
+const NAMING=[['2 oa N{ FC, < Account',false],['OO \u00ab BE m = Accounts',false],
+  ['($) SG = #1 = Accounts',false],['== 2 Nf 2. G&G) <|Se',false],['N 855-739-2859',false],
+  ['ACH Withdrawal / Acorns Round-Ups',true],['ACH Deposit / ALDI Inc',true],
+  ['Card purchase / CITY OF YOUNGSTOWN 4900 (2026-09-11) 330-742-8700 OH',true],
+  ['Card purchase / MCDONALD\'S F27375',true],['WALMART',true],['KITCHEN ABZ 5499',true]];
+const naming=await pg.evaluate(cs=>cs.map(([d,want])=>{
+  const letters=(d.match(/[A-Za-z]/g)||[]).length;
+  const soup=/[^A-Za-z0-9 .,'&\/#*()+:;_@%$-]/.test(d);
+  const words=(d.match(/[A-Za-z]{3,}/g)||[]).length;
+  return { d, want, named: !soup && d.length>=2 && letters>=3 && (words>=2 || letters>=6) };
+}),NAMING);
+ok('no row wears a name the reader invented out of a column header',
+   naming.filter(x=>!x.want).every(x=>!x.named),
+   naming.filter(x=>!x.want&&x.named).map(x=>x.d).join(' | '));
+ok('...and a real descriptor keeps its name, reference tail and all',
+   naming.filter(x=>x.want).every(x=>x.named),
+   naming.filter(x=>x.want&&!x.named).map(x=>x.d).join(' | '));
+
 R.forEach(([n,p,d])=>{ if(!p) console.log('FAIL: '+n+(d?'  <'+d+'>':'')); });
 const bad=R.filter(x=>!x[1]).length;
 console.log(`${R.length-bad} of ${R.length} hold`);
