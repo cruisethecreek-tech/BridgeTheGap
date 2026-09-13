@@ -744,6 +744,8 @@
   .dataguard .dg-x{background:none;border:none;color:var(--muted);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
   /* flip stat cards: tap to flip a figure between dollars and hours of your life */
   .fstat{perspective:1000px}
+  .ac-no{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  .ql-matched{display:block;margin-top:4px;font-size:12px;line-height:1.5;color:var(--muted)}
   .sm-rows{margin-top:2px}
   .sm-row{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
     padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45}
@@ -3773,6 +3775,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <p class="sub" data-say="1"><b>And it is the scoreboard.</b> This app never connects to your bank, which means every other figure in it is built from what you chose to type - log less and it looks calmer. This number is the exception, because it comes from outside and you have nothing to gain by inflating it. What it does over months is the honest answer to whether any of this is working. Keep it current and the app can tell you the truth; let it go stale and it can only tell you about your typing.</p>
           <div class="row" style="gap:8px;margin-top:12px">
             <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
+            <input type="text" id="acctNo" placeholder="last 4" maxlength="24" inputmode="numeric" style="width:86px" aria-label="Account number, last four digits is enough">
             <select id="acctKind" style="min-width:120px"></select>
             <select id="acctPurpose" style="min-width:140px"></select>
             <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px" aria-label="What is in it today"></span>
@@ -3785,6 +3788,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <button class="btn sm primary" id="addAcct">＋ Add</button>
             <button class="btn sm ghost" id="acctReorderBtn">Reorder</button>
           </div>
+          <p class="sub" data-say="1"><b>The number is what lets a photograph do the work.</b> A statement names itself in its header and names the other end of every internal move in the line itself - "Transfer to Loan 0002". Tell this app which digits are yours and it stops asking you which account a scan came from, and it stops filing a move between two of your own accounts as money you spent. <b>The last four is enough</b>, and less of your number sitting in a file is the better answer. Nothing here ever leaves your device.</p>
           <div id="acctKindNote"></div>
           <div id="acctList"></div>
           <div id="acctBackfill"></div>
@@ -5494,6 +5498,28 @@ function statMath(key){
       note: budgetMode()==='month'
         ? `You are budgeting the whole month, so pay you have not been handed yet still counts as money to assign. Switch to <b>only what I have</b> in Plan and that line disappears.`
         : `You are budgeting only what you actually hold, so pay that has not landed yet is not counted here. Switch to <b>the whole month</b> in Plan and it would be.` };
+  }
+  if(key==='tobudget'){
+    const lines=[smRow(`Income logged in ${mName}`, monthIncome(M))];
+    const op=openingFor(M); if(op>0) lines.push(smRow('Carried in from last month', op));
+    const ahead=budgetMode()==='month' ? incomeDueRest(M).total : 0;
+    if(ahead>0) lines.push(smRow('Pay still due this month', ahead));
+    return { title:'Income to budget', lines, total:monthToBudget(M), tab:'tx', tabLabel:'Track',
+      note:`This is what there is to give jobs to, which is not the same as what you earned - money already sitting in the account when the month opened counts, and so does pay still due if you are budgeting the whole month. The <b>Left to budget</b> card shows what happens to it from here.` };
+  }
+  if(key==='assigned'){
+    const cats=topCats();
+    const lines=smTop(cats.map(c=>({k:c.name, v:catAssigned(c.id,M)})).filter(x=>Math.abs(x.v)>0.004),
+                      8, 'other categories');
+    return { title:'Assigned', lines, total:cats.reduce((s,c)=>s+catAssigned(c.id,M),0), tab:'budget', tabLabel:'Plan',
+      note:`Every top-level category you have given money to this month. A category with subcategories counts once, as the total of its children - counting the parent as well is how a budget ends up disagreeing with itself.` };
+  }
+  if(key==='lts'){
+    const assigned=topCats().reduce((s,c)=>s+catAssigned(c.id,M),0);
+    return { title:'Left to spend', lines:[smRow('Assigned to categories', assigned),
+                                           smRow(`Spent in ${mName}`, monthExpense(M), '-')],
+      total:assigned-monthExpense(M), tab:'tx', tabLabel:'Track',
+      note:`What is left inside the plan, which is not what is left in the bank. Money you have not assigned at all is not in here - that is <b>Left to budget</b>.` };
   }
   if(key==='spent'){
     const rows=txnsInMonth(M).filter(t=>t.type==='expense');
@@ -10335,11 +10361,11 @@ function renderBudget(){
 
   const lts=assigned-spent;
   document.getElementById('summary').innerHTML=
-    flipStat('Left to budget', ltb, vc)+
-    flipStat(lifeLabel('income','Income'), income, 'good')+
-    flipStat('Assigned', assigned, '')+
-    flipStat(lifeLabel('spent','Spent'), spent, '')+
-    flipStat('Left to spend', lts, lts<0?'bad':'good');
+    flipStat('Left to budget', ltb, vc, 'ltb')+
+    flipStat(lifeLabel('income','Income'), income, 'good', 'tobudget')+
+    flipStat('Assigned', assigned, '', 'assigned')+
+    flipStat(lifeLabel('spent','Spent'), spent, '', 'spent')+
+    flipStat('Left to spend', lts, lts<0?'bad':'good', 'lts');
   const lk=document.getElementById('lifeKeyPlan'); if(lk) lk.innerHTML=syncLockedHTML()+strandedPutAwayHTML(M)+`<div class="stat-note">${msg}</div>${ltbNoteHTML(income,assigned,ltb,M)}${flipHintHTML()}`;
 
   const nmEl=document.getElementById('newMonthBanner');
@@ -11345,7 +11371,12 @@ function qlCatOptions(){
   return cats
     +`<option value="__new">＋ New category…</option>`
     +`<option value="__invest">→ Put away (savings or investing)</option>`
-    +`<option value="__income">← Money that came in</option>`;
+    +`<option value="__income">← Money that came in</option>`
+    /* "Transfer to Loan 0002" is not a purchase, and filing it as one is the
+       exact double-count txDelta exists to prevent: the money is still yours,
+       it just lives somewhere else now. The destination rides on the value
+       because the row has no room for a second dropdown on a phone. */
+    +acctsWithNumbers().map(a=>`<option value="__move:${a.id}">↔ Moved to ${escapeHtml(a.name)}</option>`).join('');
 }
 /* ---- guessing the category from what you typed -------------------------------
    Every row's dropdown defaulted to whatever category happened to be first, so
@@ -11463,17 +11494,30 @@ function qlAcctRowHTML(){
    sheet over the top would hide the very lines being checked - the same reason
    the "?" explanations are inline. It highlights the picker that is already
    there and says why it is being asked. */
-function qlAskAccount(n){
+function qlAskAccount(n, readText){
   const accts=state.accounts||[];
   if(!accts.length) return;
   const wrap=document.querySelector('.ql-acct'); if(!wrap) return;
   wrap.classList.add('asking');
   const note=wrap.querySelector('.ql-acct-n');
+  const sel=document.getElementById('qlAcct');
+  /* A statement says whose it is in its own header. If the digits are on file
+     the question is already answered - so answer it, say which line answered
+     it, and leave the dropdown alone so a wrong guess costs one tap. */
+  const found=readText ? acctByNumberIn(readText) : null;
+  if(found && sel && [...sel.options].some(op=>op.value===found.id)){
+    sel.value=found.id;
+    if(note) note.innerHTML=`<b>These ${n} are going against ${escapeHtml(found.name)}.</b> <span class="ql-matched">Its number, <b>${escapeHtml(acctDigits(found.acctNo))}</b>, is printed on the page you photographed.</span> Change it here if that is not the account.`;
+    wrap.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   if(note) note.innerHTML = accts.length>1
     ? `<b>Which account did these ${n} come out of?</b> Set it once here and every line goes against it.`
+      + (acctsWithNumbers().length===0
+          ? ` <span class="ql-matched">Put the last four digits on an account in <b>Build</b> and a photographed statement answers this by itself next time.</span>` : '')
     : `All ${n} will go against <b>${escapeHtml(accts[0].name)}</b>. Add another account on Build if that is wrong.`;
   wrap.scrollIntoView({behavior:'smooth',block:'center'});
-  const sel=document.getElementById('qlAcct'); if(sel) setTimeout(()=>sel.focus(),400);
+  if(sel) setTimeout(()=>sel.focus(),400);
 }
 function qlAcctChoice(){
   const sel=document.getElementById('qlAcct');
@@ -11504,7 +11548,7 @@ let qlPages=[];
    is a seed rather than a call into the panel's internals because wireRow and
    guessRow are closures over one render, and a third copy of the fill loop is
    how the two existing copies would have drifted apart. Consumed once. */
-let qlSeed=null, qlSeedNote='';   // say what the guessing is once, not once per row
+let qlSeed=null, qlSeedNote='', qlSeedText='';   // say what the guessing is once, not once per row
 function loadTesseract(){
   if(window.Tesseract) return Promise.resolve(window.Tesseract);
   if(tessLoading) return tessLoading;
@@ -12225,6 +12269,9 @@ function scanToQuickLog(){
   if(!scanResult||!scanResult.records.length) return;
   const n=scanResult.records.length;
   qlSeed=scanResult.records.map(r=>({what:r.what, amt:r.amt, kind:r.kind, unnamed:r.unnamed}));
+  /* The whole read, not just the rows. The account's own number is printed in
+     the header, which is not a transaction and never becomes one. */
+  qlSeedText=String(scanResult.text||'');
   qlSeedNote=`<b>${n}</b> record${n===1?'':'s'} from the statement you just read, waiting on your eyes. Fix anything misread, drop what you do not want, then log. <b>Nothing has counted yet</b> - a reader misreads, and this is the step where that gets caught.`;
   quickLogOpen=true;
   renderQuickLog();
@@ -12317,7 +12364,7 @@ function renderQuickLog(){
       const items=qlParseOcr(r&&r.data&&r.data.text);
       if(!items.length){ note.textContent="Couldn't make out clear lines (handwriting is genuinely hard). The photo's right there - punch the lines in yourself, it takes seconds."; }
       else{
-        const filled=fillFromItems(items,'Name this one from the photo');
+        const filled=fillFromItems(items,'Name this one from the photo', qlAcctChoice());
         if(filled<0) return;
         /* "Read 1 line" when four amounts came off the screen is a true
            sentence that tells you nothing useful. It has to count both: what it
@@ -12362,7 +12409,7 @@ function renderQuickLog(){
   /* One fill loop, two callers: this panel's own reader and the statement
      reader further down the tab. Extracting it is the point - a third copy is
      how the first two would have stopped agreeing, and they very nearly did. */
-  function fillFromItems(items, namePlaceholder){
+  function fillFromItems(items, namePlaceholder, homeAcctId){
     const listEl=document.getElementById('qlList'); if(!listEl) return -1;
     let filled=0;
     (items||[]).forEach(it=>{
@@ -12377,6 +12424,18 @@ function renderQuickLog(){
           c.value='__income'; c.classList.add('guessed');
           c.title='Read as money in, from the + on the statement - change it if it is wrong'; } }
       else if(it.what) guessRow(row);
+      /* A line that names another of your accounts by number is a move between
+         two places you own. Only ever a guess with a visible mark on it, same
+         as the income guess above, and never applied over a choice already made. */
+      {
+        const c=row.querySelector('.ql-cat');
+        const other=acctByNumberIn(it.what, homeAcctId||qlAcctChoice());
+        if(other && c && c.dataset.touched!=='1'
+           && [...c.options].some(op=>op.value==='__move:'+other.id)){
+          c.value='__move:'+other.id; c.classList.add('guessed');
+          c.title=`Read as a move to ${other.name}, because its number ${acctDigits(other.acctNo)} is in this line - change it if it is wrong`;
+        }
+      }
       if(it.unnamed){ row.classList.add('ql-unnamed');
         row.querySelector('.ql-what').placeholder=namePlaceholder; }
       filled++;
@@ -12386,12 +12445,15 @@ function renderQuickLog(){
   /* Rows the statement reader handed over. Consumed here, once, so a later
      re-render of this panel cannot paste them in a second time. */
   if(qlSeed && qlSeed.length){
-    const seeded=qlSeed, seedNote=qlSeedNote;
-    qlSeed=null; qlSeedNote='';
-    const n=fillFromItems(seeded,'Name this one from the page');
+    const seeded=qlSeed, seedNote=qlSeedNote, seedText=qlSeedText;
+    qlSeed=null; qlSeedNote=''; qlSeedText='';
+    /* Settled first, and used twice: to keep a row from being called a move to
+       the account it is already in, and to answer the question below. */
+    const mine=acctByNumberIn(seedText);
+    const n=fillFromItems(seeded,'Name this one from the page', mine?mine.id:qlAcctChoice());
     if(n>0){
       const on=document.getElementById('qlOcrNote'); if(on) on.innerHTML=seedNote;
-      qlAskAccount(n);
+      qlAskAccount(n, seedText);
     }
   }
   document.getElementById('qlAdd').onclick=()=>{ const wrap=document.createElement('div'); wrap.innerHTML=qlRow(); const el=wrap.firstElementChild; document.getElementById('qlList').appendChild(el); wireRow(el); el.querySelector('.ql-what').focus(); };
@@ -12430,7 +12492,7 @@ function renderQuickLog(){
     box.addEventListener('input',()=>{ if(armed) disarm(); },true);
   })();
   document.getElementById('qlSave').onclick=()=>{
-    const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0, put=0, came=0;
+    const date=document.getElementById('qlDate').value||todayStr(); let added=0, namedNoAmt=0, uncat=0, put=0, came=0, moved=0;
     const batchAcct=qlAcctChoice();   // read once: every line in this batch came from the same place
     box.querySelectorAll('.ql-row').forEach(el=>{
       const what=(el.querySelector('.ql-what').value||'').trim();
@@ -12445,6 +12507,22 @@ function renderQuickLog(){
         state.transactions.push(ivT);
         investAssetAdd(amt);          // it is still yours, so net worth has to know
         added++; put+=amt; el.remove(); return;
+      }
+      /* Where it goes is stored on the option, so nothing has to be picked twice. */
+      if(String(catId).slice(0,7)==='__move:'){
+        const destId=String(catId).slice(7);
+        const dest=(state.accounts||[]).find(x=>x.id===destId);
+        if(dest && destId!==batchAcct){
+          const mvT={id:uid(),type:'transfer',amount:amt,date,note:what,
+                     destAcctId:destId,source:dest.name};
+          if(batchAcct) mvT.acctId=batchAcct;
+          state.transactions.push(mvT);
+          added++; moved+=amt; el.remove(); return;
+        }
+        /* No destination, or it is the same account this batch came from, which
+           would be money moving to where it already is. Rather than invent a
+           transfer, hand the row back uncategorised so a person decides. */
+        catId=null; catSel.value=''; catSel.classList.remove('guessed');
       }
       if(catId==='__income'){
         const inT={id:uid(),type:'income',amount:amt,source:what||'Income',date,note:''};
@@ -12486,6 +12564,9 @@ function renderQuickLog(){
       const bits=[];
       if(put>0) bits.push(money(put)+' put away');
       if(came>0) bits.push(money(came)+' in');
+      /* Named, because it is the surprising one: this is money the old version
+         of this screen would have called spending. */
+      if(moved>0) bits.push(money(moved)+' moved, not spent');
       if(typeof toast==='function') toast(
         bits.length
           ? bits.join(', ')+' - '+added+' line'+(added>1?'s':'')+' logged.'
@@ -13957,7 +14038,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · every headline says where it came from';
+const BUILD_STAMP='2026-09-13 · the number on the page names the account';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -15005,6 +15086,51 @@ function moveAcct(id,dir){
    "what you owe on the cards", and netting them into one figure would hide the
    only two numbers that matter about a line of credit. */
 function isOwedAcct(a){ return !!acctKind(a&&a.kind).owed; }
+/* ============================================================
+   KNOWING WHOSE ACCOUNT A LINE IS TALKING ABOUT
+
+   Asked for as: "the app should be able to identify these accounts for auto
+   populating - this bank account is associated with this transfer because the
+   account number in the description matched."
+
+   A statement says who it belongs to in its header - "Benefits Plus
+   (195794-*0050)" - and it names the other end of every internal move in the
+   line itself - "Transfer to Loan 0002". Both are account numbers sitting in
+   text the reader already hands us. Tell the app which digits are yours once,
+   on Build, and it stops asking.
+
+   The whole risk lives in one place: a loose match. These descriptions are made
+   of long digit runs - routing numbers, confirmation numbers, phone numbers -
+   and a stored "0002" appears inside "111000021024413", which is the routing
+   number on an unrelated deposit. Matching that would file somebody's paycheck
+   as a transfer to their loan and take it out of income. So the digits must sit
+   in the text as their OWN run, with a non-digit on each side, and three is the
+   shortest run worth trusting at all.
+   ============================================================ */
+function acctDigits(v){ return String(v||'').replace(/\D+/g,''); }
+const ACCT_NO_RX=new Map();
+function acctNoRx(no){
+  const d=acctDigits(no);
+  if(d.length<3) return null;                       // two digits match everything
+  let rx=ACCT_NO_RX.get(d);
+  if(!rx){ rx=new RegExp('(^|[^0-9])'+d+'([^0-9]|$)'); ACCT_NO_RX.set(d,rx); }
+  return rx;
+}
+/* The longest number wins. Somebody who stored the full number on one account
+   and the last four on another should not have the vaguer one answer first. */
+function acctByNumberIn(text, exceptId){
+  const t=String(text||'');
+  if(!t) return null;
+  let best=null, bestLen=0;
+  (state.accounts||[]).forEach(a=>{
+    if(exceptId && a.id===exceptId) return;
+    const rx=acctNoRx(a.acctNo); if(!rx || !rx.test(t)) return;
+    const L=acctDigits(a.acctNo).length;
+    if(L>bestLen){ best=a; bestLen=L; }
+  });
+  return best;
+}
+function acctsWithNumbers(){ return (state.accounts||[]).filter(a=>acctDigits(a.acctNo).length>=3); }
 function acctOwed(a){ return Math.max(0, -(+a.balance||0)); }
 function acctLimit(a){ const L=+((a||{}).limit); return (isFinite(L)&&L>0)?L:0; }
 /* Headroom is the point of a line you keep at zero. The user who has never drawn
@@ -15803,6 +15929,7 @@ function renderAccounts(){
       return `<div class="acct-row editing"><div class="ac-edit">
         <div class="ae-h">Editing <b>${escapeHtml(a.name)}</b></div>
         <label class="ae-f"><span>Called</span><input type="text" id="aeName" value="${escapeHtml(a.name)}" maxlength="40"></label>
+        <label class="ae-f"><span>Number</span><input type="text" id="aeNo" value="${escapeHtml(a.acctNo||'')}" maxlength="24" inputmode="numeric" placeholder="last 4 is enough"></label>
         <label class="ae-f"><span>Kind</span><select id="aeKind">${ACCT_KINDS.map(x=>`<option value="${x.k}"${x.k===a.kind?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
         <label class="ae-f${owedNow?' hide':''}" id="aePurpWrap"><span>Its job</span><select id="aePurp">${ACCT_PURPOSES.map(x=>`<option value="${x.k}"${x.k===(a.purpose||'')?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
         <label class="ae-f${owedNow?'':' hide'}" id="aeLimWrap"><span>Limit</span><span class="sw-dol">$<input type="number" id="aeLim" min="0" step="any" value="${acctLimit(a)||''}" placeholder="none set"></span></label>
@@ -15813,7 +15940,7 @@ function renderAccounts(){
       </div></div>`;
     }
     return `<div class="acct-row${owed?' owed':''}" data-row="${a.id}" data-lvl="${acctGroupOf(a)}">${
-      acctReorder?`<button class="cat-grip" data-grip="${a.id}" data-scope="accts" aria-label="Drag to move ${escapeHtml(a.name)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`:`<span class="ac-ic">${k.ic}</span>`}<div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated+readAge(a):''}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="ac-pen" data-acctedit="${a.id}" title="Rename or change what kind it is" aria-label="Edit ${escapeHtml(a.name)}">✎</button><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
+      acctReorder?`<button class="cat-grip" data-grip="${a.id}" data-scope="accts" aria-label="Drag to move ${escapeHtml(a.name)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`:`<span class="ac-ic">${k.ic}</span>`}<div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated+readAge(a):''}${acctDigits(a.acctNo).length>=3?` · <span class="ac-no">no. ${escapeHtml(acctDigits(a.acctNo))}</span>`:''}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="ac-pen" data-acctedit="${a.id}" title="Rename or change what kind it is" aria-label="Edit ${escapeHtml(a.name)}">✎</button><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
   };
   /* A header per group that actually holds something, carrying that group's own
      total. An empty group is not a heading, it is a gap. */
@@ -15948,6 +16075,12 @@ function renderAccounts(){
     const kind=document.getElementById('aeKind').value||a.kind;
     const nowOwed=!!acctKind(kind).owed;
     a.name=nm; a.kind=kind;
+    /* Stored as the digits only. What a bank prints around them - dashes, stars,
+       "Loan", "xxxx" - differs between the statement header and the line inside
+       it, and matching on the decoration would work on one and fail on the
+       other. */
+    { const no=acctDigits((document.getElementById('aeNo')||{}).value);
+      if(no.length>=3) a.acctNo=no; else delete a.acctNo; }
     /* Flipping between a card and an account flips what the stored balance
        MEANS - owed is held negative - so the figure is turned over with it
        rather than silently changing sign on the net worth line. */
@@ -16123,6 +16256,7 @@ function syncAcctKindForm(){
     /* Stored negative. Everything downstream already knows how to subtract. */
     const rec={id:uid(),name:n,kind,purpose:owed?'':(document.getElementById('acctPurpose').value||''),
       balance:owed?-bal:bal,updated:todayStr()};
+    { const no=acctDigits((document.getElementById('acctNo')||{}).value); if(no.length>=3) rec.acctNo=no; }
     if(owed){
       const L=parseFloat((document.getElementById('acctLim')||{}).value);
       if(L>0) rec.limit=L;
@@ -16140,7 +16274,8 @@ function syncAcctKindForm(){
     }
     acctNote(rec, rec.balance, 'first');
     state.accounts.push(rec);
-    document.getElementById('acctName').value=''; document.getElementById('acctBal').value='';
+    document.getElementById('acctName').value='';
+    { const nf=document.getElementById('acctNo'); if(nf) nf.value=''; } document.getElementById('acctBal').value='';
     ['acctLim','acctApr'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     save();
     if(typeof captureSnapshot==='function') captureSnapshot();
@@ -16992,7 +17127,7 @@ const FIELD_WHY={
    Registered here rather than written out as seven literals because every one
    of them is the identical shape - a decomposition and a note - and seven
    copies of one shape is seven chances for six of them to drift. */
-['ltb','spent','bank','cards','invested','networth','streak'].forEach(k=>{
+['ltb','spent','bank','cards','invested','networth','streak','tobudget','assigned','lts'].forEach(k=>{
   FIELD_WHY['stat:'+k]={ t:()=>statMathTitle(k), b:()=>statMathHTML(k) };
 });
 function whyBtn(k){ return FIELD_WHY[k] ? `<button type="button" class="why-q" data-why="${k}" aria-label="Where does this number come from?" title="Show me the working">?</button>` : ''; }
@@ -22484,9 +22619,6 @@ function ltbNoteHTML(income,assigned,ltb,M){
   /* Only counted when the mode counts it. Read regardless, because 'have' mode
      still needs to know what it is declining to count in order to offer it. */
   const due = mode==='month' ? dueAll : {total:0, hits:0};
-  const dueBit = due.total>0
-    ? ` + still due this month <b>${money(due.total)}</b> <span class="ltb-src">(${due.hits} more ${due.hits===1?'payday':'paydays'} on your rules)</span>`
-    : '';
   /* The switch lives in the note, where the number being explained is, rather
      than only in Settings - the same reasoning as the carry-in button. It is
      only offered when it would change something: there is nothing to decide
@@ -22500,13 +22632,17 @@ function ltbNoteHTML(income,assigned,ltb,M){
      nothing here would leave somebody on tips wondering what they set up wrong.
      Shown only where it is load-bearing: the plan looks short, and there are no
      rules that could ever fill the gap. */
-  const irregular = (!hasIncomeRules() && assigned>0 && ltb<-0.005)
-    ? ` <span class="ltb-src">Nothing repeating is set up, so there is nothing to count ahead - which is the honest answer if your income is tips, commission or shifts that vary. This plan counts what you actually hold.</span>`
+  const dueBit = due.total>0
+    ? ` + still due this month <b>${money(due.total)}</b> <span class="ltb-src">(${due.hits} more ${due.hits===1?'payday':'paydays'} on your rules)</span>`
     : '';
+  /* Empty unless there is something in it worth reading. */
   const src = (opening>0 || due.total>0)
     ? `${opening>0?`Already in the account <b>${money(opening)}</b> + logged this month <b>${money(earned)}</b>`
                  :`Logged this month <b>${money(earned)}</b>`}${dueBit} = <b>${money(income)}</b> to budget`
-    : `Income logged <b>${money(income)}</b>`;
+    : '';
+  const irregular = (!hasIncomeRules() && assigned>0 && ltb<-0.005)
+    ? ` <span class="ltb-src">Nothing repeating is set up, so there is nothing to count ahead - which is the honest answer if your income is tips, commission or shifts that vary. This plan counts what you actually hold.</span>`
+    : '';
   /* One button that committed bankTotal() was an all-or-nothing offer, and for
      anybody with savings in the app the only usable answer was no. It opens the
      picker now, and the picker is where the number gets decided. */
@@ -22538,14 +22674,20 @@ function ltbNoteHTML(income,assigned,ltb,M){
   }. Nothing is overspent - the plan just doesn't have money behind it yet.${
     sitting>0 ? ` You do have <b>${money(sitting)}</b> sitting in your account from before this month started, and a plan is allowed to be funded by money you already have.` : ''
   }${irregular}${carryBtn}${swap}${trailBtn('income','Log my paycheck')}</div>`;
-  if(ltb<-0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than is behind it. That's not overspending - it's a plan that needs either more money accounted for or a category trimmed.${irregular}${carryBtn}${swap}${clearBtn}${trailBtn('income','Log more income')}${trailBtn('plan','Trim a category')}</div>`;
+  if(ltb<-0.005) return `<div class="ltb-note">${src
+      ? `${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b>. You've planned for more than is behind it.`
+      : `You've planned <b>${money(Math.abs(ltb))}</b> more than there is money behind it.`
+    } That's not overspending - it's a plan that needs either more money accounted for or a category trimmed.${irregular}${carryBtn}${swap}${clearBtn}${trailBtn('income','Log more income')}${trailBtn('plan','Trim a category')}</div>`;
   /* The tail of every remaining branch. Money in the account that the plan has
      never been told about is worth saying out loud even when the plan balances,
      because "every dollar has a job" is false while that money exists. */
   const sittingNote = (sitting>0 && opening<=0)
     ? ` <span class="ltb-src">There is also <b>${money(sitting)}</b> in your account this plan has not been told about.</span>` : '';
-  if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every dollar has a job. That's zero-based, done right.${opening>0?` <span class="ltb-src">${src}.</span>`:''}${sittingNote}${carryBtn}${swap}${clearBtn}</div>`;
-  if(ltb>0.005) return `<div class="ltb-note">${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.${sittingNote}${trailBtn('assign','Give it a job')}${carryBtn}${swap}${clearBtn}</div>`;
+  if(income>0 && Math.abs(ltb)<0.005) return `<div class="ltb-note">Every dollar has a job. That's zero-based, done right.${src?` <span class="ltb-src">${src}.</span>`:''}${sittingNote}${carryBtn}${swap}${clearBtn}</div>`;
+  if(ltb>0.005) return `<div class="ltb-note">${src
+      ? `${src} − assigned <b>${money(assigned)}</b> = <b>${money(ltb)}</b> still waiting for a job.`
+      : `<b>${money(ltb)}</b> is still waiting for a job.`
+    }${sittingNote}${trailBtn('assign','Give it a job')}${carryBtn}${swap}${clearBtn}</div>`;
   return '';
 }
 /* Delegated, because this button is drawn inside a note that Home and Plan both

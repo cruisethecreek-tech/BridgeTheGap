@@ -24,7 +24,9 @@ const p=await b.newPage({viewport:{width:390,height:900}});
 const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 
-const KEYS=['ltb','spent','bank','cards','invested','networth','streak'];
+const KEYS=['ltb','spent','bank','cards','invested','networth','streak','tobudget','assigned','lts'];
+const HOME=['ltb','spent','bank','cards','invested','networth','streak'];
+const PLAN=['ltb','tobudget','assigned','spent','lts'];
 const tx=[];
 for(let i=1;i<=9;i++) tx.push({id:'e'+i,type:'expense',amount:[820,1200,340,95,612,55,410,1400,200.19][i-1],
   catId:i<=4?'c'+i:null,source:'Shop '+i,date:'2026-09-0'+((i%9)+1),acctId:'chk'});
@@ -86,6 +88,56 @@ const shared=await p.evaluate(()=>{
            labelled:qs.every(q=>(q.getAttribute('aria-label')||'').length>8) };
 });
 
+const plan=await p.evaluate(async()=>{
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('budget'); await w(800);
+  const qs=[...document.querySelectorAll('#summary [data-why^="stat:"]')];
+  /* Three of these figures exist only on Plan, so auditing Home's tiles alone
+     left them checked against nothing - which is the same shape of hole as the
+     register test that passed against three empty strings. */
+  const rows=qs.map(q=>{
+    const k=q.dataset.why.slice(5), m=statMath(k);
+    const shown=q.closest('.fstat').querySelector('.ff .v').innerText.trim();
+    const sum=(m.lines||[]).reduce((s,l)=>s+(l.op==='-'?-l.v:l.v),0);
+    return { k, shown, want:usd(m.total),
+             tileMatches:shown===usd(m.total),
+             reconciles:Math.abs(sum-m.total)<0.005 };
+  });
+  return { count:qs.length, keys:qs.map(q=>q.dataset.why.slice(5)), rows,
+           allMatch:rows.every(r=>r.tileMatches), allAdd:rows.every(r=>r.reconciles) };
+});
+/* What the note gave up, and what it must never give up. The derivation is one
+   tap away on the tile directly above it now; a carry-in offer, a mode switch
+   and three trails are not anywhere else at all. */
+const note=await p.evaluate(async()=>{
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  const txts=[];
+  const grab=()=>{ const n=document.querySelector('.ltb-note'); return n?n.innerText.replace(/\s+/g,' '):''; };
+  activateTab('home'); await w(700); txts.push(grab());
+  activateTab('budget'); await w(700); txts.push(grab());
+  const all=txts.join(' | ');
+  const acts=[...document.querySelectorAll('.ltb-note button')].map(b=>b.innerText.trim());
+  /* Same file with nothing carried in and no rules, so the recitation would
+     have nothing in it but the figure already on the tile above. */
+  const before=JSON.parse(localStorage.getItem('unfiltered_budget_v2'));
+  const plain={...before, opening:{}, recurring:[]};
+  localStorage.setItem('unfiltered_budget_v2',JSON.stringify(plain));
+  location.reload();
+  return { txts, all, acts, keptActions: acts.length>0,
+    /* it earns its place here: there IS a term nobody would expect */
+    recitesWhenSurprising: /to budget/.test(all) && /logged this month/i.test(all) };
+});
+await p.waitForTimeout(1800);
+const notePlain=await p.evaluate(async()=>{
+  const w=ms=>new Promise(r=>setTimeout(r,ms));
+  activateTab('home'); await w(700);
+  const n=document.querySelector('.ltb-note');
+  const t=n?n.innerText.replace(/\s+/g,' '):'';
+  return { t, quiet: !/to budget/.test(t) && !/logged this month/i.test(t) && !/assigned \$/.test(t),
+           stillActs:[...document.querySelectorAll('.ltb-note button')].length>0 };
+});
+await load(FULL);
+await p.evaluate(()=>activateTab('home')); await p.waitForTimeout(700);
 /* opening one must not flip the card it is standing on, and the note has to
    land under the whole strip rather than inside one cell of the grid */
 const open=await p.evaluate(async()=>{
@@ -141,7 +193,18 @@ await b.close();
 const bad=r=>!r.reconciles || r.tileMatches===false || !r.printsTotal;
 const T=[
   ['every headline on Home carries a question mark',
-   shared.count===7 && full.every(r=>r.onTile), JSON.stringify({q:shared.count, on:full.filter(r=>r.onTile).length})],
+   shared.count===7 && HOME.every(k=>full.find(r=>r.k===k).onTile),
+   JSON.stringify({q:shared.count, on:full.filter(r=>r.onTile).length})],
+  ['...and so does every headline on Plan, which draws the same note',
+   plan.count===5 && plan.keys.join(',')==='ltb,tobudget,assigned,spent,lts', JSON.stringify(plan.keys)],
+  ['...where the same two rules hold against Plan\'s own tiles',
+   plan.allMatch===true && plan.allAdd===true, JSON.stringify(plan.rows)],
+  ['the always-on note drops the recital when it held nothing but the tile\'s own figure',
+   notePlain.quiet===true, JSON.stringify(notePlain).slice(0,220)],
+  ['...but keeps it where it carries a term nobody would expect - money carried in, pay not yet arrived',
+   note.recitesWhenSurprising===true, JSON.stringify(note.all).slice(0,200)],
+  ['...and keeps every button either way, because none of those live behind a question mark',
+   note.keptActions===true && notePlain.stillActs===true, JSON.stringify(note.acts)],
   ['...and it is the app\'s own question mark, not a second one drawn for this screen',
    shared.allWhyQ===true && shared.anyStrayClass===false, JSON.stringify(shared)],
   ['...described for anyone who cannot see it', shared.labelled===true, String(shared.labelled)],
@@ -156,7 +219,8 @@ const T=[
   ['the money cards are a real decomposition, not one line restating the answer',
    full.filter(r=>r.k!=='streak').every(r=>r.n>=1)
      && full.find(r=>r.k==='networth').n===3
-     && full.find(r=>r.k==='bank').n===2, JSON.stringify(full.map(r=>[r.k,r.n]))],
+     && full.find(r=>r.k==='bank').n===2
+     && full.find(r=>r.k==='lts').n===2, JSON.stringify(full.map(r=>[r.k,r.n]))],
   ['opening one lands the working under the whole strip, not inside one tile',
    open.opened===true && open.underStrip===true && open.notInGrid===true, JSON.stringify(open)],
   ['...without turning over the card you were asking about',
