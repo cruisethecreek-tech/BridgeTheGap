@@ -744,6 +744,18 @@
   .dataguard .dg-x{background:none;border:none;color:var(--muted);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
   /* flip stat cards: tap to flip a figure between dollars and hours of your life */
   .fstat{perspective:1000px}
+  .sm-rows{margin-top:2px}
+  .sm-row{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+    padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45}
+  .sm-row .sm-k{color:var(--muted);min-width:0;overflow-wrap:anywhere}
+  .sm-row .sm-v{font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .sm-row .sm-v.neg{color:var(--accent-2)}
+  .sm-row.sm-tot{border-bottom:none;border-top:2px solid var(--text);margin-top:2px;padding-top:11px}
+  .sm-row.sm-tot .sm-k{color:var(--text);font-weight:900}
+  .sm-row.sm-tot .sm-v{font-size:18px}
+  .sm-note{margin-top:12px;font-size:12.5px;line-height:1.6;color:var(--muted)}
+  .sm-note b{color:var(--text)}
+  .sm-go{margin-top:14px}
   .fstat .fi{position:relative;height:100%;min-height:84px;transition:transform .5s cubic-bezier(.4,.15,.2,1);transform-style:preserve-3d;cursor:pointer}
   .fstat.flipped .fi{transform:rotateY(180deg)}
   .fstat .ff,.fstat .fb{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:11px 14px;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
@@ -5420,19 +5432,144 @@ function flipBack(amt){
   if(state.freedomMode) return `<div class="fbk">= ${usd(a)}</div><div class="fbs">${hTxt} hrs &times; ${usd(H)}/hr</div>`;
   return `<div class="fbk">= ${fmtLife(a)}</div><div class="fbs">${usd(a)} &divide; ${usd(H)}/hr = ${hTxt} hrs</div>`;
 }
-function flipStat(label, amt, cls){
+/* The "?" is whyBtn, the same one on every other number in this app, opening
+   the same inline note under the strip. A second spelling of one button is how
+   a person ends up learning the app twice. */
+function statQ(key){ return key ? whyBtn('stat:'+key) : ''; }
+function flipStat(label, amt, cls, key){
   const H=effectiveHourly();
-  const front=`<div class="ff"><div class="k">${label}</div><div class="v ${cls||''}">${money(amt)}</div></div>`;
+  const front=`<div class="ff"><div class="k">${label}${statQ(key)}</div><div class="v ${cls||''}">${money(amt)}</div></div>`;
   if(!(H>0)) return `<div class="fstat noflip"><div class="fi">${front}</div></div>`;
   return `<div class="fstat" data-flip tabindex="0" role="button" aria-label="${escapeHtml(label)}: tap to flip between dollars and hours of your life"><div class="fi">${front}<div class="fb"><span class="fliptag">↩</span>${flipBack(amt)}</div></div></div>`;
 }
 /* a non-money stat (e.g. a streak) - same card look, never flips */
-function plainStat(label, valHTML, cls){
-  return `<div class="fstat noflip"><div class="fi"><div class="ff"><div class="k">${label}</div><div class="v ${cls||''}">${valHTML}</div></div></div></div>`;
+function plainStat(label, valHTML, cls, key){
+  return `<div class="fstat noflip"><div class="fi"><div class="ff"><div class="k">${label}${statQ(key)}</div><div class="v ${cls||''}">${valHTML}</div></div></div></div>`;
 }
 function flipHintHTML(){
-  return effectiveHourly()>0 ? `<div class="flip-hint">↩ Tap any card to flip between dollars and hours of your life.</div>` : '';
+  return effectiveHourly()>0
+    ? `<div class="flip-hint">↩ Tap a card for hours of your life. Tap <b>?</b> for where the number came from.</div>`
+    : `<div class="flip-hint">Tap <b>?</b> on a card for where the number came from.</div>`;
 }
+/* ============================================================
+   WHERE THE NUMBER CAME FROM
+
+   Asked for as: "This needs a question mark which opens a card to show its
+   math. Or the flip card needs to be multi functional."
+
+   The flip stays a flip. Its two faces answer the same question in two units -
+   how much, in dollars, and how much, in hours - and a third face would make
+   getting back to dollars a two-tap chore on the screen people open most. This
+   is a different question, and it needs more room than 84 pixels of card.
+
+   The contract every entry keeps: `lines` must add up to `total`, and `total`
+   must be the SAME call the tile itself made. Not a retelling of the sum - the
+   sum. A card that explains a figure the tile is no longer showing is worse
+   than no card, because it is wrong with a straight face, and it is the exact
+   failure this file has hit four times under other names. The gate adds the
+   lines up and compares them to what is printed on the tile.
+   ============================================================ */
+function smRow(k,v,op){ return {k, v:Math.round((+v||0)*100)/100, op:op||'+'}; }
+/* top N by size, with everything else gathered into one remainder line, so the
+   decomposition still adds to the total no matter how many rows there were */
+function smTop(items, n, restLabel){
+  const sorted=items.slice().sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+  if(sorted.length<=n+1) return sorted.map(x=>smRow(x.k,x.v));
+  const head=sorted.slice(0,n), rest=sorted.slice(n);
+  const restAmt=rest.reduce((s,x)=>s+x.v,0);
+  return head.map(x=>smRow(x.k,x.v))
+    .concat([smRow(`${rest.length} ${restLabel}`, restAmt)]);
+}
+function statMath(key){
+  const M=state.activeMonth, mName=(typeof fmtMonthShort==='function')?fmtMonthShort(M):M;
+  if(key==='ltb'){
+    const lines=[smRow(`Income logged in ${mName}`, monthIncome(M))];
+    const op=openingFor(M); if(op>0) lines.push(smRow('Carried in from last month', op));
+    const ahead=budgetMode()==='month' ? incomeDueRest(M).total : 0;
+    if(ahead>0) lines.push(smRow('Pay still due this month', ahead));
+    const cats=topCats();
+    const assigned=cats.reduce((s,c)=>s+catAssigned(c.id,M),0);
+    lines.push(smRow(`Assigned across ${cats.length} categor${cats.length===1?'y':'ies'}`, assigned, '-'));
+    return { title:'Left to budget', lines, total:monthToBudget(M)-assigned, tab:'budget', tabLabel:'Plan',
+      note: budgetMode()==='month'
+        ? `You are budgeting the whole month, so pay you have not been handed yet still counts as money to assign. Switch to <b>only what I have</b> in Plan and that line disappears.`
+        : `You are budgeting only what you actually hold, so pay that has not landed yet is not counted here. Switch to <b>the whole month</b> in Plan and it would be.` };
+  }
+  if(key==='spent'){
+    const rows=txnsInMonth(M).filter(t=>t.type==='expense');
+    const byCat=new Map();
+    rows.forEach(t=>{ const c=state.categories.find(x=>x.id===t.catId);
+      const k=c?c.name:'No category'; byCat.set(k,(byCat.get(k)||0)+(+t.amount||0)); });
+    const lines=smTop([...byCat].map(([k,v])=>({k,v})), 6, 'other categories');
+    return { title:'Spent this month', lines, total:monthExpense(M), tab:'tx', tabLabel:'Track',
+      note:`${rows.length} transaction${rows.length===1?'':'s'} marked <b>expense</b> in ${mName}. Transfers are not in here, and neither is a credit card payment - the shopping you put on that card was already counted the day you bought it, so counting the payment as well would charge you twice for one trip. Investing is not spending either; it has its own card.` };
+  }
+  if(key==='bank'){
+    const accts=(state.accounts||[]).filter(a=>!isOwedAcct(a));
+    const lines=smTop(accts.map(a=>({k:a.name||'Account', v:+a.balance||0})), 7, 'other accounts');
+    const stale=(typeof daysSinceBalance==='function')?daysSinceBalance():null;
+    return { title:'In the bank', lines, total:assetAcctTotal(), tab:'goals', tabLabel:'Accounts',
+      note:`Balances as you last entered them${stale!=null?`, most recently <b>${stale} day${stale===1?'':'s'}</b> ago`:''}. This app never connects to a bank, so these are your figures, not the bank's - they are right for exactly as long as you keep them right. Cards are not in this total; they have their own card.` };
+  }
+  if(key==='cards'){
+    const accts=creditAccts();
+    const lines=smTop(accts.map(a=>({k:a.name||'Card', v:acctOwed(a)})), 7, 'other cards');
+    return { title:'On the cards', lines, total:owedTotal(), tab:'goals', tabLabel:'Accounts',
+      note:`What is owed on every account you marked as a card or a line of credit. A card sitting at zero adds nothing here. This is the balance, not the minimum and not the interest - the payoff planner in <b>Debt</b> is where those live.` };
+  }
+  if(key==='invested'){
+    const rows=txnsInMonth(M).filter(t=>t.type==='invest');
+    const byS=new Map();
+    rows.forEach(t=>{ const k=String(t.source||'').trim()||'Unnamed';
+      byS.set(k,(byS.get(k)||0)+(+t.amount||0)); });
+    const lines=smTop([...byS].map(([k,v])=>({k,v})), 6, 'others');
+    return { title:'Invested this month', lines, total:monthInvested(M), tab:'tx', tabLabel:'Track',
+      note:`${rows.length} transaction${rows.length===1?'':'s'} marked <b>invest</b> in ${mName}. The money left your account, so it is not sitting in the bank figure any more - it moved into what you own, which is why net worth does not drop when you invest.` };
+  }
+  if(key==='networth'){
+    const lines=[ smRow('Things you own', sumAssets()),
+                  smRow('Every account added up', bankTotal()),
+                  smRow('Debts you have listed', sumLiab(), '-') ];
+    /* Only claim the shorthand when it is actually true. An overpaid card sits
+       at a positive balance, where owed is zero but the balance still counts,
+       and then this identity quietly stops holding. */
+    const tidy=Math.abs((assetAcctTotal()-owedTotal())-bankTotal())<0.005;
+    return { title:'Net worth', lines, total:netWorth(), tab:'reflect', tabLabel:'Reflect',
+      note:`The accounts line is <b>every</b> account together, cards included, which is why it is not the <b>In the bank</b> figure above it.`
+        + (tidy?` For you it works out to ${usd(assetAcctTotal())} in the bank less ${usd(owedTotal())} on the cards.`:'')
+        + ` Every screen in this app that says "net worth" is running this one calculation, so none of them can disagree.` };
+  }
+  if(key==='streak'){
+    const n=skipStreak(), imp=(state.impulse||[]);
+    return { title:'Skip streak', plain:true, total:n, tab:'impulse', tabLabel:'Trap Radar',
+      note: imp.length
+        ? `Counted backwards from your most recent scan: <b>${n}</b> skip${n===1?'':'s'} in a row before the last thing you bought. Buying resets it to zero. It is a count of decisions, not of dollars.`
+        : `Nothing scanned yet, so there is nothing to count. Run something through the <b>Trap Radar</b> and this starts keeping score of what you walked away from.` };
+  }
+  return null;
+}
+function statMathHTML(key){
+  const m=statMath(key); if(!m) return '';
+  if(m.plain) return `<div class="sm-rows"><div class="sm-row sm-tot"><span class="sm-k">${escapeHtml(m.title)}</span><span class="sm-v">${m.total}</span></div></div>
+    <div class="sm-note">${m.note}</div>
+    <div class="sm-go"><button class="btn sm" data-smgo="${m.tab}">Open ${escapeHtml(m.tabLabel)}</button></div>`;
+  const rows=m.lines.length
+    ? m.lines.map(l=>`<div class="sm-row"><span class="sm-k">${escapeHtml(l.k)}</span><span class="sm-v ${l.op==='-'?'neg':''}">${l.op==='-'?'&minus;':'+'} ${usd(Math.abs(l.v))}</span></div>`).join('')
+    : `<div class="sm-row"><span class="sm-k">Nothing logged yet</span><span class="sm-v">${usd(0)}</span></div>`;
+  return `<div class="sm-rows">${rows}
+      <div class="sm-row sm-tot"><span class="sm-k">${escapeHtml(m.title)}</span><span class="sm-v">${usd(m.total)}</span></div>
+    </div>
+    <div class="sm-note">${m.note}</div>
+    <div class="sm-go"><button class="btn sm" data-smgo="${m.tab}">Open ${escapeHtml(m.tabLabel)}</button></div>`;
+}
+function statMathTitle(key){
+  const m=statMath(key); if(!m) return '';
+  return 'Where '+m.title.charAt(0).toLowerCase()+m.title.slice(1)+' comes from';
+}
+document.addEventListener('click',e=>{
+  const g=e.target.closest('[data-smgo]');
+  if(g && typeof activateTab==='function') activateTab(g.dataset.smgo);
+});
 /* Copy matrix: time-framed labels by register x intensity (Freedom Mode only) */
 const LIFE_LABELS={
   income:{ genz:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Hours Sold'}, middle:{clean:'Hours Earned',blunt:'Hours Sold',savage:'Life Sold'}, mature:{clean:'Hours Earned',blunt:'Hours Traded',savage:'Life Traded'} },
@@ -8843,8 +8980,8 @@ function goToWall(catName){
   },140);
 }
 /* flip stat cards: tap (or Enter/Space) flips $ <-> hours of your life */
-document.addEventListener('click',e=>{ const f=e.target.closest('[data-flip]'); if(f) f.classList.toggle('flipped'); });
-document.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ const f=e.target.closest&&e.target.closest('[data-flip]'); if(f){ e.preventDefault(); f.classList.toggle('flipped'); } } });
+document.addEventListener('click',e=>{ if(e.target.closest('[data-why]')) return; const f=e.target.closest('[data-flip]'); if(f) f.classList.toggle('flipped'); });
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ if(e.target.closest&&e.target.closest('[data-why]')) return; const f=e.target.closest&&e.target.closest('[data-flip]'); if(f){ e.preventDefault(); f.classList.toggle('flipped'); } } });
 document.getElementById('wallsSetup').addEventListener('click',()=>{
   WALLS.forEach(w=>{ if(!state.categories.some(c=>w.match.some(t=>c.name.toLowerCase().includes(t)))) state.categories.push({id:uid(),name:w.cat}); });
   save(); renderBudget(); renderRecurring(); renderWalls(); renderHome();
@@ -13820,7 +13957,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · three numbers it always had and never said';
+const BUILD_STAMP='2026-09-13 · every headline says where it came from';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -16851,6 +16988,13 @@ const FIELD_WHY={
   assetDrain:{ t:'Why a thing you own has a cost', b:()=>`What this costs you every month just to keep: insurance, storage, fees, servicing, registration. An asset that drains more than it returns is a liability wearing an asset's name, and this is the field that tells you which one you have.<br><br>Shown &times; 12 beside it, because the yearly number is the one that changes minds.` },
   recHours:{ t:'Why it asks for hours', b:()=>`Only income you sell hours for counts toward your true hourly rate. Money that costs you no time - benefits, rent from a property, a partner's pay - is still counted in your budget total, it just does not drag your rate around.<br><br>Give hours here and this source joins the blend: total worked income &divide; total worked hours.` }
 };
+/* Home's seven headlines join the same registry rather than growing their own.
+   Registered here rather than written out as seven literals because every one
+   of them is the identical shape - a decomposition and a note - and seven
+   copies of one shape is seven chances for six of them to drift. */
+['ltb','spent','bank','cards','invested','networth','streak'].forEach(k=>{
+  FIELD_WHY['stat:'+k]={ t:()=>statMathTitle(k), b:()=>statMathHTML(k) };
+});
 function whyBtn(k){ return FIELD_WHY[k] ? `<button type="button" class="why-q" data-why="${k}" aria-label="Where does this number come from?" title="Show me the working">?</button>` : ''; }
 /* Inline, under the field, rather than a modal - on a phone an overlay hides the
    very thing you were asking about. */
@@ -22520,13 +22664,13 @@ function renderHome(){
   const everInv=(typeof investedAllTime==='function')?investedAllTime():0;
   const hasAccts=(state.accounts||[]).length>0;
   snap.innerHTML=
-    flipStat('Left to budget', ltb, ltbCls)+
-    flipStat('Spent this month', spent, '')+
-    (hasAccts?flipStat('In the bank', assetAcctTotal(), assetAcctTotal()<0?'bad':'good'):'')+
-    (owedTotal()>0?flipStat('On the cards', owedTotal(), 'bad'):'')+
-    (everInv>0?flipStat('Invested this month', invM, 'pos'):'')+
-    plainStat('Skip streak', skipStreak()+' ', 'pos')+
-    flipStat('Net worth', nw, nw<0?'bad':'good');
+    flipStat('Left to budget', ltb, ltbCls, 'ltb')+
+    flipStat('Spent this month', spent, '', 'spent')+
+    (hasAccts?flipStat('In the bank', assetAcctTotal(), assetAcctTotal()<0?'bad':'good', 'bank'):'')+
+    (owedTotal()>0?flipStat('On the cards', owedTotal(), 'bad', 'cards'):'')+
+    (everInv>0?flipStat('Invested this month', invM, 'pos', 'invested'):'')+
+    plainStat('Skip streak', skipStreak()+' ', 'pos', 'streak')+
+    flipStat('Net worth', nw, nw<0?'bad':'good', 'networth');
   const lkh=document.getElementById('lifeKeyHome');
   /* Home carried no sync banner at all - only Plan and Track did - which is the
      one screen a person opens first and the one they open most. */
