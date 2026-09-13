@@ -11346,7 +11346,34 @@ function qlParseOcr(text){
        row as unnamed, because a person can fix a blank and will not think to
        question something that looks like it was read. */
     const letters=(desc.match(/[A-Za-z]/g)||[]).length;
-    const named=desc.length>=2 && letters>=3 && letters/desc.length>=0.45;
+    /* The letter ratio alone lets soup through, because soup that happens to
+       contain a real word clears it. Three came back on one read: "2 oa N{ FC,
+       < Account", "OO << BE m = Accounts" and "($) SG = #1 = Accounts" - all of
+       them the reader's attempt at a column header, all of them sitting on a
+       row as if somebody had typed them. The last is exactly 45% letters, which
+       is the bar, so it passed by a rounding error.
+
+       So the same rule the account reader already uses applies here: a bank
+       descriptor is made of letters, digits and a short list of punctuation,
+       and a brace, a guillemet or an equals sign means the reader was looking
+       at furniture rather than a name. Rejecting leaves the row UNNAMED with
+       its amount intact, which is a gap somebody can fill from the photo - and
+       a gap is always better than a name nobody typed. */
+    const soup=/[^A-Za-z0-9 .,'&\/#*()+:;_@%$-]/.test(desc);
+    /* WORDS, not a letter ratio. The ratio asked whether letters outnumbered
+       everything else, and a real bank descriptor loses that vote: "Card
+       purchase / CITY OF YOUNGSTOWN 4900 (2026-09-11) 330-742-8700 OH" is 30
+       letters in 68 characters, 44%, just under the bar - so a perfectly good
+       name was thrown away for carrying the reference tail every bank prints
+       after it. Meanwhile "($) SG = #1 = Accounts" scored exactly 45% and was
+       kept. The measure was rewarding brevity, not readability.
+
+       What actually separates them is how many WORDS survived the read. Soup is
+       one real word adrift in symbols; a descriptor is several. Two runs of
+       three or more letters is enough, and a single long word - WALMART on its
+       own - is a name too. */
+    const words=(desc.match(/[A-Za-z]{3,}/g)||[]).length;
+    const named=!soup && desc.length>=2 && letters>=3 && (words>=2 || letters>=6);
     /* A statement writes every debit as negative, so a minus is the norm and
        says nothing. An explicit plus is the one that means money arriving. */
     const row={what:named?desc.slice(0,80):'', amt};
@@ -11427,23 +11454,55 @@ function qlDropBalances(rows){
    Where the chain begins is unknown too, so it tries several starts and keeps
    the longest run it can actually prove. */
 function qlBalanceChain(rows){
-  const n=rows.length, near=(a,b)=>Math.abs(a-b)<0.02;
-  /* Two readings of the same page can both be arithmetically perfect and only
-     one of them sane. With a balance summary printed above the table, starting
-     the chain one token early treats the summary as an AMOUNT and the $20.00
-     transaction as a BALANCE: 20 - 4,488.98 = -4,468.98 checks out exactly, and
-     the run comes out the same length as the true one, so whichever was tried
-     first won.
+  /* SEVERAL chains, not one. Somebody photographing a statement takes three or
+     four shots of it, and the reader concatenates them into a single stream -
+     so what arrives is not one running balance but one per page, each starting
+     wherever that photo happened to start. Finding the longest and stopping
+     dropped page one's five balances and handed back page two's seven as
+     transactions, which is what was reported: real Acorns round-ups sitting
+     next to $3,357.45, $3,383.25, $3,159.85 and the rest.
 
-     Size decides first, as before, because that is the evidence. The tie-break
-     is the smallest balance in the run, and it earns its place: a balance
-     column is the account's running total, so its figures sit consistently
-     above the movements through it. A "balance" of $20 carrying a $4,468.98
-     movement is not a reading of a bank statement. Guessing by size was
-     rejected as the test and stays rejected; this only chooses between readings
-     the arithmetic has already proved. */
+     So it takes the best chain it can prove, claims those tokens, and looks
+     again in what is left. A page whose balances do not form a run of three is
+     left alone, which is the same refusal as before - it just no longer takes
+     the rest of the statement down with it. */
+  /* Keep going until nothing more can be proved. The limit here was TEN, which
+     is a number I picked while thinking about three or four photographs -
+     somebody who scrolls a month of statement and shoots fifteen screens has
+     fifteen chains, and the eleventh page onward kept every balance it had.
+     Reported as "which account did these 111 come out of", and 111 rows is what
+     a leak of five pages looks like from the outside.
+
+     The real bound is arithmetic rather than taste: a chain claims at least
+     three tokens, so there cannot be more than a third of them, and the loop
+     stops on its own the moment a pass proves nothing. */
+  const claimed=new Set(), bals=new Set(), signs=new Map();
+  const maxChains=Math.ceil(rows.length/3)+1;
+  for(let pass=0; pass<maxChains; pass++){
+    const best=qlBestChain(rows, claimed);
+    if(best.bals.size<3) break;
+    best.bals.forEach(i=>{ bals.add(i); claimed.add(i); });
+    best.signs.forEach((v,k)=>{ signs.set(k,v); claimed.add(k); });
+  }
+  return {bals, signs};
+}
+/* The longest chain that can be proved among the tokens nobody has claimed.
+
+   Listed newest first, each balance is the NEXT one plus that row's signed
+   amount - 4,468.98 = 4,488.98 + (-20.00) - so the amount belongs to the
+   balance ABOVE it and the difference between two balances is that row's
+   movement. That holds however much noise sits between them, which is why this
+   walks forward inside a short window and steps over whatever does not fit
+   rather than giving up.
+
+   Every position is a candidate start. The first version tried only the first
+   eight, which is fine for one page and useless for the second one in the
+   stream, where the run begins a hundred tokens in. */
+function qlBestChain(rows, claimed){
+  const n=rows.length, near=(a,b)=>Math.abs(a-b)<0.02;
   let best={bals:new Set(), signs:new Map(), floor:-1};
-  for(let s=1;s<Math.min(n,9);s++){
+  for(let s=1;s<n;s++){
+    if(claimed.has(s)) continue;
     const bals=new Set([s]), signs=new Map();
     let cur=s;
     while(cur<n){
@@ -11452,21 +11511,17 @@ function qlBalanceChain(rows){
          so both windows stay short. Widening them buys nothing and starts
          finding chains inside coincidences. */
       for(let k=cur+1;k<Math.min(n,cur+5)&&hit<0;k++){
+        if(claimed.has(k)) continue;
         const d=rows[cur].amt-rows[k].amt, D=Math.abs(d);
         for(let a=cur-1;a>=Math.max(0,cur-4)&&hit<0;a--){
-          if(bals.has(a)) continue;
+          if(bals.has(a)||claimed.has(a)) continue;
           if(near(D, rows[a].amt)){ hit=k; amtIdx=a; delta=d; break; }
           /* A BALANCE THE READER MISSED leaves a gap of two rows rather than
              one, and arithmetic says exactly what that looks like: the step is
              this row's amount combined with the next one's, because the balance
-             that separated them never made it off the photo. Checking the sum
-             and the difference covers both directions without needing to know
-             which way either row went. Without this a single unreadable figure
-             ends the chain, the run comes up short of proof, and every balance
-             on the page is handed back as a transaction - which is the whole
-             fault being fixed, returning through a smaller door. */
+             that separated them never made it off the photo. */
           for(let a2=a+1;a2<k;a2++){
-            if(a2===a||bals.has(a2)) continue;
+            if(a2===a||bals.has(a2)||claimed.has(a2)) continue;
             if(near(D, rows[a].amt+rows[a2].amt) || near(D, Math.abs(rows[a].amt-rows[a2].amt))){
               hit=k; amtIdx=a; delta=d; break;
             }
@@ -11475,10 +11530,17 @@ function qlBalanceChain(rows){
       }
       if(hit<0) break;
       bals.add(hit);
-      /* balance went UP across this row, so money arrived */
-      signs.set(amtIdx, delta>0?'income':'expense');
+      signs.set(amtIdx, delta>0?'income':'expense');   // balance rose, so money arrived
       cur=hit;
     }
+    /* Two readings of the same page can both be arithmetically perfect and only
+       one of them sane. With a balance summary printed above the table,
+       starting one token early treats the summary as an AMOUNT and the $20.00
+       transaction as a BALANCE: 20 - 4,488.98 = -4,468.98 checks out exactly
+       and the run comes out the same length. Size decides first, because that
+       is the evidence; the tie-break is the smallest balance in the run, since
+       a balance column is the account's running total and sits consistently
+       above the movements through it. */
     const floor=bals.size?Math.min(...[...bals].map(i=>rows[i].amt)):-1;
     if(bals.size>best.bals.size || (bals.size===best.bals.size && floor>best.floor))
       best={bals,signs,floor};
@@ -13518,7 +13580,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-12 · a mindset card opens the day';
+const BUILD_STAMP='2026-09-13 · every page, however many, and no invented names';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
