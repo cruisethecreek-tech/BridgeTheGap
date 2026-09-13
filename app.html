@@ -11378,6 +11378,10 @@ function qlParseOcr(text){
        says nothing. An explicit plus is the one that means money arriving. */
     const row={what:named?desc.slice(0,80):'', amt};
     if(!named) row.unnamed=true;
+    /* Kept on the row rather than decided here, because whether a missing minus
+       means anything depends on the whole document, and this loop can only see
+       one token at a time. */
+    if(m[1]==='-'||m[1]==='\u2212'||m[1]==='\u2013') row.neg=true;
     if(m[1]==='+') row.kind='income';
     out.push(row);
   }
@@ -11404,6 +11408,11 @@ function qlParseOcr(text){
 function qlDropBalances(rows){
   if(rows.length<4) return rows;
   const {bals, signs}=qlBalanceChain(rows);
+  /* Does this document write its debits with a minus? A statement does, and a
+     till receipt does not, so the presence of even one is what makes ABSENCE
+     mean something. Without that test, "no minus, therefore money in" would
+     turn every line of a shop receipt into income. */
+  const usesMinus=rows.some(r=>r.neg);
   /* Three linked balances is a column; two is a coincidence waiting to happen.
      And a "column" that swallowed nearly the whole page is a misread rather
      than a discovery - refusing there costs somebody a little deleting, while
@@ -11426,6 +11435,16 @@ function qlDropBalances(rows){
        a $2,436.96 paycheck as spending. The balance either rose or fell, and
        that is not a matter of whether a glyph survived the photograph. */
     if(signs.has(i)) r.kind=signs.get(i);
+    /* The chain is the authority, but it cannot reach the LAST row on a page:
+       the balance that would prove its direction is the first row of the next
+       photograph, in a different chain. So every page's final transaction had
+       no proof and fell to the default, which is how a $1,230.23 paycheck
+       landed as spending - reported exactly that way.
+
+       Where the arithmetic is silent, the printed sign gets to speak. It is the
+       weaker witness, which is why it is only consulted second and only in a
+       document that uses minus signs at all. */
+    else if(usesMinus && !r.neg) r.kind='income';
     kept.push(r);
   });
   kept.forEach(r=>{ r.balancesDropped=bals.size; });
@@ -11477,12 +11496,34 @@ function qlBalanceChain(rows){
      three tokens, so there cannot be more than a third of them, and the loop
      stops on its own the moment a pass proves nothing. */
   const claimed=new Set(), bals=new Set(), signs=new Map();
-  const maxChains=Math.ceil(rows.length/3)+1;
+  const maxChains=Math.ceil(rows.length/2)+2;
+  let strong=0;
   for(let pass=0; pass<maxChains; pass++){
     const best=qlBestChain(rows, claimed);
     if(best.bals.size<3) break;
+    strong++;
     best.bals.forEach(i=>{ bals.add(i); claimed.add(i); });
     best.signs.forEach((v,k)=>{ signs.set(k,v); claimed.add(k); });
+  }
+  /* A SECOND, LOWER BAR, and only once the first one has been cleared.
+     Three linked balances proves this document has a running-balance column.
+     After that, a page caught in a photograph that only holds two rows - the
+     top or the bottom of a scroll, where most of the screen is the next page -
+     has a pair that links, and demanding three there means its balances come
+     back as payments. Reported that way: a short page left $3,357.45 and
+     $3,383.25 sitting in the ledger.
+
+     The order matters. Two linked figures on their own are a coincidence and
+     stay refused, which is what keeps a till receipt whole: no run of three,
+     so this pass never runs at all. The document earns the lower bar with the
+     strong evidence first, and only then is the weaker evidence admissible. */
+  if(strong){
+    for(let pass=0; pass<maxChains; pass++){
+      const best=qlBestChain(rows, claimed);
+      if(best.bals.size<2) break;
+      best.bals.forEach(i=>{ bals.add(i); claimed.add(i); });
+      best.signs.forEach((v,k)=>{ signs.set(k,v); claimed.add(k); });
+    }
   }
   return {bals, signs};
 }
@@ -13580,7 +13621,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · every page, however many, and no invented names';
+const BUILD_STAMP='2026-09-13 · the edge of a page is still a page';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
