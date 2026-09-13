@@ -11595,8 +11595,33 @@ function loadTesseract(){
    falls back to the original line-at-a-time reading, which is still right for
    "coffee 4.50". */
 const QL_LEADINS=/^(?:preauthorization|pre-authorization|pos\s+debit|pos\s+purchase|debit\s+card\s+purchase|check\s+card\s+purchase|card\s+purchase|point\s+of\s+sale|recurring\s+payment|ach\s+(?:debit|credit|payment)|electronic\s+(?:withdrawal|deposit)|withdrawal|purchase|payment)\b[\s\/:,-]*/i;
+/* Where one row's name stops being the row above's leftovers.
+
+   The parser hands this function everything between two amounts, so a
+   description always arrives carrying the tail of the record before it: the
+   chevron the bank's app draws at the end of a row, the date under it, the
+   screen's own heading, the phone's status bar. One of those ruined seven rows
+   out of fifteen on a real read - a lone ">" is not in the punctuation a bank
+   descriptor is allowed, so the soup test threw away "Home banking Withdrawal /
+   Transfer to Loan 0003" along with it, and the row arrived blank next to an
+   amount whose name was sitting two lines up in the photograph.
+
+   None of these ever appear inside a merchant name, and the last one is where
+   this row begins. */
+const QL_ROWEDGE=/(?:^|\s)(?:[><»«›‹]|[Vv]{2}|\|{2,})(?=\s|$)|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\s*,\s*\d{4}\b|\bAccount History\b|\bShowing all transactions[^\n]*/gi;
+function qlRowTail(t){
+  QL_ROWEDGE.lastIndex=0;
+  let last=null, m;
+  while((m=QL_ROWEDGE.exec(t))!==null){ last=m; if(m.index===QL_ROWEDGE.lastIndex) QL_ROWEDGE.lastIndex++; }
+  if(!last) return t;
+  const cut=t.slice(last.index+last[0].length);
+  /* Only if something worth having is left. A name that genuinely ends in one
+     of these would otherwise be cut down to nothing, and a blank row is the one
+     outcome this whole function exists to avoid. */
+  return ((cut.match(/[A-Za-z]/g)||[]).length>=3) ? cut : t;
+}
 function qlCleanDesc(raw){
-  let t=String(raw||'').replace(/\s+/g,' ').trim();
+  let t=qlRowTail(String(raw||'')).replace(/\s+/g,' ').trim();
   /* Everything from Held:/Exp:/Posted: onward is the bank talking to itself. */
   t=t.split(/\b(?:held|exp|expires|posted|effective|trace)\s*:/i)[0];
   /* A description that still contains a transaction-type lead-in is carrying
@@ -14043,7 +14068,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · the suffix is not the account, the member number is';
+const BUILD_STAMP='2026-09-13 · the name was two lines up in the photograph';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;

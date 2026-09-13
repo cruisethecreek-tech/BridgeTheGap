@@ -118,6 +118,37 @@ const lastFour=await p.evaluate(()=>{
 });
 await load(SEED());
 
+/* ============================================================
+   THE READ ITSELF, VERBATIM
+
+   Reported as "It didn't recognize the accounts", with the app's own "Show me
+   what it actually read" pasted underneath. The numbers were not the problem -
+   the NAMES were missing. Eight of fifteen rows arrived blank.
+
+   The parser hands qlCleanDesc everything between two amounts, so a description
+   always carries the tail of the record above it: the chevron this bank's app
+   draws at the end of a row, the date under it, the screen heading, the phone's
+   status bar. A lone ">" is not in the punctuation a bank descriptor may
+   contain, so the soup test threw away "Home banking Withdrawal / Transfer to
+   Loan 0003" along with it - and a blank row has no account number in it to
+   match, so the whole feature could not fire on the rows it was built for.
+
+   Pinned verbatim. If the naming regresses, this fails before it ships. */
+const REAL_READ="09:29 OO N=. ED\n< Account History\nBenefits Plus (195794-*0050) Vv\nACH Deposit / Cc hosting 1800948598 Cc $28.83\nhosting 091000010207486 $1,028.83 >\nSep 3, 2026\nHome banking Withdrawal / Transfer to\nLoan 0003: NetWorth24 09/02/2026 09:43 -$240.08 N\n212125: $1,000.00\nSep 2, 2026\nACH Deposit / Cc hosting 4270465600 Cc\nhosti 000020030707 2240.08 >\nosting $1,240.08\nSep 2, 2026\nHome banking Withdrawal / Transfer to\nLoan 0003: NetWorth24 09/01/2026 08:32 -$89.61 N\n196982: $1,000.00\nSep 1,2026\nHome banking Withdrawal / Transfer to\nLoan 0002: NetWorth24 09/01/2026 08:32 -$18.06 N\n196965: $1,089.61\nSep 1, 2026\nACH Deposit / Cc hosting 1800948598 Cc $115.62\nhosting 091000019067570 $1107.67 >\nSep 1,2026\n\n09:29 BQ P CHAI 84)\n< Account History\nBenefits Plus (195794-*0050) Vv\nACH Withdrawal / ATT 9864031004 $52.30\nPAYMENT 090426 031100201430678 $1,064.47 >\nSep 8, 2026\nACH Deposit / Cc hosting 1800948598 Cc $116.77\nhosting 091000011048654 $1116.77 >\nSep 8, 2026\nHome banking Deposit / Transfer from\nLoan 0002: NetWorth24 09/04/2026 $1,000.00 N\n09:30 241334: $1,000.00\nSep 4, 2026\nHome banking Withdrawal / Transfer\nto Loan 0002: NetWorth24 09/04/2026 -$1,081.93 N\n09:30 241321: $0.00\nSep 4, 2026\nACH Deposit / Cc hosting 4270465600 Cc $81.93\nhosting 111000024184120 $1,081.93 >\nSep 4, 2026\nHome banking Withdrawal / Transfer to\nLoan 0002: NetWorth24 09/03/2026 13:49 -$28.83 N\n230470: $1,000.00\nSep 3, 2026\n\n09:30 420 HCI 84)\n< Account History\nBenefits Plus (195794-*0050) Vv\nACH Deposit / Cc hosting 1800948598 Cc $102.14\nhosting 091000011346314 $1,102.14 >\nSep 11,2026\nHome banking Withdrawal / Transfer to\nLoan 0003: NetWorth24 09/10/2026 10:24 -$589.49 N\n308891: $1,000.00\nSep 10, 2026\nACH Deposit / Cc hosting 1800948598 Cc\nhosting 091000018904640 $588.99 >\nosting $1,589.49\nSep 10, 2026\nHome banking Withdrawal / Transfer to\nLoan 0002: NetWorth24 09/09/2026 09:56 -$269.27 N\n292690: $1,000.50\nSep 9, 2026\nACH Deposit / Cc hosting 4270465600 Cc\nhosting 111000021024413 5269.77 >\nosting $1,269.77\nSep 9, 2026\nHome banking Withdrawal / Transfer to\nLoan 0002: NetWorth24 09/08/2026 15:58 -$64.47 N\n284631: $1,000.00\nSep 8, 2026\n";
+await load(SEED());
+const readback=await p.evaluate(REAL_READ=>{
+  const nm=a=>a?a.name:null;
+  const rows=qlParseOcr(REAL_READ);
+  return { n:rows.length,
+    named:rows.filter(r=>!r.unnamed).length,
+    moves:rows.map(r=>nm(acctByNumberIn(r.what,'bp','bp'))).filter(Boolean),
+    whose:nm(acctByNumberIn(REAL_READ)),
+    /* the row that was blank before, named after */
+    has240:rows.some(r=>Math.abs(r.amt-240.08)<0.005 && /Loan 0003/.test(r.what||'')),
+    /* nothing invented: no row may be named out of the status bar or heading */
+    noFurniture:rows.every(r=>!/Account History|Showing all|Benefits Plus \(/i.test(r.what||'')) };
+},REAL_READ);
+
 /* longest stored number wins, tested on text where both really appear */
 const longest=await p.evaluate(()=>{
   state.accounts.push({id:'full',name:'Full number',kind:'savings',balance:1,acctNo:'80050'});
@@ -227,6 +258,16 @@ const T=[
   ['...and an account is never a move to itself', m.selfExcluded===true, String(m.selfExcluded)],
   ['the longest stored number wins when more than one is really in the text',
    longest==='Full number', String(longest)],
+
+  ['every row of the owner\'s real read comes back with a name on it',
+   readback.named===readback.n && readback.n>=16, `${readback.named} of ${readback.n}`],
+  ['...including the one that arrived blank before, whose name was two lines up in the photo',
+   readback.has240===true, String(readback.has240)],
+  ['...and none of them is named out of a status bar or a screen heading',
+   readback.noFurniture===true, String(readback.noFurniture)],
+  ['the read identifies whose statement it is, and every transfer in it',
+   readback.whose==='Benefits Plus' && readback.moves.length===7,
+   JSON.stringify({whose:readback.whose, moves:readback.moves.length})],
 
   ['all seven of the owner\'s real accounts resolve to themselves and no other',
    real.allRight===true, JSON.stringify(real.headers)],
