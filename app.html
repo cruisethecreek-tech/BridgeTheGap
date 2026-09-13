@@ -745,6 +745,10 @@
   /* flip stat cards: tap to flip a figure between dollars and hours of your life */
   .fstat{perspective:1000px}
   .ac-no{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  .ac-no.clash{color:var(--accent-2)}
+  .ac-clash{margin:6px 0 0;padding:8px 10px;border-radius:9px;font-size:12px;line-height:1.5;
+    background:var(--ink);border:1px solid var(--line);color:var(--muted)}
+  .ac-clash b{color:var(--text)}
   .ql-matched{display:block;margin-top:4px;font-size:12px;line-height:1.5;color:var(--muted)}
   .sm-rows{margin-top:2px}
   .sm-row{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
@@ -3775,7 +3779,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <p class="sub" data-say="1"><b>And it is the scoreboard.</b> This app never connects to your bank, which means every other figure in it is built from what you chose to type - log less and it looks calmer. This number is the exception, because it comes from outside and you have nothing to gain by inflating it. What it does over months is the honest answer to whether any of this is working. Keep it current and the app can tell you the truth; let it go stale and it can only tell you about your typing.</p>
           <div class="row" style="gap:8px;margin-top:12px">
             <input type="text" id="acctName" placeholder="Checking, Savings, HYSA…" style="flex:1;min-width:110px">
-            <input type="text" id="acctNo" placeholder="last 4" maxlength="24" inputmode="numeric" style="width:86px" aria-label="Account number, last four digits is enough">
+            <input type="text" id="acctNo" placeholder="195794-0050" maxlength="32" style="width:128px" aria-label="Account number as your bank prints it">
             <select id="acctKind" style="min-width:120px"></select>
             <select id="acctPurpose" style="min-width:140px"></select>
             <span class="sw-dol">$<input type="number" id="acctBal" min="0" step="any" placeholder="0" style="width:100px" aria-label="What is in it today"></span>
@@ -3788,7 +3792,8 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
             <button class="btn sm primary" id="addAcct">＋ Add</button>
             <button class="btn sm ghost" id="acctReorderBtn">Reorder</button>
           </div>
-          <p class="sub" data-say="1"><b>The number is what lets a photograph do the work.</b> A statement names itself in its header and names the other end of every internal move in the line itself - "Transfer to Loan 0002". Tell this app which digits are yours and it stops asking you which account a scan came from, and it stops filing a move between two of your own accounts as money you spent. <b>The last four is enough</b>, and less of your number sitting in a file is the better answer. Nothing here ever leaves your device.</p>
+          <p class="sub" data-say="1"><b>The number is what lets a photograph do the work.</b> A statement names itself in its header and names the other end of every internal move in the line itself - "Transfer to Loan 0003". Tell this app which digits are yours and it stops asking which account a scan came from, and it stops filing a move between two of your own accounts as money you spent.</p>
+          <p class="sub" data-say="1"><b>Put in what your bank prints, not just the last four.</b> Most credit unions number an account as a member number and then a suffix - <b>195794-0050</b> - and the suffix repeats: three accounts can end 0050 and two can end 0000. On its own it is not an identifier, and an app that guessed between them would file a statement against the wrong account with complete confidence. Give it both halves and the guessing stops. Separators do not matter; a dash, a star or a space all read the same. Nothing here ever leaves your device.</p>
           <div id="acctKindNote"></div>
           <div id="acctList"></div>
           <div id="acctBackfill"></div>
@@ -11507,14 +11512,14 @@ function qlAskAccount(n, readText){
   const found=readText ? acctByNumberIn(readText) : null;
   if(found && sel && [...sel.options].some(op=>op.value===found.id)){
     sel.value=found.id;
-    if(note) note.innerHTML=`<b>These ${n} are going against ${escapeHtml(found.name)}.</b> <span class="ql-matched">Its number, <b>${escapeHtml(acctDigits(found.acctNo))}</b>, is printed on the page you photographed.</span> Change it here if that is not the account.`;
+    if(note) note.innerHTML=`<b>These ${n} are going against ${escapeHtml(found.name)}.</b> <span class="ql-matched">Its number, <b>${escapeHtml(acctRuns(found.acctNo).join('-'))}</b>, is printed on the page you photographed.</span> Change it here if that is not the account.`;
     wrap.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
   if(note) note.innerHTML = accts.length>1
     ? `<b>Which account did these ${n} come out of?</b> Set it once here and every line goes against it.`
       + (acctsWithNumbers().length===0
-          ? ` <span class="ql-matched">Put the last four digits on an account in <b>Build</b> and a photographed statement answers this by itself next time.</span>` : '')
+          ? ` <span class="ql-matched">Put the account number on an account in <b>Build</b> and a photographed statement answers this by itself next time.</span>` : '')
     : `All ${n} will go against <b>${escapeHtml(accts[0].name)}</b>. Add another account on Build if that is wrong.`;
   wrap.scrollIntoView({behavior:'smooth',block:'center'});
   if(sel) setTimeout(()=>sel.focus(),400);
@@ -12429,11 +12434,11 @@ function renderQuickLog(){
          as the income guess above, and never applied over a choice already made. */
       {
         const c=row.querySelector('.ql-cat');
-        const other=acctByNumberIn(it.what, homeAcctId||qlAcctChoice());
+        const other=acctByNumberIn(it.what, homeAcctId||qlAcctChoice(), homeAcctId||qlAcctChoice());
         if(other && c && c.dataset.touched!=='1'
            && [...c.options].some(op=>op.value==='__move:'+other.id)){
           c.value='__move:'+other.id; c.classList.add('guessed');
-          c.title=`Read as a move to ${other.name}, because its number ${acctDigits(other.acctNo)} is in this line - change it if it is wrong`;
+          c.title=`Read as a move to ${other.name}, because its number ${acctRuns(other.acctNo).join('-')} is in this line - change it if it is wrong`;
         }
       }
       if(it.unnamed){ row.classList.add('ql-unnamed');
@@ -14038,7 +14043,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · the number on the page names the account';
+const BUILD_STAMP='2026-09-13 · the suffix is not the account, the member number is';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -15108,29 +15113,79 @@ function isOwedAcct(a){ return !!acctKind(a&&a.kind).owed; }
    shortest run worth trusting at all.
    ============================================================ */
 function acctDigits(v){ return String(v||'').replace(/\D+/g,''); }
+/* A credit union numbers an account as <member>-<suffix>, and the suffix on its
+   own is not an identifier. From the owner's own list:
+
+     195794-*0050  Benefits Plus        153934-*0050  Free Checking
+     195794-*0000  Savings              436067-*0050  Free Checking
+     195794-*0003  Home Equity Loc      481557-*0000  LLC Savings
+                                        481557-*1000  Business Free Checking
+
+   Three accounts end 0050 and two end 0000. Storing the last four and matching
+   on it filed a statement from 153934-*0050 against Benefits Plus - not a near
+   miss, a confident wrong answer, which is the worst thing this feature could
+   do. So a stored number is a SEQUENCE of digit runs, matched in order with a
+   little slack for whatever the bank prints between them. */
+function acctRuns(v){ return String(v||'').match(/\d+/g)||[]; }
 const ACCT_NO_RX=new Map();
-function acctNoRx(no){
-  const d=acctDigits(no);
-  if(d.length<3) return null;                       // two digits match everything
-  let rx=ACCT_NO_RX.get(d);
-  if(!rx){ rx=new RegExp('(^|[^0-9])'+d+'([^0-9]|$)'); ACCT_NO_RX.set(d,rx); }
+function acctRunsRx(runs){
+  if(!runs.length) return null;
+  if(runs.join('').length<3) return null;              // two digits match everything
+  const k=runs.join('-');
+  let rx=ACCT_NO_RX.get(k);
+  if(!rx){ rx=new RegExp('(^|[^0-9])'+runs.join('[^0-9]{0,4}')+'([^0-9]|$)'); ACCT_NO_RX.set(k,rx); }
   return rx;
 }
-/* The longest number wins. Somebody who stored the full number on one account
-   and the last four on another should not have the vaguer one answer first. */
-function acctByNumberIn(text, exceptId){
-  const t=String(text||'');
-  if(!t) return null;
-  let best=null, bestLen=0;
-  (state.accounts||[]).forEach(a=>{
-    if(exceptId && a.id===exceptId) return;
-    const rx=acctNoRx(a.acctNo); if(!rx || !rx.test(t)) return;
-    const L=acctDigits(a.acctNo).length;
-    if(L>bestLen){ best=a; bestLen=L; }
-  });
-  return best;
+function acctNoRx(no){ return acctRunsRx(acctRuns(no)); }
+/* The member number, and the bit after it. A statement header carries both
+   ("Benefits Plus 195794-*0050"); a line inside that statement carries only the
+   suffix ("Transfer to Loan 0003"), because which member it belongs to is the
+   statement you are holding. */
+function acctSuffix(v){ const r=acctRuns(v); return r.length?r[r.length-1]:''; }
+function acctMember(v){ const r=acctRuns(v); return r.length>1?r.slice(0,-1).join(''):''; }
+function acctsWithNumbers(){ return (state.accounts||[]).filter(a=>acctRuns(a.acctNo).join('').length>=3); }
+/* Every account whose stored number is the same as this one's. Two accounts
+   answering to the same digits is not a tie to break - it is a question this
+   app cannot answer, and it has to say so where it can still be fixed. */
+function acctNoClash(a){
+  const k=acctRuns(a&&a.acctNo).join('-'); if(!k || k.replace(/-/g,'').length<3) return [];
+  return (state.accounts||[]).filter(x=>x!==a && x.id!==(a&&a.id) && acctRuns(x.acctNo).join('-')===k);
 }
-function acctsWithNumbers(){ return (state.accounts||[]).filter(a=>acctDigits(a.acctNo).length>=3); }
+function acctAnyClash(){ return acctsWithNumbers().some(a=>acctNoClash(a).length>0); }
+/* Two passes, most specific first.
+
+   1. The whole stored number, as the header prints it. If exactly one account
+      answers, that is the account.
+   2. Failing that, the suffix alone - but only among accounts under the SAME
+      member number as the statement being read, which is what makes "Loan 0003"
+      mean anything. Without a known member to scope it, a bare suffix is only
+      allowed when no other account shares it.
+
+   Either pass returning more than one answer returns none. Guessing between two
+   accounts files money against the wrong one, and asking is cheaper. */
+function acctByNumberIn(text, exceptId, homeId){
+  const t=String(text||''); if(!t) return null;
+  const all=(state.accounts||[]).filter(a=>!(exceptId && a.id===exceptId));
+  const full=all.filter(a=>{ const rx=acctNoRx(a.acctNo); return rx && rx.test(t); });
+  if(full.length===1) return full[0];
+  if(full.length>1){
+    /* more digits means more specific: 195794-0050 beats a bare 0050 */
+    const sorted=full.slice().sort((x,y)=>acctDigits(y.acctNo).length-acctDigits(x.acctNo).length);
+    if(acctDigits(sorted[0].acctNo).length>acctDigits(sorted[1].acctNo).length) return sorted[0];
+    return null;
+  }
+  const home=homeId ? (state.accounts||[]).find(a=>a.id===homeId) : null;
+  const member=home ? acctMember(home.acctNo) : '';
+  const pool=member ? all.filter(a=>acctMember(a.acctNo)===member) : all;
+  const bySuffix=pool.filter(a=>{
+    const sfx=acctSuffix(a.acctNo); if(sfx.length<3) return false;
+    const rx=acctRunsRx([sfx]); return rx && rx.test(t);
+  });
+  if(bySuffix.length!==1) return null;
+  /* No member to scope by means the suffix has to stand on its own merits. */
+  if(!member && (state.accounts||[]).filter(a=>acctSuffix(a.acctNo)===acctSuffix(bySuffix[0].acctNo)).length>1) return null;
+  return bySuffix[0];
+}
 function acctOwed(a){ return Math.max(0, -(+a.balance||0)); }
 function acctLimit(a){ const L=+((a||{}).limit); return (isFinite(L)&&L>0)?L:0; }
 /* Headroom is the point of a line you keep at zero. The user who has never drawn
@@ -15929,7 +15984,7 @@ function renderAccounts(){
       return `<div class="acct-row editing"><div class="ac-edit">
         <div class="ae-h">Editing <b>${escapeHtml(a.name)}</b></div>
         <label class="ae-f"><span>Called</span><input type="text" id="aeName" value="${escapeHtml(a.name)}" maxlength="40"></label>
-        <label class="ae-f"><span>Number</span><input type="text" id="aeNo" value="${escapeHtml(a.acctNo||'')}" maxlength="24" inputmode="numeric" placeholder="last 4 is enough"></label>
+        <label class="ae-f"><span>Number</span><input type="text" id="aeNo" value="${escapeHtml(a.acctNo||'')}" maxlength="32" placeholder="as your bank prints it"></label>
         <label class="ae-f"><span>Kind</span><select id="aeKind">${ACCT_KINDS.map(x=>`<option value="${x.k}"${x.k===a.kind?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
         <label class="ae-f${owedNow?' hide':''}" id="aePurpWrap"><span>Its job</span><select id="aePurp">${ACCT_PURPOSES.map(x=>`<option value="${x.k}"${x.k===(a.purpose||'')?' selected':''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>
         <label class="ae-f${owedNow?'':' hide'}" id="aeLimWrap"><span>Limit</span><span class="sw-dol">$<input type="number" id="aeLim" min="0" step="any" value="${acctLimit(a)||''}" placeholder="none set"></span></label>
@@ -15940,7 +15995,8 @@ function renderAccounts(){
       </div></div>`;
     }
     return `<div class="acct-row${owed?' owed':''}" data-row="${a.id}" data-lvl="${acctGroupOf(a)}">${
-      acctReorder?`<button class="cat-grip" data-grip="${a.id}" data-scope="accts" aria-label="Drag to move ${escapeHtml(a.name)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`:`<span class="ac-ic">${k.ic}</span>`}<div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated+readAge(a):''}${acctDigits(a.acctNo).length>=3?` · <span class="ac-no">no. ${escapeHtml(acctDigits(a.acctNo))}</span>`:''}</div>${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="ac-pen" data-acctedit="${a.id}" title="Rename or change what kind it is" aria-label="Edit ${escapeHtml(a.name)}">✎</button><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
+      acctReorder?`<button class="cat-grip" data-grip="${a.id}" data-scope="accts" aria-label="Drag to move ${escapeHtml(a.name)}, or use the up and down arrow keys" title="Drag to move. Arrow keys work too.">⠿</button>`:`<span class="ac-ic">${k.ic}</span>`}<div class="ac-b"><div class="ac-n">${escapeHtml(a.name)}${tag}</div><div class="ac-k">${owed?'On it':'Bank said this'}${a.updated?' on '+a.updated+readAge(a):''}${acctRuns(a.acctNo).join('').length>=3?` · <span class="ac-no${acctNoClash(a).length?' clash':''}">no. ${escapeHtml(acctRuns(a.acctNo).join('-'))}</span>`:''}</div>${
+        acctNoClash(a).length?`<div class="ac-clash"><b>${escapeHtml(acctRuns(a.acctNo).join('-'))}</b> is also on <b>${acctNoClash(a).map(x=>escapeHtml(x.name)).join('</b>, <b>')}</b>, so a scan cannot tell them apart and will keep asking. Add the member number your bank prints in front of it and it can.</div>`:''}${creditLine}${expLine}${gapLine}${acctHistHTML(a)}</div><span class="sw-dol">$<input type="number" min="0" step="any" value="${owed?acctOwed(a):(+a.balance||0)}" data-acctbal="${a.id}" aria-label="${owed?'What is on':'What is in'} ${escapeHtml(a.name)}"></span><button class="ac-pen" data-acctedit="${a.id}" title="Rename or change what kind it is" aria-label="Edit ${escapeHtml(a.name)}">✎</button><button class="del" data-acctdel="${a.id}" title="Remove this account">✕</button></div>`;
   };
   /* A header per group that actually holds something, carrying that group's own
      total. An empty group is not a heading, it is a gap. */
@@ -16079,8 +16135,8 @@ function renderAccounts(){
        "Loan", "xxxx" - differs between the statement header and the line inside
        it, and matching on the decoration would work on one and fail on the
        other. */
-    { const no=acctDigits((document.getElementById('aeNo')||{}).value);
-      if(no.length>=3) a.acctNo=no; else delete a.acctNo; }
+    { const runs=acctRuns((document.getElementById('aeNo')||{}).value);
+      if(runs.join('').length>=3) a.acctNo=runs.join('-'); else delete a.acctNo; }
     /* Flipping between a card and an account flips what the stored balance
        MEANS - owed is held negative - so the figure is turned over with it
        rather than silently changing sign on the net worth line. */
@@ -16256,7 +16312,7 @@ function syncAcctKindForm(){
     /* Stored negative. Everything downstream already knows how to subtract. */
     const rec={id:uid(),name:n,kind,purpose:owed?'':(document.getElementById('acctPurpose').value||''),
       balance:owed?-bal:bal,updated:todayStr()};
-    { const no=acctDigits((document.getElementById('acctNo')||{}).value); if(no.length>=3) rec.acctNo=no; }
+    { const runs=acctRuns((document.getElementById('acctNo')||{}).value); if(runs.join('').length>=3) rec.acctNo=runs.join('-'); }
     if(owed){
       const L=parseFloat((document.getElementById('acctLim')||{}).value);
       if(L>0) rec.limit=L;

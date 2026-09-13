@@ -28,9 +28,9 @@ await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 
 const SEED=(x={})=>({onboarded:true,mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'brief',
   activeMonth:'2026-09',categories:[{id:'c1',name:'Roof'}],budgets:{},transactions:[],
-  accounts:[{id:'bp',name:'Benefits Plus',kind:'checking',balance:929.55,updated:'2026-09-11',acctNo:'0050'},
-            {id:'l2',name:'Loan 0002',kind:'credit',balance:-1200,updated:'2026-09-11',acctNo:'0002'},
-            {id:'l3',name:'Loan 0003',kind:'credit',balance:-800,updated:'2026-09-11',acctNo:'0003'},
+  accounts:[{id:'bp',name:'Benefits Plus',kind:'checking',balance:929.55,updated:'2026-09-11',acctNo:'195794-0050'},
+            {id:'l2',name:'Loan 0002',kind:'credit',balance:-1200,updated:'2026-09-11',acctNo:'195794-0002'},
+            {id:'l3',name:'Loan 0003',kind:'credit',balance:-800,updated:'2026-09-11',acctNo:'195794-0003'},
             {id:'nn',name:'Unnumbered',kind:'savings',balance:50,updated:'2026-09-11'}],
   assets:[],liabilities:[],goals:[],recurring:[],impulse:[],debts:[],diary:[],intake:{},lessons:[],vault:[],...x});
 const load=async st=>{ await p.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),st);
@@ -52,22 +52,71 @@ const m=await p.evaluate(([HEADER,MOVES,NOT_MOVES])=>{
   const nm=a=>a?a.name:null;
   return {
     header:nm(acctByNumberIn(HEADER)),
-    moves:MOVES.map(l=>nm(acctByNumberIn(l,'bp'))),
-    notMoves:NOT_MOVES.map(l=>nm(acctByNumberIn(l,'bp'))),
+    moves:MOVES.map(l=>nm(acctByNumberIn(l,'bp','bp'))),
+    notMoves:NOT_MOVES.map(l=>nm(acctByNumberIn(l,'bp','bp'))),
     /* the trap, stated rather than assumed */
     substringIsReal:'111000021024413'.indexOf('0002')>=0,
     boundedRejectsIt:!acctNoRx('0002').test('Cc hosting 111000021024413'),
     twoDigitsRefused:acctNoRx('50')===null && acctNoRx('7')===null,
     threeAccepted:!!acctNoRx('050'),
     /* decoration differs between the header and the line, so only digits are kept */
-    digitsOnly:acctDigits('195794-*0050')==='1957940050' && acctDigits('xxxx-0050')==='0050',
+    digitsOnly:acctRuns('195794-*0050').join('-')==='195794-0050' && acctRuns('xxxx-0050').join('-')==='0050',
     unnumberedNeverMatches:nm(acctByNumberIn('Unnumbered savings 12345'))===null
       || nm(acctByNumberIn('Unnumbered savings 12345'))!=='Unnumbered',
     /* the account a line came OUT of is not somewhere it moved TO */
-    selfExcluded:nm(acctByNumberIn('Transfer within 0050 account','bp'))===null,
+    selfExcluded:nm(acctByNumberIn('Transfer within 195794-0050 account','bp','bp'))===null,
     withNumbers:acctsWithNumbers().length
   };
 },[HEADER,MOVES,NOT_MOVES]);
+
+/* ============================================================
+   THE OWNER'S REAL ACCOUNT LIST
+
+   Asked, after the first version shipped: "Are these last 4 enough?" They are
+   not, and the screenshot that came with the question is the proof. Three of
+   these end 0050 and two end 0000, because a credit union numbers an account as
+   a member number and then a suffix. Matching the suffix alone did not fail
+   safe - it filed a statement from 153934-*0050 against Benefits Plus with
+   complete confidence, which is the worst available outcome. */
+const REAL=[
+  ['bp','Benefits Plus',        '195794-0050'],
+  ['sv','Savings',              '195794-0000'],
+  ['he','Home Equity Loc',      '195794-0003'],
+  ['fk','Free Checking Kristi', '153934-0050'],
+  ['fd','Free Checking Donovan','436067-0050'],
+  ['bz','Business Free Checking','481557-1000'],
+  ['ls','LLC Savings',          '481557-0000']];
+await load(SEED({accounts:REAL.map(([id,name,no])=>
+  ({id,name,kind:'checking',balance:100,updated:'2026-09-11',acctNo:no}))}));
+const real=await p.evaluate(REAL=>{
+  const nm=a=>a?a.name:null;
+  const hdr=(name,no)=>nm(acctByNumberIn(`${name} ${no.split('-')[0]}-*${no.split('-')[1]}`));
+  return {
+    /* every one of the seven headers finds its own account and no other */
+    headers:REAL.map(([id,name,no])=>[name, hdr(name,no)]),
+    allRight:REAL.every(([id,name,no])=>hdr(name,no)===name),
+    /* a line inside a 195794 statement naming a bare suffix means that member's */
+    suffixScoped:nm(acctByNumberIn('Transfer to Loan 0003: NetWorth24',null,'bp')),
+    /* and the same bare suffix from a different member's statement is not
+       silently handed the first account that happens to end the same way */
+    suffixOther:nm(acctByNumberIn('Transfer to Loan 0000: NetWorth24',null,'bz')),
+    noClashes:!acctAnyClash()
+  };
+},REAL);
+/* the same list stored the way the first version advised */
+await load(SEED({accounts:REAL.map(([id,name,no])=>
+  ({id,name,kind:'checking',balance:100,updated:'2026-09-11',acctNo:no.split('-')[1]}))}));
+const lastFour=await p.evaluate(()=>{
+  const nm=a=>a?a.name:null;
+  return { kristi:nm(acctByNumberIn('Free Checking 153934-*0050')),
+           llc:nm(acctByNumberIn('LLC Savings 481557-*0000')),
+           /* 0003 and 1000 appear once, so those still work */
+           equity:nm(acctByNumberIn('Home Equity Loc 195794-*0003')),
+           flagged:(state.accounts||[]).filter(a=>acctNoClash(a).length).map(a=>a.name).length,
+           anyClash:acctAnyClash(),
+           toldOnScreen:/is also on/.test((document.getElementById('acctList')||{innerText:''}).innerText) };
+});
+await load(SEED());
 
 /* longest stored number wins, tested on text where both really appear */
 const longest=await p.evaluate(()=>{
@@ -179,6 +228,22 @@ const T=[
   ['the longest stored number wins when more than one is really in the text',
    longest==='Full number', String(longest)],
 
+  ['all seven of the owner\'s real accounts resolve to themselves and no other',
+   real.allRight===true, JSON.stringify(real.headers)],
+  ['...including the three that end 0050 and the two that end 0000',
+   real.noClashes===true, String(real.noClashes)],
+  ['a bare suffix in a line means the member number of the statement it is in',
+   real.suffixScoped==='Home Equity Loc', String(real.suffixScoped)],
+  ['...and the same suffix read from another member\'s statement finds that member\'s',
+   real.suffixOther==='LLC Savings', String(real.suffixOther)],
+  ['stored as only the last four, the colliding ones refuse to answer rather than answer wrongly',
+   lastFour.kristi===null && lastFour.llc===null, JSON.stringify(lastFour)],
+  ['...the ones whose last four happens to be unique still work',
+   lastFour.equity==='Home Equity Loc', String(lastFour.equity)],
+  ['...and Build says which accounts cannot be told apart, where it can still be fixed',
+   lastFour.anyClash===true && lastFour.flagged===5 && lastFour.toldOnScreen===true,
+   JSON.stringify(lastFour)],
+
   ['a scan no longer asks which account it came from - it says',
    ui.acctPicked==='bp' && ui.noteNamesIt===true, JSON.stringify({a:ui.acctPicked,n:ui.noteNamesIt})],
   ['...and says what told it, rather than asking to be trusted',
@@ -207,9 +272,10 @@ const T=[
    off.offersTheIdea===true, String(off.offersTheIdea)],
 
   ['the field is on Build, on the add form and in the editor',
-   build.addField===true && build.prefilled==='0050', JSON.stringify(build)],
+   build.addField===true && build.prefilled==='195794-0050', JSON.stringify(build)],
   ['...shown on the row without opening anything', build.shownOnRow===true, String(build.shownOnRow)],
-  ['...stores only the digits of whatever was typed', build.stored==='9911', String(build.stored)],
+  ['...keeps the digit runs of whatever was typed, and nothing else',
+   build.stored==='9911', String(build.stored)],
   ['...and refuses something too short to mean anything', build.shortRefused===true, String(build.shortRefused)],
 ];
 let bad=0; for(const [n,ok,d] of T){ if(!ok) bad++; console.log(`${ok?'ok  ':'FAIL'}  ${n}${ok?'':'\n        '+d}`); }
