@@ -34,5 +34,10 @@
 /shots/*
   Cache-Control: public, max-age=604800
 
+# The mindset pictures never change once written; a card that has been opened
+# once should never cost the data a second time.
+/mind/*
+  Cache-Control: public, max-age=2592000
+
 /icon.svg
   Cache-Control: public, max-age=604800
