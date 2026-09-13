@@ -744,6 +744,12 @@
   .dataguard .dg-x{background:none;border:none;color:var(--muted);font-weight:800;font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0}
   /* flip stat cards: tap to flip a figure between dollars and hours of your life */
   .fstat{perspective:1000px}
+  .hh-zero{margin-top:10px;padding:10px 12px;border-radius:11px;font-size:12.5px;line-height:1.6;
+    background:var(--ink);border:1px solid var(--line);color:var(--muted)}
+  .hh-zero b{color:var(--text)}
+  .hh-caveat{margin:6px 0 2px;font-size:12.5px;line-height:1.6;color:var(--muted)}
+  .hh-caveat b{color:var(--text)}
+  .hh-fair.partial{border-left:3px solid var(--accent-2);padding-left:11px}
   .ac-no{font-variant-numeric:tabular-nums;letter-spacing:.04em}
   .ac-no.clash{color:var(--accent-2)}
   .ac-clash{margin:6px 0 0;padding:8px 10px;border-radius:9px;font-size:12px;line-height:1.5;
@@ -5727,7 +5733,25 @@ function renderHousehold(){
   const M=state.activeMonth, inc=incomeByOwner(M);
   const nameA=escapeHtml(state.nameA||'You'), nameB=escapeHtml(state.nameB||'Partner');
   const vA=(state.nameA||'You')==='You'?'cover':'covers';   // "You covers" read as broken English until someone typed a real name
+  /* Money marked Joint belongs to both, so it cannot say which of you earns
+     more - it is out of the ratio by definition. What it must NOT be is out of
+     the ratio SILENTLY.
+
+     Reported as: "Why is Kristi zero if she's contributed 2 paychecks?" Her two
+     paychecks were posted by a repeat set to Both of us, so $2,436.97 - more
+     than half the household's income - sat in a box on screen labelled shared
+     while the panel underneath printed "Pat covers 100%" and "Kristi covers
+     0%". Nothing was miscalculated. The caption was asserting something the
+     arithmetic under it could not support, which is the fourth time this class
+     of fault has come up in this file, and the first time it has done so
+     attached to a recommendation somebody could act on. */
   const base=inc.a+inc.b, rA=base>0?inc.a/base:.5, rB=base>0?inc.b/base:.5, pct=v=>Math.round(v*100);
+  const jShare = inc.total>0 ? inc.j/inc.total : 0;
+  /* A quarter is the line where "proportional to what each of you earns" stops
+     being a description of the household and starts being a description of
+     whatever happens to be left after the Joint pile. */
+  const jHeavy = inc.j>0 && jShare>=0.25;
+  const zeroName = (base>0 && inc.j>0) ? (inc.a<=0.005 ? nameA : (inc.b<=0.005 ? nameB : '')) : '';
   const ess=(typeof essentialMonthly==='function')?essentialMonthly():0;
   const wA=effectiveHourly(), wB=state.wageB||0;
   box.innerHTML=`<div class="panel household">
@@ -5739,11 +5763,15 @@ function renderHousehold(){
       <div class="hh-p b"><span class="nm">${nameB}</span><span class="v">${moneyOwner(inc.b,'b')}</span><span class="pc">${pct(rB)}%</span></div>
       ${inc.j>0?`<div class="hh-p j"><span class="nm">Joint</span><span class="v">${usd(inc.j)}</span><span class="pc">shared</span></div>`:''}
     </div>
+    ${zeroName?`<div class="hh-zero"><b>${zeroName} reads ${usd(0)} because none of this month's income is marked as theirs.</b> The <b>${usd(inc.j)}</b> above is marked <b>Joint</b>, which belongs to both of you and so cannot say who earned it. If some of that is actually ${zeroName}'s pay, open it on <b>Track</b> and set <b>Whose</b> - or fix the repeat that posts it, and every future one lands right.</div>`:''}
     <div class="hh-bar"><span class="a" style="width:${pct(rA)}%"></span><span class="b" style="width:${pct(rB)}%"></span></div>
-    ${ess>0&&base>0?`<div class="hh-fair">
-      <div class="k">Fair split of the ${usd(ess)} in shared essentials</div>
+    ${ess>0&&base>0?`<div class="hh-fair${jHeavy?' partial':''}">
+      <div class="k">${jHeavy
+        ? `A split of the ${usd(ess)} in shared essentials, from part of the picture`
+        : `Fair split of the ${usd(ess)} in shared essentials`}</div>
+      ${jHeavy?`<div class="hh-caveat"><b>${usd(inc.j)}</b> of this month's <b>${usd(inc.total)}</b> is marked Joint, so these percentages describe only the <b>${usd(base)}</b> that is attributed to one of you. Treat them as incomplete rather than as a plan.</div>`:''}
       <div class="hh-fairrow"><span>${nameA} ${vA} <b>${usd(ess*rA)}</b> · ${pct(rA)}%${wA>0?` <span class="hh-life">${fmtLife(ess*rA,wA)}</span>`:''}</span><span>${nameB} covers <b>${usd(ess*rB)}</b> · ${pct(rB)}%${wB>0?` <span class="hh-life">${fmtLife(ess*rB,wB)}</span>`:''}</span></div>
-      <p class="sub" style="margin:8px 0 0">Proportional to what each of you earns - not a 50/50 that squeezes the lower earner. A guideline, not a rule.${wA>0&&wB>0&&Math.abs(wA-wB)>0.5?` The hours show the real cost: the lower earner pays for their share with more of their life.`:''}</p>
+      <p class="sub" style="margin:8px 0 0">Proportional to ${jHeavy?'the income the app can attribute':'what each of you earns'} - not a 50/50 that squeezes the lower earner. A guideline, not a rule.${wA>0&&wB>0&&Math.abs(wA-wB)>0.5?` The hours show the real cost: the lower earner pays for their share with more of their life.`:''}</p>
     </div>`:''}
     ${(wA>0||wB>0)?`<div class="hh-wage"><span>${nameA}: <b>${wA>0?usd(wA)+'/hr':'set wage'}</b></span><span>${nameB}: <b>${wB>0?usd(wB)+'/hr':'add in Settings'}</b></span></div>`:''}
   </div>`;
@@ -14111,7 +14139,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · whose it is was a fact you could not change';
+const BUILD_STAMP='2026-09-13 · a hundred percent of part of the picture';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
