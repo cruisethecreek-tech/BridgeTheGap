@@ -315,6 +315,161 @@ const till=await pg.evaluate(()=>{
 ok('a till receipt keeps every line and calls none of it income',
    till.n===5 && till.income===0, JSON.stringify(till));
 
+/* ---------- the actual read, from the actual phone ----------
+   Four rounds of this were fought with fixtures I invented, and every one was
+   more polite than the reader: one page when there were four, clean tokens
+   where the reader produces furniture, a dollar sign where it produces a
+   section mark. This is what the device really returned, pasted from the app's
+   own "Show me what it actually read", and it is worth more than the other
+   sixteen shapes combined because nothing about it was imagined.
+
+   Three things in here that no fixture of mine had:
+     - "$367.87" and "$41.00" with the MINUS LOST, on real purchases
+     - "-\u00a731.70", where the dollar sign came back as a section mark, so the
+       minus never attached to a number at all
+     - "$8,816.35" where the balance is really $3,315.35, because the bank's own
+       OCR mangled the digits
+   The first two are why absence of a minus cannot mean income on its own. */
+const REAL_READ = `20:35 2 oa N{ FC,
+< Account History
+Free Checking (153934-*0050) v
+09100001/839/94 $3,383.25
+Sep 4, 2026
+Card purchase / SAMSCLUB #6327 5300 $367.87
+(2026-09-02) WARREN OH 63270083 $2153.02 >
+Sep 3,2026
+Card purchase / GOOGLE*GOOGLE ONE
+5816 (2026-09-02) 650-2530000 CA -$21.49 N
+WPGTIDO1 $2,520.89
+Sep 3, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090326 -$43.40 N
+855-739-2859 111924682521732 $2,542.38
+Sep 3, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090326 -$43.40 N
+855-739-2859 111924682521713 $2,585.78
+Sep 3,2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090326 -$15.40 N
+855-739-2859 111924682448758 $2,629.18
+Sep 3,2026
+OO « BE m =
+Accounts Move Money Check Deposit Credit Score More
+20:35 m2 a N{ 7°,
+< Account History
+Free Checking (153934-*0050) v
+Sep 4, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090426 -$20.00 N
+855-739-2859 111924683080404 $3,275.35
+Sep 4, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090426 -$20.00 N
+855-739-2859 111924683080400 $3,295.35
+Sep 4, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090426 -$42.10 N
+855-739-2859 111924682581485 $8,816.35
+Sep 4, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090426 -$25.80 N
+855-739-2859 111924682581473 $3,357.45
+Sep 4, 2026
+ACH Deposit / YOUNGSTOWN REAL
+6506940773 PAYROLL 260904 $1,230.23 N
+091000017839794 $3,383.25
+Sep 4, 2026
+($) SG = #1 =
+Accounts Move Money Check Deposit Credit Score More
+20:35 m2 a Nf 2,
+< Account History
+Free Checking (153934-*0050) v
+ie cee
+855-739-2859 111924684145266 $3,150.45
+Sep 8, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090826 -$6.40 N
+855-739-2859 111924683235948 $3,159.85
+Sep 8, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090826 -$6.40 N
+855-739-2859 111924683235947 $3,166.25
+Sep 8, 2026
+Card purchase / KITCHEN ABZ 5499 $41.00
+(2026-09-05) 330-9420960 OH 96520224 $3172.65 >
+Sep 6, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090426 -§31.70 N
+855-739-2859 111924683174881 $3,213.65
+Sep 4, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090426 -$30.00 N
+855-739-2859 111924683174879 $3,245.35
+Sep 4, 2026
+($) " = Pi =
+Accounts Move Money Check Deposit Credit Score More
+20:35 m2 a Nf 2,
+< Account History
+Free Checking (153934-*0050) v
+Sep 8, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090826 -$10.00 N
+855-739-2859 111924684853359 $2,760.35
+Sep 8, 2026
+ACH Withdrawal / PAYPAL PAYPALSI77
+PURCHASE 260905 INSTANT TRANSFER  -$320.00 N
+091000010205942 $2,770.35
+Sep 8, 2026
+ACH Withdrawal / Acorns Invest
+9000142693 Transfer 090826 -$50.00 N
+855-739-2859 111924683969708 $3,090.35
+Sep 8, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090826 -$10.10 N
+855-739-2859 111924684145275 $3,140.35
+Sep 8, 2026
+ACH Withdrawal / Acorns Round-Ups
+9000142693 Transfer 090826 -$9.40 N
+855-739-2859 111924684145266 $3,150.45
+Sep 8, 2026
+($] " = £1 =
+Accounts Move Money Check Deposit Credit Score More`;
+const real=await pg.evaluate(t=>{
+  const out=qlParseOcr(t);
+  return { n:out.length,
+    income:out.filter(x=>x.kind==='income').map(x=>x.amt),
+    byAmt:Object.fromEntries(out.map(x=>[x.amt, x.kind||'expense'])) };
+},REAL_READ);
+/* every balance printed on those screens */
+const REAL_BALS=[3383.25,2153.02,2520.89,2542.38,2585.78,2629.18,3275.35,3295.35,
+  3357.45,3150.45,3159.85,3166.25,3172.65,3213.65,3245.35,2760.35,2770.35,3090.35,3140.35];
+ok('the real read gives back its twenty-one transactions',
+   real.n===21, String(real.n));
+ok('...and not one balance the reader got right',
+   REAL_BALS.every(v=>!(v in real.byAmt)),
+   REAL_BALS.filter(v=>v in real.byAmt).join(' '));
+ok('...with the payroll deposit, and only that, read as money arriving',
+   real.income.length===1 && real.income[0]===1230.23, real.income.join(' '));
+/* The three the reader damaged. A purchase whose minus was lost, a purchase
+   whose dollar sign came back as a section mark - all still money going out,
+   because the chain proves direction from the balances and does not care what
+   happened to the punctuation. */
+ok('a purchase whose minus the reader dropped is still money going out',
+   real.byAmt['367.87']==='expense' && real.byAmt['41']==='expense',
+   `367.87=${real.byAmt['367.87']} 41=${real.byAmt['41']}`);
+ok('...and so is one whose dollar sign came back as a section mark',
+   real.byAmt['31.7']==='expense', String(real.byAmt['31.7']));
+/* The one thing left, and it is the bank's reader rather than ours: $3,315.35
+   came off the screen as $8,816.35. Arithmetic cannot link a corrupted figure,
+   so it survives as a row. It arrives UNNAMED and is not called income, which
+   makes it a visible oddity somebody deletes in one tap rather than a wrong
+   number hiding among right ones. Chasing it would need a rule that deletes
+   rows the chain cannot explain, and a rule like that eventually eats a real
+   payment - which is the one failure worth more than this one. */
+ok('a balance the bank\'s own reader corrupted is left visible, never called income',
+   real.byAmt['8816.35']==='expense', String(real.byAmt['8816.35']));
+
 R.forEach(([n,p,d])=>{ if(!p) console.log('FAIL: '+n+(d?'  <'+d+'>':'')); });
 const bad=R.filter(x=>!x[1]).length;
 console.log(`${R.length-bad} of ${R.length} hold`);
