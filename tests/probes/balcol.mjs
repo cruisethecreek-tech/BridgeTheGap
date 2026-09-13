@@ -272,6 +272,49 @@ ok('...and a real descriptor keeps its name, reference tail and all',
    naming.filter(x=>x.want).every(x=>x.named),
    naming.filter(x=>x.want&&!x.named).map(x=>x.d).join(' | '));
 
+/* ---------- the edge of a photograph ----------
+   "Much better.. But still added a few balances. The Youngstown didn't post as
+   income as well." Both symptoms are the same wound: a page boundary.
+
+   The chain cannot reach the LAST row on a page, because the balance that would
+   prove its direction is the first row of the NEXT photograph, in a different
+   chain. So every page's final transaction fell to the default, which is how a
+   $1,230.23 paycheck landed as spending. And a photo catching only two rows -
+   the top or bottom of a scroll - has a pair that links but not the run of
+   three that was being demanded, so its balances came back as payments. */
+const E1=build(3736.41,[['Card purchase / WALGREENS 5912',-77.97],
+  ['Card purchase / CITY OF YOUNGSTOWN 4900',-5.99],['POS Card purchase / RED PLUM',-144.85],
+  ['Card purchase / SHELL OIL 5541',-55.86]]);
+const E2=build(3357.45,[['ACH Withdrawal / Acorns Round-Ups',-25.80],
+  ['ACH Deposit / YOUNGSTOWN 1733757000',1230.23]]);   /* deposit is LAST on the page */
+const E3=build(3150.45,[['ACH Withdrawal / Acorns Round-Ups',-6.40],
+  ['ACH Withdrawal / Acorns Round-Ups',-6.40],['KITCHEN ABZ 5499 POS',-41.00],
+  ['ACH Withdrawal / PAYPAL 5499',-320.00]]);
+const EDGE=[...E1,...E2,...E3];
+const edge=await pg.evaluate(([t,bals,amts])=>{
+  const out=qlParseOcr(t);
+  return { rows:out.length,
+    leaked:out.filter(x=>bals.includes(x.amt)&&!amts.includes(x.amt)).map(x=>x.amt),
+    deposit:(out.find(x=>Math.abs(x.amt-1230.23)<0.01)||{}).kind||'expense' };
+},[[E1,E2,E3].map(r=>'Account History\nFree Checking (153934-0050)\nPosted\n'+asPage(r)).join('\n'),
+   EDGE.map(r=>r[2]), EDGE.map(r=>Math.abs(r[1]))]);
+ok('a photo holding only two rows still loses its balances',
+   edge.leaked.length===0 && edge.rows===EDGE.length,
+   `${edge.rows} of ${EDGE.length}, leaked ${edge.leaked.join(' ')}`);
+ok('...and a deposit at the very bottom of a page is still money arriving',
+   edge.deposit==='income', edge.deposit);
+
+/* The guard for BOTH of those relaxations, and it is the one that matters most.
+   A till receipt has no running balance and no minus signs, so the run of three
+   is never proved, the two-link pass never runs, and "no minus means money in"
+   never applies. Every line stays, and stays an expense. */
+const till=await pg.evaluate(()=>{
+  const out=qlParseOcr('MORRISONS\nMilk $2.40\nBread $1.80\nCheese $4.25\nApples $3.10\nTOTAL $11.55');
+  return { n:out.length, income:out.filter(x=>x.kind==='income').length };
+});
+ok('a till receipt keeps every line and calls none of it income',
+   till.n===5 && till.income===0, JSON.stringify(till));
+
 R.forEach(([n,p,d])=>{ if(!p) console.log('FAIL: '+n+(d?'  <'+d+'>':'')); });
 const bad=R.filter(x=>!x[1]).length;
 console.log(`${R.length-bad} of ${R.length} hold`);
