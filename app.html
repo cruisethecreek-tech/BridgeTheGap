@@ -5212,6 +5212,38 @@ function deviceId(){
    attribution needs and what a role would hang off later. */
 function syncActor(){ return state.meIs==='b' ? 'b' : 'a'; }
 function actorName(who){ return who==='b' ? (state.nameB||'Partner') : (state.nameA||'You'); }
+/* Named, not "Mine" and "Partner". Asked for as: "Where from should be either
+   Kristi or Pat as a drop down." The names were already in the app - they were
+   simply never used on the one sheet that reports whose income it is. */
+function ownerOptions(cur){
+  const a=(state.nameA&&state.nameA!=='You')?state.nameA:'Mine';
+  const b=state.nameB||'Partner';
+  return [['a',a],['b',b],['joint','Both of us']]
+    .map(([v,l])=>`<option value="${v}"${v===(cur||'a')?' selected':''}>${escapeHtml(l)}</option>`).join('');
+}
+/* Where the money came from stays typed, because it is a PAYER and not a
+   person: incomeDueRest decides which payday has already been logged by
+   comparing this string, so replacing it with a name would break every repeat
+   somebody has set up. What it gains is the list of payers already used, so it
+   is pick-or-type rather than type-and-hope.
+
+   Named incomeSourceOptions first, which is already taken by the list of income
+   KINDS two thousand lines up. A function declaration later in the file wins,
+   so the Kind dropdown would have rendered as blank options - the fourth time
+   in this file two things have worn one name. */
+function incomePayerList(){
+  const seen=new Map();
+  (state.transactions||[]).filter(t=>t.type==='income').forEach(t=>{
+    const v=String(t.source||'').trim(); if(!v) return;
+    seen.set(v.toLowerCase(), v);
+  });
+  (state.recurring||[]).filter(r=>r.type==='income').forEach(r=>{
+    const v=String(r.source||r.name||'').trim(); if(!v) return;
+    seen.set(v.toLowerCase(), v);
+  });
+  return [...seen.values()].sort((x,y)=>x.localeCompare(y)).slice(0,40)
+    .map(v=>`<option value="${escapeHtml(v)}"></option>`).join('');
+}
 function nowStamp(){ return {t:new Date().toISOString(), by:syncActor(), d:deviceId()}; }
 /* Deterministic ordering: newest wins, and when two devices write in the same
    millisecond the device id breaks the tie the same way on both sides - without
@@ -12977,6 +13009,11 @@ function editTx(id, patch){
     }
   }
   ['date','note','source','catId','srcType','srcLabel','energy','ikind','acctId','destAcctId'].forEach(k=>{ if(k in patch) t[k]=patch[k]; });
+  /* Whose it is, which every hours-of-life figure and the household split read.
+     Stored by ABSENCE when it is yours: everything downstream asks for
+     `t.owner||'a'`, so writing the string back would be harmless today and a
+     trap the first time something tests for the property instead of the value. */
+  if('owner' in patch){ if(patch.owner) t.owner=patch.owner; else delete t.owner; }
   if('destAcctId' in patch && !patch.destAcctId) delete t.destAcctId;
   if('destAcctId' in patch && t.destAcctId) t.source=acctName(t.destAcctId)||t.source;
   /* Covers the amount AND the kind: flipping "still yours" to "into you" takes
@@ -13010,7 +13047,8 @@ function renderTxSheet(){
     <div class="txs-f"><span class="txs-k">Date</span><span class="txs-v"><input type="date" value="${escapeHtml(t.date||'')}" data-txedit="date"></span></div>
     ${(t.type==='expense'||t.type==='invest')?`<div class="txs-f"><span class="txs-k">Category</span><span class="txs-v"><select data-txedit="catId" id="txsCat">${catOpts}</select></span></div>
       <div class="txs-f hide" id="txsNewWrap"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" id="txsCatNew" placeholder="Name the new one" enterkeyhint="done"></span></div>`:''}
-    ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"></span></div>
+    ${t.type==='income'?`<div class="txs-f"><span class="txs-k">Where from</span><span class="txs-v"><input type="text" list="txsSrcList" value="${escapeHtml(t.source||'')}" placeholder="Paycheck" data-txedit="source"><datalist id="txsSrcList">${incomePayerList()}</datalist></span></div>
+      ${(state.householdOn || (t.owner||'a')!=='a')?`<div class="txs-f"><span class="txs-k">Whose</span><span class="txs-v"><select data-txedit="owner">${ownerOptions(t.owner||'a')}</select></span></div>`:''}
       <div class="txs-f"><span class="txs-k">Kind</span><span class="txs-v"><select data-txedit="srcType"><option value="">Not said</option>${srcOpts}</select></span></div>
       ${t.srcType==='other'?`<div class="txs-f"><span class="txs-k">Call it</span><span class="txs-v"><input type="text" value="${escapeHtml(t.srcLabel||'')}" placeholder="Call it what it is" data-txedit="srcLabel"></span></div>`:''}`:''}
     ${t.type==='transfer'?`<div class="txs-f"><span class="txs-k">Lands in</span><span class="txs-v"><select data-txedit="destAcctId">${acctOptions(t.destAcctId)}</select></span></div>`:''}
@@ -13127,6 +13165,11 @@ function renderTxSheet(){
         if(n) n.focus();
         return;
       }
+      /* 'a' is the default and is stored by its ABSENCE - every figure that
+         reads owner does `t.owner||'a'`. Writing the string back would be
+         harmless today and a trap the first time something tests for the
+         property rather than the value. */
+      if(k==='owner'){ editTx(t.id,{owner: v==='a'?undefined:v}); renderTxSheet(); return; }
       editTx(t.id,{[k]:v});
       if(typeof toast==='function' && k==='amount') toast('Changed to '+money(parseFloat(el.value)||0)+'. Everything built on it moved with it.');
     });
@@ -14068,7 +14111,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · the name was two lines up in the photograph';
+const BUILD_STAMP='2026-09-13 · whose it is was a fact you could not change';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
