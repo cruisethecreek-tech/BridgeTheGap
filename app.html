@@ -11390,6 +11390,20 @@ function qlParseOcr(text){
      for something else and producing rows nobody can explain. */
   return hits ? qlDropBalances(out) : [];
 }
+/* Absence of a minus is NOT enough on its own to call something income, and the
+   real read proved it. The reader loses that character constantly: "$367.87"
+   for a SAMSCLUB purchase, "$41.00" for a kitchen shop, "-\u00a731.70" where the
+   dollar sign came back as a section mark so the minus never attached to
+   anything. Every one of those is money going out, and a rule reading only the
+   sign would have called all three income - turning a shopping trip into wages.
+
+   The chain settles direction wherever it reaches, and it reached all three of
+   those. This is only for what the chain cannot prove: the last row on a page,
+   and rows whose balance the reader mangled. There, the WORDS decide, because a
+   bank says what a line is - and it says it in the description, which survives
+   a photograph far better than a hyphen does. */
+const QL_IN_RX=/\b(deposit|payroll|direct dep|refund|rebate|dividend|interest paid|reimburs)/i;
+const QL_OUT_RX=/\b(withdrawal|purchase|payment|debit|fee|charge|transfer to)/i;
 /* ---------- the running-balance column ----------
    Reported with the statement beside the result: a page of Acorns withdrawals
    came back with every real amount PLUS a row for every running balance -
@@ -11444,7 +11458,7 @@ function qlDropBalances(rows){
        Where the arithmetic is silent, the printed sign gets to speak. It is the
        weaker witness, which is why it is only consulted second and only in a
        document that uses minus signs at all. */
-    else if(usesMinus && !r.neg) r.kind='income';
+    else if(usesMinus && !r.neg && QL_IN_RX.test(r.what) && !QL_OUT_RX.test(r.what)) r.kind='income';
     kept.push(r);
   });
   kept.forEach(r=>{ r.balancesDropped=bals.size; });
@@ -13621,7 +13635,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · the edge of a page is still a page';
+const BUILD_STAMP='2026-09-13 · the words decide where the arithmetic cannot';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
