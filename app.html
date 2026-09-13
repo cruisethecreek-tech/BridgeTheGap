@@ -1356,6 +1356,21 @@
     background:rgba(5,6,9,.78);border:1px solid rgba(255,255,255,.16);color:#fff;
     border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;
     max-width:86vw;text-align:center}
+  /* Quiet on purpose. This is the one surface in the app where the register
+     system does not reach, and it must not look like an alarm either: a person
+     reading this does not need the app raising its voice at them. */
+  .scan-bet{margin-top:12px;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.6;
+    background:var(--ink);border:1px solid var(--line);color:var(--text)}
+  .scan-bet .sb-flat{display:block;margin-top:7px;color:var(--muted)}
+  .scan-bet .sb-help{display:block;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--muted)}
+  .scan-bet .sb-help a{color:var(--accent);font-weight:800;white-space:nowrap}
+  .dr-min{flex-basis:100%;margin-top:7px;padding:8px 11px;border-radius:10px;font-size:12.5px;
+    line-height:1.55;background:var(--ink);border:1px solid var(--line);color:var(--muted)}
+  .dr-min b{color:var(--text)}
+  .debt-minnote{margin-top:10px;font-size:11.5px;line-height:1.55;color:var(--muted)}
+  .kept-note{margin-top:9px;font-size:11.5px;line-height:1.55;color:var(--muted)}
+  .kept-note b{color:var(--text)}
   .sync-live{margin-top:10px;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.5;
     background:var(--ink);border:1px solid var(--line);color:var(--muted)}
   .sync-live.on{border-color:rgba(53,201,154,.45);background:rgba(53,201,154,.08);color:var(--text)}
@@ -6350,6 +6365,34 @@ function debtDur(m){
   const y=Math.floor(m/12), mo=m%12;
   return (y?y+' yr'+(y>1?'s':''):'')+(y&&mo?' ':'')+(mo?mo+' mo':'')||'0 mo';
 }
+/* The number the whole credit card industry is built on nobody ever seeing.
+   Every input it needs is already on the row - balance, rate, minimum - and it
+   is run through the SAME simulator as the payoff plan, so this line can never
+   disagree with the date printed under it.
+
+   Every branch that cannot answer says which number is missing instead of
+   guessing one. A rate of 0 in this app means "not told yet", not "0% card", so
+   returning $0 of interest there would be a fabrication dressed as good news -
+   and it would be the good news that stops somebody entering the rate. */
+function minPayCost(d){
+  const bal=+d.balance||0, apr=+d.apr||0, min=+d.minPayment||0;
+  if(!(bal>0)) return null;
+  if(!(apr>0)) return {kind:'norate'};
+  if(!(min>0)) return {kind:'nomin'};
+  const monthlyInterest=bal*(apr/100/12);
+  if(min<=monthlyInterest+0.005) return {kind:'never', monthlyInterest};
+  const r=simulateDebts([{name:d.name||'this', balance:bal, apr, minPayment:min}], min, 'avalanche');
+  if(r.error||r.stalled) return {kind:'never', monthlyInterest};
+  return {kind:'ok', months:r.months, interest:Math.round(r.totalInterest*100)/100,
+          total:Math.round((bal+r.totalInterest)*100)/100, monthlyInterest};
+}
+function debtMinHTML(d){
+  const c=minPayCost(d); if(!c) return '';
+  if(c.kind==='norate') return `<b>Add the rate</b> and this line says what paying only the minimum costs you.`;
+  if(c.kind==='nomin')  return `<b>Add the minimum</b> and this line says what paying only it costs you.`;
+  if(c.kind==='never')  return `Paying only the <b>${usd(+d.minPayment||0)}</b> minimum, this <b>never clears</b>. Interest alone adds about <b>${usd(c.monthlyInterest)}</b> a month, which is more than the payment.`;
+  return `Paying only the <b>${usd(+d.minPayment||0)}</b> minimum: <b>${debtDur(c.months)}</b> and <b>${usd(c.interest)}</b> of interest. You would hand over <b>${usd(c.total)}</b> to clear <b>${usd(+d.balance||0)}</b>.`;
+}
 /* The "no rate set" caveat used to render only on the success path, so the
    stalled screens - the ones a beginner hits first - blamed interest without
    ever mentioning that no rate had been entered. */
@@ -6445,6 +6488,15 @@ function debtSumHTML(d){
    Two fixes in one: found by ANY field belonging to that debt, and only the
    derived summary is rewritten. The inputs are left alone, so a redraw on every
    keystroke cannot take the box out from under a thumb. */
+function debtMinLine(d){
+  const inner=debtMinHTML(d);
+  return `<div class="dr-min" data-drmin="${d.id}"${inner?'':' hidden'}>${inner}</div>`;
+}
+function redrawMinLine(d){
+  const el=document.querySelector('#debtList [data-drmin="'+d.id+'"]'); if(!el) return;
+  const inner=debtMinHTML(d);
+  el.innerHTML=inner; el.hidden=!inner;
+}
 function redrawRoomLine(d){
   const inp=document.querySelector('#debtList .debtrow input[data-debt="'+d.id+'"]');
   const row=inp&&inp.closest('.debtrow'); if(!row) return;
@@ -6637,8 +6689,12 @@ function renderDebt(){
       <label class="dr-f dr-kind"><select data-debtkind="${d.id}"><option value="">Kind?</option>${DEBT_KINDS.map(k=>`<option value="${k.k}"${d.kind===k.k?' selected':''}>${escapeHtml(k.label)}</option>`).join('')}</select></label>
       <button class="btn sm danger ghost" data-deldebt="${d.id}">✕</button>
       ${roomLine}
+      ${debtMinLine(d)}
     </div>`;
-  }).join('') : '<div class="empty" style="margin-top:10px">No debts yet. Add what you owe above, or import from your liabilities.</div>';
+  }).join('')
+    + (state.debts.map(d=>(minPayCost(d)||{}).kind).some(k=>k==='ok'||k==='never')
+        ? `<div class="debt-minnote">Those minimum lines hold the minimum where you typed it. Most cards set it as a percentage of the balance instead, so it shrinks as you pay down and the real answer is longer than the one above, never shorter.</div>` : '')
+    : '<div class="empty" style="margin-top:10px">No debts yet. Add what you owe above, or import from your liabilities.</div>';
   box.querySelectorAll('input[data-debt]').forEach(inp=>inp.addEventListener('input',()=>{
     const d=state.debts.find(x=>x.id===inp.dataset.debt); if(!d) return;
     const k=inp.dataset.k, v=parseFloat(inp.value)||0;
@@ -6650,7 +6706,7 @@ function renderDebt(){
       save(); renderDebtResults(); renderRoom(); redrawRoomLine(d);
       return;
     }
-    d[k]=v; save(); renderDebtResults();
+    d[k]=v; save(); renderDebtResults(); redrawMinLine(d);
     /* Any of these can move what the summary says: the balance against a limit
        or a value, and the rate through the signals below. Narrowing this to
        'balance' is what let the equity go stale in the first place. */
@@ -6819,7 +6875,7 @@ const RET_PRESETS=[
 ];
 function renderReturnPicker(){
   const box=document.getElementById('retPick'); if(!box) return;
-  const cur=state.investReturn||7;
+  const cur=investRet();
   box.innerHTML=RET_PRESETS.map(r=>`<button data-ret="${r.v}" class="${cur===r.v?'on':''}"><span class="rp-v">${r.v}%</span><span class="rp-t">${escapeHtml(r.t)}</span></button>`).join('');
   box.querySelectorAll('button[data-ret]').forEach(b=>b.addEventListener('click',()=>{
     state.investReturn=+b.dataset.ret; save();
@@ -6837,7 +6893,7 @@ function renderInvestCompare(){
   const ri=document.getElementById('investReturn'); if(ri&&document.activeElement!==ri) ri.value=state.investReturn||'';
   document.querySelectorAll('#investYears button').forEach(b=>b.classList.toggle('on',+b.dataset.y===(state.investYears||10)));
   if(!debts.length || budget<totalMin-0.01){ box.innerHTML='<div class="sub" style="margin-top:12px">Add your debts and a monthly amount above to see how paying down compares to investing.</div>'; return; }
-  const ret=state.investReturn||7, yrs=state.investYears||10, hz=yrs*12;
+  const ret=investRet(), yrs=state.investYears||10, hz=yrs*12;
   const c=investCompare(debts, budget, ret, hz), crushNet=c.crush.net, invNet=c.investFirst.net, diff=invNet-crushNet;
   /* Do not crown a winner over a rounding error. A $96 gap on $237,000 after
      ten years is a tie, and highlighting one card green tells someone a
@@ -11741,6 +11797,17 @@ const SCAN_GROUPS=[
   {g:'Put away',      emoji:'🌱', keep:true, w:PUT_AWAY_WORDS},
   {g:'Rent or mortgage', emoji:'🏠', w:['rent','mortgage','landlord','property mgmt','realty','housing']},
   {g:'Debt payments', emoji:'💳', w:['loan pmt','loan payment','card payment','cardmember','creditcard','credit card pmt','student loan','navient','nelnet','sallie','autopay loan','collections']},
+  /* Every name here is a bookmaker, a casino, a lottery or a sweepstakes site,
+     and nothing else is. Three deliberate omissions:
+
+     - Bare "bet". The word-boundary matcher would catch BET+ the streaming
+       service and file a TV subscription under gambling.
+     - Bare "caesars". Little Caesars is a pizza chain, and the sportsbook is
+       the one that has to be named in full.
+     - Crypto exchanges. Buying an asset badly is not placing a bet, and an app
+       that files Coinbase under gambling is making an editorial claim about
+       somebody's portfolio that it has no standing to make. */
+  {g:'Betting and gambling', emoji:'🎰', w:['casino','lottery','lotto','powerball','mega millions','scratch off','keno','sportsbook','wager','bookmaker','draftkings','fanduel','betmgm','caesars sportsbook','espn bet','fanatics betting','fanatics sportsbook','betrivers','pointsbet','bet365','bovada','mybookie','prizepicks','underdog fantasy','stake.com','chumba','luckyland','pulsz','betfair','ladbrokes','paddy power','william hill','sky bet','unibet','poker','slot machine','off track betting','racetrack','racebook']},
   {g:'Utilities',     emoji:'💡', w:['electric','hydro','power co','energy','gas co','water','sewer','utility','utilities','waste','trash']},
   {g:'Phone and internet', emoji:'📶', w:['verizon','at&t','att ','t-mobile','tmobile','sprint','rogers','bell','telus','comcast','xfinity','spectrum','cox','internet','broadband','wireless','mobile']},
   {g:'Insurance',     emoji:'🛡️', w:['insurance','geico','allstate','statefarm','state farm','progressive','aetna','cigna','anthem','premium']},
@@ -11770,6 +11837,7 @@ const SCAN_GROUPS=[
    not name" is a fact about the reading's own reliability, and hiding it would
    make every other percentage on the screen look more certain than it is. */
 const SCAN_OTHER={g:'Not recognised', emoji:'❓', other:true};
+const BET_GROUP='Betting and gambling';
 /* Matched on WORD BOUNDARIES, not on bare substring, and the first draft is
    why: `includes('etf')` filed NETFLIX.COM under Put away, because n-ETF-lix
    contains it. A subscription reported as retirement saving is not a cosmetic
@@ -11859,7 +11927,17 @@ function scanRead(records){
   const drips=spendGroups.filter(g=>!g.other && g.n>=4)
     .map(g=>({...g, avg:Math.round(g.amt/g.n*100)/100}))
     .sort((a,b)=>b.amt-a.amt);
+  const bet=spendGroups.find(g=>g.g===BET_GROUP)||null;
+  const betPct = bet && spent>0 ? Math.round(bet.amt/spent*1000)/10 : 0;
+  /* Deliberately gated. The bucket row above always shows the figure, whatever
+     it is - that is just arithmetic. THIS block carries a helpline, and putting
+     a helpline under an $8 scratch card is the kind of scolding that makes a
+     person close the app and never scan anything again. It needs a floor and
+     either a pattern (the same 4-charge test the drip already uses) or real
+     weight against everything else on the pages. */
+  const betLoud = !!(bet && bet.amt>=100 && (bet.n>=4 || betPct>=10));
   return { spent, putAway, inAmt, count:rows.length, outCount:out.length, spendCount:spend.length,
+           bet, betPct, betLoud,
            keptCount:kept.length, inCount:income.length,
            groups, spendGroups, drips,
            unnamed:rows.filter(r=>r.unnamed).length,
@@ -11981,6 +12059,11 @@ function renderScanOut(){
         <span class="sg-bar"><i class="${g.keep?'sg-keep':''}" style="width:${Math.max(2,Math.min(100,pct(g.amt)))}%"></i></span>
       </div>`).join('')}</div>
     ${R.drips.length?`<div class="scan-drip"><b>The drip.</b> This is the part a statement physically cannot show you, because it spreads it over ${scanResult.pages} page${scanResult.pages>1?'s':''}: ${R.drips.slice(0,3).map(d=>`<b>${escapeHtml(d.g.toLowerCase())}</b> came to <b>${usd(d.amt)}</b> across <b>${d.n}</b> separate charges, ${usd(d.avg)} at a time`).join('; ')}. Nobody adds those up by eye, which is exactly why they are the easiest money in your life to move.</div>`:''}
+    ${R.betLoud?`<div class="scan-bet">
+      <b>Betting.</b> <b>${usd(R.bet.amt)}</b> across <b>${R.bet.n}</b> separate charges${R.bet.n>1?`, ${usd(Math.round(R.bet.amt/R.bet.n*100)/100)} at a time`:''} - <b>${R.betPct}%</b> of what you spent on these pages${hrs(R.bet.amt)}.
+      <span class="sb-flat">That is the number and nothing else. No verdict: this app does not know your life, and ${R.bet.n} rows spread over ${scanResult.pages} page${scanResult.pages>1?'s':''} is simply not a total anybody adds up by eye.</span>
+      <span class="sb-help">If it is bigger than you thought it was, that is worth something on its own. <a href="tel:18004262537">1-800-GAMBLER</a> is free, confidential and open all night, in the US.</span>
+    </div>`:''}
     <div class="scan-caveat"><b>What this is:</b> a reading of ${scanResult.pages} photograph${scanResult.pages>1?'s':''}, not your ledger. It is <b>not</b> in Track, it is not in your net worth, and it has not changed a single figure anywhere else in this app. A reader misreads - ${R.unnamed?`<b>${R.unnamed}</b> amount${R.unnamed===1?'':'s'} came off with no name attached, and `:''}${R.unknownPct>0?`<b>${R.unknownPct}%</b> of it landed in <b>Not recognised</b> because the merchant name meant nothing to me - `:''}check it against the pages before you believe any of it.
       <details class="scan-raw"><summary>Show me what it actually read</summary><pre>${escapeHtml(scanResult.text.slice(0,6000))}</pre></details>
     </div>
@@ -13737,7 +13820,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · the picture says it before a word is read';
+const BUILD_STAMP='2026-09-13 · three numbers it always had and never said';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -14474,6 +14557,36 @@ const TRAPS=[
   {v:'tool', icon:'', label:'Not a trap', sub:'It replaces a cost you already carry', tool:true,
    pick:'none of these - it replaces something I already pay for, in money or in hours'}
 ];
+/* The mirror of fmtLife. That one prices a purchase in hours already worked;
+   this one prices it in the years it would have bought if left alone.
+
+   It runs on a REAL return - the expected return less inflation - and every
+   retirement calculator that does not is quietly lying, because $1,523 in 2056
+   does not buy what $1,523 buys today and showing the bigger number makes the
+   argument look stronger than it is. Today's money is the only money a person
+   can actually picture, so that is what this answers in. */
+const KEPT_YEARS=30, KEPT_INFL=3;
+/* `state.investReturn||7` treats a deliberate 0 as unset. The box sets 0 when
+   it is cleared, so somebody who answers "none" gets the answer for 7%. */
+function investRet(){ const r=+state.investReturn; return isFinite(r)&&r>=0 ? r : 7; }
+function keptRate(){ return Math.max(0, investRet() - KEPT_INFL)/100; }
+function keptGrowsTo(amount, years){
+  const a=+amount||0; if(!(a>0)) return 0;
+  return Math.round(a*Math.pow(1+keptRate(), years||KEPT_YEARS));
+}
+/* Only worth a tile when it says something the price does not. A zero real
+   return makes it the price again, and a figure that just repeats the one
+   beside it is noise wearing a label. */
+function keptMetric(amount){
+  const a=+amount||0; if(!(a>0) || keptRate()<=0) return null;
+  const g=keptGrowsTo(a);
+  if(g<=a*1.2) return null;
+  return ['If kept '+KEPT_YEARS+' yrs', usd(g)];
+}
+function keptNoteHTML(amount){
+  const m=keptMetric(amount); if(!m) return '';
+  return `<div class="kept-note">“If kept ${KEPT_YEARS} yrs” is this same money invested and left alone at <b>${investRet()}%</b> a year less <b>${KEPT_INFL}%</b> inflation, so it is written in today's money - what it would buy, not what it would say on a statement. Change the rate in <b>Invest</b>. It is arithmetic on your own number, not a forecast and not advice.</div>`;
+}
 /* The payback engine. Everything converts to a YEAR, because that is the unit a
    tool is actually judged in, and because a season of leaves is a yearly thing
    however you phrase it. */
@@ -17034,6 +17147,7 @@ function renderToolResult(){
   if(pb.hoursYear>0) metrics.push(['Hours it gives back a year', fmtHours(pb.hoursYear)]);
   if(displaces) metrics.push(['Pays for itself in', fmtPayback(pb.years)]);
   if(displaces) metrics.push(['Five-year net', (pb.fiveYear>=0?'+':'')+money(pb.fiveYear)]);
+  if(!displaces){ const km=keptMetric(amt); if(km) metrics.push(km); }
 
   let head, body, honest;
   if(!displaces){
@@ -17069,6 +17183,7 @@ function renderToolResult(){
       <div class="meter-lbl"><span class="cl">&#9668; Freedom</span><span>${displaces?'Payback':'Trap pull'}</span><span class="fr">Trap &#9658;</span></div>
       <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:${displaces?'rgb(var(--good-rgb))':'var(--accent-2)'}"></div></div>
       <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
+      ${displaces?'':keptNoteHTML(amt)}
       <div class="tool-honest">${honest}</div>
       ${whyReminderHTML()}
       <div class="check-actions">
@@ -17101,6 +17216,7 @@ function renderCheckResult(){
   }
   if(NW>0) metrics.push(['Of your net worth', Math.round(amt/NW*100)+'%']);
   metrics.push(['Traps to fund '+money(500), Math.max(1,Math.round(500/amt))+'×']);
+  const keptM=keptMetric(amt); if(keptM) metrics.push(keptM);
 
   const tline=pickTrapVoiceCtx(trap,name);
   const hook=H>0?` That's <b>${fmtHours(amt/H)}</b> of your life.`:'';
@@ -17123,6 +17239,7 @@ function renderCheckResult(){
       <div class="meter-lbl"><span class="cl">◄ Freedom</span><span>Trap pull</span><span class="fr">Trap ►</span></div>
       <div class="meter"><div class="mid"></div><div class="needle" style="left:${left}%;background:var(--accent-2)"></div></div>
       <div class="metrics">${metrics.map(m=>`<div class="metric"><div class="k">${escapeHtml(m[0])}</div><div class="v">${escapeHtml(String(m[1]))}</div></div>`).join('')}</div>
+      ${keptNoteHTML(amt)}
       <div class="qline">${escapeHtml(q)}</div>
       ${whyReminderHTML()}
       ${lessonNoteHTML(amt)}
