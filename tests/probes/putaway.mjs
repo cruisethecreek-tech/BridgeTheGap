@@ -1,109 +1,160 @@
+/* "Is this a fair assessment? I wasn't given an option to show I'm putting this
+   away in investment when I did a bulk upload."
+
+   It was not fair, and the reason is a fix this file already made once and only
+   applied to one of the two ways in. qlCatOptions carries the reason in its own
+   comment:
+
+     "Every line in here was hard-coded type:'expense', and the only list on
+      offer was places money GOES. So a person who moved $145 into savings had
+      nowhere to put it - the app would either refuse the entry or record their
+      best month as a purchase... which left the whole screen reading as an
+      accusation."
+
+   The quick log learned that. commitImport never did. Every outgoing row it
+   imported was hard-coded type:'expense', and both of the cards the owner was
+   looking at - "You spent more than came in" and "You are on pace to go over" -
+   are built on monthExpense. So a month of investing came back as a month of
+   overspending, with the arithmetic shown underneath to prove it.
+
+   Nothing here checks that the cards are kind. They are allowed to be harsh;
+   the app is called Accountability. What they are not allowed to be is wrong
+   about what a number IS. */
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
-/* "So all of these did not land in investing for acorns. Should I delete the
-   investing category? And if it didn't land there where did it go?"
-   Nowhere visible. "Put away" sat in the same dropdown as the categories, so it
-   was picked INSTEAD of one, and the entry carried no category at all. Two
-   different questions - which pool, and did the money leave you - in one list
-   that could only answer one of them. */
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
-const pg=await b.newPage({viewport:{width:390,height:900}});
-const errs=[]; pg.on('pageerror',e=>errs.push(String(e)));
-await pg.goto('file://'+process.cwd()+'/app.html');
-/* his shape exactly: Acorns is a leaf under an Investing group */
-await pg.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),
- {onboarded:true, mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'full',activeMonth:'2026-09',hourlyWage:70,
-  categories:[{id:'inv',name:'Investing',growth:'invest'},
-              {id:'ac',name:'Acorns',parentId:'inv'},
-              {id:'st',name:'Stash',parentId:'inv'},
-              {id:'food',name:'Food'}],
-  budgets:{'2026-09':{ac:300,food:400}},
-  accounts:[{id:'a1',name:'Chequing',kind:'checking',balance:5000,updated:'2026-09-01'}],
-  transactions:[
-    /* the twelve that went in with no category */
-    ...[43.40,43.40,40.60,17.90,5.40,5.40,5.00,7.80,45.80,22.50,200,25]
-      .map((a,i)=>({id:'p'+i,type:'invest',amount:a,source:'ACH Withdrawal / Acorns',date:'2026-09-04',ikind:'holds'}))]});
-await pg.reload(); await pg.waitForTimeout(1500);
-const R=[]; const ok=(n,v,d)=>R.push([n,!!v,d]);
+const p=await b.newPage({viewport:{width:390,height:900}});
+const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
+await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 
-/* 1. the leaf inherits its group, which is why "Acorns" alone looked ordinary */
-const inh=await pg.evaluate(()=>({
-  acorns:growthOf((state.categories||[]).find(c=>c.id==='ac')),
-  puts:catPutsAway((state.categories||[]).find(c=>c.id==='ac')),
-  food:growthOf((state.categories||[]).find(c=>c.id==='food'))}));
-ok('a category under Investing counts as investing, without being told twice',
-   inh.acorns==='invest' && inh.puts===true, JSON.stringify(inh));
-ok('...and an ordinary category is left alone', inh.food==='', JSON.stringify(inh));
+const SEED=()=>({onboarded:true,mindOff:true,uiMode:'all',stageReached:3,guidesOff:true,sayMode:'brief',
+  activeMonth:'2026-09',hourlyWage:70,
+  categories:[{id:'c1',name:'Roof'},{id:'c2',name:'Investing',growth:'invest'}],
+  budgets:{'2026-09':{c1:5000}},
+  transactions:[{id:'i1',type:'income',amount:4760.28,source:'Pay',date:'2026-09-04'}],
+  accounts:[],assets:[],liabilities:[],goals:[],recurring:[],impulse:[],debts:[],
+  diary:[],intake:{},lessons:[],vault:[]});
+const load=async()=>{ await p.evaluate(s=>localStorage.setItem('unfiltered_budget_v2',JSON.stringify(s)),SEED());
+  await p.reload(); await p.waitForTimeout(1600); };
 
-/* 2. where the money actually went, before the repair */
-const before=await pg.evaluate(()=>({
-  stranded:strandedPutAways('2026-09').length,
-  onPlan:catUsed('ac','2026-09'),
-  inNetWorth:typeof sumAssetsKind==='function'}));
-ok('the entries were real, and none of them reached the Plan line',
-   before.stranded===12 && before.onPlan===0, JSON.stringify(before));
+/* the owner's own split: $6,787.68 out, of which $1,470.68 was never spending */
+const ROWS=[
+  {keep:true,type:'expense',amt:5317.00,date:'2026-09-05',desc:'Rent and the rest',cat:'c1'},
+  {keep:true,type:'expense',amt:1000.00,date:'2026-09-06',desc:'Fidelity',cat:'__invest'},
+  {keep:true,type:'expense',amt:470.68,date:'2026-09-07',desc:'Acorns',cat:'c2'}];
 
-/* 3. the offer to file them, where the money lives */
-const offer=await pg.evaluate(async ()=>{
-  const w=ms=>new Promise(r=>setTimeout(r,ms));
-  activateTab('budget'); await w(600);
-  const box=document.querySelector('#view-budget .stranded');
-  return {shown:!!box, text:box?box.innerText.replace(/\s+/g,' ').slice(0,120):'',
-    opts:[...document.querySelectorAll('#strandedCat option')].map(o=>o.textContent)};
-});
-ok('Plan says how many are unfiled and what they add up to',
-   offer.shown && /12 put-away entries have no category/.test(offer.text) && /\$462\.20/.test(offer.text),
-   offer.text);
-ok('...offering only the categories money can be put away into',
-   offer.opts.some(o=>/Acorns/.test(o)) && !offer.opts.some(o=>/Food/.test(o)), JSON.stringify(offer.opts));
-ok('...naming the group so two "Acorns" could be told apart',
-   offer.opts.some(o=>/Investing \/ Acorns/.test(o)), JSON.stringify(offer.opts));
+await load();
+const offered=await p.evaluate(async ROWS=>{
+  const w=m=>new Promise(x=>setTimeout(x,m));
+  activateTab('tx'); await w(600);
+  importRows=ROWS.map(r=>({...r}));
+  renderImportReview(); await w(400);
+  const sels=[...document.querySelectorAll('#importReview select[data-ic]')];
+  return { rows:sels.length,
+    /* the option the bulk upload never had */
+    everyRowOffersIt: sels.length>0 && sels.every(s=>[...s.options].some(o=>o.value==='__invest')),
+    label: sels.length?([...sels[0].options].find(o=>o.value==='__invest')||{}).text:'',
+    /* and a row already marked keeps its mark through a redraw */
+    keepsTheMark: sels.length>1 && sels[1].value==='__invest' };
+},ROWS);
 
-/* 4. one tap files them all */
-const after=await pg.evaluate(async ()=>{
-  const w=ms=>new Promise(r=>setTimeout(r,ms));
-  document.getElementById('strandedCat').value='ac';
-  document.getElementById('strandedGo').click(); await w(600);
-  return {stranded:strandedPutAways('2026-09').length,
-    onPlan:Math.round(catUsed('ac','2026-09')*100)/100,
-    parent:Math.round(catUsed('inv','2026-09')*100)/100,
-    spentNotInvested:Math.round(catSpent('ac','2026-09')*100)/100,
-    gone:!document.querySelector('#view-budget .stranded')};
-});
-ok('one tap files every one of them', after.stranded===0, String(after.stranded));
-ok('...and the money lands on the Acorns line', after.onPlan===462.20, String(after.onPlan));
-ok('...rolling up into Investing, like money does', after.parent===462.20, String(after.parent));
-ok('...counted as put away, never as spending', after.spentNotInvested===0, String(after.spentNotInvested));
-ok('...and the offer stops once there is nothing left to file', after.gone===true);
-
-/* 5. and from now on, picking Acorns just does the right thing */
-const fresh=await pg.evaluate(async ()=>{
-  const w=ms=>new Promise(r=>setTimeout(r,ms));
-  const n=state.transactions.length;
-  /* what the quick log does with a row categorised to Acorns */
-  const cat=(state.categories||[]).find(c=>c.id==='ac');
-  const isPut=catPutsAway(cat);
-  state.transactions.push({id:'new1',type:isPut?'invest':'expense',amount:50,catId:'ac',
-                           source:'Acorns',date:'2026-09-04',ikind:'holds'});
-  save(); await w(200);
-  const t=state.transactions.find(x=>x.id==='new1');
-  return {type:t.type, catId:t.catId, onPlan:Math.round(catUsed('ac','2026-09')*100)/100};
-});
-ok('a new entry categorised to Acorns is recorded as a put-away, in Acorns',
-   fresh.type==='invest' && fresh.catId==='ac', JSON.stringify(fresh));
-ok('...and shows on the Plan line straight away', fresh.onPlan===512.20, String(fresh.onPlan));
-
-/* 6. nothing is counted twice */
-const dup=await pg.evaluate(()=>{
+const committed=await p.evaluate(async ROWS=>{
+  const w=m=>new Promise(x=>setTimeout(x,m));
+  importRows=ROWS.map(r=>({...r}));
+  commitImport(); await w(500);
   const M='2026-09';
-  const invest=txnsInMonth(M).filter(t=>t.type==='invest').reduce((s,t)=>s+t.amount,0);
-  const expense=txnsInMonth(M).filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  return {invest:Math.round(invest*100)/100, expense, used:Math.round(catUsed('ac',M)*100)/100};
-});
-ok('nothing is double counted - it is one entry wearing one hat',
-   dup.invest===512.20 && dup.expense===0, JSON.stringify(dup));
+  const t=state.transactions;
+  return {
+    spent:Math.round(monthExpense(M)*100)/100,
+    invested:Math.round(monthInvested(M)*100)/100,
+    /* put away is still yours, so net worth has to know */
+    netWorth:Math.round(netWorth()*100)/100,
+    kinds:t.filter(x=>x.type!=='income').map(x=>x.type).sort().join(','),
+    /* the one filed under a category the user marked as investing decided its
+       own verb, without being picked twice */
+    byCategory:t.some(x=>x.type==='invest' && x.catId==='c2' && Math.abs(x.amount-470.68)<0.005),
+    byOption:t.some(x=>x.type==='invest' && Math.abs(x.amount-1000)<0.005),
+    msg:(document.getElementById('importReview')||{innerText:''}).innerText.replace(/\s+/g,' ').trim()
+  };
+},ROWS);
 
-R.forEach(([n,p,d])=>{ if(!p) console.log('FAIL: '+n+(d?'  <'+d+'>':'')); });
-const bad=R.filter(x=>!x[1]).length;
-console.log(`${R.length-bad} of ${R.length} hold`);
-console.log('page errors: '+(errs.length?errs.slice(0,2).join(' | '):'none'));
-await b.close(); process.exit(bad||errs.length?1:0);
+/* what the two cards say once the same money is filed for what it is */
+const cards=await p.evaluate(()=>{
+  const strip=h=>String(h||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  const kept=REPORT_SIGNALS.find(c=>c.k==='kept');
+  const r=kept.run();
+  return { title:r.t, body:strip(r.body), work:strip(r.work) };
+});
+
+/* the same three rows the old way: everything is spending */
+const oldWay=await p.evaluate(async ROWS=>{
+  const w=m=>new Promise(x=>setTimeout(x,m));
+  localStorage.setItem('unfiltered_budget_v2',JSON.stringify({...JSON.parse(localStorage.getItem('unfiltered_budget_v2')),
+    transactions:[{id:'i1',type:'income',amount:4760.28,source:'Pay',date:'2026-09-04'}],assets:[]}));
+  location.reload();
+  return true;
+},ROWS);
+await p.waitForTimeout(1700);
+const asExpense=await p.evaluate(async ROWS=>{
+  const w=m=>new Promise(x=>setTimeout(x,m));
+  importRows=ROWS.map(r=>({...r, cat:'c1'}));   // all three filed as ordinary spending
+  commitImport(); await w(500);
+  const strip=h=>String(h||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  const r=REPORT_SIGNALS.find(c=>c.k==='kept').run();
+  return { spent:Math.round(monthExpense('2026-09')*100)/100, work:strip(r.work), body:strip(r.body) };
+},ROWS);
+
+/* a month that goes negative WHILE money is put away says so, because the
+   good-month branch always did and the bad-month branch is the one that reads
+   as an accusation */
+const negative=await p.evaluate(()=>{
+  state.transactions=[{id:'i1',type:'income',amount:1000,source:'Pay',date:'2026-09-04'},
+                      {id:'e1',type:'expense',amount:1500,catId:'c1',date:'2026-09-05'},
+                      {id:'v1',type:'invest',amount:400,source:'Acorns',date:'2026-09-06',ikind:'holds'}];
+  const strip=h=>String(h||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  const r=REPORT_SIGNALS.find(c=>c.k==='kept').run();
+  const out={ title:r.t, body:strip(r.body) };
+  /* and a negative month with nothing put away says nothing extra */
+  state.transactions=state.transactions.filter(t=>t.type!=='invest');
+  out.quiet=strip(REPORT_SIGNALS.find(c=>c.k==='kept').run().body);
+  return out;
+});
+
+await b.close();
+
+const T=[
+  ['every outgoing row in a bulk upload can now be marked as put away',
+   offered.everyRowOffersIt===true && offered.rows===3, JSON.stringify(offered)],
+  ['...named the same way the quick log names it',
+   /Put away/.test(offered.label), offered.label],
+  ['...and a row already marked stays marked through a redraw',
+   offered.keepsTheMark===true, String(offered.keepsTheMark)],
+
+  ['importing them records put-aways rather than purchases',
+   committed.invested===1470.68 && committed.spent===5317, JSON.stringify(committed).slice(0,120)],
+  ['...one from the option, one from a category already marked as investing',
+   committed.byOption===true && committed.byCategory===true,
+   JSON.stringify({opt:committed.byOption, cat:committed.byCategory})],
+  ['...and net worth knows, because the money is still yours',
+   committed.netWorth===1470.68, String(committed.netWorth)],
+  ['...and the confirmation says which part was not spending',
+   /put away, not spent/.test(committed.msg) && /1,470\.68/.test(committed.msg),
+   committed.msg.slice(0,120)],
+
+  ['the month card is then working from what was actually spent',
+   /5,317/.test(cards.work) && !/6,787/.test(cards.work), cards.work],
+  ['...the same three rows filed as spending give the harsher figure, as they should',
+   asExpense.spent===6787.68 && /6,787/.test(asExpense.work), asExpense.work],
+  ['...so the difference between the two readings is the whole of the put-aways',
+   Math.abs((asExpense.spent-committed.spent)-1470.68)<0.02,
+   JSON.stringify({asExpense:asExpense.spent, committed:committed.spent})],
+
+  ['a negative month names what was put away, which is not part of the gap',
+   /put away/.test(negative.body) && /not in the figure above/.test(negative.body),
+   negative.body.slice(0,160)],
+  ['...and a negative month with nothing put away says nothing extra',
+   !/put away/.test(negative.quiet), negative.quiet.slice(0,120)],
+];
+let bad=0; for(const [n,ok,d] of T){ if(!ok) bad++; console.log(`${ok?'ok  ':'FAIL'}  ${n}${ok?'':'\n        '+d}`); }
+console.log(`\n${T.length-bad} of ${T.length} hold`);
+console.log('page errors:', errs.length?[...new Set(errs)].join(' | '):'none');
+process.exit(bad?1:0);
