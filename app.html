@@ -1402,6 +1402,10 @@
      headline stays, the figures wait. A collapsed details is out of innerText,
      which is exactly what the arrival count measures and exactly what it is
      supposed to mean - nobody is reading it until they ask. */
+  .cc-head{margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line);
+    font-size:13px;font-weight:900;color:var(--text)}
+  .cc-head .cc-sub{display:block;margin-top:3px;font-size:11.5px;font-weight:600;
+    line-height:1.5;color:var(--muted)}
   .dr-fold{margin-top:6px}
   .dr-fold>summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--accent);list-style:none}
   .dr-fold>summary::-webkit-details-marker{display:none}
@@ -14244,7 +14248,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-14 · money put away is not money spent, on every way in';
+const BUILD_STAMP='2026-09-14 · a list with no heading borrows the one above it';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -20510,7 +20514,7 @@ function renderBreakdown(){
 const TREND_SERIES=[
   {k:'spent',  label:'Spending',  color:'#e0663c', from:'ledger',
    val:m=>monthExpense(m), note:'What went out each month.'},
-  {k:'invest', label:'Investing', color:'#35c99a', from:'ledger',
+  {k:'invest', label:'Investing', color:'#35c99a', from:'ledger', cumulative:true,
    val:m=>investedUpTo(m), note:'Everything you have put away, adding up as it goes.'},
   {k:'bank',   label:'In the bank', color:'#5b9bd5', from:'snap', field:'bank',
    note:'What your accounts said at each month end.'},
@@ -20561,8 +20565,16 @@ function trendRead(S,pts,i){
     const kind = S.k==='invest' ? 'invest' : S.k==='spent' ? 'expense' : null;
     const rows=kind?list.filter(t=>t.type===kind):list;
     const big=rows.slice().sort((a,b)=>b.amount-a.amount)[0];
-    const bits=[`${rows.length} entr${rows.length===1?'y':'ies'} behind it`];
-    if(big) bits.push(`biggest: ${escapeHtml(kind==='expense'?(catName(big.catId)||big.note||'Uncategorized'):(big.source||big.note||'Entry'))} ${money(big.amount)}`);
+    /* "Behind it" is only true of a figure that IS this month. A running total
+       is behind by everything before it too, so the entries describe the MOVE
+       and say that they do - otherwise the count reads as an account of the
+       headline and quietly fails to add up to it. */
+    const all = S.cumulative
+      ? state.transactions.filter(t=>t.type===kind && monthOf(t.date)<=p.m).length : 0;
+    const bits=[ S.cumulative
+      ? `${rows.length} entr${rows.length===1?'y':'ies'} added it this month, ${all} in all`
+      : `${rows.length} entr${rows.length===1?'y':'ies'} behind it` ];
+    if(big) bits.push(`biggest ${S.cumulative?'this month':''}: ${escapeHtml(kind==='expense'?(catName(big.catId)||big.note||'Uncategorized'):(big.source||big.note||'Entry'))} ${money(big.amount)}`.replace('biggest :','biggest:'));
     out+=`<span class="cr-bits">${bits.join(' &middot; ')}</span>`;
   }
   /* "Up $794 since July" was true and useless: it could be one account up
@@ -20617,7 +20629,8 @@ function renderCharts(){
   if(uncat>0) rows.push({name:'Uncategorized',val:uncat});
   const total=rows.reduce((s,r)=>s+r.val,0), maxV=Math.max(1,...rows.map(r=>r.val));
   const cc=document.getElementById('catChart');
-  if(cc) cc.innerHTML=rows.length?rows.map(r=>`<div class="cbar"><span class="lab">${escapeHtml(r.name)}</span><span class="track"><span class="fill" style="width:${Math.max(3,r.val/maxV*100)}%"></span></span><span class="val">${money(r.val)}<br><small style="color:var(--muted);font-weight:600">${Math.round(r.val/total*100)}%</small></span></div>`).join(''):`<div class="empty">No spending logged for ${fmtMonth(M)} yet.</div>`;
+  const ccHead=`<div class="cc-head">Spent in ${escapeHtml(fmtMonth(M))}, biggest first<span class="cc-sub">Every category you spent in. This is spending - it is not the line above it.</span></div>`;
+  if(cc) cc.innerHTML=ccHead+(rows.length?rows.map(r=>`<div class="cbar"><span class="lab">${escapeHtml(r.name)}</span><span class="track"><span class="fill" style="width:${Math.max(3,r.val/maxV*100)}%"></span></span><span class="val">${money(r.val)}<br><small style="color:var(--muted);font-weight:600">${Math.round(r.val/total*100)}%</small></span></div>`).join(''):`<div class="empty">No spending logged for ${fmtMonth(M)} yet.</div>`);
   // income vs expense, last 6 months
   const months=last6Months(), data=months.map(m=>({m,inc:monthIncome(m),exp:monthExpense(m)}));
   const maxM=Math.max(1,...data.map(d=>Math.max(d.inc,d.exp)));
