@@ -30,7 +30,24 @@
 
    The rule underneath 3 is the one worth keeping: a box that cannot read what
    is in it writes NOTHING. Half-typed is the normal state of a field somebody
-   is still typing in. */
+   is still typing in.
+
+   SECOND PASS, from a screen recording. The first fix made the box
+   type="text" inputmode="decimal", and that was still wrong on the reporter's
+   own phone: the number pad opened - "1 2 3 ( ) , / 4 5 6 + - ; / 7 8 9 / N",
+   the calculator keys right there on it - and the next tap in the same field
+   replaced the whole thing with QWERTY. inputmode is a HINT. SwiftKey honours
+   it on first focus and then falls back to the element's type, and the type
+   said text, so it offered letters for a budget amount.
+
+   type="tel" is not a hint. No keyboard can answer it with letters, and its
+   value is still a free-form string, so a sum survives in it where a
+   type="number" box would have reported "" and had a zero written over the
+   plan. inputmode="decimal" stays for iOS, which honours it and adds the
+   decimal point the phone pad does not have.
+
+   So the check is not "does it ask for a numeric keypad" - the old box did
+   that too. It is "can the keyboard refuse". */
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const p=await b.newPage({viewport:{width:390,height:900}});
@@ -78,7 +95,10 @@ const field=await p.evaluate(async()=>{
   o.emptyWhenUnassigned = din.value==='';
   o.placeholderIsZero   = din.placeholder==='0';
   o.assignedShowsFigure = wal.value==='250';
+  /* Not a hint the keyboard is free to walk back on the second tap. */
+  o.typeIsNotText       = din.type==='tel';
   o.stillNumericPad     = din.inputMode==='decimal';
+  o.notANumberInput     = din.type!=='number';
 
   /* 4. the row does not change height when a figure lands in it */
   const h=id=>Math.round(document.querySelector('#cats [data-row="'+id+'"]').getBoundingClientRect().height);
@@ -203,8 +223,12 @@ const T=[
    field.emptyWhenUnassigned===true && field.placeholderIsZero===true,
    JSON.stringify({v:field.emptyWhenUnassigned,ph:field.placeholderIsZero})],
   ['...one that has money shows it', field.assignedShowsFigure===true, String(field.assignedShowsFigure)],
-  ['...and the phone still raises a number pad over it', field.stillNumericPad===true,
-   String(field.stillNumericPad)],
+  ['...and the keyboard it raises cannot fall back to letters on the next tap',
+   field.typeIsNotText===true, 'type='+String(field.typeIsNotText)],
+  ['...with the decimal point iOS only offers when asked',
+   field.stillNumericPad===true, String(field.stillNumericPad)],
+  ['...and it is still not the number input that ate the sum',
+   field.notANumberInput===true, String(field.notANumberInput)],
 
   ['every row is the same height whether or not it has a figure in it',
    field.heightsEvenBefore===true, String(field.heightsEvenBefore)],

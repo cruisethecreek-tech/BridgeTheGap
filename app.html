@@ -10762,7 +10762,7 @@ function renderBudget(){
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
         <span class="rw-money">${
-          view==='planned' ? `<span class="sub-assign${noHint}"><span class="sa-row">$<input type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="next" value="${amtBox(own)}" placeholder="0" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
+          view==='planned' ? `<span class="sub-assign${noHint}"><span class="sa-row">$<input type="tel" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="next" value="${amtBox(own)}" placeholder="0" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
           : `<span class="sub-spent${sp>a&&a>0?' over':''}${noHint}" title="What has gone"><span class="rw-fig">${money(sp)}</span>${leftHint}</span>`
         }</span>
       </div>`;
@@ -11052,7 +11052,7 @@ function renderCatSheet(){
     </div>
     ${!isGroup?`<div class="ufld cs-assign">
         <span class="fl-k">Assign<span id="${aid}Unit"></span></span>
-        <span class="fl-in">$<input type="text" id="${aid}" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="0" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <span class="fl-in">$<input type="tel" id="${aid}" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="0" aria-label="Assign to ${escapeHtml(c.name)}"></span>
         <div class="unit-work" id="${aid}W"></div>
       </div>
       ${rateBuilderHTML(c)}`
@@ -17663,7 +17663,7 @@ function wireUnitField(o){
        gets back whatever is actually stored, rather than being left holding
        "1200+" - which reads as a figure nobody set. */
     inp.addEventListener('blur',()=>{
-      if(inp.type!=='text') return;
+      if(inp.type==='number') return;      // a number input never holds a sum to finish
       const r=read();
       if(r.ok && r.hasOp) inp.value=amtBox(Math.max(0,r.value));
       else if(!r.ok) fill();          // defined below; this runs long after

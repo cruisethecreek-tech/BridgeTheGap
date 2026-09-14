@@ -311,7 +311,7 @@ const c = await p.evaluate(() => {
   const sum=type('1200+0.83');
   const midSum=(()=>{ type('1200.83'); return type('1200+'); })();   // unfinished: nothing written
   type('1200');
-  return { ltb, mode:box.inputMode, cents, sum, midSum,
+  return { ltb, mode:box.inputMode, kind:box.type, cents, sum, midSum,
            zeroVerdict: /Zero-based\. Every dollar has a job/.test(t),
            fortyCents: usd(0.4), negForty: usd(-0.4), whole: usd(4700), mixed: usd(1200.5) };
 });
@@ -324,6 +324,8 @@ check('   ...and they add up, because the phone pad has a + on it', 1200.83, c.s
 check('   ...while a half-typed sum leaves the figure alone rather than zeroing it', 1200.83, c.midSum,
       '"1200+" is unfinished, not nothing');
 check('   ...with a decimal keypad on a phone', 'decimal', c.mode);
+check('   ...that the keyboard cannot answer with letters instead', 'tel', c.kind,
+      'inputmode is a hint - SwiftKey honoured it once and then fell back to type="text" and offered QWERTY');
 check('forty cents prints as forty cents', '$0.40', c.fortyCents, 'it printed "$0.4"');
 check('   ...negative too', '-$0.40', c.negForty);
 check('whole dollars stay clean', '$4,700', c.whole, 'no pointless .00 everywhere');
