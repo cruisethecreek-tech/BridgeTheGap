@@ -85,7 +85,20 @@ drop trigger if exists trg_prune_vault_versions on public.vault_versions;
 create trigger trg_prune_vault_versions
   after insert on public.vault_versions
   for each row execute function public.prune_vault_versions();
+
+-- Supabase publishes every function in the public schema as a REST endpoint, so
+-- without this the line above leaves /rest/v1/rpc/prune_vault_versions callable
+-- by anyone - signed in or not - running as the DEFINER. It only ever needs to
+-- be fired by the trigger above, and Postgres checks EXECUTE when a trigger is
+-- CREATED rather than when it fires, so revoking here costs the trigger nothing.
+revoke execute on function public.prune_vault_versions() from public;
+revoke execute on function public.prune_vault_versions() from anon;
+revoke execute on function public.prune_vault_versions() from authenticated;
 ```
+
+Run Supabase's own security advisor afterwards (Dashboard, Advisors, Security).
+Without those three revokes it reports two WARNs against this function, which is
+how they were found.
 
 **Why this exists.** The push is an `upsert` - it overwrites the one row, and
 what was there is gone. This app has already shipped a merge bug once that

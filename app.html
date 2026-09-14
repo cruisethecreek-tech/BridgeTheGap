@@ -11360,7 +11360,7 @@ function renderImportReview(){
         <td>${escapeHtml(r.desc||'-')}</td>
         <td><span class="tt ${r.type==='expense'?'exp':'inc'}">${r.type==='expense'?'OUT':'IN'}</span></td>
         <td class="amt ${r.type==='expense'?'exp':'inc'}">${usd(r.amt)}</td>
-        <td>${r.type==='expense'?`<select data-ic="${i}">${catOptions(r.cat)}</select>`:'<span class="sub" style="margin:0">income</span>'}</td>
+        <td>${r.type==='expense'?`<select data-ic="${i}">${catOptions(r.cat)}<option value="__invest"${r.cat==='__invest'?' selected':''}>→ Put away (savings or investing)</option></select>`:'<span class="sub" style="margin:0">income</span>'}</td>
       </tr>`).join('')}
     </tbody></table></div>
     <div class="imp-actions">
@@ -11377,16 +11377,32 @@ function txExists(type,date,amt,label){
     ((t.note||t.source||'').toLowerCase()===String(label||'').toLowerCase()));
 }
 function commitImport(){
-  const rows=importRows.filter(r=>r.keep); let added=0, dup=0;
+  const rows=importRows.filter(r=>r.keep); let added=0, dup=0, put=0;
   rows.forEach(r=>{
     if(txExists(r.type,r.date,r.amt,r.desc)){ dup++; return; }
     if(r.type==='income'){
       state.transactions.push({id:uid(),type:'income',amount:r.amt,source:r.desc||'Imported income',date:r.date,note:'Imported',srcType:'primary'});
+    } else if(r.cat==='__invest'){
+      /* Money that did NOT leave you. Same row, same amount, different verb -
+         and net worth has to know, or the figure quietly drops by whatever you
+         put away this month. */
+      const ivT={id:uid(),type:'invest',amount:r.amt,source:r.desc||'Savings',date:r.date,note:'Imported',ikind:'holds'};
+      state.transactions.push(ivT); investAssetAdd(r.amt); put+=r.amt;
     } else {
       let catId=r.cat;
       if(catId.indexOf('wall:')===0) catId=findOrCreateEssential(catId.slice(5)).id;
       if(!catId){ catId=findOrCreateEssential('Uncategorized').id; }
-      state.transactions.push({id:uid(),type:'expense',amount:r.amt,catId,date:r.date,note:r.desc||'Imported'});
+      /* A category the user has marked as somewhere money is KEPT decides the
+         verb on its own, so nothing has to be picked twice. The quick log has
+         worked this way for a while; this path never learned it. */
+      const catObj=(state.categories||[]).find(x=>x.id===catId);
+      if(catObj && typeof catPutsAway==='function' && catPutsAway(catObj)){
+        state.transactions.push({id:uid(),type:'invest',amount:r.amt,catId,
+          source:r.desc||catObj.name,date:r.date,note:'Imported',ikind:'holds'});
+        investAssetAdd(r.amt); put+=r.amt;
+      } else {
+        state.transactions.push({id:uid(),type:'expense',amount:r.amt,catId,date:r.date,note:r.desc||'Imported'});
+      }
     }
     added++;
   });
@@ -11396,7 +11412,7 @@ function commitImport(){
   save(); renderBudget(); renderTx(); renderHome(); renderNetWorth();
   renderImportReview();
   const box=document.getElementById('importReview');
-  if(box) box.innerHTML=`<div class="logwin">Imported <b>${added}</b> transaction${added===1?'':'s'}.${dup?` Skipped ${dup} that looked like duplicates.`:''}</div>`;
+  if(box) box.innerHTML=`<div class="logwin">Imported <b>${added}</b> transaction${added===1?'':'s'}.${put>0?` <b>${usd(put)}</b> of it was <b>put away</b>, not spent - it is still yours and it is in your net worth.`:''}${dup?` Skipped ${dup} that looked like duplicates.`:''}</div>`;
 }
 function handleCSVFile(file){
   const box=document.getElementById('importReview');
@@ -14228,7 +14244,7 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-13 · the warning stays, the figures wait';
+const BUILD_STAMP='2026-09-14 · money put away is not money spent, on every way in';
 function renderBuildLine(){
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
@@ -19786,7 +19802,7 @@ const REPORT_SIGNALS=[
       const invested=monthInvested(M);
       return { t: kept<0 ? 'You spent more than came in' : `You kept ${rate}% of what you earned`,
         body: kept<0
-          ? `<b>${money(inc)}</b> came in and <b>${money(exp)}</b> went out. That is <b>${money(-kept)}</b> more than you had${rpLife(-kept)}.`
+          ? `<b>${money(inc)}</b> came in and <b>${money(exp)}</b> went out. That is <b>${money(-kept)}</b> more than you had${rpLife(-kept)}.${invested>0?` Separately, <b>${money(invested)}</b> was <b>put away</b> - that is not in the figure above, because it is still yours.`:''}`
           : `<b>${money(inc)}</b> came in, <b>${money(exp)}</b> went out, so <b>${money(kept)}</b> stayed yours.${invested>0?` <b>${money(invested)}</b> of it went into investments.`:''}`,
         work:`(${money(inc)} − ${money(exp)}) ÷ ${money(inc)} = ${rate}%`,
         nudge: (trend?trend+' ':'')+voice(kept<0?RP_TONE.keptBad:RP_TONE.keptGood,null), bad: kept<0 };
