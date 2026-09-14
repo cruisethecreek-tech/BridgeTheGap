@@ -1442,6 +1442,20 @@
   .rw-left{display:block;font-style:normal;font-size:11px;font-weight:800;
     letter-spacing:.02em;color:var(--muted);text-align:right;margin-top:2px;white-space:nowrap}
   .rw-left.over{color:var(--bad)}
+  /* The sum still being typed, shown where the remainder normally sits. */
+  .rw-left.calc{color:var(--accent)}
+  /* A row with nothing assigned has no remainder to print, and used to be a
+     line shorter than every row around it. Typing the first number into it
+     therefore GREW it, which shoved the twenty rows below down the screen -
+     once per category, while the thumb was moving between them. The space the
+     line would take is held open whether there is a line in it or not, so
+     filling one in changes nothing but the row it is in. */
+  /* A space, not a height: it carries the same metrics as .rw-left, so the gap
+     is exactly the line that would have been there rather than a number that
+     goes stale the first time the font changes. */
+  .sub-assign.nohint::after,.cat-assign.nohint::after,.sub-spent.nohint::after{
+    content:"\00a0";display:block;font-style:normal;font-size:11px;font-weight:800;
+    letter-spacing:.02em;margin-top:2px}
   .subrow .sub-assign{display:flex;flex-direction:column;align-items:stretch;gap:0}
   .subrow .sub-assign .sa-row{display:flex;align-items:center;gap:4px}
   .subrow .sub-assign .sa-row input{flex:1;min-width:0}
@@ -5466,6 +5480,85 @@ function fmtLife(amount, rateOverride){
   else { const v=Math.round(hrs/moHrs*10)/10; out=v+' mo'; }
   return (neg?'-':'')+out;
 }
+/* ---------- a box you can do arithmetic in ----------
+   "The calculator also does not add to the total it just brings it to zero."
+
+   The phone's number pad has + - x and ( ) printed on it, so people press
+   them. Every amount box in this app was <input type="number">, and a number
+   input holding "250+52" reports its value as the EMPTY STRING - the browser
+   refuses to hand over text it cannot read as a number. parseFloat('')||0 is
+   0, and that zero went straight into the plan. The one figure on the screen
+   that was already right got wiped at the exact moment somebody was trying to
+   add to it.
+
+   Two rules come out of that, and the second matters more than the first:
+
+     1. a box asking for an amount reads arithmetic, and
+     2. a box that cannot read what is in it writes NOTHING.
+
+   Half-typed is the normal state of a field somebody is still typing in.
+   "250+" is not zero, it is unfinished, and a handler that commits on every
+   keystroke had destroyed the number before the second one arrived. So an
+   unreadable box is reported as unreadable and the stored figure is left
+   exactly as it was. */
+function amtEval(raw){
+  const s=String(raw==null?'':raw).trim();
+  if(!s) return {ok:true, value:0, empty:true, hasOp:false};
+  /* Written the way a thumb writes it: a dollar sign and thousands separators
+     get typed in, "x" is what people press for multiply, and a few keyboards
+     send the real minus, times and divide characters rather than the ASCII
+     ones. All of it means the same thing and none of it is a reason to refuse. */
+  const t=s.replace(/[−–—]/g,'-')
+           .replace(/[×xX*]/g,'*')
+           .replace(/[÷]/g,'/')
+           .replace(/[$£€\s,]/g,'');
+  if(!t) return {ok:true, value:0, empty:true, hasOp:false};
+  if(!/^[0-9.+\-*/()]+$/.test(t)) return {ok:false};
+  /* Hand-written rather than handed to Function(): this app evaluates a string
+     the user typed, and there is exactly one way to do that which cannot also
+     run something else. */
+  let i=0;
+  const at=()=>t[i];
+  const atom=()=>{
+    if(at()==='('){ i++; const v=sum(); if(v==null||t[i]!==')') return null; i++; return v; }
+    const m=/^\d*\.?\d*/.exec(t.slice(i));
+    if(!m||!m[0]||m[0]==='.') return null;
+    i+=m[0].length; return parseFloat(m[0]);
+  };
+  const unary=()=>{
+    if(at()==='-'){ i++; const v=unary(); return v==null?null:-v; }
+    if(at()==='+'){ i++; return unary(); }
+    return atom();
+  };
+  const product=()=>{
+    let v=unary(); if(v==null) return null;
+    while(at()==='*'||at()==='/'){
+      const op=t[i++], r=unary();
+      if(r==null) return null;
+      if(op==='/'&&r===0) return null;          // dividing by nothing is not a number
+      v = op==='*' ? v*r : v/r;
+    }
+    return v;
+  };
+  const sum=()=>{
+    let v=product(); if(v==null) return null;
+    while(at()==='+'||at()==='-'){
+      const op=t[i++], r=product();
+      if(r==null) return null;
+      v = op==='+' ? v+r : v-r;
+    }
+    return v;
+  };
+  const v=sum();
+  if(v==null || i!==t.length || !isFinite(v)) return {ok:false};
+  /* "is there working to show" - a leading minus is a sign, not a sum, so
+     "-500" is a plain number and "250-50" is not. */
+  const hasOp=/[+*/()]/.test(t) || /[^\s].*-/.test(t);
+  return {ok:true, value:Math.round(v*100)/100, empty:false, hasOp};
+}
+/* What goes back INTO a box: a plain number, no symbol and no separators,
+   because whatever this writes has to be readable by the same box next time. */
+function amtBox(n){ const v=Math.round((+n||0)*100)/100; return v?String(v):''; }
 /* the app formats everything through money(): mode-aware */
 function money(n){ return state.freedomMode ? fmtLife(n) : usd(n); }
 /* Life-hours mode converts every money() figure to time. That is right for a
@@ -9783,6 +9876,71 @@ let catSheetId=null;
    second's figure while the list behind it has moved on is the kind of thing
    people stop trusting an app over. */
 function planRefresh(){ renderBudget(); if(catSheetId) renderCatSheet(); }
+/* The line under the money column, written once. It is read from two places -
+   the row builder and the in-place refresher below - and two copies of it is
+   how the list starts disagreeing with itself halfway through a typing run.
+   Nothing assigned means nothing to say: a row that has been given no money
+   has no remainder worth printing, and "$0 left" would imply it had. */
+function planLeftHTML(a,rem){ return a>0 ? `<i class="rw-left${rem<0?' over':''}">${money(rem)} left</i>` : ''; }
+/* ---------- moving the figures without rebuilding the rows ----------
+   "The number pad keeps disappearing when clicked on."
+
+   Every budget field committed on `input` and then called planRefresh() on
+   `change`, and planRefresh rebuilds the whole list with innerHTML. A browser
+   fires `change` on the field you are LEAVING before it focuses the field you
+   are tapping - so moving from Dining to Coffee destroyed the Coffee box
+   mid-tap, focus fell to <body>, and the keypad closed. Every second category
+   you budgeted, the keyboard shut on you.
+
+   So the rebuild waits for the thumb to actually leave the list, and until it
+   does the figures move in place. Only one cell on the screen can hold a
+   cursor - the leaf row in Planned - and that one is edited surgically; every
+   other cell is redrawn whole, so it cannot drift from what the row builder
+   would have written. */
+function planFigures(box){
+  box=box||document.getElementById('cats'); if(!box) return;
+  const M=state.activeMonth, planned=planView()==='planned';
+  box.querySelectorAll('[data-row]').forEach(row=>{
+    const id=row.dataset.row;
+    const a=catAssigned(id,M), sp=catUsed(id,M), rem=a-sp, own=assignedFor(id,M);
+    row.classList.toggle('overspent', rem<0);
+    const cell=row.querySelector('.cat-assign,.sub-assign,.sub-spent');
+    if(!cell) return;
+    if(!cell.querySelector('input[data-cat]')){
+      const isGroup=cell.classList.contains('cat-assign');
+      cell.classList.toggle('over', !planned && sp>a && a>0);
+      cell.classList.toggle('nohint', !(a>0));
+      cell.innerHTML=`<span class="rw-fig">${money(planned?a:sp)}</span>`
+        + (isGroup&&planned&&own>0&&a>own?`<i>${money(own)} direct</i>`:'')
+        + planLeftHTML(a,rem);
+      return;
+    }
+    let hint=cell.querySelector('.rw-left');
+    if(hint && hint.dataset.calc) return;     // it is showing the sum being typed beside it
+    if(a>0){
+      if(!hint){ hint=document.createElement('i'); cell.appendChild(hint); }
+      hint.className='rw-left'+(rem<0?' over':'');
+      hint.textContent=money(rem)+' left';
+    } else if(hint) hint.remove();
+    cell.classList.toggle('nohint', !cell.querySelector('.rw-left'));
+  });
+}
+/* The running total of a sum still being typed, shown where the remainder
+   normally sits. Dollars whatever the display mode is in, because it is
+   echoing what the thumb just typed and every box in this app takes dollars. */
+function planCalcHint(inp,val){
+  const cell=inp.closest('.sub-assign'); if(!cell) return;
+  let hint=cell.querySelector('.rw-left');
+  if(val==null){
+    if(hint && hint.dataset.calc){ hint.remove(); planFigures(); }
+    return;
+  }
+  if(!hint){ hint=document.createElement('i'); cell.appendChild(hint); }
+  hint.dataset.calc='1';
+  hint.className='rw-left calc';
+  hint.textContent='= '+actMoney(val);
+  cell.classList.remove('nohint');
+}
 function repeatCtrlHTML(catId, assigned){
   if(catReorder) return '';
   const r=recForCat(catId), on=!!r;
@@ -10567,7 +10725,8 @@ function renderBudget(){
          left a whole tab with nothing of its own to say. It only appears when
          there is something to say: a category with nothing assigned has no
          remainder worth printing. */
-      const leftHint = a>0 ? `<i class="rw-left ${rem<0?'over':''}">${money(rem)} left</i>` : '';
+      const leftHint = planLeftHTML(a,rem);
+      const noHint = leftHint ? '' : ' nohint';
       /* Renaming happens in the sheet, never here. Two live inputs carrying the
          same data-rename would have the save button picking one of them at
          random, and the row has no room for a text field anyway. */
@@ -10588,8 +10747,8 @@ function renderBudget(){
             <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
             <span class="cat-name">${nameHTML}</span>
             <span class="rw-money">${
-              view==='planned' ? `<span class="cat-assign gcol">${money(a)}${own>0&&a>own?`<i>${money(own)} direct</i>`:''}${leftHint}</span>`
-              : `<span class="cat-assign gcol${sp>a&&a>0?' over':''}">${money(sp)}${leftHint}</span>`
+              view==='planned' ? `<span class="cat-assign gcol${noHint}"><span class="rw-fig">${money(a)}</span>${own>0&&a>own?`<i>${money(own)} direct</i>`:''}${leftHint}</span>`
+              : `<span class="cat-assign gcol${sp>a&&a>0?' over':''}${noHint}"><span class="rw-fig">${money(sp)}</span>${leftHint}</span>`
             }</span>
           </div>
         </div>`;
@@ -10603,8 +10762,8 @@ function renderBudget(){
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
         <span class="rw-money">${
-          view==='planned' ? `<span class="sub-assign"><span class="sa-row">$<input type="number" inputmode="decimal" min="0" step="0.01" enterkeyhint="next" value="${own||0}" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
-          : `<span class="sub-spent${sp>a&&a>0?' over':''}" title="What has gone">${money(sp)}${leftHint}</span>`
+          view==='planned' ? `<span class="sub-assign${noHint}"><span class="sa-row">$<input type="text" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="next" value="${amtBox(own)}" placeholder="0" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
+          : `<span class="sub-spent${sp>a&&a>0?' over':''}${noHint}" title="What has gone"><span class="rw-fig">${money(sp)}</span>${leftHint}</span>`
         }</span>
       </div>`;
     };
@@ -10648,20 +10807,56 @@ function wirePlan(box, isMain){
   box.querySelectorAll('[data-wallnext]').forEach(b=>b.addEventListener('click',()=>goToWall(b.dataset.wallnext)));
   box.querySelectorAll('[data-walldone]').forEach(b=>b.addEventListener('click',()=>{ wallGuideCat=null; planRefresh(); }));
   let budgetAdvancing=false;
+  /* The rebuild waits until the thumb has actually left the list. `change` and
+     `blur` both fire on the field being LEFT, before the browser focuses the
+     one being tapped, so asking who has the cursor right now always answers
+     "nobody" - and the list got rebuilt out from under a tap that was already
+     in flight. One tick later the question has a true answer. */
+  const planSettle=()=>setTimeout(()=>{
+    const ae=document.activeElement;
+    if(ae && ae.matches && ae.matches('#cats input[data-cat]')) return;
+    planRefresh();
+  },0);
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
-    /* Clamp at the point of entry: the field says min=0 but typing "-500" got
-       past it, and a negative assignment SUBTRACTS from the assigned total -
-       zero-based math you can print money against. (Independent audit, F1.) */
-    inp.addEventListener('input',()=>{ budgetFor(M)[inp.dataset.cat]=Math.max(0,parseFloat(inp.value)||0); save(); refreshBudgetSummary(); });
-    inp.addEventListener('change',()=>{ if(budgetAdvancing) return; planRefresh(); });
+    /* Clamp at the point of entry: the field said min=0 and typing "-500" got
+       past it anyway, and a negative assignment SUBTRACTS from the assigned
+       total - zero-based math you can print money against. (Independent audit,
+       F1.) The clamp stayed when the box stopped being type="number"; the
+       browser's own min was never what was enforcing it. */
+    inp.addEventListener('input',()=>{
+      const r=amtEval(inp.value);
+      /* Unreadable is not zero. "250+" is somebody in the middle of a sum, and
+         the figure they are adding to has to survive until they finish it. */
+      if(!r.ok) return;
+      budgetFor(M)[inp.dataset.cat]=Math.max(0,r.value); save();
+      refreshBudgetSummary(); planFigures(box);
+      planCalcHint(inp, r.hasOp?Math.max(0,r.value):null);
+    });
+    inp.addEventListener('blur',()=>{
+      if(budgetAdvancing) return;
+      const r=amtEval(inp.value);
+      /* Leave the answer in the box they typed the sum into. An unreadable box
+         gets the stored figure back rather than being left holding "250+",
+         which would read as an assignment nobody made. */
+      inp.value=amtBox(r.ok?Math.max(0,r.value):assignedFor(inp.dataset.cat,M));
+      planCalcHint(inp,null);
+      planSettle();
+    });
     inp.addEventListener('keydown',e=>{
       if(e.key!=='Enter') return;
       e.preventDefault();
       // commit + refresh math, then flow to the next field so budgeting moves start-to-finish
       budgetAdvancing=true;
+      const r=amtEval(inp.value);
+      if(r.ok) inp.value=amtBox(Math.max(0,r.value));
+      planCalcHint(inp,null);
+      /* No rebuild here either. This used to call planRefresh(), which threw
+         away every row - the one it was about to put the cursor in among them -
+         and then had to look the replacement up again. On a phone that is a
+         keypad closing and reopening between two categories. */
+      planFigures(box); refreshBudgetSummary();
       const ids=[...box.querySelectorAll('input[data-cat]')].map(x=>x.dataset.cat);
       const nextId=ids[ids.indexOf(inp.dataset.cat)+1];
-      planRefresh();
       const next=nextId?box.querySelector('input[data-cat="'+nextId+'"]'):null;
       if(next){ next.focus(); if(next.select) next.select(); }
       else { const add=document.getElementById('catName'); if(add) add.focus(); }   // past the last: on to adding a category
@@ -10857,7 +11052,7 @@ function renderCatSheet(){
     </div>
     ${!isGroup?`<div class="ufld cs-assign">
         <span class="fl-k">Assign<span id="${aid}Unit"></span></span>
-        <span class="fl-in">$<input type="number" id="${aid}" inputmode="decimal" min="0" step="0.01" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <span class="fl-in">$<input type="text" id="${aid}" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="0" aria-label="Assign to ${escapeHtml(c.name)}"></span>
         <div class="unit-work" id="${aid}W"></div>
       </div>
       ${rateBuilderHTML(c)}`
@@ -11051,6 +11246,14 @@ function renderCatSheet(){
        chevron and the delete button. Tapping any of those must do its own job -
        a row that swallows its own controls is worse than one you cannot tap. */
     if(e.target.closest('input,select,textarea,label')) return;
+    /* The money cell is not a doorway. The box inside it is 80px wide with a
+       dollar sign beside it, so a thumb aiming for the field lands next to the
+       field about as often as in it - and every one of those misses opened a
+       full-screen sheet over the top, which on a phone closes the keypad. A
+       tap in that cell means the number: put the cursor in it. */
+    const cell=e.target.closest('.sub-assign,.cat-assign');
+    const f=cell && cell.querySelector('input[data-cat]');
+    if(f){ try{ f.focus(); f.select&&f.select(); }catch(_){} return; }
     const btn=e.target.closest('button');
     if(btn && !btn.hasAttribute('data-catsheet')) return;
     openCatSheet(b.dataset.catsheet);
@@ -17436,8 +17639,12 @@ function wireUnitField(o){
   const slot=document.getElementById(o.id+'Unit');
   if(slot && !slot.firstChild) slot.innerHTML=(o.why?whyBtn(o.why):'')+periodSel(o.id,o.dflt,o.kinds);
   const cur=()=>unitOf(o.id,o.dflt);
-  const draw=()=>{ const w=document.getElementById(o.id+'W');
-    if(w) w.innerHTML=periodWork(parseFloat(inp.value)||0, cur(), o.unitWord); };
+  /* Read through amtEval rather than parseFloat, so every field wired here
+     takes a sum - "1200+300" for a payment, "4x12" for a commute - and so a
+     half-typed one writes nothing instead of writing zero. */
+  const read=()=>amtEval(inp.value);
+  const draw=()=>{ const w=document.getElementById(o.id+'W'); const r=read();
+    if(w) w.innerHTML=periodWork(r.ok?r.value:0, cur(), o.unitWord); };
   /* Clamped here, once, rather than at each of the eight call sites. Every
      field wired through this helper is a QUANTITY - a spending limit, a debt
      budget, a payment, an amount of cash, a target - and not one of them has a
@@ -17446,10 +17653,21 @@ function wireUnitField(o){
      level down: seven others had no guard, and typing "-5" into any of them
      stuck. Found by the hostile suite, which types -5 into everything it can
      see and then asks the state what it kept. */
-  const commit=()=>{ if(o.set) o.set(Math.max(0, toMonthly(parseFloat(inp.value)||0, cur()))); draw(); };
+  const commit=()=>{ const r=read();
+    if(r.ok && o.set) o.set(Math.max(0, toMonthly(r.value, cur())));
+    draw(); };
   if(!inp.dataset.unitWired){
     inp.dataset.unitWired='1';
     inp.addEventListener('input',commit);
+    /* Leave the answer in the box the sum was typed into. An unreadable box
+       gets back whatever is actually stored, rather than being left holding
+       "1200+" - which reads as a figure nobody set. */
+    inp.addEventListener('blur',()=>{
+      if(inp.type!=='text') return;
+      const r=read();
+      if(r.ok && r.hasOp) inp.value=amtBox(Math.max(0,r.value));
+      else if(!r.ok) fill();          // defined below; this runs long after
+    });
   }
   UNIT_REDRAW[o.id]=commit;                       // the picker moved: the same number now means something else
   const fill=()=>{
