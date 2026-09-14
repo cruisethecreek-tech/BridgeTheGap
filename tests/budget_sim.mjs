@@ -301,14 +301,28 @@ const c = await p.evaluate(() => {
   const ltb = monthIncome(M) - topCats().reduce((s,k)=>s+catAssigned(k.id,M),0);
   const box = document.querySelector('#cats input[data-cat="roof"]');
   const t = document.getElementById('view-budget').innerText;
-  return { ltb, step:box.step, mode:box.inputMode,
+  /* Typed in and read back out of the state, rather than inferred from a step
+     attribute. The box used to be type="number" and the claim was made about
+     its step="0.01"; it is a text box now, so the only honest way to ask
+     whether it takes cents is to type cents into it and see what was kept. */
+  const type=v=>{ box.value=v; box.dispatchEvent(new Event('input',{bubbles:true}));
+                  return state.budgets[M].roof; };
+  const cents=type('1200.83');
+  const sum=type('1200+0.83');
+  const midSum=(()=>{ type('1200.83'); return type('1200+'); })();   // unfinished: nothing written
+  type('1200');
+  return { ltb, mode:box.inputMode, cents, sum, midSum,
            zeroVerdict: /Zero-based\. Every dollar has a job/.test(t),
            fortyCents: usd(0.4), negForty: usd(-0.4), whole: usd(4700), mixed: usd(1200.5) };
 });
 check('a paycheck with cents can be assigned to exactly zero', 0, c.ltb);
 checkTrue('   ...and the app says so', c.zeroVerdict);
-check('the plan boxes accept cents, like the spend boxes do', '0.01', c.step,
+check('the plan boxes accept cents, like the spend boxes do', 1200.83, c.cents,
       'step="1" made every cents entry a stepMismatch, so a real paystub could never reach zero');
+check('   ...and they add up, because the phone pad has a + on it', 1200.83, c.sum,
+      'a number input holding "1200+0.83" reports its value as "", and parseFloat("")||0 wrote a zero over the plan');
+check('   ...while a half-typed sum leaves the figure alone rather than zeroing it', 1200.83, c.midSum,
+      '"1200+" is unfinished, not nothing');
 check('   ...with a decimal keypad on a phone', 'decimal', c.mode);
 check('forty cents prints as forty cents', '$0.40', c.fortyCents, 'it printed "$0.4"');
 check('   ...negative too', '-$0.40', c.negForty);
