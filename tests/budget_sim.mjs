@@ -302,16 +302,13 @@ const c = await p.evaluate(() => {
   const box = document.querySelector('#cats input[data-cat="roof"]');
   const t = document.getElementById('view-budget').innerText;
   /* Typed in and read back out of the state, rather than inferred from a step
-     attribute. The box used to be type="number" and the claim was made about
-     its step="0.01"; it is a text box now, so the only honest way to ask
-     whether it takes cents is to type cents into it and see what was kept. */
+     attribute. The claim used to be made about step="0.01"; typing the cents in
+     and asking the state what it kept is the same claim without the proxy. */
   const type=v=>{ box.value=v; box.dispatchEvent(new Event('input',{bubbles:true}));
                   return state.budgets[M].roof; };
   const cents=type('1200.83');
-  const sum=type('1200+0.83');
-  const midSum=(()=>{ type('1200.83'); return type('1200+'); })();   // unfinished: nothing written
   type('1200');
-  return { ltb, mode:box.inputMode, kind:box.type, cents, sum, midSum,
+  return { ltb, mode:box.inputMode, kind:box.type, cents,
            zeroVerdict: /Zero-based\. Every dollar has a job/.test(t),
            fortyCents: usd(0.4), negForty: usd(-0.4), whole: usd(4700), mixed: usd(1200.5) };
 });
@@ -319,13 +316,15 @@ check('a paycheck with cents can be assigned to exactly zero', 0, c.ltb);
 checkTrue('   ...and the app says so', c.zeroVerdict);
 check('the plan boxes accept cents, like the spend boxes do', 1200.83, c.cents,
       'step="1" made every cents entry a stepMismatch, so a real paystub could never reach zero');
-check('   ...and they add up, because the phone pad has a + on it', 1200.83, c.sum,
-      'a number input holding "1200+0.83" reports its value as "", and parseFloat("")||0 wrote a zero over the plan');
-check('   ...while a half-typed sum leaves the figure alone rather than zeroing it', 1200.83, c.midSum,
-      '"1200+" is unfinished, not nothing');
+/* The arithmetic claims - that "1200+0.83" adds up and "1200+" leaves the
+   figure alone - cannot be made from here. Assigning .value to a number input
+   discards anything that is not a number, so a check written that way would be
+   handing the app a figure the browser would never have handed it. They are
+   made in tests/probes/numpad.mjs instead, typed a character at a time through
+   the real input pipeline, which is the only place the distinction is real. */
 check('   ...with a decimal keypad on a phone', 'decimal', c.mode);
-check('   ...that the keyboard cannot answer with letters instead', 'tel', c.kind,
-      'inputmode is a hint - SwiftKey honoured it once and then fell back to type="text" and offered QWERTY');
+check('   ...that the keyboard cannot answer with letters instead', 'number', c.kind,
+      'inputmode is a hint - SwiftKey honoured it once and then fell back to type="text" and offered QWERTY. tel fixed that and attached Android autofill to a budget field, so the type went back to the one whose keypad was never the complaint and the sum is read through beforeinput instead.');
 check('forty cents prints as forty cents', '$0.40', c.fortyCents, 'it printed "$0.4"');
 check('   ...negative too', '-$0.40', c.negForty);
 check('whole dollars stay clean', '$4,700', c.whole, 'no pointless .00 everywhere');

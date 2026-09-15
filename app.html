@@ -5502,7 +5502,13 @@ function fmtLife(amount, rateOverride){
    unreadable box is reported as unreadable and the stored figure is left
    exactly as it was. */
 function amtEval(raw){
-  const s=String(raw==null?'':raw).trim();
+  /* null is not an empty box. Empty means "they cleared it", which is a real
+     instruction and writes a zero; null comes from amtRead and means the text
+     could not be recovered at all. Folding the two together would have turned
+     every keyboard this cannot follow into a figure wiped to nothing, which is
+     the original bug wearing a different hat. */
+  if(raw==null) return {ok:false};
+  const s=String(raw).trim();
   if(!s) return {ok:true, value:0, empty:true, hasOp:false};
   /* Written the way a thumb writes it: a dollar sign and thousands separators
      get typed in, "x" is what people press for multiply, and a few keyboards
@@ -5555,6 +5561,53 @@ function amtEval(raw){
      "-500" is a plain number and "250-50" is not. */
   const hasOp=/[+*/()]/.test(t) || /[^\s].*-/.test(t);
   return {ok:true, value:Math.round(v*100)/100, empty:false, hasOp};
+}
+/* ---------- reading a box the browser has stopped reading ----------
+   Three input types have now been tried on the one field, on the reporter's own
+   phone, and each traded one fault for another:
+
+     type="number"          the right keypad, with + - ( ) / on it - but a
+                            number input holding "250+52" reports its value as
+                            the EMPTY STRING, so the sum was read as zero.
+     type="text"            held the sum fine, and SwiftKey answered the second
+     + inputmode="decimal"  tap with the full QWERTY alphabet, because inputmode
+                            is only a hint and the type is not.
+     type="tel"             the right keypad and it cannot be argued with - and
+                            it tells Android this is a phone number, so the
+                            platform autofill strip attaches to a budget field.
+
+   So: back to type="number", which is the only one of the three whose keypad
+   was never itself the complaint, and read the text a different way. The value
+   is empty while the content is not a number, but beforeinput still delivers
+   every character that made it - "+" included - so the text can be kept
+   alongside. validity.badInput is what says which of the two to believe.
+
+   The important part is the failure mode. If an IME ever delivers an edit this
+   cannot model - a composition, a caret dropped into the middle - the shadow is
+   abandoned rather than guessed at, amtRead returns null, and null means
+   UNREADABLE, which every caller already treats as "write nothing". A keyboard
+   this does not understand loses the calculator. It never loses the figure. */
+function amtTrack(inp){
+  if(!inp || inp._amtWired) return; inp._amtWired=1;
+  inp.addEventListener('beforeinput',e=>{
+    /* Only while the box is already unreadable, or about to be. While it holds
+       a real number the browser is the truth and the shadow just follows. */
+    const cur = inp.validity && inp.validity.badInput ? (inp._raw||'') : inp.value;
+    const t=e.inputType||'';
+    if(t==='insertText' && e.data!=null) inp._raw=cur+e.data;
+    else if(t==='insertFromPaste') inp._raw=cur+(e.data||'');
+    else if(t.indexOf('delete')===0) inp._raw=cur.slice(0,-1);
+    else inp._raw=null;                 // not modelled: stop pretending to know
+  });
+  inp.addEventListener('input',()=>{
+    if(!(inp.validity && inp.validity.badInput)) inp._raw=inp.value;   // back on solid ground
+  });
+}
+/* The text in the box, whoever is holding it. null means nobody knows. */
+function amtRead(inp){
+  if(!inp) return '';
+  if(inp.validity && inp.validity.badInput) return inp._raw==null ? null : inp._raw;
+  return inp.value;
 }
 /* What goes back INTO a box: a plain number, no symbol and no separators,
    because whatever this writes has to be readable by the same box next time. */
@@ -10815,7 +10868,7 @@ function renderBudget(){
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
         <span class="rw-money">${
-          view==='planned' ? `<span class="sub-assign${noHint}"><span class="sa-row">$<input type="tel" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="next" value="${amtBox(own)}" placeholder="0" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
+          view==='planned' ? `<span class="sub-assign${noHint}"><span class="sa-row">$<input type="number" inputmode="decimal" min="0" step="0.01" autocomplete="off" enterkeyhint="next" value="${amtBox(own)}" placeholder="0" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
           : `<span class="sub-spent${sp>a&&a>0?' over':''}${noHint}" title="What has gone"><span class="rw-fig">${money(sp)}</span>${leftHint}</span>`
         }</span>
       </div>`;
@@ -10871,13 +10924,14 @@ function wirePlan(box, isMain){
     planRefresh();
   },0);
   box.querySelectorAll('input[data-cat]').forEach(inp=>{
+    amtTrack(inp);
     /* Clamp at the point of entry: the field said min=0 and typing "-500" got
        past it anyway, and a negative assignment SUBTRACTS from the assigned
        total - zero-based math you can print money against. (Independent audit,
        F1.) The clamp stayed when the box stopped being type="number"; the
        browser's own min was never what was enforcing it. */
     inp.addEventListener('input',()=>{
-      const r=amtEval(inp.value);
+      const r=amtEval(amtRead(inp));
       /* Unreadable is not zero. "250+" is somebody in the middle of a sum, and
          the figure they are adding to has to survive until they finish it. */
       if(!r.ok) return;
@@ -10887,11 +10941,12 @@ function wirePlan(box, isMain){
     });
     inp.addEventListener('blur',()=>{
       if(budgetAdvancing) return;
-      const r=amtEval(inp.value);
+      const r=amtEval(amtRead(inp));
       /* Leave the answer in the box they typed the sum into. An unreadable box
          gets the stored figure back rather than being left holding "250+",
          which would read as an assignment nobody made. */
       inp.value=amtBox(r.ok?Math.max(0,r.value):assignedFor(inp.dataset.cat,M));
+      inp._raw=inp.value;
       planCalcHint(inp,null);
       planSettle();
     });
@@ -10900,8 +10955,8 @@ function wirePlan(box, isMain){
       e.preventDefault();
       // commit + refresh math, then flow to the next field so budgeting moves start-to-finish
       budgetAdvancing=true;
-      const r=amtEval(inp.value);
-      if(r.ok) inp.value=amtBox(Math.max(0,r.value));
+      const r=amtEval(amtRead(inp));
+      if(r.ok){ inp.value=amtBox(Math.max(0,r.value)); inp._raw=inp.value; }
       planCalcHint(inp,null);
       /* No rebuild here either. This used to call planRefresh(), which threw
          away every row - the one it was about to put the cursor in among them -
@@ -11105,7 +11160,7 @@ function renderCatSheet(){
     </div>
     ${!isGroup?`<div class="ufld cs-assign">
         <span class="fl-k">Assign<span id="${aid}Unit"></span></span>
-        <span class="fl-in">$<input type="tel" id="${aid}" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="0" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <span class="fl-in">$<input type="number" id="${aid}" inputmode="decimal" min="0" step="0.01" autocomplete="off" placeholder="0" aria-label="Assign to ${escapeHtml(c.name)}"></span>
         <div class="unit-work" id="${aid}W"></div>
       </div>
       ${rateBuilderHTML(c)}`
@@ -17723,7 +17778,8 @@ function wireUnitField(o){
   /* Read through amtEval rather than parseFloat, so every field wired here
      takes a sum - "1200+300" for a payment, "4x12" for a commute - and so a
      half-typed one writes nothing instead of writing zero. */
-  const read=()=>amtEval(inp.value);
+  amtTrack(inp);
+  const read=()=>amtEval(amtRead(inp));
   const draw=()=>{ const w=document.getElementById(o.id+'W'); const r=read();
     if(w) w.innerHTML=periodWork(r.ok?r.value:0, cur(), o.unitWord); };
   /* Clamped here, once, rather than at each of the eight call sites. Every
@@ -17744,9 +17800,8 @@ function wireUnitField(o){
        gets back whatever is actually stored, rather than being left holding
        "1200+" - which reads as a figure nobody set. */
     inp.addEventListener('blur',()=>{
-      if(inp.type==='number') return;      // a number input never holds a sum to finish
       const r=read();
-      if(r.ok && r.hasOp) inp.value=amtBox(Math.max(0,r.value));
+      if(r.ok && r.hasOp){ inp.value=amtBox(Math.max(0,r.value)); inp._raw=inp.value; }
       else if(!r.ok) fill();          // defined below; this runs long after
     });
   }
