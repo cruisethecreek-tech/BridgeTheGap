@@ -95,10 +95,11 @@ const field=await p.evaluate(async()=>{
   o.emptyWhenUnassigned = din.value==='';
   o.placeholderIsZero   = din.placeholder==='0';
   o.assignedShowsFigure = wal.value==='250';
-  /* Not a hint the keyboard is free to walk back on the second tap. */
-  o.typeIsNotText       = din.type==='tel';
+  /* Not a hint the keyboard is free to walk back on the second tap, and not a
+     type that tells Android this is a phone number either. */
+  o.typeIsNotText       = din.type!=='text';
   o.stillNumericPad     = din.inputMode==='decimal';
-  o.notANumberInput     = din.type!=='number';
+  o.notAPhoneNumber     = din.type!=='tel';
 
   /* 4. the row does not change height when a figure lands in it */
   const h=id=>Math.round(document.querySelector('#cats [data-row="'+id+'"]').getBoundingClientRect().height);
@@ -130,33 +131,78 @@ const field=await p.evaluate(async()=>{
   return o;
 });
 
-/* ---- 3. the calculator, and what it refuses to do ---- */
-const calc=await p.evaluate(async()=>{
+/* ---- 3. the calculator, and what it refuses to do ----
+   Typed through the REAL pipeline, one character at a time, because that is the
+   only way this can be tested at all now. A number input holding "250+52"
+   reports its value as "", so a probe that assigns .value and fires an input
+   event is handing the app a figure the browser would never have handed it -
+   it would pass against code that cannot read a sum, which is exactly the
+   thing under test. keyboard.type() goes through beforeinput the way a keypad
+   does. */
+const typeReal=async(id,v)=>{
+  await p.click('#cats input[data-cat="'+id+'"]');
+  await p.evaluate(id=>{ const e=document.querySelector('#cats input[data-cat="'+id+'"]');
+    e.value=''; e._raw=''; e.dispatchEvent(new Event('input',{bubbles:true})); },id);
+  if(v) await p.keyboard.type(v,{delay:12});
+  await p.waitForTimeout(90);
+  return p.evaluate(id=>assignedFor(id,'2026-09'), id);
+};
+const calc=await (async()=>{
+  const V=id=>p.evaluate(id=>document.querySelector('#cats input[data-cat="'+id+'"]').value,id);
+  const STORED=id=>p.evaluate(id=>assignedFor(id,'2026-09'),id);
+  const HINT=id=>p.evaluate(id=>{ const h=document.querySelector('#cats [data-row="'+id+'"] .rw-left');
+                                  return h?h.innerText.trim():''; },id);
+  const BLUR=async id=>{ await p.evaluate(id=>document.querySelector('#cats input[data-cat="'+id+'"]').blur(),id);
+                         await p.waitForTimeout(250); };
+  const o={};
+  /* a whole sum, typed into an empty box the way a keypad delivers it */
+  o.sum = await typeReal('din','250+52');
+  o.working = await HINT('din');
+  await BLUR('din');
+  o.boxAfterBlur = await V('din');
+  o.afterBlur = await STORED('din');
+
+  /* the case that matters most: a figure is already there and a thumb is
+     adding to it. Half-typed must leave the figure it is being added to
+     alone - it used to wipe it to zero on the keystroke after the plus. */
+  await typeReal('din','302'); await BLUR('din');
+  await p.click('#cats input[data-cat="din"]'); await p.keyboard.press('End');
+  await p.keyboard.type('+',{delay:12}); await p.waitForTimeout(90);
+  o.badInputWhileMidSum = await p.evaluate(()=>{ const e=document.querySelector('#cats input[data-cat="din"]');
+                                                 return e.value==='' && e.validity.badInput===true; });
+  o.midSum = await STORED('din');
+  await p.keyboard.type('98',{delay:12}); await p.waitForTimeout(120);
+  o.finished = await STORED('din');
+  o.workingLive = await HINT('din');
+
+  /* letters cannot be evaluated, and must not be treated as a cleared box */
+  await typeReal('din','400'); await BLUR('din');
+  await p.click('#cats input[data-cat="din"]'); await p.keyboard.press('End');
+  await p.keyboard.type('abc',{delay:12}); await p.waitForTimeout(120);
+  o.junk = await STORED('din');
+
+  /* an unreadable box is handed back the stored figure rather than left holding it */
+  await BLUR('din');
+  o.unreadableBoxRestored = await V('din');
+
+  /* clearing it IS an instruction, and it is a different one */
+  await typeReal('din',''); await p.waitForTimeout(90);
+  o.clearedWritesZero = await STORED('din');
+
+  /* negative is still clamped, by either route */
+  o.negative = await typeReal('din','-500');
+  o.negativeViaSum = await typeReal('din','100-600');
+  return o;
+})();
+const calcOld=await p.evaluate(async()=>{
   const w=m=>new Promise(x=>setTimeout(x,m));
   const q=id=>document.querySelector('#cats input[data-cat="'+id+'"]');
   const type=async(id,v)=>{ const e=q(id); e.focus(); e.value=v;
     e.dispatchEvent(new Event('input',{bubbles:true})); await w(80);
     return assignedFor(id,'2026-09'); };
-  const o={};
-  o.sum = await type('din','250+52');
-  /* shown where the remainder normally sits, while it is being typed */
-  const h=document.querySelector('#cats [data-row="din"] .rw-left');
-  o.working = h?h.innerText.trim():'';
-  /* half-typed leaves the figure it is being added to alone */
-  o.midSum = await type('din','250+');
-  o.junk   = await type('din','abc');
-  /* blur puts the answer in the box */
-  q('din').blur(); await w(200);
-  o.boxAfterBlur = q('din').value;
-  o.afterBlur = assignedFor('din','2026-09');
-  /* an unreadable box gets the stored figure back rather than keeping "250+" */
-  const e=q('din'); e.focus(); e.value='250+'; e.dispatchEvent(new Event('input',{bubbles:true}));
-  await w(80); e.blur(); await w(250);
-  o.unreadableBoxRestored = q('din').value;
-  /* negative is still clamped, whatever route it arrives by */
-  o.negative = await type('din','-500');
-  o.negativeViaSum = await type('din','100-600');
-  return o;
+  /* A plain number still arrives the ordinary way, and still lands. */
+  await type('din','412');
+  return { plain:assignedFor('din','2026-09') };
 });
 
 /* ---- nothing else on the list moved ---- */
@@ -179,21 +225,28 @@ const rest=await p.evaluate(async()=>{
   o.groupFigureFollows = g?g.innerText.trim():'';
   o.groupHintFollows = hint('food');
   tak.blur(); await w(350);
-  /* Enter still walks down the list, and still does not rebuild it mid-step */
-  const wal=document.querySelector('#cats input[data-cat="wal"]');
-  wal.focus(); wal.value='100+100';
-  wal.dispatchEvent(new Event('input',{bubbles:true})); await w(80);
-  wal.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); await w(200);
-  o.enterComputed = wal.value;
-  o.enterMovedOn = document.activeElement && document.activeElement.dataset
-                   ? document.activeElement.dataset.cat : null;
-  o.enterKeptTheField = document.activeElement===document.querySelector('#cats input[data-cat="ald"]');
-  document.activeElement.blur(); await w(350);
-  o.storedAfterEnter = assignedFor('wal','2026-09');
-  /* and once the thumb is gone the list is rebuilt for real */
-  o.rebuiltOnLeave = document.querySelector('#cats input[data-cat="wal"]').value==='200';
   return o;
 });
+/* Enter still walks down the list, and still does not rebuild it mid-step.
+   Typed for real: assigning .value='100+100' to a number input stores nothing,
+   so the old version of this was asking the app to add up a figure the browser
+   had already thrown away. */
+await typeReal('wal','100+100');
+await p.keyboard.press('Enter');
+await p.waitForTimeout(250);
+const enter=await p.evaluate(()=>({
+  computed:document.querySelector('#cats input[data-cat="wal"]').value,
+  movedOn:document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.cat:null,
+  keptTheField:document.activeElement===document.querySelector('#cats input[data-cat="ald"]')
+}));
+await p.evaluate(()=>document.activeElement.blur());
+await p.waitForTimeout(400);
+const after=await p.evaluate(()=>({
+  stored:assignedFor('wal','2026-09'),
+  rebuilt:document.querySelector('#cats input[data-cat="wal"]').value==='200'
+}));
+Object.assign(rest,{enterComputed:enter.computed,enterMovedOn:enter.movedOn,
+  enterKeptTheField:enter.keptTheField,storedAfterEnter:after.stored,rebuiltOnLeave:after.rebuilt});
 
 await b.close();
 
@@ -227,8 +280,8 @@ const T=[
    field.typeIsNotText===true, 'type='+String(field.typeIsNotText)],
   ['...with the decimal point iOS only offers when asked',
    field.stillNumericPad===true, String(field.stillNumericPad)],
-  ['...and it is still not the number input that ate the sum',
-   field.notANumberInput===true, String(field.notANumberInput)],
+  ['...and it does not tell Android that a budget amount is a phone number',
+   field.notAPhoneNumber===true, String(field.notAPhoneNumber)],
 
   ['every row is the same height whether or not it has a figure in it',
    field.heightsEvenBefore===true, String(field.heightsEvenBefore)],
@@ -249,6 +302,14 @@ const T=[
   ['...and the name is still the doorway it always was',
    field.nameStillOpensTheSheet===true, String(field.nameStillOpensTheSheet)],
 
+  ['the browser really has stopped reading the box while the sum is half typed',
+   calc.badInputWhileMidSum===true,
+   'value is "" and badInput is '+String(calc.badInputWhileMidSum)
+     +' - which is why the sum has to be read a different way'],
+  ['a plain number typed the ordinary way still lands',
+   calcOld.plain===412, String(calcOld.plain)],
+  ['...and clearing the box is a different instruction, which does write a zero',
+   calc.clearedWritesZero===0, String(calc.clearedWritesZero)],
   ['the pad\'s plus key adds to the figure instead of zeroing it',
    calc.sum===302, String(calc.sum)],
   ['...showing the running answer where the remainder sits',
@@ -257,10 +318,13 @@ const T=[
    calc.boxAfterBlur==='302' && calc.afterBlur===302,
    JSON.stringify({box:calc.boxAfterBlur,stored:calc.afterBlur})],
   ['a half-typed sum leaves the figure it is being added to alone',
-   calc.midSum===302, String(calc.midSum)],
-  ['...as does anything else it cannot read', calc.junk===302, String(calc.junk)],
+   calc.midSum===302, 'was 302 before the plus, is now '+String(calc.midSum)],
+  ['...and the rest of the sum finishes it',
+   calc.finished===400 && /^= \$400/.test(calc.workingLive||''),
+   JSON.stringify({stored:calc.finished, shown:calc.workingLive})],
+  ['...as does anything else it cannot read', calc.junk===400, String(calc.junk)],
   ['...and an unreadable box is given the stored figure back rather than left holding it',
-   calc.unreadableBoxRestored==='302', calc.unreadableBoxRestored],
+   calc.unreadableBoxRestored==='400', calc.unreadableBoxRestored],
   ['a negative assignment is still clamped, by either route',
    calc.negative===0 && calc.negativeViaSum===0,
    JSON.stringify({plain:calc.negative,sum:calc.negativeViaSum})],
