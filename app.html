@@ -8304,10 +8304,29 @@ function deckLabel(el){ return el.dataset.deck||''; }
 function deckLive(view){
   const host=document.getElementById('deck-'+view); if(!host) return [];
   const spend=!!document.querySelector('#view-home.spending-mode');
+  const openId=deckOpen[view]||null;
   return [...host.querySelectorAll(':scope > [data-deck]')].filter(el=>{
     if(el.hidden || el.classList.contains('stage-locked')) return false;
     if(spend && el.classList.contains('hide-in-spending')) return false;
     if(!spend && el.classList.contains('show-in-spending')) return false;
+    /* "Empty" is the one of these states that is allowed to be temporary, and
+       it was being treated as permanent.
+
+       A renderer that clears its box before refilling it is empty for a frame.
+       A pass landing in that frame found the open panel missing from this list,
+       deckPass cleared deckOpen, and the screen the reader was standing in
+       closed itself - permanently, because nothing reopens it when the content
+       comes back a moment later. And passes are frequent: every resize (which
+       Android fires several times while a keyboard animates), every details
+       toggle, and eighty milliseconds after any DOM change at all.
+
+       Reported as "even this screen disappears automatically and it doesn't
+       even have a keyboard". It did not need one.
+
+       Hidden, stage-locked and the spending-mode switches still close it -
+       those are deliberate changes of state and a panel the ladder has locked
+       must not stay open. Emptiness is not a state, it is a moment. */
+    if(openId && el.dataset.deck===openId) return true;
     const body=el.matches('details')?el.querySelector('.acc-body'):el;
     return !body || (body.innerHTML||'').trim()!=='';
   });
@@ -8388,14 +8407,46 @@ function deckPass(view){
    is done once, at the two methods every one of them ends up calling. */
 /* Open a named section from code - what a deep link, a test, or a future
    "take me to X" shortcut needs. */
-function deckShow(view,label){ deckOpen[view]=label||null; deckSync(view); }
+/* Can this panel be shown at all - not "does it have anything in it yet".
+   The first cut of this asked deckLive, which also refuses an EMPTY panel, and
+   that broke every deep link in the app: a panel is empty until its renderer
+   fills it, and the whole point of a deep link is to open the panel and then
+   put the cursor in it. Five suites caught it. It is the same mistake this
+   commit exists to fix, made one function further along - emptiness is a
+   moment, and only a deliberate state may refuse. */
+function deckShowable(view,label){
+  /* Not yet built is not the same as refused. Callers legitimately say "open
+     this panel" in the same breath as switching to the tab, before the deck has
+     been mounted at all - every deep link in the app is shaped that way, and
+     the old code simply recorded the intent for the next pass to apply. A guard
+     that answered "no panel found, so no" broke five suites' worth of those.
+     Only a panel that is here AND deliberately shut may refuse. */
+  const host=document.getElementById('deck-'+view); if(!host) return true;
+  const el=[...host.querySelectorAll(':scope > [data-deck]')].find(x=>deckLabel(x)===label);
+  if(!el) return true;
+  if(el.hidden || el.classList.contains('stage-locked')) return false;
+  const spend=!!document.querySelector('#view-home.spending-mode');
+  if(spend && el.classList.contains('hide-in-spending')) return false;
+  if(!spend && el.classList.contains('show-in-spending')) return false;
+  return true;
+}
+function deckShow(view,label){
+  /* Refuse a panel that cannot be shown, rather than opening it and letting the
+     next pass shut it. A deep link into a section the ladder has hidden used to
+     flash it onto the screen and then take it away a moment later, with no user
+     action in between. That reads as the app glitching. Declining reads as the
+     app declining. */
+  if(label && !deckShowable(view,label)) return false;
+  deckOpen[view]=label||null; deckSync(view); return true;
+}
 function deckReveal(el){
   const panel=(el&&el.closest)?el.closest('.dk-panel'):null;
   if(!panel || panel.classList.contains('dk-on')) return;
   const host=panel.closest('.deck'); if(!host) return;
   const view=host.id.replace(/^deck-/,'');
-  deckOpen[view]=panel.dataset.deck||null;
-  deckSync(view);
+  /* Through the same door, so a reveal cannot open something deckShow would
+     refuse. Two ways in is how one of them keeps a rule the other forgot. */
+  deckShow(view, panel.dataset.deck||null);
 }
 (function(){
   if(typeof Element==='undefined') return;
