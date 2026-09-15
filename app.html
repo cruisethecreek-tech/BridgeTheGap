@@ -5835,6 +5835,59 @@ function categoryOptions(){
     return `<optgroup label="${escapeHtml(c.name)}"><option value="${c.id}">${escapeHtml(c.name)} (whole group)</option>${kidOpts}</optgroup>`;
   }).join('');
 }
+/* One list, for every picker that offers categories. There were two: the one
+   renderTxForm wrote and the one refreshCatSelects wrote, and they differed -
+   refreshCatSelects added "New category", renderTxForm did not. So the two
+   fought over the same element, every render swapped one for the other, and
+   whether the Log form offered you a way to make a category depended on which
+   of them had run last. */
+function catSelectOptions(){
+  return (state.categories.length ? categoryOptions() : `<option value="">Add a category first</option>`)
+    + `<option value="__new">＋ New category…</option>`;
+}
+/* ---------- replacing the options of a picker somebody may be looking at ----------
+   "It's flickering in the back and won't let me select anything."
+
+   A <select> on Android opens as a NATIVE popup drawn over the page, not as
+   part of it. renderTxForm rewrote that picker's options on every render -
+   unconditionally, and without keeping the chosen value - and renderTx runs on
+   every renderAll. So with a sync loop calling renderAll every couple of
+   seconds, the list underneath the open popup was being replaced continuously
+   and the selection reset to whatever happened to be first. The popup
+   flickers, and a tap that lands between two rewrites is thrown away.
+
+   Two rules come out of it, and the first is the one that generalises:
+
+     rewriting a control with markup identical to what it already holds is not
+     free. On a <div> it is invisible. On an open <select> it is destructive.
+
+   So nothing is written unless it actually differs. And when it does differ
+   while the picker is open under a thumb, the new list waits until the thumb
+   is gone - a list that reshuffles while you are reading it is how somebody
+   ends up choosing the row that was there a moment ago. */
+function setOptions(sel, html){
+  if(!sel) return;
+  if(sel._optHTML===html){ delete sel._optPend; return; }
+  if(document.activeElement===sel){ sel._optPend=html; return; }
+  const keep=sel.value;
+  sel.innerHTML=html; sel._optHTML=html; delete sel._optPend;
+  /* Never lose what they picked to a redraw. renderTxForm assigned innerHTML
+     and walked away, so every render put the form back on whichever category
+     happened to be first - and on the Log tab that is a expense filed against
+     the wrong envelope by a screen the user never touched. */
+  if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;
+}
+/* The list that was held back goes in the moment the picker closes. Read a
+   tick later: during focusout the element it is moving to is not focused yet,
+   so asking now gets the wrong answer. */
+document.addEventListener('focusout',e=>{
+  const sel=e.target;
+  if(!sel || sel.tagName!=='SELECT' || sel._optPend==null) return;
+  setTimeout(()=>{
+    if(document.activeElement===sel || sel._optPend==null) return;
+    const html=sel._optPend; delete sel._optPend; setOptions(sel, html);
+  },0);
+},true);
 function todayStr(){ return localYMD(new Date()); }
 
 /* ---------- Household mode (couples): one budget, two earners ---------- */
@@ -11719,8 +11772,7 @@ function renderRecFill(){
   }));
 }
 function renderTxForm(){
-  const sel=document.getElementById('txCat');
-  sel.innerHTML = state.categories.length ? categoryOptions() : `<option value="">Add a category first</option>`;
+  setOptions(document.getElementById('txCat'), catSelectOptions());
   if(!document.getElementById('txDate').value) document.getElementById('txDate').value=todayStr();
   /* The move note names the destination account, so it has to be redrawn when
      the accounts behind it change - not only when the toggle is pressed. */
@@ -14152,8 +14204,22 @@ async function pushToVault(passphrase){
   const pass=passphrase||syncPass; if(!pass) throw new Error('No Sync Passphrase in this session - enter it to resume syncing.');
   const payload=await encryptVault(state, pass);
   const stamp=new Date().toISOString();
+  /* Claimed BEFORE the write, not after, and this is the whole of the bug that
+     made the app flicker. Realtime notifies within milliseconds of the row
+     committing; the old code only recorded the stamp once the version had also
+     been filed, a second round trip later. So the notification for our OWN push
+     arrived inside that window, found a stamp it did not recognise, pulled,
+     merged, saved, scheduled another push - and went round again, for as long
+     as the tab was open. The poll never exposed it because fifteen seconds is
+     far longer than the window; turning Realtime on closed the gap and the loop
+     ran continuously.
+
+     A stamp we are about to write is ours whether or not the write lands. If it
+     fails, nothing carries that stamp and nothing can be missed by it. */
+  const prevSeen=syncLastSeen;
+  syncLastSeen=stamp;
   const {error}=await sb.from('user_vaults').upsert({ user_id:sess.user.id, encrypted_payload:payload, updated_at:stamp }, {onConflict:'user_id'});
-  if(error) throw new Error(error.message);
+  if(error){ syncLastSeen=prevSeen; throw new Error(error.message); }
   /* Filed after the push succeeded, never before: a version of something that
      did not land is a version of nothing. Awaited so the ordering is real, but
      it swallows its own failures. */
@@ -14162,7 +14228,6 @@ async function pushToVault(passphrase){
      that has moved - because WE moved it - decides the other phone has news,
      and pulls back its own write every fifteen seconds forever. Harmless to the
      data, since merging is idempotent, and pure noise on the wire. */
-  syncLastSeen=stamp;
   state.syncLastPush=stamp;
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(_){ }   // not save(): that would schedule another push
   return true;
@@ -14227,10 +14292,19 @@ async function vaultRestore(id){
   state=normalizeState(Object.assign(defaultState(), old));
   if(!state.activeMonth) state.activeMonth=thisMonth();
   syncPrev=null; save(); syncPulling=false;
-  syncLastSeen='';
   await pushToVault(pass);
   if(typeof renderAll==='function') renderAll();
   return data.created_at||'';
+}
+/* What counts as "the same vault" for the purpose of deciding whether to write.
+   The sync bookkeeping is excluded deliberately: syncLastPull moves on every
+   pull by definition, so comparing it would make every merge look like news and
+   the echo push would fire forever - which is the fault this exists to stop. */
+const VAULT_SIG_SKIP=['syncLastPull','syncLastPush','syncOptIn'];
+function vaultSig(s){
+  try{
+    return JSON.stringify(s, (k,v)=>VAULT_SIG_SKIP.includes(k)?undefined:v);
+  }catch(_){ return Math.random().toString(); }   // unserialisable: treat as different, never as same
 }
 async function pullFromVault(passphrase){
   const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.');
@@ -14249,7 +14323,8 @@ async function pullFromVault(passphrase){
      Both sides are now reconciled item by item, and the losing copy of any
      single item is the older one rather than the one that happened to sync
      second. */
-  const merged=mergeVault(state, Object.assign(defaultState(), remote));
+  const remoteN=normalizeState(Object.assign(defaultState(), remote));
+  const merged=mergeVault(state, remoteN);
   state=normalizeState(merged); if(!state.activeMonth) state.activeMonth=thisMonth();
   syncPrev=null;                                      // re-baseline: a merge is not an edit by this device
   state.syncLastPull=new Date().toISOString();
@@ -14257,9 +14332,15 @@ async function pullFromVault(passphrase){
   syncPulling=false;
   /* What came back may differ from what the vault held, because our side had
      things it did not. Push the reconciliation straight back so the other phone
-     sees it without waiting for the next edit. */
-  syncLastSeen='';
-  try{ await pushToVault(pass); }catch(_){ }
+     sees it without waiting for the next edit - but only when there is
+     something to tell them. This used to push every single time, and it cleared
+     syncLastSeen first so that it definitely would, which is what kept the loop
+     above fed: every pull wrote, every write notified, every notification
+     pulled. A merge that produced exactly what the vault already holds is not
+     news and must not be sent. */
+  if(vaultSig(state)!==vaultSig(remoteN)){
+    try{ await pushToVault(pass); }catch(_){ }
+  }
   if(typeof renderAll==='function') renderAll();
   return true;
 }
@@ -18611,18 +18692,11 @@ document.getElementById('postRec').addEventListener('click',()=>{
    the other three pickers. One shared option list and one shared handler now,
    so a picker cannot quietly lose it again. */
 function refreshCatSelects(){
-  const opts=(state.categories.length?categoryOptions():'')
-    +'<option value="__new">＋ New category…</option>';
-  document.querySelectorAll('#recCat, #txCat, .ql-cat').forEach(sel=>{
-    if(sel.classList.contains('ql-cat')) return;   // the quick log builds its own, with its invest and income lanes
-    const keep=sel.value;
-    sel.innerHTML=opts;
-    if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;   // do not lose a chosen category on a redraw
-  });
-  document.querySelectorAll('.ql-cat').forEach(sel=>{
-    const keep=sel.value; sel.innerHTML=qlCatOptions();
-    if(keep && [...sel.options].some(o=>o.value===keep)) sel.value=keep;
-  });
+  const opts=catSelectOptions();
+  document.querySelectorAll('#recCat, #txCat').forEach(sel=>setOptions(sel, opts));
+  /* the quick log builds its own, with its invest and income lanes */
+  const qopts=qlCatOptions();
+  document.querySelectorAll('.ql-cat').forEach(sel=>setOptions(sel, qopts));
   /* Built from the list, not typed out beside it. The form carried its own copy
      of the five original kinds, so when Dividends and Rent were added to the
      model to answer a question about capital income they appeared in the entry
