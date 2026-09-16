@@ -14418,14 +14418,51 @@ async function vaultRestore(id){
   return data.created_at||'';
 }
 /* What counts as "the same vault" for the purpose of deciding whether to write.
-   The sync bookkeeping is excluded deliberately: syncLastPull moves on every
-   pull by definition, so comparing it would make every merge look like news and
-   the echo push would fire forever - which is the fault this exists to stop. */
-const VAULT_SIG_SKIP=['syncLastPull','syncLastPush','syncOptIn'];
+
+   The sync bookkeeping is excluded because syncLastPull moves on every pull by
+   definition, so comparing it would make every merge look like news.
+
+   And so is the view state, which is what actually melted two phones. Measured
+   with two real instances against one vault: 665 writes in twelve seconds, 55 a
+   second, and about 330 renderAll() calls on each device - twenty-seven full
+   redraws a second, which is why no keypad could stay open and why the two
+   heaviest screens, Home and Plan, were the ones that visibly came apart.
+
+   The cause is that "which month am I looking at" lives in the same object as
+   the household's money. One phone on September and the other on August is not
+   a disagreement to resolve - it is two people looking at different screens -
+   but it made every merge differ from the vault, so every pull pushed, and
+   every push notified the other phone, which pulled, and pushed. Forever.
+
+   These keys are yours, on this device, and no partner's phone has an opinion
+   about them. */
+const VAULT_SIG_SKIP=['syncLastPull','syncLastPush','syncOptIn',
+  'activeMonth','rateDraft','intakeDraft','retroView','planPromptSkip',
+  'deepenSkipMonth','backupNagDay','msNoteDismissed'];
 function vaultSig(s){
   try{
     return JSON.stringify(s, (k,v)=>VAULT_SIG_SKIP.includes(k)?undefined:v);
   }catch(_){ return Math.random().toString(); }   // unserialisable: treat as different, never as same
+}
+/* The floor under all of it. Excluding the view state fixes the disagreement
+   we know about; this bounds the damage of every one we do not.
+
+   Two devices are allowed to disagree about what the vault should contain - one
+   of them has something the other has not seen yet, which is the whole point of
+   the echo push. What they are not allowed to do is tell each other about it
+   fifty-five times a second. Nothing is lost by waiting: the merge has already
+   taken their side, and this device's next real edit pushes anyway. All that is
+   delayed is a reconciliation the other phone will get on its next poll.
+
+   A loop that writes to somebody's database as fast as the network allows is
+   worse than whatever it is trying to fix, so this rule is unconditional and
+   does not ask why the two sides differ. */
+const SYNC_ECHO_MIN_MS=20000;
+let syncEchoAt=0;
+function syncEchoAllowed(){
+  const now=Date.now();
+  if(now-syncEchoAt < SYNC_ECHO_MIN_MS) return false;
+  syncEchoAt=now; return true;
 }
 async function pullFromVault(passphrase){
   const sb=await getSupabase(); if(!sb) throw new Error('Sync is not set up on this build yet.');
@@ -14459,7 +14496,7 @@ async function pullFromVault(passphrase){
      above fed: every pull wrote, every write notified, every notification
      pulled. A merge that produced exactly what the vault already holds is not
      news and must not be sent. */
-  if(vaultSig(state)!==vaultSig(remoteN)){
+  if(vaultSig(state)!==vaultSig(remoteN) && syncEchoAllowed()){
     try{ await pushToVault(pass); }catch(_){ }
   }
   if(typeof renderAll==='function') renderAll();
@@ -14756,7 +14793,7 @@ function renderTracePanel(){
 /* A link anybody can be sent: accountability.money/app.html#trace */
 if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
 
-const BUILD_STAMP='2026-09-15 · emptiness is a moment, not a state';
+const BUILD_STAMP='2026-09-16 · two phones, not one';
 function renderBuildLine(){
   if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
