@@ -1442,6 +1442,20 @@
   .rw-left{display:block;font-style:normal;font-size:11px;font-weight:800;
     letter-spacing:.02em;color:var(--muted);text-align:right;margin-top:2px;white-space:nowrap}
   .rw-left.over{color:var(--bad)}
+  /* The box with the cursor in it has to LOOK like the box with the cursor in
+     it. The global rule is outline:none plus an accent border, and on a beige
+     row against a beige border that is close to invisible - which on a screen
+     where the keyboard keeps vanishing leaves no way to tell whether the tap
+     landed at all. */
+  .subrow .sub-assign input:focus,.cs-assign input:focus{
+    outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);
+    background:var(--panel)}
+  .tracepanel{margin-top:10px}
+  .trace-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .trace-live{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--bad)}
+  .trace-body{margin:8px 0 0;max-height:210px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px}
   /* The sum still being typed, shown where the remainder normally sits. */
   .rw-left.calc{color:var(--accent)}
   /* A row with nothing assigned has no remainder to print, and used to be a
@@ -4226,6 +4240,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Which version is this</h2>
         <p class="sub" data-say="1">If something has been fixed and your phone still does the old thing, this is how you tell whether the fix has actually reached you. Read it out when you report something.</p>
         <div class="buildline" id="buildLine"></div>
+        <div class="tracepanel" id="tracePanel"></div>
       </div>
     </section>
   </div>
@@ -10032,7 +10047,7 @@ let catSheetId=null;
    list and the sheet show the same numbers, and a sheet still displaying last
    second's figure while the list behind it has moved on is the kind of thing
    people stop trusting an app over. */
-function planRefresh(){ renderBudget(); if(catSheetId) renderCatSheet(); }
+function planRefresh(){ if(traceOn) traceNote('the app redrew: planRefresh'); renderBudget(); if(catSheetId) renderCatSheet(); }
 /* The line under the money column, written once. It is read from two places -
    the row builder and the in-place refresher below - and two copies of it is
    how the list starts disagreeing with itself halfway through a typing run.
@@ -10812,7 +10827,7 @@ function wallGuideHTML(c,M){
   if(next) return `<div class="wall-next"><span class="wn-t">✓${escapeHtml(w.name)} set aside. Next wall: ${next.icon} ${escapeHtml(next.name)}</span><span class="wn-b"><button class="btn sm primary" data-wallnext="${escapeHtml(next.cat)}">Fund ${escapeHtml(next.name)} →</button><button class="btn sm ghost" data-walldone>Done for now</button></span></div>`;
   return deepenHTML();   // the walls are the floor, not the finish line
 }
-function renderBudget(){
+function renderBudget(){ if(traceOn) traceNote('the app redrew: renderBudget');
   if(typeof refreshCatSelects==='function') setTimeout(refreshCatSelects,0);
   document.getElementById('mLabel').innerHTML = fmtMonth(state.activeMonth)
     + (state.activeMonth===thisMonth() ? '<small>This month</small>' : `<small>${backToThisMonthHTML('mBack')}</small>`);
@@ -14638,8 +14653,112 @@ function changeLogHTML(n){
    this is set by hand in the same commit as the change it names, and the date
    plus the change is what makes it useful: "2026-09-02 sync-optin-fix" answers
    "has the fix reached me" in a way a version number never does. */
-const BUILD_STAMP='2026-09-14 · a list with no heading borrows the one above it';
+/* ---------- the trace: what the phone did, in the phone's own words ----------
+   Four rounds have now gone into "the keypad disappears", and three of the
+   fixes were aimed at causes I inferred from screenshots. The last recording
+   killed the remaining theory: at 3.20s the keypad is gone and the cursor is
+   still sitting in the field. Something dismisses the keyboard WITHOUT the box
+   losing focus, and that is a device-level event - nothing in this repository
+   can see it, and no test I can write here has an IME to close.
+
+   So instead of a fourth guess, an instrument. It is off until switched on,
+   costs nothing while off, and records the handful of things that could
+   possibly be responsible: focus arriving and leaving, the window losing focus
+   underneath the page, the viewport resizing the way a keyboard makes it, the
+   page being hidden, and - the one an event log would otherwise miss - the
+   focused box being taken out of the page by a render.
+
+   It never leaves the device and it is not part of the vault: it lives in a
+   variable and is copied out by hand. */
+let traceLog=[], traceOn=false, traceT0=0, traceFocused=null;
+function traceDesc(el){
+  if(!el || el===document.body || el===document) return 'the page itself';
+  if(el.dataset && el.dataset.cat) return 'the amount box for '+(typeof catName==='function'?catName(el.dataset.cat):el.dataset.cat);
+  const id=el.id?'#'+el.id:'';
+  const cls=el.className&&typeof el.className==='string'?'.'+el.className.split(/\s+/)[0]:'';
+  return (el.tagName||'?').toLowerCase()+id+cls;
+}
+function traceNote(what,extra){
+  if(!traceOn) return;
+  const t=Math.round(performance.now()-traceT0);
+  traceLog.push((t/1000).toFixed(2).padStart(6)+'s  '+what+(extra?'   '+extra:''));
+  if(traceLog.length>500) traceLog.shift();
+  const body=document.getElementById('traceBody');
+  if(body){ body.textContent=traceLog.slice(-40).join('\n'); body.scrollTop=body.scrollHeight; }
+  const n=document.getElementById('traceCount');
+  if(n) n.textContent=traceLog.length+' lines';
+}
+function traceSize(){
+  const v=window.visualViewport;
+  return 'window '+Math.round(innerWidth)+'x'+Math.round(innerHeight)
+    + (v?'  visible '+Math.round(v.width)+'x'+Math.round(v.height)+' at '+Math.round(v.offsetTop):'');
+}
+(function(){
+  /* Bound once, at boot, and every one of them leaves immediately when the
+     trace is off. Wiring them only on start would miss whatever happens in the
+     same moment the switch is thrown. */
+  document.addEventListener('focusin',e=>{ traceFocused=e.target; traceNote('focus arrived at '+traceDesc(e.target)); },true);
+  document.addEventListener('focusout',e=>{ traceNote('focus LEFT '+traceDesc(e.target)); },true);
+  window.addEventListener('resize',()=>traceNote('the page was resized',traceSize()));
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',()=>traceNote('the visible area changed - this is what a keyboard does',traceSize()));
+    window.visualViewport.addEventListener('scroll',()=>traceNote('the visible area scrolled',traceSize()));
+  }
+  document.addEventListener('visibilitychange',()=>traceNote(document.hidden?'the page was HIDDEN':'the page came back'));
+  window.addEventListener('blur',()=>traceNote('!! the WINDOW lost focus - something outside the page took it'));
+  window.addEventListener('focus',()=>traceNote('the window got focus back'));
+  window.addEventListener('pagehide',()=>traceNote('!! pagehide - the page is being put away'));
+  if(typeof MutationObserver!=='undefined'){
+    new MutationObserver(()=>{
+      if(!traceOn || !traceFocused) return;
+      if(!traceFocused.isConnected){
+        traceNote('!! the box that had the cursor was REMOVED from the page','('+traceDesc(traceFocused)+')');
+        traceFocused=null;
+      }
+    }).observe(document.documentElement,{childList:true,subtree:true});
+  }
+})();
+function traceStart(){
+  traceOn=true; traceT0=performance.now(); traceLog=[];
+  traceNote('recording started',traceSize());
+  traceNote('now do the thing that goes wrong, then press Stop');
+  renderTracePanel();
+}
+function traceStop(){ traceOn=false; renderTracePanel(); }
+function traceText(){
+  return 'ACCOUNTABILITY trace\n'+BUILD_STAMP+'\n'+navigator.userAgent+'\n\n'+traceLog.join('\n');
+}
+function renderTracePanel(){
+  const box=document.getElementById('tracePanel'); if(!box) return;
+  if(!traceOn && !traceLog.length){
+    box.innerHTML=`<button class="btn sm ghost" id="traceGo">Record what the screen does</button>
+      <span class="bl-n">Switch this on, make the problem happen, then stop and copy. It watches the cursor, the keyboard and the page - nothing else, and nothing leaves the phone.</span>`;
+    const g=document.getElementById('traceGo'); if(g) g.onclick=traceStart;
+    return;
+  }
+  box.innerHTML=`<div class="trace-row">
+      ${traceOn?`<button class="btn sm primary" id="traceStop">Stop recording</button><span class="trace-live">recording</span>`
+               :`<button class="btn sm ghost" id="traceGo">Record again</button>`}
+      <button class="btn sm ghost" id="traceCopy">Copy</button>
+      <span class="bl-n" id="traceCount">${traceLog.length} lines</span>
+    </div>
+    <pre class="trace-body" id="traceBody">${escapeHtml(traceLog.slice(-40).join('\n'))}</pre>`;
+  const g=document.getElementById('traceGo'); if(g) g.onclick=traceStart;
+  const st=document.getElementById('traceStop'); if(st) st.onclick=traceStop;
+  const cp=document.getElementById('traceCopy');
+  if(cp) cp.onclick=()=>{
+    const t=traceText();
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(t).then(()=>{ if(typeof toast==='function') toast('Trace copied - paste it wherever you are reporting this.'); })
+        .catch(()=>{ if(typeof toast==='function') toast('Could not copy. Select the text above and copy it by hand.'); });
+  };
+}
+/* A link anybody can be sent: accountability.money/app.html#trace */
+if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
+
+const BUILD_STAMP='2026-09-15 · emptiness is a moment, not a state';
 function renderBuildLine(){
+  if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
   const known=BUILD_STAMP.indexOf('__')!==0;
   el.innerHTML=known
@@ -17035,7 +17154,7 @@ function renderFreedomToggle(){
   document.querySelectorAll('#freedomToggle button').forEach(b=>b.classList.toggle('on', (b.dataset.mode==='life')===!!state.freedomMode));
   const lbl=document.getElementById('ftLabel'); if(lbl) lbl.textContent = state.freedomMode ? 'Life-hours' : 'Dollars';
 }
-function renderAll(){
+function renderAll(){ if(traceOn) traceNote('the app redrew: renderAll');
   renderFreedomToggle();
   renderBudget(); renderTx(); renderGoals(); renderNetWorth(); renderImpulse(); renderVault(); renderRecurring(); renderCharts(); renderHome();
   // a sync pull replaces state wholesale and calls only renderAll - so everything
