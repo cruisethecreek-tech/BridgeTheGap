@@ -3206,6 +3206,34 @@ p,.sub{font-weight:400;line-height:1.62}
 .metric,.cal-stat,.bd-row,.rec,.dy-entry,.sov-m{border-color:transparent;background:var(--panel-2)}
 .fab{box-shadow:0 6px 20px rgba(0,0,0,.28)}
 .btn.primary{box-shadow:none}
+/* ---------- the invitation, as opposed to the alternative ----------
+   "These CTAs should be a more prominent bold color to stand out, instead of
+   just blending in with the rest of the text."
+
+   Reported against "Enter my notes - log several at once", which is the way in
+   to the whole batch-logging tool and rendered as .btn.ghost: transparent, a
+   hairline border, body-coloured text. Under a heading it reads as a caption
+   somebody drew a box around.
+
+   Not every ghost button, though - there are 85 of them and most are the other
+   half of a pair: Not now, Cancel, Keep it, Delete. Painting those loud would
+   flatten the hierarchy, and everything loud is the same as nothing loud.
+
+   The line is whether anything else is offered beside it. A ghost button with a
+   .primary next to it IS the quiet alternative and should stay quiet - "Take a
+   page / Pick from photos", "Start budgeting / Run a gut check". A ghost button
+   standing alone is not an alternative to anything. It is the invitation, and
+   it should look like one.
+
+   So this sits between the two: filled enough to read as a control at a glance,
+   short of the solid accent that marks the one committing action on a screen.
+
+   Declared here, after the rule two lines up that pulls every button back to
+   600, because that rule would otherwise win the weight. */
+.btn.cta{background:rgba(var(--accent-rgb),.14);border:2px solid var(--accent);
+  color:var(--accent);font-weight:800}
+.btn.cta:hover{background:rgba(var(--accent-rgb),.24);border-color:var(--accent)}
+.btn.cta:active{background:rgba(var(--accent-rgb),.3)}
 </style>
 <script>/* Pre-paint theme so a light-mode phone never flashes dark. Mirrors resolvedTheme(). */
 try{var _s=JSON.parse(localStorage.getItem("unfiltered_budget_v2")||"{}"),_t=_s&&_s.theme;
@@ -3294,7 +3322,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <p class="walls-tag" id="wallsTag" data-say="1">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving.</p>
       </div>
       <div class="walls hide-in-spending" id="wallsGrid"></div>
-      <div class="hide-in-spending" style="text-align:center;margin-top:12px"><button class="btn ghost sm" id="wallsSetup">Set up my essentials</button></div>
+      <div class="hide-in-spending" style="text-align:center;margin-top:12px"><button class="btn cta sm" id="wallsSetup">Set up my essentials</button></div>
     </section>
 
     <!-- ============ BUDGET ============ -->
@@ -3407,7 +3435,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         <h2>Log money in &amp; money out</h2>
         <p class="sub" data-say="1">Every paycheck, every purchase. This is the truth your budget is measured against.</p>
 
-        <button class="btn ghost" id="quickLogBtn" style="margin-bottom:12px">Enter my notes - log several at once</button>
+        <button class="btn cta" id="quickLogBtn" style="margin-bottom:12px">Enter my notes - log several at once</button>
         <div id="quickLog"></div>
 
         <div class="typetoggle" id="typeToggle">
@@ -3588,7 +3616,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
         </div>
         <details class="traplegend" id="trapLegend"><summary>What are the traps - and what isn't one?</summary><div id="trapLegendBody"></div></details>
         <div id="impResult"></div>
-        <div style="margin-top:14px"><button class="btn sm ghost" id="copyLink">Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
+        <div style="margin-top:14px"><button class="btn sm cta" id="copyLink">Save a one-tap scan link</button> <span id="copyMsg" class="sub" style="margin:0"></span></div>
       </div>
 
       <div class="panel" id="tripwirePanel" data-deck="Tripwires">
@@ -3658,7 +3686,7 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
           <p><b>Pick the kind first.</b> It decides which of those you are asked for - a card is asked for its limit, a mortgage for the value of the house, a student loan for neither, because it has no other side.</p>
           <p>Do not have the rate to hand? Add the debt anyway with the balance - it still counts what you owe. Come back and fill the rate in when you have the statement, and the numbers sharpen up.</p>
         </details>
-        <div style="margin-top:8px"><button class="btn sm ghost" id="importLiab">⤵ Import from my liabilities</button></div>
+        <div style="margin-top:8px"><button class="btn sm cta" id="importLiab">⤵ Import from my liabilities</button></div>
         <div id="debtList"></div>
       </div>
       <div class="panel" id="gate-debtplan">
@@ -14793,7 +14821,7 @@ function renderTracePanel(){
 /* A link anybody can be sent: accountability.money/app.html#trace */
 if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
 
-const BUILD_STAMP='2026-09-16 · two phones, not one';
+const BUILD_STAMP='2026-09-18 · the invitation, not the alternative';
 function renderBuildLine(){
   if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
@@ -19717,7 +19745,7 @@ function renderAreaGuide(view){
     <div class="ag-first"><b>Start with:</b> ${escapeHtml(g.first)}</div>
     <div class="ag-row">
       <button class="btn sm primary" data-agok>Got it</button>
-      <button class="btn sm ghost" data-agmap>See how it all fits →</button>
+      <button class="btn sm cta" data-agmap>See how it all fits →</button>
       <button class="ag-off" data-agoff>I know my way around - turn these off</button>
     </div>`;
   sec.insertBefore(el, sec.firstChild);
