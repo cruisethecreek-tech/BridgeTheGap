@@ -2705,8 +2705,33 @@
   .ql-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:10px}
   .ql-datel{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
   .ql-datel input{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:13px}
-  .ql-list{display:flex;flex-direction:column;gap:8px}
-  .ql-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  /* ---------- one entry, one block ----------
+     "Each section should have a block to know what you are changing. It's hard
+     to clearly see without each broken into each section."
+
+     A row is a flex line that WRAPS on a phone: what it was and how much sit on
+     the first line, the category and the remove button drop to a second. The
+     gap inside a row was 7px and the gap between two rows was 8px - one pixel
+     apart. So the space separating two halves of the SAME entry looked exactly
+     like the space separating two different entries, and on a four-line batch
+     there was nothing telling the eye which dropdown belonged to which
+     description. Everything was equally close to everything.
+
+     Each entry is its own surface now, and carries its own number, so "which
+     account did these 4 come out of" has four visible answers underneath it
+     rather than eight loose controls. The number is a CSS counter rather than
+     markup: rows are added and removed constantly here, and anything the
+     renderer has to renumber by hand is something it will eventually get
+     wrong. */
+  .ql-list{display:flex;flex-direction:column;gap:12px;counter-reset:qln}
+  .ql-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;counter-increment:qln;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px}
+  .ql-row::before{content:counter(qln);flex:1 0 100%;font-size:10.5px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.09em;color:var(--muted);line-height:1;margin-bottom:1px}
+  /* A row still waiting to be named is the one to look at, so the block says so
+     rather than leaving the mark on the field alone. */
+  .ql-row.ql-unnamed{border-color:var(--accent);background:rgba(var(--accent-rgb),.06)}
+  .ql-row.ql-unnamed::before{content:counter(qln) " - needs a name";color:var(--accent)}
   .ql-row .ql-what{flex:2;min-width:120px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 10px;font-size:14px}
   .ql-row .ql-dol{display:inline-flex;align-items:center;gap:3px;color:var(--muted);font-weight:700}
   .ql-row .ql-amt{width:78px;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 8px;font-size:14px}
@@ -14821,7 +14846,7 @@ function renderTracePanel(){
 /* A link anybody can be sent: accountability.money/app.html#trace */
 if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
 
-const BUILD_STAMP='2026-09-18 · the invitation, not the alternative';
+const BUILD_STAMP='2026-09-20 · one entry, one block';
 function renderBuildLine(){
   if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
