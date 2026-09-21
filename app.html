@@ -1442,6 +1442,15 @@
   .rw-left{display:block;font-style:normal;font-size:11px;font-weight:800;
     letter-spacing:.02em;color:var(--muted);text-align:right;margin-top:2px;white-space:nowrap}
   .rw-left.over{color:var(--bad)}
+  /* The steps that are not your next one. A summary, not a button: it has to
+     read as "there is more when you want it", never as another decision. */
+  .ns-more{margin-top:8px}
+  .ns-more>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:700;color:var(--muted);padding:6px 2px}
+  .ns-more>summary::-webkit-details-marker{display:none}
+  .ns-more>summary::before{content:"\25B8";font-size:10px;color:var(--accent)}
+  .ns-more[open]>summary::before{content:"\25BE"}
+  .ns-more>summary:hover{color:var(--accent)}
   /* The box with the cursor in it has to LOOK like the box with the cursor in
      it. The global rule is outline:none plus an accent border, and on a beige
      row against a beige border that is close to invisible - which on a screen
@@ -3334,20 +3343,34 @@ document.documentElement.setAttribute("data-theme",_t==="light"?"light":"dark");
       <div id="rewardCalBox" class="show-in-spending"></div>
       <div id="stageBar" class="hide-in-spending"></div>
       <div id="nextSteps" class="hide-in-spending"></div>
-      <div class="snapshot hide-in-spending" id="homeSnap"></div>
-      <div id="lifeKeyHome" class="hide-in-spending"></div>
+      <!-- Where you stand used to sit open on Home: six stat cards and six
+           question marks, directly under the list telling you what to do. It
+           answers a different question - "how am I doing" rather than "what
+           now" - and it was being asked at the same volume. Folded, not
+           removed: one tap, and every number is still there. -->
+      <div class="hide-in-spending" data-deck="Where you stand">
+        <div class="snapshot" id="homeSnap"></div>
+        <div id="lifeKeyHome"></div>
+      </div>
       <div id="householdBox" data-deck="Household"></div>
       <div id="retroBox" class="hide-in-spending" data-deck="Your evolution"></div>
       <div id="offenseCard" data-stage="2" data-deck="Offense vs. Defense"></div>
       <div id="enoughCard" data-stage="2" data-deck="The &quot;Enough&quot; anchor"></div>
 
-      <div class="walls-head hide-in-spending">
-        <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
-        <h2 class="ph-title">Cover First</h2>
-        <p class="walls-tag" id="wallsTag" data-say="1">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving.</p>
+      <!-- Cover First is a second screen living under the first one: a
+           heading, a sentence, four cards and a button. When the walls are not
+           covered the Do-this-next list already says so at the top, in one
+           line, with the button that fixes it - so this was the same advice
+           twice, the second time at four times the size. -->
+      <div class="hide-in-spending" data-deck="Cover First">
+        <div class="walls-head">
+          <div class="ph-eye" id="wallsProgress">0 of 4 covered</div>
+          <h2 class="ph-title">Cover First</h2>
+          <p class="walls-tag" id="wallsTag" data-say="1">Food. Power &amp; Wi-Fi. Roof. Getting around. Fund these before anything fun - they keep the lights on and you moving.</p>
+        </div>
+        <div class="walls" id="wallsGrid"></div>
+        <div style="text-align:center;margin-top:12px"><button class="btn cta sm" id="wallsSetup">Set up my essentials</button></div>
       </div>
-      <div class="walls hide-in-spending" id="wallsGrid"></div>
-      <div class="hide-in-spending" style="text-align:center;margin-top:12px"><button class="btn cta sm" id="wallsSetup">Set up my essentials</button></div>
     </section>
 
     <!-- ============ BUDGET ============ -->
@@ -14846,7 +14869,7 @@ function renderTracePanel(){
 /* A link anybody can be sent: accountability.money/app.html#trace */
 if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
 
-const BUILD_STAMP='2026-09-20 · one entry, one block';
+const BUILD_STAMP='2026-09-21 · home answers one thing';
 function renderBuildLine(){
   if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
@@ -23766,6 +23789,15 @@ function renderMoneyStoryNote(){
   const x=document.getElementById('msNoteX'); if(x) x.onclick=()=>{ state.msNoteDismissed=M; save(); renderMoneyStoryNote(); };
 }
 /* guided "do this next" - computes the user's most useful next moves */
+/* The Do-this-next cards: the first one, then the rest behind a summary that
+   reads as "there is more when you want it" rather than as a third decision. */
+function nsCards(steps){
+  const card=(s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`;
+  const all=steps.map(card);
+  if(all.length<2) return all.join('');
+  const rest=all.slice(1);
+  return all[0]+`<details class="ns-more"><summary>${rest.length===1?'One more when this is done':rest.length+' more when this is done'}</summary>${rest.join('')}</details>`;
+}
 function renderNextSteps(){
   const box=document.getElementById('nextSteps'); if(!box) return;
   const M=state.activeMonth, income=monthToBudget(M);
@@ -23855,7 +23887,19 @@ function renderNextSteps(){
     : '';
   box.innerHTML=`<div class="paths-head" style="margin-top:6px"><div class="ph-eye">Start here</div><h2 class="ph-title">Do this next</h2></div>`+
     outgrownNote+
-    steps.slice(0,3).map((s,i)=>`<button class="nextstep" data-act="${s[3]}"><span class="ns-n">${i+1}</span><span class="ns-ic">${s[0]}</span><span class="ns-body"><span class="ns-t">${escapeHtml(s[1])}</span><span class="ns-s">${escapeHtml(s[2])}</span></span><span class="ns-arrow">→</span></button>`).join('');
+    /* One move, then the rest behind a fold.
+
+       Measured: Home carried fifteen buttons proposing an action, twenty-seven
+       sentences asserting something and eight question marks - on the screen
+       whose entire job is to answer "what is my next move". Three ranked steps
+       shown at equal size is not a ranking, it is three decisions, and a screen
+       that opens with three decisions is one you close.
+
+       So the first arrives at full size and the other two wait. Nothing is
+       removed, and a shut <details> is genuinely absent from the page's own
+       text rather than merely small - the same property the explainer folds
+       rely on, which is what makes this a real reduction and not a visual one. */
+    nsCards(steps.slice(0,3));
 }
 /* ============================================================
    THE TRAIL - one map of every "next move" in the app.

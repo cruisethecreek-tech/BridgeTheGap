@@ -259,14 +259,21 @@ const walls = await p.evaluate(() => {
                        return { own:cats.reduce((s,c)=>s+assignedFor(c.id,M),0), tree:cats.reduce((s,c)=>s+catAssigned(c.id,M),0) }; };
   const food = WALLS.find(w=>w.cat==='Food'), pow = WALLS.find(w=>w.cat==='Power & Wi-Fi');
   renderAll();
+  /* Home answers one question now, so Cover First folded into the deck and is
+     no longer in the tab's own text until it is opened. Both claims below are
+     still true and still worth holding - what changed is where the sentence
+     lives, not whether it is said. The nag line is still read from the Home
+     text itself, because that one has to greet you without being asked for. */
   const home = document.getElementById('view-home').innerText;
+  if(typeof deckShow==='function') deckShow('home','Cover First');
+  const walls = document.getElementById('view-home').innerText;
   return {
     foodOwn: cover(food).own, foodTree: cover(food).tree,
     powOwn: pow?cover(pow).own:null, powTree: pow?cover(pow).tree:null,
     coveredCount: WALLS.filter(w=>cover(w).tree>0).length,
     nags: (home.match(/Cover your essentials \(\d\/\d\)/)||[])[0] || '',
     tellsToFundFood: /Fund Food first|Food[\s\S]{0,60}Fund it first/.test(home),
-    coverFirstSays: (home.match(/All four walls covered this month[^\n]*/)||[])[0] || '<<still asking>>',
+    coverFirstSays: (walls.match(/All four walls covered this month[^\n]*/)||[])[0] || '<<still asking>>',
   };
 });
 check('Food carries 620 - on its subs, not on itself', 620, walls.foodTree);
