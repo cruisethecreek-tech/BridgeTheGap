@@ -1451,6 +1451,25 @@
   .ns-more>summary::before{content:"\25B8";font-size:10px;color:var(--accent)}
   .ns-more[open]>summary::before{content:"\25BE"}
   .ns-more>summary:hover{color:var(--accent)}
+  /* The three steps of reading a statement. A step you have finished is ticked
+     and steps back out of the way; the one you are on is the only thing lit. */
+  .ql-steps{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:10px}
+  .qs{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:12px;
+    border:1px solid transparent;transition:background .2s,border-color .2s}
+  .qs-n{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    font-size:11px;font-weight:800;background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+  .qs-b{min-width:0;display:flex;flex-direction:column;gap:2px;flex:1}
+  .qs-t{font-size:14px;font-weight:800;color:var(--text)}
+  .qs-s{font-size:12px;line-height:1.5;color:var(--muted)}
+  .qs.now{background:rgba(var(--accent-rgb),.07);border-color:var(--accent)}
+  .qs.now .qs-n{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+  .qs.done .qs-n{background:transparent;color:var(--accent);border-color:var(--accent)}
+  .qs.done .qs-n::before{content:"\2713"}
+  .qs.done .qs-n{font-size:0}
+  .qs.done .qs-n::before{font-size:12px}
+  .qs.done .qs-t,.qs.todo .qs-t{color:var(--muted);font-weight:700}
+  .qs.todo{opacity:.62}
+  .ql-steps .ql-photo-row{margin:8px 0 0}
   /* The box with the cursor in it has to LOOK like the box with the cursor in
      it. The global rule is outline:none plus an accent border, and on a beige
      row against a beige border that is close to invisible - which on a screen
@@ -12042,7 +12061,19 @@ const HABIT_WORDS=[
   {w:['haircut','hair','nails','salon','barber'],                            c:['personal care','hair']},
   {w:['daycare','childcare','babysitter','diapers'],                         c:['child','kids','daycare']}
 ];
-function qlWords(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(w=>w.length>2); }
+/* Every line a bank prints says "ACH WITHDRAWAL", "Card purchase", "Transfer",
+   "WEB", "pending". None of it identifies anything - it is the plumbing, and it
+   is on every row. Left in, it makes any two statement lines look alike: with
+   three Acorns entries in the history, "ACH Withdrawal / Betterment deposit"
+   scored Acorns and won, because it shares "ach", "withdrawal" and "transfer"
+   with them. A confidently wrong guess is worse than no guess, so the plumbing
+   scores nothing and only the words that name something are allowed to. */
+const BANK_NOISE=new Set(['ach','withdrawal','withdrawals','deposit','deposits','transfer','transfers',
+  'purchase','purchases','card','payment','payments','web','pos','debit','credit','posted','pending',
+  'authorized','authorization','preauthorization','recurring','online','banking','bank','from','for',
+  'the','and','ref','trans','transaction','held','exp','usd','inst','instant','ext','xfer','memo','desc']);
+function qlWords(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').split(/\s+/)
+  .filter(w=>w.length>2 && !BANK_NOISE.has(w) && !/^\d+$/.test(w)); }
 /* Words that mean the money did not leave. Checked FIRST, because every one of
    these would otherwise score against a spending category and quietly file a
    Roth contribution as shopping - the one misfiling that turns a good month into
@@ -12064,19 +12095,47 @@ function looksPutAway(q){
 function suggestCatFor(text){
   const q=String(text||'').trim().toLowerCase();
   if(q.length<3) return '';
-  if(looksPutAway(q)) return '__invest';
-  const words=qlWords(q); if(!words.length) return '';
-  const live=new Map(state.categories.map(c=>[c.id,c]));
-  const score={};
-  const bump=(id,n)=>{ if(id&&live.has(id)) score[id]=(score[id]||0)+n; };
+  /* "It's smart by choosing investing, it's not smart by recognizing my past
+     choices such as Acorns vs Stash. Right now I still have to manually choose
+     those from the drop down. It's not learning."
 
-  // 1. what they have logged before under this description
+     It was not, and for two reasons that compounded.
+
+     The word list behind looksPutAway contains 'acorns', 'stash', 'fidelity'
+     and forty others, and it used to RETURN on the first line - before a single
+     one of the four learning passes below ever ran. So every destination the
+     owner has collapsed into the same generic answer, and no correction could
+     ever change that, because the correction was never consulted.
+
+     And the one pass that did read history only looked at expenses, only read
+     t.note, and a put-away is neither: it is stored as type 'invest' with the
+     description on t.source. So the whole of the money this is being asked
+     about was invisible to the thing meant to learn from it.
+
+     Now the generic answer is the FALLBACK rather than the gate. What you have
+     actually filed this description under before wins, whatever kind of money
+     it was, and "Put away" is what you get only when nothing has been learned
+     and nothing is named for it. */
+  const generic = looksPutAway(q) ? '__invest' : '';
+  const words=qlWords(q); if(!words.length) return generic;
+  const live=new Map(state.categories.map(c=>[c.id,c]));
+  const PUT='__invest';
+  const score={};
+  const bump=(id,n)=>{ if(!id) return; if(id!==PUT && !live.has(id)) return; score[id]=(score[id]||0)+n; };
+
+  // 1. what they have filed this description under before - whatever KIND of
+  //    money it was. A put-away is a choice too, and it carries its destination
+  //    on t.source, which is how "ACH Withdrawal / Acorns Later" can learn that
+  //    it belongs to Acorns rather than to the generic bucket.
   (state.transactions||[]).forEach(t=>{
-    if(t.type!=='expense'||!t.catId) return;
-    const note=String(t.note||'').trim().toLowerCase(); if(!note) return;
-    if(note===q) bump(t.catId,14);
-    else if(note.includes(q)||q.includes(note)) bump(t.catId,8);
-    else { const nw=qlWords(note); const hits=words.filter(w=>nw.includes(w)).length; if(hits) bump(t.catId,4*hits); }
+    const target = t.catId || ((t.type==='invest'||t.type==='save') ? PUT : null);
+    if(!target) return;
+    [t.note,t.source].forEach(raw=>{
+      const note=String(raw||'').trim().toLowerCase(); if(!note) return;
+      if(note===q) bump(target,14);
+      else if(note.includes(q)||q.includes(note)) bump(target,8);
+      else { const nw=qlWords(note); const hits=words.filter(w=>nw.includes(w)).length; if(hits) bump(target,4*hits); }
+    });
   });
   // 2. a bill they already said repeats
   (state.recurring||[]).forEach(r=>{
@@ -12102,7 +12161,8 @@ function suggestCatFor(text){
   });
   let best='', top=0;
   Object.keys(score).forEach(id=>{ if(score[id]>top){ top=score[id]; best=id; } });
-  return top>=4 ? best : '';
+  /* And the generic bucket is where this LANDS, not where it starts. */
+  return top>=4 ? best : generic;
 }
 /* One account for the batch, not one per line. A notepad of purchases came off
    a single card and asking eleven times would be worse than not asking - but
@@ -12948,20 +13008,63 @@ function wireScan(){
   files.addEventListener('change',()=>{ scanAdd(files.files); files.value=''; });
   renderScanPages();
 }
+/* Which of the three you are on, worked out from what is actually true rather
+   than from a counter somebody has to remember to advance: a photo is added, a
+   read has filled some rows, a row has something in it. */
+function qlStepMark(){
+  const ol=document.getElementById('qlSteps'); if(!ol) return;
+  const hasPhoto=(typeof qlPages!=='undefined' && qlPages.length>0);
+  const rows=[...document.querySelectorAll('#qlList .ql-row')];
+  const hasLines=rows.some(el=>{
+    const w=el.querySelector('.ql-what'), a=el.querySelector('.ql-amt');
+    return (w&&w.value.trim()) || (a&&a.value.trim());
+  });
+  const at = hasLines ? 3 : hasPhoto ? 2 : 1;
+  ol.querySelectorAll('.qs').forEach(li=>{
+    const n=+li.dataset.qs;
+    li.classList.toggle('done', n<at);
+    li.classList.toggle('now', n===at);
+    li.classList.toggle('todo', n>at);
+  });
+}
 function renderQuickLog(){
   const box=document.getElementById('quickLog'); if(!box) return;
   qlGen++;   // invalidate any OCR pass still running against the previous panel
   if(!quickLogOpen){ box.innerHTML=''; if(qlPhotoURL){ URL.revokeObjectURL(qlPhotoURL); qlPhotoURL=null; } qlPages.forEach(p=>{ if(p.url) URL.revokeObjectURL(p.url); }); qlPages=[]; qlPhotoFile=null; return; }
   box.innerHTML=`<div class="ql-panel">
     <div class="ql-head"><span>One line each, then log them all. The little stuff is where it hides - and money you <b>put away</b> goes in here too, at the bottom of the category list.</span><label class="ql-datel">Date <input type="date" id="qlDate"></label></div>
-    <div class="ql-photo-row"><button class="btn ghost" id="qlSnap">Take a photo</button><button class="btn ghost" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" multiple class="hide"><button class="btn ghost hide" id="qlRead">Read it for me</button></div>
-    <div id="qlPhotoPrev"></div>
-    <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
+    <!-- "Read it for me button is useless if it's not a step by step guide to
+         know to push it. It should be upload your photos step 1, step 2 read it
+         for me, step 3 review entries."
+
+         It was three buttons in a row with no order between them and no reason
+         to press the third. Numbering them is the whole fix: the step you are
+         on is lit, the ones behind it are ticked, and the one ahead says what
+         it will do rather than waiting to be discovered. -->
+    <ol class="ql-steps" id="qlSteps">
+      <li class="qs" data-qs="1"><span class="qs-n">1</span><div class="qs-b">
+        <b class="qs-t">Add a photo</b>
+        <span class="qs-s">One page or several. It never leaves this phone.</span>
+        <div class="ql-photo-row"><button class="btn cta sm" id="qlSnap">Take a photo</button><button class="btn cta sm" id="qlPick">Pick a photo</button><input type="file" id="qlCam" accept="image/*" capture="environment" class="hide"><input type="file" id="qlPhoto" accept="image/*" multiple class="hide"></div>
+        <div id="qlPhotoPrev"></div>
+      </div></li>
+      <li class="qs" data-qs="2"><span class="qs-n">2</span><div class="qs-b">
+        <b class="qs-t">Let me read it</b>
+        <span class="qs-s">I fill in the lines. Nothing is logged by it.</span>
+        <button class="btn cta sm hide" id="qlRead">Read it for me</button>
+        <div id="qlOcrNote" class="sub" style="margin:6px 0 0"></div>
+      </div></li>
+      <li class="qs" data-qs="3"><span class="qs-n">3</span><div class="qs-b">
+        <b class="qs-t">Check every line</b>
+        <span class="qs-s">Fix anything wrong, then Log them all. Nothing lands until you do.</span>
+      </div></li>
+    </ol>
     ${qlAcctRowHTML()}
     <div class="ql-list" id="qlList">${qlRow()}</div>
     <div class="ql-actions"><button class="btn ghost" id="qlAdd">＋ Add another line</button><button class="btn ghost" id="qlClear">Clear</button><button class="btn primary" id="qlSave">Log them all →</button></div>
   </div>`;
-  document.getElementById('qlDate').value=qlDatePrefill||todayStr(); qlDatePrefill=null;   // consumed once - the next open is today again unless told otherwise
+  document.getElementById('qlDate').value=qlDatePrefill||todayStr(); qlDatePrefill=null;
+  qlStepMark();          // opening the panel puts you on step one   // consumed once - the next open is today again unless told otherwise
   // --- photo capture + on-device read ---
   // camera and gallery need separate inputs - see renderBudgetPhoto for why
   const snap=document.getElementById('qlSnap'), pick=document.getElementById('qlPick'), cam=document.getElementById('qlCam'),
@@ -12985,6 +13088,7 @@ function renderQuickLog(){
       `<span class="ql-page"><img class="ql-photo-img" src="${p.url}" alt="Page ${i+1}">`+
       (qlPages.length>1?`<span class="ql-pagen">${i+1}</span>`:'')+`</span>`).join('');
     readBtn.classList.remove('hide');
+    qlStepMark();
     /* It was called "snap my notepad" and read like it only took one thing. It
        takes anything with numbers on it, and the honest part is that some of
        those read far better than others - a person who knows that aims the
@@ -13053,7 +13157,8 @@ function renderQuickLog(){
     const syncNew=()=>{ nw.classList.toggle('hide', c.value!=='__new'); };
     c.onchange=()=>{ c.dataset.touched='1'; c.classList.remove('guessed'); c.removeAttribute('title'); syncNew(); if(c.value==='__new') nw.focus(); };
     syncNew();   // if __new is the default (empty budget), show the name field from the start
-    el.querySelector('.ql-what').addEventListener('input',()=>guessRow(el));
+    el.querySelector('.ql-what').addEventListener('input',()=>{ guessRow(el); qlStepMark(); });
+    el.querySelector('.ql-amt').addEventListener('input',qlStepMark);
     el.querySelector('.ql-del').onclick=()=>{ if(box.querySelectorAll('.ql-row').length>1) el.remove(); };
   };
   box.querySelectorAll('.ql-row').forEach(wireRow);
@@ -13090,6 +13195,7 @@ function renderQuickLog(){
       if(it.unnamed){ row.classList.add('ql-unnamed');
         row.querySelector('.ql-what').placeholder=namePlaceholder; }
       filled++;
+      qlStepMark();       // the reader filling rows is what moves you to step three
     });
     return filled;
   }
@@ -13128,6 +13234,7 @@ function renderQuickLog(){
       qlPhotoFile=null;
       const pv=document.getElementById('qlPhotoPrev'); if(pv) pv.innerHTML='';
       const rb=document.getElementById('qlRead'); if(rb) rb.classList.add('hide');
+      if(typeof qlStepMark==='function') qlStepMark();
       const nt=document.getElementById('qlOcrNote'); if(nt) nt.textContent='';
       disarm();
       const f=box.querySelector('.ql-what'); if(f) f.focus();
@@ -14869,7 +14976,7 @@ function renderTracePanel(){
 /* A link anybody can be sent: accountability.money/app.html#trace */
 if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
 
-const BUILD_STAMP='2026-09-21 · home answers one thing';
+const BUILD_STAMP='2026-09-21 · it learns Acorns from Stash';
 function renderBuildLine(){
   if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
