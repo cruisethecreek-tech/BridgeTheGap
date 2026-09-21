@@ -1442,6 +1442,12 @@
   .rw-left{display:block;font-style:normal;font-size:11px;font-weight:800;
     letter-spacing:.02em;color:var(--muted);text-align:right;margin-top:2px;white-space:nowrap}
   .rw-left.over{color:var(--bad)}
+  /* Money logged straight at a pool, in no sub. Without it the pool's remainder
+     cannot be reconciled against the rows underneath it - which is exactly how
+     -$844.39 came to sit above six children adding to +$33.10. */
+  .rw-dspend{display:block;font-style:normal;font-size:10.5px;font-weight:700;
+    color:var(--bad);letter-spacing:.01em;white-space:nowrap}
+  .cat-split.direct{color:var(--bad)}
   /* The steps that are not your next one. A summary, not a button: it has to
      read as "there is more when you want it", never as another decision. */
   .ns-more{margin-top:8px}
@@ -1543,8 +1549,9 @@
      names, which is how a tidy-up becomes a regression. */
   .rw-money{display:flex;align-items:center;gap:8px;flex:0 0 4.65rem;min-width:0;margin-left:auto}
   .rw-money>*{flex:1 1 auto;min-width:0;width:100%}
-  .subrow.lvl1{margin-left:12px}
-  .subrow.lvl2{margin-left:24px}
+  .subrow.lvl1,.cat.grp.lvl1{margin-left:12px}
+  .subrow.lvl2,.cat.grp.lvl2{margin-left:24px}
+  .subrow.lvl3,.cat.grp.lvl3{margin-left:36px}
   .subrow.overspent{border-color:rgba(var(--accent-2-rgb),.45)}
   /* break-word rather than anywhere. "anywhere" is allowed to split a word even
      when wrapping to the next line would have fitted it whole, which is how
@@ -10653,6 +10660,31 @@ function setPlanView(k){
    up for you. So a parent's real budget = its own figure OR the sum of its
    children, whichever is larger. Filling in subs is never an error. */
 function catAssigned(id,M){
+  /* "It shows -844.39 but the dropdowns only show -33.70."
+     Reproduced on the reporter's own Food pool:
+
+       assigned directly to Food       745.00
+       assigned across its 6 subs    1,714.81
+       catAssigned reported          1,714.81   <- max(): the 745 was DISCARDED
+
+       spent directly against Food     877.49
+       spent across its subs         1,681.71
+       catUsed reported              2,559.20   <- own + kids: the 877.49 COUNTED
+
+     A pool's assignment used max(own, kids) - treating the parent's money and
+     its subs' money as THE SAME money - while catSpent has always used
+     own + kids, treating them as different. One of the two had to be wrong,
+     and the difference between them was the $811 nobody could account for.
+
+     They add up now, the same way spending always has: a pool holds whatever
+     is assigned straight to it PLUS whatever its subs hold, so a parent is
+     always the sum of its parts and the row can be reconciled against the rows
+     underneath it.
+
+     This also fixes something quieter. "Assigned" on the Plan summary is built
+     from catAssigned, so every dollar resting directly on a pool with subs was
+     invisible to it - the total understated, and Left to budget overstated by
+     exactly that much. */
   const kids=childrenOf(id);
   const own=assignedFor(id,M);
   if(!kids.length) return own;
@@ -10664,12 +10696,33 @@ function kidsAssigned(id,M){ return childrenOf(id).reduce((s,k)=>s+catAssigned(k
 function splitNoteHTML(id,M,label){
   const kids=childrenOf(id); if(!kids.length) return '';
   const own=assignedFor(id,M), sum=kidsAssigned(id,M), extra=id&&label?'subsplit':'';
-  // one tap writes the rolled-up total into the parent's own Assign field, so the
-  // number the user is reading becomes the number actually on the books
-  if(sum>own) return `<div class="cat-split rolled ${extra}">↑ ${money(sum)} total, added up from your ${kids.length} sub${kids.length>1?'s':''}${own>0?` (you'd typed ${money(own)})`:''}. <button class="assign-now" data-assignnow="${id}">Assign ${actMoney(sum)} →</button></div>`;
+  /* "It shows -844.39 but the dropdowns only show -33.70."
+
+     The totals were not wrong. A pool's figure is max(own, kids) on purpose,
+     and that one function is what lets this app be budgeted two ways: BOTTOM UP
+     - leave the pool blank and type into the subs, the pool sums them - or TOP
+     DOWN, type $300 on the pool and carve $265 of it into subs, where the pool
+     is still $300 and $35 is unsplit. Adding the two instead would double-count
+     every dollar somebody organised, which budget_sim states outright: it would
+     read 4,965 assigned of 4,700 and put a zero-based household $265 in a hole
+     it never dug.
+
+     What was missing is the other half of the picture. spentFor counts money
+     logged STRAIGHT at the pool, in no sub at all, and nothing on any screen
+     ever said so. On the reported Food pool that was $877.49 - so the row read
+     -$844.39 while its six children added to +$33.10, and no amount of staring
+     at the children could account for the difference, because the money that
+     explains it was not on the page.
+
+     It is on the page now. */
+  const ownSpent=(typeof spentFor==='function'?spentFor(id,M):0);
+  const direct = ownSpent>0.005
+    ? `<div class="cat-split direct ${extra}"><b>${money(ownSpent)}</b> was spent straight at ${label?escapeHtml(label):'this pool'}, in no sub. That comes out of the pool as well, which is why what is left can be smaller than the subs alone suggest.</div>`
+    : '';
+  if(sum>own) return direct+`<div class="cat-split rolled ${extra}">&#8593; ${money(sum)} total, added up from your ${kids.length} sub${kids.length>1?'s':''}${own>0?` (you'd typed ${money(own)})`:''}. <button class="assign-now" data-assignnow="${id}">Assign ${actMoney(sum)} &rarr;</button></div>`;
   const left=own-sum;
-  if(left<=0.005) return `<div class="cat-split ${extra}">Fully split - every dollar of this pool has a home.</div>`;
-  return `<div class="cat-split ${extra}">${money(left)}${label?' of '+escapeHtml(label):''} left to split into subs.</div>`;
+  if(left<=0.005) return direct+`<div class="cat-split ${extra}">Fully split - every dollar of this pool has a home.</div>`;
+  return direct+`<div class="cat-split ${extra}">${money(left)}${label?' of '+escapeHtml(label):''} left to split into subs.</div>`;
 }
 
 /* ---------- budget render ---------- */
@@ -11008,13 +11061,18 @@ function renderBudget(){ if(traceOn) traceNote('the app redrew: renderBudget');
       const cullBox = catCull ? `<label class="rw-cull"><input type="checkbox" data-cull="${c.id}"${catCullPick.has(c.id)?' checked':''} aria-label="Remove ${escapeHtml(c.name)}"></label>` : '';
       const nameHTML = cullBox + `<button class="rw-nm" data-catsheet="${c.id}"${catCull?' disabled':''} title="${escapeHtml(c.name)}">${face?`<span class="rw-e" aria-hidden="true">${escapeHtml(face)}</span>`:''}<span class="rw-t">${escapeHtml(c.name)}</span>${isGroup?`<span class="cat-count">${kids.length}</span>`:''}${c.growth?`<span class="growth-tag mini" title="${escapeHtml(GROWTH_TAG[c.growth]||'Not spending')}">${escapeHtml(GROWTH_TAG_SHORT[c.growth]||'not spent')}</span>`:''}${recForCat(c.id)?'<span class="rep-dot" title="This repeats">&#8635;</span>':''}</button>`;
       if(isGroup){
-        return `<div class="cat grp${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
+        /* lvl${depth} was on the leaf rows and NOT on the group rows, so a
+           pool inside a pool got no indent at all and sat at the same level as
+           its parent - Fun Money and Online shopping reading as siblings while
+           one contained the other, with identical figures, which looks like the
+           number is printed twice. */
+        return `<div class="cat grp lvl${depth}${catReorder?' reordering':''}${rem<0?' overspent':''}" data-row="${c.id}" data-lvl="${c.parentId||''}" data-catsheet="${c.id}">
           <div class="cat-top">
             ${reorderCtrlHTML(c.id)}
             <button class="cat-toggle" data-toggle="${c.id}" aria-label="${collapsed?'Expand':'Collapse'} ${escapeHtml(c.name)}">${collapsed?'&#9656;':'&#9662;'}</button>
             <span class="cat-name">${nameHTML}</span>
             <span class="rw-money">${
-              view==='planned' ? `<span class="cat-assign gcol${noHint}"><span class="rw-fig">${money(a)}</span>${own>0&&a>own?`<i>${money(own)} direct</i>`:''}${leftHint}</span>`
+              view==='planned' ? `<span class="cat-assign gcol${noHint}"><span class="rw-fig">${money(a)}</span>${own>0&&a>own?`<i>${money(own)} direct</i>`:''}${spentFor(c.id,M)>0.005?`<i class="rw-dspend">${money(spentFor(c.id,M))} spent here</i>`:''}${leftHint}</span>`
               : `<span class="cat-assign gcol${sp>a&&a>0?' over':''}${noHint}"><span class="rw-fig">${money(sp)}</span>${leftHint}</span>`
             }</span>
           </div>
@@ -11029,7 +11087,7 @@ function renderBudget(){ if(traceOn) traceNote('the app redrew: renderBudget');
         ${reorderCtrlHTML(c.id)}
         <span class="sub-name">${nameHTML}</span>
         <span class="rw-money">${
-          view==='planned' ? `<span class="sub-assign${noHint}"><span class="sa-row">$<input type="number" inputmode="decimal" min="0" step="0.01" autocomplete="off" enterkeyhint="next" value="${amtBox(own)}" placeholder="0" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
+          view==='planned' ? `<span class="sub-assign${noHint}"><span class="sa-row">$<input type="tel" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="next" value="${amtBox(own)}" placeholder="0" data-cat="${c.id}" aria-label="Assign to ${escapeHtml(c.name)}"></span>${leftHint}</span>`
           : `<span class="sub-spent${sp>a&&a>0?' over':''}${noHint}" title="What has gone"><span class="rw-fig">${money(sp)}</span>${leftHint}</span>`
         }</span>
       </div>`;
@@ -11321,7 +11379,7 @@ function renderCatSheet(){
     </div>
     ${!isGroup?`<div class="ufld cs-assign">
         <span class="fl-k">Assign<span id="${aid}Unit"></span></span>
-        <span class="fl-in">$<input type="number" id="${aid}" inputmode="decimal" min="0" step="0.01" autocomplete="off" placeholder="0" aria-label="Assign to ${escapeHtml(c.name)}"></span>
+        <span class="fl-in">$<input type="tel" id="${aid}" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="0" aria-label="Assign to ${escapeHtml(c.name)}"></span>
         <div class="unit-work" id="${aid}W"></div>
       </div>
       ${rateBuilderHTML(c)}`
@@ -14976,7 +15034,7 @@ function renderTracePanel(){
 /* A link anybody can be sent: accountability.money/app.html#trace */
 if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
 
-const BUILD_STAMP='2026-09-21 · it learns Acorns from Stash';
+const BUILD_STAMP='2026-09-21 · the money that was not on the page';
 function renderBuildLine(){
   if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
