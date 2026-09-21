@@ -95,11 +95,12 @@ const field=await p.evaluate(async()=>{
   o.emptyWhenUnassigned = din.value==='';
   o.placeholderIsZero   = din.placeholder==='0';
   o.assignedShowsFigure = wal.value==='250';
-  /* Not a hint the keyboard is free to walk back on the second tap, and not a
-     type that tells Android this is a phone number either. */
+  /* Not a hint the keyboard can walk back on the second tap (type="text" gave
+     QWERTY), and not the type that cannot PAINT a sum (type="number" swallows
+     the second decimal point - see the round-trip check below). */
   o.typeIsNotText       = din.type!=='text';
   o.stillNumericPad     = din.inputMode==='decimal';
-  o.notAPhoneNumber     = din.type!=='tel';
+  o.canPaintASum        = din.type!=='number';
 
   /* 4. the row does not change height when a figure lands in it */
   const h=id=>Math.round(document.querySelector('#cats [data-row="'+id+'"]').getBoundingClientRect().height);
@@ -192,6 +193,15 @@ const calc=await (async()=>{
   /* negative is still clamped, by either route */
   o.negative = await typeReal('din','-500');
   o.negativeViaSum = await typeReal('din','100-600');
+
+  /* Last, because it leaves its own figure behind: typed through the real
+     pipeline and read straight back. What is in the box has to be what the
+     thumb put there - two decimal points included. Slotted into the middle of
+     the run first time round, where it changed the running value the checks
+     either side of it depend on, and broke two of them. */
+  await typeReal('din','41.11+1109.7');
+  o.paintedMidSum = await p.evaluate(()=>document.querySelector('#cats input[data-cat="din"]').value);
+  o.sumWithTwoDecimals = await p.evaluate(()=>assignedFor('din','2026-09'));
   return o;
 })();
 const calcOld=await p.evaluate(async()=>{
@@ -280,8 +290,8 @@ const T=[
    field.typeIsNotText===true, 'type='+String(field.typeIsNotText)],
   ['...with the decimal point iOS only offers when asked',
    field.stillNumericPad===true, String(field.stillNumericPad)],
-  ['...and it does not tell Android that a budget amount is a phone number',
-   field.notAPhoneNumber===true, String(field.notAPhoneNumber)],
+  ['...and it is not the type that cannot show a sum it is holding',
+   field.canPaintASum===true, 'type must not be number: it paints 41.11+1109.7 as "41.11+11097"'],
 
   ['every row is the same height whether or not it has a figure in it',
    field.heightsEvenBefore===true, String(field.heightsEvenBefore)],
@@ -302,10 +312,23 @@ const T=[
   ['...and the name is still the doorway it always was',
    field.nameStillOpensTheSheet===true, String(field.nameStillOpensTheSheet)],
 
-  ['the browser really has stopped reading the box while the sum is half typed',
-   calc.badInputWhileMidSum===true,
-   'value is "" and badInput is '+String(calc.badInputWhileMidSum)
-     +' - which is why the sum has to be read a different way'],
+  /* This used to assert the opposite - that the browser had STOPPED reading the
+     box - because the box was type="number" and the sum had to be recovered
+     from beforeinput. That machinery still exists and is still harmless, but it
+     was only ever a workaround for a box that could not hold what was typed.
+     The real requirement, and the one reported, is that the box SHOWS the sum:
+
+       "The decimal calculates correctly but doesn't show while computing."
+
+     A number input allows exactly one decimal point, so it silently swallowed
+     the second - 41.11+1109.7 painted as 41.11+11097 while the arithmetic
+     underneath stayed right. A box that displays something other than what was
+     typed into it is lying, whatever it goes on to compute. */
+  ['the box shows the sum it is holding, decimals and all',
+   calc.paintedMidSum==='41.11+1109.7',
+   'typed 41.11+1109.7, box holds "'+calc.paintedMidSum+'"'],
+  ['...and computes it correctly, which it always did',
+   Math.abs(calc.sumWithTwoDecimals-1150.81)<0.005, String(calc.sumWithTwoDecimals)],
   ['a plain number typed the ordinary way still lands',
    calcOld.plain===412, String(calcOld.plain)],
   ['...and clearing the box is a different instruction, which does write a zero',

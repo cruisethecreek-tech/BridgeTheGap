@@ -330,8 +330,23 @@ check('the plan boxes accept cents, like the spend boxes do', 1200.83, c.cents,
    made in tests/probes/numpad.mjs instead, typed a character at a time through
    the real input pipeline, which is the only place the distinction is real. */
 check('   ...with a decimal keypad on a phone', 'decimal', c.mode);
-check('   ...that the keyboard cannot answer with letters instead', 'number', c.kind,
-      'inputmode is a hint - SwiftKey honoured it once and then fell back to type="text" and offered QWERTY. tel fixed that and attached Android autofill to a budget field, so the type went back to the one whose keypad was never the complaint and the sum is read through beforeinput instead.');
+/* Three types have been tried on this box and each failed differently, so the
+   check is what it must NOT be rather than a single blessed answer:
+
+     text    inputmode is only a hint - SwiftKey honoured it once and then fell
+             back to the type and offered QWERTY for a budget amount.
+     number  the right keypad, and it cannot PAINT a sum: a number input allows
+             exactly one decimal point, so 41.11+1109.7 shows as 41.11+11097
+             while computing correctly. A box that displays something other
+             than what was typed into it is lying, whatever it then computes.
+
+   tel is what is left: the numeric keypad, unarguable by any keyboard, and
+   free-form text so a sum survives on screen. It attaches Android's autofill
+   strip, which is cosmetic - and the keypad DISAPPEARING, which is what drove
+   the move away from tel, turned out to be the two-phone sync loop instead:
+   344 renderAll calls per device, twelve seconds, measured in twophones.mjs. */
+checkTrue('   ...that the keyboard cannot answer with letters instead', c.kind!=='text');
+checkTrue('   ...and can show a sum while it is being typed', c.kind!=='number');
 check('forty cents prints as forty cents', '$0.40', c.fortyCents, 'it printed "$0.4"');
 check('   ...negative too', '-$0.40', c.negForty);
 check('whole dollars stay clean', '$4,700', c.whole, 'no pointless .00 everywhere');
