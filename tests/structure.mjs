@@ -9009,8 +9009,21 @@ const homeCut = await p.evaluate(async () => {
   const vis=el=>{ const st=getComputedStyle(el); return st.display!=='none' && el.getBoundingClientRect().height>4; };
   const panels=[...v.querySelectorAll('[data-deck]')];
   const o={ px:Math.round(v.scrollHeight),
-    core:['nextSteps','homeSnap','wallsGrid'].every(id=>{const e=document.getElementById(id); return e&&vis(e);}),
+    /* Home answers ONE question now. The next move still has to greet you -
+       that is the whole reason the screen exists - but "where you stand" and
+       "cover first" answer a different question and were being asked at the
+       same volume, so they fold. This used to require all three to be visible
+       at rest, which is the design that was deliberately replaced. */
+    core:(()=>{const e=document.getElementById('nextSteps'); return !!e&&vis(e);})(),
+    /* and folded is not gone: both are still on the page, inside the deck */
+    foldedNotGone:['homeSnap','wallsGrid'].every(id=>{
+      const e=document.getElementById(id); return !!e && !!e.closest('#deck-home'); }),
+    /* Every secondary panel belongs in the deck. Asserting the COUNT was the
+       weaker claim - it passed while panels sat loose on the page as long as
+       seven of them happened to be decked, and it had to be edited every time
+       a panel was added. */
     moved:panels.filter(el=>el.closest('#deck-home')).length,
+    loose:panels.filter(el=>!el.closest('#deck-home')).length,
     openAtRest:panels.filter(vis).length,
     rows:v.querySelectorAll('.dk-chip').length };
   const c=v.querySelector('.dk-chip'); const lbl=c?c.dataset.dk:null;
@@ -9024,8 +9037,11 @@ const homeCut = await p.evaluate(async () => {
   return o;
 });
 check('Home fits in about two phone screens, not five', homeCut.px<2400, homeCut.px+'px');
-check('...still showing what you have to act on', homeCut.core===true);
-check('...with the other seven panels moved into one card', homeCut.moved===7, String(homeCut.moved));
+check('...still showing the one thing you have to act on', homeCut.core===true);
+check('...with every other panel moved into one card, none left loose',
+      homeCut.loose===0 && homeCut.moved>=7, JSON.stringify({decked:homeCut.moved, loose:homeCut.loose}));
+check('...and what folded is folded, not deleted', homeCut.foldedNotGone===true,
+      'where you stand and cover first must still be on the page, inside the deck');
 check('...and none of them open until somebody asks', homeCut.openAtRest===0, String(homeCut.openAtRest));
 check('...each one named in a row you can tap', homeCut.rows>=4, String(homeCut.rows));
 check('tapping a row opens exactly that panel', homeCut.opened===true && homeCut.onlyOne===true, JSON.stringify(homeCut));
