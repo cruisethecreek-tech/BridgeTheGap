@@ -58,6 +58,8 @@ const afterOff=await p.evaluate(async()=>{
   await w(400);
   const rows=[...document.querySelectorAll('[data-mindopen]')];
   out.inLibrary=rows.length;
+  out.written=MIND_CARDS.length;   // the claim is "every one", not "six"
+
   if(rows.length){ rows[0].click(); await w(400);
     out.opensFromLibrary=document.getElementById('mindSheet').classList.contains('on');
     out.libraryHasNoActions=!document.getElementById('mindGot');
@@ -124,7 +126,8 @@ const noPic=await p.evaluate(()=>{
 /* the words are the owner's, untouched */
 const text=await p.evaluate(()=>{
   const c=MIND_CARDS.find(x=>x.k==='rich');
-  return { punch:c.punch, bodyStart:c.body.slice(0,58),
+  const bb=MIND_CARDS.find(x=>x.k==='buyback');
+  return { punch:c.punch, bodyStart:c.body.slice(0,58), buyback:bb?bb.body:'',
            dashes:MIND_CARDS.some(x=>/[—–]/.test(x.body+x.punch+x.t)),
            all:MIND_CARDS.length };
 });
@@ -143,9 +146,13 @@ const T=[
   ['...and the set starts over rather than going silent', rotation.resets===0, JSON.stringify(rotation)],
   ['turning them off is remembered', off.stored===true && off.closed===true, JSON.stringify(off)],
   ['...and they stop opening with the app', afterOff.opened===false, String(afterOff.opened)],
+  /* Was afterOff.inLibrary===6. The claim is that NOTHING WAS LOST, and a
+     hard six only said that by accident - it passed while cards went missing
+     as long as six survived, and it had to be edited every time one was
+     written. Counted against what is actually in MIND_CARDS now. */
   ['...but every one is still on Learn, so nothing was lost',
-   afterOff.inLibrary===6 && afterOff.opensFromLibrary===true,
-   JSON.stringify(afterOff)],
+   afterOff.inLibrary===afterOff.written && afterOff.opensFromLibrary===true,
+   JSON.stringify({onLearn:afterOff.inLibrary, written:afterOff.written})],
   ['...opened from there without the dismiss buttons, which belong to the prompt',
    afterOff.libraryHasNoActions===true, String(afterOff.libraryHasNoActions)],
   ['...and they can be turned back on from the same place',
@@ -154,7 +161,11 @@ const T=[
   ['the owner\'s words are stored exactly as written',
    /^Poor mindset spends to look better today/.test(text.punch)
      && /^A poor mindset sees money as something to spend/.test(text.bodyStart)
-     && text.all===6, JSON.stringify(text).slice(0,140)],
+     && text.all>=6, JSON.stringify(text).slice(0,140)],
+  ['...including the one about buying your hours back, in the words it was sent in',
+   /money is a renewable resource, but time is strictly finite/.test(text.buyback||'')
+     && /your money buys back your life/.test(text.buyback||''),
+   (text.buyback||'(missing)').slice(0,90)],
   ['...and carry none of the dashes this project bans', text.dashes===false, String(text.dashes)],
   ['every card names a picture, and no two share one',
    pic.allNamed===true && pic.distinct===pic.total, JSON.stringify({a:pic.allNamed,d:pic.distinct,t:pic.total})],

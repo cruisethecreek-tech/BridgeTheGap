@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1408" height="768" viewBox="0 0 1408 768" role="img"
+     aria-label="Trading hours versus buying them back">
+  <defs>
+    <style>
+      .h{font-family:Georgia,'Iowan Old Style','Times New Roman',serif;font-weight:700}
+      .s{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+      .eye{font-size:23px;font-weight:800;letter-spacing:3.4px;text-transform:uppercase}
+    </style>
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9b08a"/><stop offset="1" stop-color="#a8452c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9b578"/><stop offset="1" stop-color="#835a24"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1408" height="768" fill="#f4efe6"/>
+  <rect x="40" y="40" width="1328" height="688" rx="34" fill="#fbf8f3" stroke="#e0d5c4" stroke-width="2"/>
+
+  <text x="704" y="126" class="h" font-size="50" fill="#2c2620" text-anchor="middle">Your money can be earned back.</text>
+  <text x="704" y="186" class="h" font-size="50" fill="#a8452c" text-anchor="middle">Your time cannot.</text>
+
+  <line x1="704" y1="236" x2="704" y2="620" stroke="#e0d5c4" stroke-width="2"/>
+
+  <!-- LEFT: trading hours away to save dollars -->
+  <text x="372" y="282" class="s eye" fill="#6d6254" text-anchor="middle">Starting out</text>
+
+  <!-- an hourglass, running out -->
+  <g transform="translate(372 404)">
+    <rect x="-84" y="-118" width="168" height="15" rx="7" fill="#835a24"/>
+    <rect x="-84" y="103" width="168" height="15" rx="7" fill="#835a24"/>
+    <path d="M-66 -103 L66 -103 L8 0 L66 103 L-66 103 L-8 0 Z" fill="#f0e9dd" stroke="#835a24" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-52 -96 L52 -96 L4 -8 L-4 -8 Z" fill="url(#sand)" opacity=".28"/>
+    <path d="M-44 96 L44 96 L6 26 L-6 26 Z" fill="url(#sand)"/>
+    <rect x="-2.5" y="-8" width="5" height="34" fill="#a8452c"/>
+  </g>
+
+  <text x="372" y="574" class="s" font-size="30" fill="#2c2620" text-anchor="middle" font-weight="700">Hours spent to save a few dollars</text>
+  <text x="372" y="614" class="s" font-size="25" fill="#6d6254" text-anchor="middle">That is survival, and it is fine</text>
+
+  <!-- RIGHT: spending dollars to buy hours back -->
+  <text x="1036" y="282" class="s eye" fill="#835a24" text-anchor="middle">Once you have traction</text>
+
+  <g transform="translate(1036 404)">
+    <!-- coins going out -->
+    <g transform="translate(-118 0)">
+      <ellipse cx="0" cy="62" rx="58" ry="17" fill="url(#gold)"/>
+      <ellipse cx="0" cy="34" rx="58" ry="17" fill="url(#gold)"/>
+      <ellipse cx="0" cy="6" rx="58" ry="17" fill="url(#gold)"/>
+      <ellipse cx="0" cy="-22" rx="58" ry="17" fill="#d9b578" stroke="#835a24" stroke-width="3"/>
+      <text x="0" y="-15" class="s" font-size="26" font-weight="800" fill="#5a3d16" text-anchor="middle">$</text>
+    </g>
+    <!-- the exchange -->
+    <path d="M-36 -6 L34 -6" stroke="#316743" stroke-width="7" stroke-linecap="round"/>
+    <path d="M18 -26 L40 -6 L18 14" fill="none" stroke="#316743" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- hours coming back: a clock face -->
+    <g transform="translate(122 0)">
+      <circle cx="0" cy="0" r="86" fill="#f0e9dd" stroke="#316743" stroke-width="7"/>
+      <circle cx="0" cy="-66" r="5" fill="#316743"/><circle cx="66" cy="0" r="5" fill="#316743"/>
+      <circle cx="0" cy="66" r="5" fill="#316743"/><circle cx="-66" cy="0" r="5" fill="#316743"/>
+      <path d="M0 0 L0 -50" stroke="#2c2620" stroke-width="8" stroke-linecap="round"/>
+      <path d="M0 0 L40 22" stroke="#2c2620" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="9" fill="#a8452c"/>
+    </g>
+  </g>
+
+  <text x="1036" y="574" class="s" font-size="30" fill="#2c2620" text-anchor="middle" font-weight="700">Dollars spent to buy hours back</text>
+  <text x="1036" y="614" class="s" font-size="25" fill="#316743" text-anchor="middle">That is the shift</text>
+
+  <text x="704" y="686" class="s" font-size="27" fill="#6d6254" text-anchor="middle">The goal is not to hoard the cash. It is to reach the point where the cash buys back your life.</text>
+</svg>

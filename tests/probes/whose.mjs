@@ -17,6 +17,21 @@
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
 const p=await b.newPage({viewport:{width:390,height:900}});
+/* WHAT "TODAY" IS, PINNED.
+
+   This probe asserts things about money STILL TO COME this month, and it let
+   the real calendar decide what "still to come" means. Its fixture sits in
+   September 2026 with a weekly payday anchored on the 4th, so it passed all
+   through the month and began failing on the 26th, when the last of those
+   paydays went past - nothing to do with the code it is testing, and it failed
+   identically against a build from before the change that happened to be in
+   flight when it went off.
+
+   A test whose answer depends on the day it is run is worse than no test: it
+   is green when nobody is looking and red for a reason that has to be
+   diagnosed before it can be dismissed. The clock is fixed here so the fixture
+   means the same thing forever. */
+await p.clock.setFixedTime(new Date('2026-09-08T09:00:00'));
 const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
 await p.goto('file://'+process.cwd()+'/app.html'); await p.waitForTimeout(400);
 

@@ -4669,6 +4669,14 @@ const MIND_CARDS=[
   { k:'growth', img:'mind/growth.jpg', t:'Fixed versus growth',
     punch:'Fixed mindset shrinks to avoid looking foolish today. Growth mindset stretches to become competent later.',
     body:`A fixed mindset sees failure as a permanent label. A growth mindset sees failure as a data point. Fixed mindset says, "I'm just not naturally good at this." Growth mindset says, "I'm not good at this yet." That's why one person hits a technical roadblock and quits, feeling defeated. The other person hits a roadblock and thinks, "What is this trying to teach me?" It's not always about blind optimism; sometimes it's learning a new software tool, adjusting a strategy after a setback, or asking for feedback instead of hiding.` },
+  /* The owner's own words, house punctuation. The em dashes they wrote are
+     converted to " - " because mindset.mjs refuses any card carrying one, which
+     is the app's typography rule rather than a change of meaning. The picture
+     is an SVG rather than a generated image, which is also why its text is
+     right: the last one of those had to be redrawn for garbled words. */
+  { k:'buyback', img:'mind/time.svg', t:'Trading hours versus buying them back',
+    punch:'Broke mindset trades hours to save dollars. Wealth mindset spends dollars to buy the hours back.',
+    body:`The biggest shift in building wealth is changing how you value your time. When you're starting out and cash is tight, you often have to trade your hours to save a few dollars. That's just survival. But the trap is staying in that mindset once you finally have a little traction. People who build wealth realize that money is a renewable resource, but time is strictly finite. They start using their cash to buy back their hours - whether that's outsourcing a basic task, paying for a service, or choosing convenience. They do this because freeing up their time allows them to focus on high-impact moves that actually generate wealth. Money can always be earned back. Your time cannot. The ultimate goal isn't just to hoard cash - it's to reach the point where your money buys back your life.` },
   { k:'productive', img:'mind/productive.jpg', t:'Busy versus productive',
     punch:'Busy mindset runs on a treadmill to feel tired. Productive mindset climbs a ladder to get higher.',
     body:`A busy mindset sees value in motion. A productive mindset sees value in momentum. Busy mindset says, "I have a million things on my to-do list, I'm exhausted." Productive mindset says, "I have three priorities today that actually move the needle." That's why one person works a 12-hour day but stays in the exact same place. The other person works a focused 4-hour day and achieves exponential growth. It's not about doing everything yourself; sometimes it's delegating a task, automating a workflow, or simply saying 'no' to a distraction.` }
@@ -15034,7 +15042,7 @@ function renderTracePanel(){
 /* A link anybody can be sent: accountability.money/app.html#trace */
 if(/(^|[#&])trace\b/.test(String(location.hash||''))) setTimeout(traceStart,300);
 
-const BUILD_STAMP='2026-09-21 · the money that was not on the page';
+const BUILD_STAMP='2026-09-27 · your money buys back your life';
 function renderBuildLine(){
   if(typeof renderTracePanel==='function') renderTracePanel();
   const el=document.getElementById('buildLine'); if(!el) return;
